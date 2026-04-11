@@ -13,6 +13,7 @@ import { useSubscription } from "./useSubscription";
 // Module-level cache (shared across all hook instances and persists across remounts)
 let hostCache: Host[] = [];
 let listActionsCache: HateoasAction[] | undefined;
+let targetVersionCache: string | undefined;
 
 export const useHostData = () => {
   // Version counter to trigger re-renders when cache updates
@@ -44,6 +45,7 @@ export const useHostData = () => {
 
       hostCache = sortedHosts;
       listActionsCache = query.data._actions;
+      targetVersionCache = query.data.targetVersion;
 
       // Trigger re-render
       setCacheVersion((v) => v + 1);
@@ -69,6 +71,10 @@ export const useHostData = () => {
           host.online = update.online;
           changed = true;
         }
+        if (update.version !== undefined && host.version !== update.version) {
+          host.version = update.version;
+          changed = true;
+        }
       }
 
       if (changed) {
@@ -83,6 +89,7 @@ export const useHostData = () => {
   return {
     hosts: hostCache,
     listActions: listActionsCache,
+    targetVersion: targetVersionCache,
     isLoading: query.isLoading,
     error: query.error,
   };

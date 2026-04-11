@@ -48,6 +48,7 @@ export async function createHubConfigService(
     { key: "GOOGLE_SEARCH_ENGINE_ID" },
     { key: "SPEND_LIMIT_DOLLARS" },
     { key: "SPEND_LIMIT_HOURS" },
+    { key: "TARGET_VERSION" },
   ]);
 
   /** Read variables from DB and build a ConfigResponse */

@@ -24,6 +24,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
+import { hubDb } from "../database/hubDb.js";
 import { badRequest, conflict, notFound } from "../error-helpers.js";
 import { API_PREFIX, selfLink } from "../hateoas.js";
 import { permGate, resolveActions } from "../route-helpers.js";
@@ -122,7 +123,10 @@ export default function hostsRoutes(
       },
     },
     async (request, _reply) => {
-      const hosts = await getHosts();
+      const [hosts, targetVar] = await Promise.all([
+        getHosts(),
+        hubDb.variables.findUnique({ where: { key: "TARGET_VERSION" } }),
+      ]);
 
       const user = request.supervisorUser;
       const hasManageHostsPermission = hasPermission(user, "manage_hosts");
@@ -132,12 +136,14 @@ export default function hostsRoutes(
         return {
           ...host,
           online,
+          version: getHostVersion(host.id),
           _actions: hostActions(host.name, user, online),
         };
       });
 
       return {
         items,
+        targetVersion: targetVar?.value || undefined,
         _links: [selfLink("/hosts")],
         _linkTemplates: [
           { rel: "item", hrefTemplate: `${API_PREFIX}/hosts/{name}` },

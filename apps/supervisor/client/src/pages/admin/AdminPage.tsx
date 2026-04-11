@@ -26,12 +26,14 @@ import { useCallback, useEffect, useState } from "react";
 import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/apiClient";
 import { api, API_BASE, apiEndpoints } from "../../lib/apiClient";
+import { UpdateDialog } from "./UpdateDialog";
 
 export const AdminPage: React.FC = () => {
   const [data, setData] = useState<AdminInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [rotating, setRotating] = useState(false);
+  const [updateOpen, setUpdateOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -84,6 +86,9 @@ export const AdminPage: React.FC = () => {
     : false;
   const canViewAttachments = data
     ? !!hasAction(data._actions, "view-attachments")
+    : false;
+  const canCheckUpdates = data
+    ? !!hasAction(data._actions, "check-updates")
     : false;
 
   const LOG_TABS = [
@@ -145,7 +150,24 @@ export const AdminPage: React.FC = () => {
                 <Table.Tbody>
                   <Table.Tr>
                     <Table.Td fw={600}>Version</Table.Td>
-                    <Table.Td>{data.supervisorVersion}</Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <span>{data.supervisorVersion}</span>
+                        {data.targetVersion && (
+                          <Badge
+                            size="sm"
+                            variant="light"
+                            color={
+                              data.targetVersion === data.supervisorVersion
+                                ? "green"
+                                : "red"
+                            }
+                          >
+                            target: {data.targetVersion}
+                          </Badge>
+                        )}
+                      </Group>
+                    </Table.Td>
                   </Table.Tr>
                   <Table.Tr>
                     <Table.Td fw={600}>DB Path</Table.Td>
@@ -162,15 +184,24 @@ export const AdminPage: React.FC = () => {
                 </Table.Tbody>
               </Table>
 
-              {canExport && (
-                <Button
-                  onClick={handleExport}
-                  loading={exporting}
-                  style={{ alignSelf: "flex-start" }}
-                >
-                  Export Config
-                </Button>
-              )}
+              <Group>
+                {canExport && (
+                  <Button
+                    onClick={handleExport}
+                    loading={exporting}
+                  >
+                    Export Config
+                  </Button>
+                )}
+                {canCheckUpdates && (
+                  <Button
+                    variant="light"
+                    onClick={() => setUpdateOpen(true)}
+                  >
+                    Check for Updates
+                  </Button>
+                )}
+              </Group>
 
               <Title order={4} mt="md">
                 Hub
@@ -264,6 +295,13 @@ export const AdminPage: React.FC = () => {
           )}
         </Tabs>
       ) : null}
+
+      <UpdateDialog
+        opened={updateOpen}
+        onClose={() => setUpdateOpen(false)}
+        onUpdate={fetchData}
+        currentVersion={data?.supervisorVersion ?? ""}
+      />
     </Container>
   );
 };

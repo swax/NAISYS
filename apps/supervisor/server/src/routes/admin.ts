@@ -11,25 +11,32 @@ import type {
   AdminAttachmentListResponse,
   AdminInfoResponse,
   ErrorResponse,
+  NpmVersionsRequest,
+  NpmVersionsResponse,
   RotateAccessKeyResult,
+  SaveVariableResponse,
   ServerLogRequest,
   ServerLogResponse,
+  SetTargetVersionRequest,
 } from "@naisys/supervisor-shared";
 import {
   AdminAttachmentListRequestSchema,
   AdminAttachmentListResponseSchema,
   AdminInfoResponseSchema,
   ErrorResponseSchema,
+  NpmVersionsRequestSchema,
+  NpmVersionsResponseSchema,
   RotateAccessKeyResultSchema,
+  SaveVariableResponseSchema,
   ServerLogRequestSchema,
   ServerLogResponseSchema,
+  SetTargetVersionRequestSchema,
 } from "@naisys/supervisor-shared";
 import archiver from "archiver";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { getNaisysDatabasePath, hubDb } from "../database/hubDb.js";
-import { getPackageVersion } from "../version.js";
 import { API_PREFIX, paginationLinks } from "../hateoas.js";
 import {
   buildExportFiles,
@@ -40,8 +47,11 @@ import {
   getHubVersion,
   isHubConnected,
   sendRotateAccessKey,
+  sendVariablesChanged,
 } from "../services/hubConnectionService.js";
 import { getLogFilePath, tailLogFile } from "../services/logFileService.js";
+import { saveVariable } from "../services/variableService.js";
+import { getPackageVersion } from "../version.js";
 
 function adminActions(hasAdminPermission: boolean): HateoasAction[] {
   const actions: HateoasAction[] = [];
@@ -65,6 +75,21 @@ function adminActions(hasAdminPermission: boolean): HateoasAction[] {
         href: `${API_PREFIX}/admin/attachments`,
         method: "GET",
         title: "View Attachments",
+      },
+    );
+
+    actions.push(
+      {
+        rel: "check-updates",
+        href: `${API_PREFIX}/admin/npm-versions`,
+        method: "GET",
+        title: "Check for Updates",
+      },
+      {
+        rel: "set-target-version",
+        href: `${API_PREFIX}/admin/target-version`,
+        method: "PUT",
+        title: "Set Target Version",
       },
     );
 
@@ -110,7 +135,7 @@ export default function adminRoutes(
 
       const actions = adminActions(hasAdminPermission);
 
-      const [supervisorDbSize, hubDbSize] = await Promise.all([
+      const [supervisorDbSize, hubDbSize, targetVar] = await Promise.all([
         fs
           .stat(supervisorDbPath())
           .then((s) => s.size)
@@ -119,6 +144,7 @@ export default function adminRoutes(
           .stat(getNaisysDatabasePath())
           .then((s) => s.size)
           .catch(() => undefined),
+        hubDb.variables.findUnique({ where: { key: "TARGET_VERSION" } }),
       ]);
 
       return {
@@ -132,6 +158,7 @@ export default function adminRoutes(
         hubDbVersion: HUB_DB_VERSION,
         hubConnected: isHubConnected(),
         hubAccessKey: getHubAccessKey(),
+        targetVersion: targetVar?.value || undefined,
         _actions: actions.length > 0 ? actions : undefined,
       };
     },
@@ -258,6 +285,118 @@ export default function adminRoutes(
         fileName: `${file}.log`,
         fileSize,
       };
+    },
+  );
+
+  // GET /npm-versions — Check npm registry for latest versions
+  fastify.get<{
+    Querystring: NpmVersionsRequest;
+    Reply: NpmVersionsResponse | ErrorResponse;
+  }>(
+    "/npm-versions",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "Fetch latest naisys versions from npm registry",
+        tags: ["Admin"],
+        querystring: NpmVersionsRequestSchema,
+        response: {
+          200: NpmVersionsResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        // Fetch dist-tags from npm
+        const distTagsRes = await fetch(
+          "https://registry.npmjs.org/-/package/naisys/dist-tags",
+        );
+        if (!distTagsRes.ok) {
+          return reply.status(500).send({
+            success: false,
+            message: `npm registry returned ${distTagsRes.status}`,
+          });
+        }
+        const distTags = (await distTagsRes.json()) as Record<string, string>;
+
+        // Read current TARGET_VERSION from DB
+        const targetVar = await hubDb.variables.findUnique({
+          where: { key: "TARGET_VERSION" },
+        });
+
+        const result: NpmVersionsResponse = {
+          latest: distTags.latest ?? "",
+          beta: distTags.beta ?? null,
+          targetVersion: targetVar?.value ?? "",
+        };
+
+        // Optionally validate a specific version
+        const { check } = request.query;
+        if (check) {
+          const checkRes = await fetch(
+            `https://registry.npmjs.org/naisys/${encodeURIComponent(check)}`,
+          );
+          result.check = {
+            version: check,
+            exists: checkRes.ok,
+          };
+        }
+
+        return result;
+      } catch (error) {
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to check npm registry",
+        });
+      }
+    },
+  );
+
+  // PUT /target-version — Set the TARGET_VERSION variable
+  fastify.put<{
+    Body: SetTargetVersionRequest;
+    Reply: SaveVariableResponse | ErrorResponse;
+  }>(
+    "/target-version",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "Set the TARGET_VERSION variable for auto-updates",
+        tags: ["Admin"],
+        body: SetTargetVersionRequestSchema,
+        response: {
+          200: SaveVariableResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { version } = request.body;
+        const result = await saveVariable(
+          "TARGET_VERSION",
+          version,
+          false,
+          false,
+          request.supervisorUser!.uuid,
+        );
+        sendVariablesChanged();
+        return result;
+      } catch (error) {
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to set target version",
+        });
+      }
     },
   );
 

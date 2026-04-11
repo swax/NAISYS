@@ -27,7 +27,8 @@ export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hosts, listActions, isLoading } = useHostDataContext();
+  const { hosts, listActions, targetVersion, isLoading } =
+    useHostDataContext();
   const { status: connectionStatus } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -125,8 +126,22 @@ export const HostSidebar: React.FC = () => {
                     {host.name}
                   </Text>
                 </Group>
-                <Text size="xs" c="dimmed">
+                <Text
+                  size="xs"
+                  c={
+                    targetVersion &&
+                    host.version &&
+                    host.version !== targetVersion
+                      ? "red"
+                      : "dimmed"
+                  }
+                >
                   {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
+                  {targetVersion &&
+                  host.version &&
+                  host.version !== targetVersion
+                    ? ` · v${host.version}`
+                    : ""}
                 </Text>
               </div>
               <Group gap={4} style={{ flexShrink: 0 }} wrap="nowrap">

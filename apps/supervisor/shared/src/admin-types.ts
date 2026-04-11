@@ -12,6 +12,7 @@ export const AdminInfoResponseSchema = z.object({
   hubDbVersion: z.number(),
   hubConnected: z.boolean(),
   hubAccessKey: z.string().optional(),
+  targetVersion: z.string().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -82,3 +83,30 @@ export const ServerLogResponseSchema = z.object({
   fileSize: z.number().optional(),
 });
 export type ServerLogResponse = z.infer<typeof ServerLogResponseSchema>;
+
+// --- NPM version check types ---
+
+export const NpmVersionsRequestSchema = z.object({
+  check: z.string().optional(),
+});
+export type NpmVersionsRequest = z.infer<typeof NpmVersionsRequestSchema>;
+
+export const NpmVersionsResponseSchema = z.object({
+  latest: z.string(),
+  beta: z.string().nullable(),
+  targetVersion: z.string(),
+  check: z
+    .object({
+      version: z.string(),
+      exists: z.boolean(),
+    })
+    .optional(),
+});
+export type NpmVersionsResponse = z.infer<typeof NpmVersionsResponseSchema>;
+
+export const SetTargetVersionRequestSchema = z.object({
+  version: z.string(),
+});
+export type SetTargetVersionRequest = z.infer<
+  typeof SetTargetVersionRequestSchema
+>;

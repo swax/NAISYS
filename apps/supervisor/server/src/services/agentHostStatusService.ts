@@ -237,7 +237,7 @@ function getAgentSnapshot(): AgentStatusEvent {
 function getHostSnapshot(): HostStatusEvent {
   const hosts: HostStatusEvent["hosts"] = {};
   for (const [hostId, state] of hostStates) {
-    hosts[String(hostId)] = { online: state.online };
+    hosts[String(hostId)] = { online: state.online, version: state.version };
   }
   return { hosts };
 }

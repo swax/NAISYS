@@ -41,6 +41,7 @@ export const HostSchema = z.object({
   restricted: z.boolean().optional(),
   hostType: z.string().optional(),
   online: z.boolean().optional(),
+  version: z.string().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -91,6 +92,7 @@ export const AgentDetailResponseSchema = z.object({
 
 export const HostListResponseSchema = z.object({
   items: z.array(HostSchema),
+  targetVersion: z.string().optional(),
   _links: z.array(LinkSchema),
   _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
