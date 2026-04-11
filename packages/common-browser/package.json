@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "clean": "rimraf dist",
+    "clean": "npx rimraf dist",
     "build": "tsc"
   },
   "dependencies": {
