@@ -78,6 +78,7 @@ export function createUpdateService(
     }
 
     if (!success) {
+      logError(`Version change failed, continuing on current version.`);
       updateInProgress = false;
       return;
     }
@@ -103,7 +104,7 @@ export function createUpdateService(
       const child = spawn(process.argv[0], process.argv.slice(1), {
         cwd: process.cwd(),
         detached: true,
-        stdio: "ignore",
+        stdio: "inherit",
       });
       child.unref();
     }
