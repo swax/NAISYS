@@ -11,7 +11,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { hasAction } from "@naisys/common";
+import { hasAction, versionsMatch } from "@naisys/common";
 import { IconPlus, IconServer } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
@@ -131,7 +131,7 @@ export const HostSidebar: React.FC = () => {
                   c={
                     targetVersion &&
                     host.version &&
-                    host.version !== targetVersion
+                    !versionsMatch(host.version, targetVersion)
                       ? "red"
                       : "dimmed"
                   }
@@ -139,7 +139,7 @@ export const HostSidebar: React.FC = () => {
                   {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
                   {targetVersion &&
                   host.version &&
-                  host.version !== targetVersion
+                  !versionsMatch(host.version, targetVersion)
                     ? ` · v${host.version}`
                     : ""}
                 </Text>

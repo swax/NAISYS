@@ -10,7 +10,12 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { formatFileSize, formatVersion, hasAction } from "@naisys/common";
+import {
+  formatFileSize,
+  formatVersion,
+  hasAction,
+  versionsMatch,
+} from "@naisys/common";
 import type {
   AttachmentListData,
   ServerLogResponse,
@@ -157,8 +162,13 @@ export const AdminPage: React.FC = () => {
                           <Badge
                             size="sm"
                             variant="light"
+                            style={{ cursor: "pointer" }}
+                            onClick={() => setUpdateOpen(true)}
                             color={
-                              data.targetVersion === data.supervisorVersion
+                              versionsMatch(
+                                data.supervisorVersion,
+                                data.targetVersion,
+                              )
                                 ? "green"
                                 : "red"
                             }

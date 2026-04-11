@@ -12,6 +12,7 @@ export {
   findAgentByApiKey,
   getAgentApiKeyByUuid,
   getHubAgentById,
+  getHubVariable,
   getLatestRunInfoByUuid,
   rotateAgentApiKeyByUuid,
   sumCostsByUuid,

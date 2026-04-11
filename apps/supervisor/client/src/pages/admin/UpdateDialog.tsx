@@ -13,7 +13,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { formatVersion } from "@naisys/common";
+import { formatVersion, parseVersion } from "@naisys/common";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
@@ -63,6 +63,29 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         apiEndpoints.adminNpmVersions,
       );
       setNpmData(result);
+
+      // Initialize form from current target version
+      if (result.targetVersion) {
+        const { npm: npmPart, hash: hashPart } = parseVersion(
+          result.targetVersion,
+        );
+
+        if (hashPart) setCommitHash(hashPart);
+
+        if (!npmPart) {
+          setSelectedOption("none");
+        } else if (npmPart === result.latest) {
+          setSelectedOption("latest");
+        } else if (npmPart === result.beta) {
+          setSelectedOption("beta");
+        } else {
+          setSelectedOption("custom");
+          setCustomVersion(npmPart);
+          setCustomValid(true);
+        }
+      } else {
+        setSelectedOption("latest");
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to fetch npm versions",
@@ -74,11 +97,10 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
   useEffect(() => {
     if (opened) {
-      void fetchNpmVersions();
-      setSelectedOption("latest");
       setCustomVersion("");
       setCustomValid(null);
       setCommitHash("");
+      void fetchNpmVersions();
     }
   }, [opened, fetchNpmVersions]);
 
@@ -118,11 +140,14 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     return npmVersion;
   };
 
+  const isValidFullHash = (hash: string) => /^[0-9a-f]{40}$/i.test(hash);
+
   const canApply = (): boolean => {
     if (saving) return false;
     const npmVersion = getSelectedNpmVersion();
     const hash = commitHash.trim();
     if (!npmVersion && !hash) return false;
+    if (hash && !isValidFullHash(hash)) return false;
     if (
       selectedOption === "custom" &&
       npmVersion &&
@@ -334,10 +359,15 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
           {hasGitHosts && (
             <TextInput
               label="Git commit hash"
-              description="Full commit hash for git-based hosts"
-              placeholder="e.g. a1b2c3d4e5f6..."
+              description="Full 40-character commit hash for git-based hosts"
+              placeholder="e.g. a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
               value={commitHash}
               onChange={(e) => setCommitHash(e.currentTarget.value)}
+              error={
+                commitHash.trim() && !isValidFullHash(commitHash.trim())
+                  ? "Must be a full 40-character hex hash"
+                  : undefined
+              }
             />
           )}
 
