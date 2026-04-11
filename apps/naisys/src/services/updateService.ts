@@ -217,6 +217,20 @@ export function createUpdateService(
     }
   }
 
+  async function rollbackNpm(
+    packages: string[],
+    previousVersion: string,
+    logError: (msg: string) => void,
+  ) {
+    const rollbackArgs = packages.map((p) => `${p}@${previousVersion}`);
+    logError(`Rolling back to ${previousVersion}...`);
+    try {
+      await runSpawn("npm", ["install", ...rollbackArgs]);
+    } catch (rollbackError) {
+      logError(`Rollback also failed: ${rollbackError}`);
+    }
+  }
+
   async function performNpmUpdate(
     targetVersion: string,
     log: (msg: string) => void,
@@ -240,6 +254,7 @@ export function createUpdateService(
       await runSpawn("npm", ["install", ...installArgs]);
     } catch (error) {
       logError(`npm install failed: ${error}`);
+      await rollbackNpm(packages, currentVersion, logError);
       return false;
     }
 

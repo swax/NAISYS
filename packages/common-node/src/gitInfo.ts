@@ -1,4 +1,6 @@
 import { execSync } from "child_process";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 let cachedRepoRoot: string | null | undefined;
 let cachedCommitHash: string | null | undefined;
@@ -11,11 +13,16 @@ let cachedCommitHash: string | null | undefined;
 export function getGitRepoRoot(startDir?: string): string | null {
   if (cachedRepoRoot !== undefined) return cachedRepoRoot;
   try {
-    cachedRepoRoot = execSync("git rev-parse --show-toplevel", {
+    const root = execSync("git rev-parse --show-toplevel", {
       cwd: startDir ?? process.cwd(),
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
+
+    // Verify this is actually the NAISYS monorepo, not a user's project
+    // that happens to contain naisys as an npm dependency in node_modules
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf-8"));
+    cachedRepoRoot = pkg.name === "naisys-monorepo" ? root : null;
   } catch {
     cachedRepoRoot = null;
   }
