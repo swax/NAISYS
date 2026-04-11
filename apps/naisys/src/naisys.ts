@@ -52,6 +52,7 @@ program
     "Start integrated Supervisor website (integrated hub required)",
   )
   .option("--erp", "Start ERP web app (requires --supervisor)")
+  .option("--no-auto-update", "Disable automatic version updates")
   .parse();
 
 const agentPath = program.args[0];
@@ -135,7 +136,9 @@ const heartbeatService = createHeartbeatService(
   userService,
 );
 
-const updateService = createUpdateService(globalConfig, agentManager);
+const updateService = program.opts().autoUpdate
+  ? createUpdateService(globalConfig, agentManager)
+  : undefined;
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
 const startupUserIds = userService.getStartupUserIds();
@@ -149,7 +152,7 @@ hubLogBuffer?.cleanup();
 hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
 
-if (updateService.isUpdateInProgress()) {
+if (updateService?.isUpdateInProgress()) {
   // Update handler will call process.exit(0) after install and PM2 setup complete
   await new Promise(() => {});
 }
