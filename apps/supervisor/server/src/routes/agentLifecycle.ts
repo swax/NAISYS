@@ -20,6 +20,7 @@ import {
   ErrorResponseSchema,
   SetLeadAgentRequestSchema,
 } from "@naisys/supervisor-shared";
+import { ADMIN_USERNAME } from "@naisys/common";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { requirePermission } from "../auth-middleware.js";
@@ -114,7 +115,7 @@ export default function agentLifecycleRoutes(
           select: { id: true },
         })) ??
         (await hubDb.users.findFirst({
-          where: { username: "admin" },
+          where: { username: ADMIN_USERNAME },
           select: { id: true },
         }));
 

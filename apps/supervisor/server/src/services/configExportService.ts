@@ -1,4 +1,5 @@
 import {
+  ADMIN_USERNAME,
   dbFieldsToImageModel,
   dbFieldsToLlmModel,
   type ModelDbRow,
@@ -46,7 +47,7 @@ export function buildExportFiles(
 
   // --- Agents ---
   const activeUsers = users.filter(
-    (u) => u.username !== "admin" && !u.archived,
+    (u) => u.username !== ADMIN_USERNAME && !u.archived,
   );
 
   const userById = new Map(activeUsers.map((u) => [u.id, u]));

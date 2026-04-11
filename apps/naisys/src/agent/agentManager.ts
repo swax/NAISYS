@@ -1,4 +1,4 @@
-import { sleep } from "@naisys/common";
+import { ADMIN_USERNAME, sleep } from "@naisys/common";
 import {
   AgentPeekRequestSchema,
   AgentStartRequestSchema,
@@ -102,7 +102,8 @@ export class AgentManager {
   notifyHubRequest(type: "start" | "stop", userId: number) {
     const username =
       this.userService.getUserById(userId)?.username || String(userId);
-    const adminUserId = this.userService.getUserByName("admin")?.userId ?? 0;
+    const adminUserId =
+      this.userService.getUserByName(ADMIN_USERNAME)?.userId ?? 0;
 
     this.promptNotification.notify({
       wake: "always",

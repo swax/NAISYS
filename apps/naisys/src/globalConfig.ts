@@ -126,7 +126,7 @@ export function createGlobalConfig(
   return {
     globalConfig: () => cachedConfig,
     waitForConfig: () => configReadyPromise,
-    onUpdateAvailable: (handler: (targetVersion: string) => void) => {
+    onTargetVersionChanged: (handler: (targetVersion: string) => void) => {
       updateHandler = handler;
     },
   };

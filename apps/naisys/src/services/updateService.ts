@@ -13,7 +13,7 @@ export function createUpdateService(
 ) {
   let updateInProgress = false;
 
-  globalConfig.onUpdateAvailable(async (targetVersion) => {
+  globalConfig.onTargetVersionChanged(async (targetVersion) => {
     if (updateInProgress) return;
     updateInProgress = true;
 
@@ -30,7 +30,7 @@ export function createUpdateService(
       output ? output.errorAndLog(msg) : console.error(`[NAISYS] ${msg}`);
 
     const currentVersion = globalConfig.globalConfig().packageVersion;
-    log(`Update available: ${currentVersion} → ${targetVersion}`);
+    log(`Target version changed: ${currentVersion} → ${targetVersion}`);
 
     const packages = detectInstalledNaisysPackages();
     if (!packages.length) {
@@ -50,14 +50,16 @@ export function createUpdateService(
       return;
     }
 
-    log(`Update installed. Stopping agents for restart...`);
+    log(
+      `Target version ${targetVersion} installed. Stopping agents for restart...`,
+    );
 
     try {
       await Promise.all(
         agentManager.runningAgents.map((agent) =>
           agentManager.stopAgent(
             agent.agentUserId,
-            `Updating to version ${targetVersion}`,
+            `Switching to version ${targetVersion}`,
           ),
         ),
       );
