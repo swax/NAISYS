@@ -181,6 +181,8 @@ export function createCommandLoop(
     for (const item of result.output) {
       if (item.type === "context") {
         contextManager.append(item.text, ContentSource.Console);
+      } else if (item.type === "error") {
+        output.errorAndLog(item.text);
       } else {
         output.commentAndLog(item.text);
       }
