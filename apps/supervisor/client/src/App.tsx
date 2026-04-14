@@ -87,52 +87,56 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <AppShell
-      header={{ height: NAV_HEADER_ROW_HEIGHT }}
-      navbar={{
-        width: 300,
-        breakpoint: "sm",
-        collapsed: { desktop: true, mobile: !opened },
-      }}
-      padding={0}
-    >
-      <AppShell.Header>
-        <AppHeader
-          onBurgerClick={toggle}
-          onLoginOpen={openLogin}
-          hasErp={hasErp}
-        />
-      </AppShell.Header>
-
-      <AppShell.Navbar p="md">
-        <AppNavbar onClose={close} hasErp={hasErp} />
-      </AppShell.Navbar>
-
-      <AppShell.Main
-        style={{
-          height: "100dvh",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <DisconnectedBanner />
-        <Box
-          px={{ base: 0, sm: "xs" }}
-          pt={0}
-          pb={0}
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "auto",
+    <AgentDataProvider>
+      <HostDataProvider>
+        <AppShell
+          header={{ height: NAV_HEADER_ROW_HEIGHT }}
+          navbar={{
+            width: 300,
+            breakpoint: "sm",
+            collapsed: { desktop: true, mobile: !opened },
           }}
+          padding={0}
         >
-          <Outlet context={{ permissions }} />
-        </Box>
-      </AppShell.Main>
-      <LoginDialog opened={loginOpen} onClose={closeLogin} />
-    </AppShell>
+          <AppShell.Header>
+            <AppHeader
+              onBurgerClick={toggle}
+              onLoginOpen={openLogin}
+              hasErp={hasErp}
+            />
+          </AppShell.Header>
+
+          <AppShell.Navbar p="md">
+            <AppNavbar onClose={close} hasErp={hasErp} />
+          </AppShell.Navbar>
+
+          <AppShell.Main
+            style={{
+              height: "100dvh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <DisconnectedBanner />
+            <Box
+              px={{ base: 0, sm: "xs" }}
+              pt={0}
+              pb={0}
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "auto",
+              }}
+            >
+              <Outlet context={{ permissions }} />
+            </Box>
+          </AppShell.Main>
+          <LoginDialog opened={loginOpen} onClose={closeLogin} />
+        </AppShell>
+      </HostDataProvider>
+    </AgentDataProvider>
   );
 };
 
@@ -180,11 +184,7 @@ const App: React.FC = () => {
       <MantineProvider defaultColorScheme="dark">
         <Notifications />
         <SessionProvider>
-          <AgentDataProvider>
-            <HostDataProvider>
-              <RouterProvider router={router} />
-            </HostDataProvider>
-          </AgentDataProvider>
+          <RouterProvider router={router} />
         </SessionProvider>
       </MantineProvider>
     </QueryClientProvider>

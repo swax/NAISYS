@@ -6,6 +6,7 @@ import type {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
+import { useSession } from "../contexts/SessionContext";
 import { getHostData } from "../lib/apiAgents";
 import type { Host } from "../types/agent";
 import { useSubscription } from "./useSubscription";
@@ -16,6 +17,7 @@ let listActionsCache: HateoasAction[] | undefined;
 let targetVersionCache: string | undefined;
 
 export const useHostData = () => {
+  const { isAuthenticated } = useSession();
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
   const queryClient = useQueryClient();
@@ -84,7 +86,10 @@ export const useHostData = () => {
     [queryClient],
   );
 
-  useSubscription<HostStatusEvent>("host-status", handleStatusUpdate);
+  useSubscription<HostStatusEvent>(
+    isAuthenticated ? "host-status" : null,
+    handleStatusUpdate,
+  );
 
   return {
     hosts: hostCache,
