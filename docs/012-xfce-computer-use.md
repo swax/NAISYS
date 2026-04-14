@@ -24,31 +24,34 @@ sudo dpkg -i /tmp/google-chrome.deb
 sudo apt-get install -f -y
 ```
 
-## 3. Install NAISYS
+## 3. Create the naisys user
 
 ```bash
-sudo npm install -g naisys
-```
-
-## 4. Create the naisys user
-
-```bash
-sudo adduser --disabled-password --gecos "NAISYS Agent" naisys
+sudo useradd -m -s /bin/bash naisys
 echo "naisys:naisys" | sudo chpasswd
 ```
 
-## 5. Configure the .env file
+## 4. Install NAISYS and configure
 
-Create the NAISYS `.env` file in the naisys user's home directory:
+Switch to the naisys user, install NAISYS, and configure the `.env` file. The `DISPLAY` and `XAUTHORITY` variables are required for desktop interaction — pm2 does not source `.bashrc` or `.profile`, so they must be set here.
 
 ```bash
-sudo -u naisys tee /home/naisys/.env << EOF
+sudo su - naisys
+mkdir client && cd client
+npm install naisys
+```
+
+```bash
+tee /home/naisys/client/.env << EOF
 NAISYS_FOLDER=~
 HUB_ACCESS_KEY=<your-hub-access-token>
+DISPLAY=:2
+XDG_SESSION_TYPE=x11
+XAUTHORITY=/home/naisys/.Xauthority
 EOF
 ```
 
-## 6. Configure VNC
+## 5. Configure VNC
 
 Create the VNC config directory and files:
 
@@ -83,9 +86,9 @@ conflicts. Environment variables like `WAYLAND_DISPLAY`, `SESSION_MANAGER`, and
 servers, and Snap applications to fail. A dedicated user has none of these set, so
 everything works cleanly.
 
-## 7. Create systemd services
+## 6. Create the VNC desktop systemd service
 
-### VNC Desktop Service
+The VNC server uses `vncserver` which forks a daemon process, so it needs systemd's `Type=forking`.
 
 Create `/etc/systemd/system/naisys-desktop.service`:
 
@@ -118,52 +121,25 @@ WantedBy=multi-user.target
 to create the runtime directory. Adjust the UID (`1001`) to match the naisys user's
 actual UID (`id -u naisys`).
 
-### NAISYS Agent Service
-
-Create `/etc/systemd/system/naisys-agent.service`:
-
-```ini
-[Unit]
-Description=NAISYS Agent
-After=naisys-desktop.service
-Requires=naisys-desktop.service
-
-[Service]
-Type=simple
-User=naisys
-Group=naisys
-
-Environment=HOME=/home/naisys
-Environment=DISPLAY=:2
-Environment=XDG_SESSION_TYPE=x11
-Environment=XDG_RUNTIME_DIR=/run/user/1001
-Environment=XAUTHORITY=/home/naisys/.Xauthority
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-WorkingDirectory=/home/naisys
-
-ExecStart=/usr/bin/naisys --hub="<hub url>"
-
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**Notes:**
-- `PATH` must be set explicitly — systemd services get a minimal PATH that may not
-  include directories where tools like `scrot` are installed.
-- `Restart=always` is used instead of `on-failure` because NAISYS exits cleanly
-  (status 0) in some cases where it should be restarted.
-- The agent service depends on the desktop service via `Requires` and `After`.
-
-## 8. Enable and start
+## 7. Enable and start the desktop
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable naisys-desktop naisys-agent
+sudo systemctl enable naisys-desktop
 sudo systemctl start naisys-desktop
-sudo systemctl start naisys-agent
+```
+
+## 8. Start the NAISYS agent with pm2
+
+As the naisys user:
+
+```bash
+sudo su - naisys
+cd client
+npm install -g pm2
+pm2 start npx --name naisys-client -- naisys --hub=<hub-url>
+pm2 startup   # enable start on boot (one-time sudo)
+pm2 save
 ```
 
 ## 9. Connect via VNC
@@ -176,20 +152,15 @@ vncviewer localhost:5902
 
 Display `:2` maps to port `5902` (5900 + display number).
 
-## Managing the services
+## Managing the desktop service
 
 ```bash
 # Check status
 sudo systemctl status naisys-desktop
-sudo systemctl status naisys-agent
-
-# View logs
-sudo journalctl -u naisys-agent -f
 
 # Restart
-sudo systemctl restart naisys-desktop  # also restarts agent due to Requires=
+sudo systemctl restart naisys-desktop
 
 # Stop
-sudo systemctl stop naisys-agent
 sudo systemctl stop naisys-desktop
 ```
