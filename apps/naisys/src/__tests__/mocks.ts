@@ -283,7 +283,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
       binPath: "/bin",
-      supervisorPort: undefined,
+      supervisorUrl: undefined,
       autoStartAgentsOnMessage: true,
     }),
   };

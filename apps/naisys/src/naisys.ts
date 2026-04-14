@@ -74,7 +74,7 @@ const agentPath = program.args[0];
 
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
-let supervisorPort: number | undefined;
+let supervisorUrl: string | undefined;
 
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
@@ -87,10 +87,12 @@ if (integratedHub) {
     "hosted",
     program.opts().supervisor,
     plugins,
-    agentPath,
+    agentPath || ".",
   );
-  hubUrl = `http://localhost:${hubResult.hubPort}/hub`;
-  supervisorPort = hubResult.supervisorPort;
+  hubUrl = `http://localhost:${hubResult.serverPort}/hub`;
+  if (program.opts().supervisor) {
+    supervisorUrl = `http://localhost:${hubResult.serverPort}/supervisor`;
+  }
 }
 
 const promptNotification = createPromptNotificationService();
@@ -110,7 +112,7 @@ if (hubUrl) {
   hubLogBuffer = createHubLogBuffer(hubClient);
 }
 
-const globalConfig = createGlobalConfig(hubClient, supervisorPort);
+const globalConfig = createGlobalConfig(hubClient, supervisorUrl);
 const hostService = createHostService(hubClient, globalConfig);
 const userService = createUserService(
   hubClient,
@@ -259,18 +261,10 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
       {
         type: "fields",
         comment:
-          "Integrated supervisor configuration if the --supervisor option is used on startup",
+          "Integrated server configuration if the --integrated-hub option is used on startup",
         fields: [
-          { key: "SUPERVISOR_PORT", label: "Supervisor Server Port" },
+          { key: "SERVER_PORT", label: "Server Port" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
-        ],
-      },
-      {
-        type: "fields",
-        comment:
-          "Integrated Hub configuration if the --integrated-hub option is used on startup",
-        fields: [
-          { key: "HUB_PORT", label: "NAISYS Hub Server Port" },
         ],
       },
     ],

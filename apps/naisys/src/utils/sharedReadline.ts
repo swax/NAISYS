@@ -10,17 +10,19 @@ import * as readline from "readline";
 let instance: readline.Interface | null = null;
 
 export function getSharedReadline(): readline.Interface | null {
-  if (!process.stdin.isTTY) {
+  if (!process.stdin.readable) {
     return null;
   }
   if (!instance) {
+    const isTTY = Boolean(process.stdin.isTTY);
     instance = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       // With this set to true, after an abort the second input will not be processed, see:
       // https://gist.github.com/swax/964a2488494048c8e03d05493d9370f8
       // With this set to false, the stdout.write event above will not be triggered
-      terminal: true,
+      // Use terminal: false when stdin is piped (e.g. E2E tests) to avoid TTY-only features
+      terminal: isTTY,
     });
     instance.pause();
   }

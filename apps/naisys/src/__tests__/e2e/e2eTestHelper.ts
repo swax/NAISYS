@@ -140,7 +140,7 @@ export function createHubEnvFile(
 ): void {
   const envContent = `
 NAISYS_FOLDER=${options.naisysFolder}
-HUB_PORT=${options.port}
+SERVER_PORT=${options.port}
 `.trim();
   writeFileSync(join(testDir, ".env"), envContent);
 }

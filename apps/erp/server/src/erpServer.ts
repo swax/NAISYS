@@ -339,7 +339,7 @@ async function startServer() {
 
   await fastify.register(erpPlugin);
 
-  const port = Number(process.env.ERP_PORT) || 3201;
+  const port = Number(process.env.SERVER_PORT) || 3201;
   const host = isProd ? "0.0.0.0" : "localhost";
 
   try {
@@ -367,7 +367,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         comment: "ERP configuration",
         fields: [
           { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
-          { key: "ERP_PORT", label: "ERP Server Port" },
+          { key: "SERVER_PORT", label: "Server Port" },
           { key: "SUPERVISOR_AUTH", label: "Use Supervisor for Auth" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
         ],

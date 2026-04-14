@@ -111,8 +111,7 @@ export function createDebugCommands(
 
   const commands: RegistrableCommand[] = [nsContext, nsTalk, nsExit];
 
-  const supervisorPort = globalConfig.globalConfig().supervisorPort;
-  if (supervisorPort) {
+  if (globalConfig.globalConfig().supervisorUrl) {
     const nsAdminPw: RegistrableCommand = {
       command: superadminPasswordCmd,
       handleCommand: (cmdArgs) => {

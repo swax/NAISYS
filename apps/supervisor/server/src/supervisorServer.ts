@@ -33,6 +33,7 @@ import {
 } from "@naisys/supervisor-database";
 import { PermissionEnum } from "@naisys/supervisor-shared";
 import Fastify from "fastify";
+import type { FastifyPluginAsync } from "fastify";
 import {
   jsonSchemaTransform,
   jsonSchemaTransformObject,
@@ -53,6 +54,205 @@ import { initBrowserSocket } from "./services/browserSocketService.js";
 import { initHubConnection } from "./services/hubConnectionService.js";
 import { getUserByUsername } from "./services/userService.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/** Plugin options for registering supervisor inside another Fastify app */
+interface SupervisorPluginOptions {
+  plugins?: "erp"[];
+  serverPort?: number;
+  hosted?: boolean;
+}
+
+/**
+ * Fastify plugin that registers Supervisor routes, services, and static files.
+ * Can be used standalone or registered inside another Fastify app (e.g. hub).
+ */
+export const supervisorPlugin: FastifyPluginAsync<SupervisorPluginOptions> =
+  async (fastify, opts) => {
+    if (opts.hosted) {
+      process.env.NODE_ENV = "production";
+    }
+
+    const isProd = process.env.NODE_ENV === "production";
+
+    // Auto-migrate supervisor database
+    await deploySupervisorMigrations();
+
+    if (!(await createSupervisorDatabaseClient())) {
+      throw new Error(
+        "[Supervisor] Supervisor database not found. Cannot start without it.",
+      );
+    }
+
+    // Hub DB still needed for agent API key auth
+    await createHubDatabaseClient();
+
+    // Initialize local Prisma clients (after migrations so they don't lock the DB)
+    await initSupervisorDb();
+    await initHubDb();
+
+    // Populate in-memory user lookup for username ↔ id resolution
+    await refreshUserLookup();
+
+    const superAdminResult = await ensureSuperAdmin();
+    if (superAdminResult.created) {
+      console.log(
+        `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
+      );
+      console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+    }
+
+    // Logger — in hosted mode create a dedicated file logger since the
+    // parent Fastify may not have one configured. In standalone mode the
+    // parent's Fastify logger (configured by startServer) is used.
+    if (opts.hosted && process.env.NAISYS_FOLDER) {
+      const { default: pino } = await import("pino");
+      const logDest = path
+        .join(process.env.NAISYS_FOLDER, "logs", "supervisor.log")
+        .replaceAll("\\", "/");
+      const fileLogger = pino(
+        { level: "info" },
+        pino.destination({ dest: logDest, mkdir: true }),
+      );
+      initLogger(fileLogger as any);
+    } else {
+      initLogger(fastify.log);
+    }
+
+    // Connect to hub via Socket.IO for agent management
+    const hubUrl = opts.serverPort
+      ? `http://localhost:${opts.serverPort}/hub`
+      : process.env.HUB_URL;
+    if (hubUrl) {
+      initHubConnection(hubUrl);
+    }
+
+    // Set Zod validator and serializer compilers
+    fastify.setValidatorCompiler(validatorCompiler);
+    fastify.setSerializerCompiler(serializerCompiler);
+    registerLenientJsonParser(fastify);
+
+    fastify.setErrorHandler(commonErrorHandler);
+
+    await fastify.register(cors, {
+      origin: isProd ? false : ["http://localhost:3002"],
+    });
+
+    registerSecurityHeaders(fastify, { enforceHsts: isProd });
+
+    await fastify.register(cookie);
+
+    // Rate limiting
+    await fastify.register(rateLimit as any, {
+      max: 500,
+      timeWindow: "1 minute",
+      allowList: (request: { url: string }) =>
+        !request.url.match(/^\/(supervisor|erp)\/api\//),
+    });
+
+    await fastify.register(multipart, {
+      limits: { fileSize: MAX_ATTACHMENT_SIZE },
+    });
+
+    // Register Swagger + Scalar
+    await fastify.register(swagger, {
+      openapi: {
+        info: {
+          title: "NAISYS Supervisor API",
+          description: "API documentation for NAISYS Supervisor server",
+          version: "1.0.0",
+        },
+        components: {
+          securitySchemes: {
+            cookieAuth: {
+              type: "apiKey",
+              in: "cookie",
+              name: "naisys_session",
+            },
+          },
+        },
+      },
+      transform: jsonSchemaTransform,
+      transformObject: jsonSchemaTransformObject,
+    });
+
+    await registerApiReference(fastify);
+
+    fastify.get("/", { schema: { hide: true } }, async (_request, reply) => {
+      return reply.redirect("/supervisor/");
+    });
+
+    fastify.register(apiRoutes, { prefix: "/supervisor/api" });
+
+    // Public endpoint to expose client configuration (plugins, publicRead, etc.)
+    fastify.get(
+      "/supervisor/api/client-config",
+      { schema: { hide: true } },
+      () => ({
+        plugins: opts.plugins,
+        publicRead: process.env.PUBLIC_READ === "true",
+        permissions: PermissionEnum.options,
+      }),
+    );
+
+    // Conditionally load ERP plugin
+    if (opts.plugins?.includes("erp")) {
+      // Use variable to avoid compile-time type dependency on @naisys/erp (allows parallel builds)
+      const erpModule = "@naisys/erp";
+      const { erpPlugin, enableSupervisorAuth } = (await import(
+        erpModule
+      )) as {
+        erpPlugin: any;
+        enableSupervisorAuth: any;
+      };
+      enableSupervisorAuth();
+      await fastify.register(erpPlugin);
+    }
+
+    if (isProd) {
+      const clientDistPath = path.join(__dirname, "../client-dist");
+
+      // Redirect /supervisor → /supervisor/
+      fastify.get(
+        "/supervisor",
+        { schema: { hide: true } },
+        (_request, reply) => reply.redirect("/supervisor/"),
+      );
+
+      await fastify.register(async (scope) => {
+        await scope.register(staticFiles, {
+          root: clientDistPath,
+          prefix: "/supervisor/",
+          wildcard: false,
+        });
+
+        // SPA fallback for /supervisor/* routes
+        scope.get(
+          "/supervisor/*",
+          { schema: { hide: true } },
+          (request, reply) => {
+            if (request.url.startsWith("/supervisor/api")) {
+              return reply
+                .code(404)
+                .send({ error: "API endpoint not found" });
+            }
+            // Static asset with file extension that wasn't matched
+            if (/\.\w+$/.test(request.url)) {
+              return reply.code(404).send({
+                error: `Static file not found: ${request.url} — server restart may be needed after a client rebuild`,
+              });
+            }
+            return reply.sendFile("index.html", clientDistPath);
+          },
+        );
+      });
+    }
+
+    // Browser Socket.IO (uses a separate path from the hub's Socket.IO)
+    initBrowserSocket(fastify.server, isProd);
+  };
+
 export const startServer: StartServer = async (
   startupType,
   plugins = [],
@@ -64,41 +264,10 @@ export const startServer: StartServer = async (
 
   const isProd = process.env.NODE_ENV === "production";
 
-  // Auto-migrate supervisor database
-  await deploySupervisorMigrations();
-
-  if (!(await createSupervisorDatabaseClient())) {
-    console.error(
-      "[Supervisor] Supervisor database not found. Cannot start without it.",
-    );
-    process.exit(1);
-  }
-
-  // Hub DB still needed for agent API key auth
-  await createHubDatabaseClient();
-
-  // Initialize local Prisma clients (after migrations so they don't lock the DB)
-  await initSupervisorDb();
-  await initHubDb();
-
-  // Populate in-memory user lookup for username ↔ id resolution
-  await refreshUserLookup();
-
-  const superAdminResult = await ensureSuperAdmin();
-  if (superAdminResult.created) {
-    console.log(
-      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
-    );
-    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
-  }
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-
   const fastify = Fastify({
     logger:
       // Log to file in hosted mode
-      startupType === "hosted"
+      isProd
         ? {
             level: "info",
             transport: {
@@ -127,118 +296,14 @@ export const startServer: StartServer = async (
           },
   }).withTypeProvider<ZodTypeProvider>();
 
-  initLogger(fastify.log);
-
-  // Connect to hub via Socket.IO for agent management
-  const hubUrl = hubPort
-    ? `http://localhost:${hubPort}/hub`
-    : process.env.HUB_URL;
-  if (hubUrl) {
-    initHubConnection(hubUrl);
-  }
-
-  // Set Zod validator and serializer compilers
-  fastify.setValidatorCompiler(validatorCompiler);
-  fastify.setSerializerCompiler(serializerCompiler);
-  registerLenientJsonParser(fastify);
-
-  fastify.setErrorHandler(commonErrorHandler);
-
-  await fastify.register(cors, {
-    origin: isProd ? false : ["http://localhost:3002"],
+  await fastify.register(supervisorPlugin, {
+    plugins,
+    serverPort: hubPort,
+    hosted: startupType === "hosted",
   });
-
-  registerSecurityHeaders(fastify, { enforceHsts: isProd });
-
-  await fastify.register(cookie);
-
-  // Rate limiting
-
-  await fastify.register(rateLimit as any, {
-    max: 500,
-    timeWindow: "1 minute",
-    allowList: (request: { url: string }) =>
-      !request.url.match(/^\/(supervisor|erp)\/api\//),
-  });
-
-  await fastify.register(multipart, {
-    limits: { fileSize: MAX_ATTACHMENT_SIZE },
-  });
-
-  // Register Swagger + Scalar
-  await fastify.register(swagger, {
-    openapi: {
-      info: {
-        title: "NAISYS Supervisor API",
-        description: "API documentation for NAISYS Supervisor server",
-        version: "1.0.0",
-      },
-      components: {
-        securitySchemes: {
-          cookieAuth: {
-            type: "apiKey",
-            in: "cookie",
-            name: "naisys_session",
-          },
-        },
-      },
-    },
-    transform: jsonSchemaTransform,
-    transformObject: jsonSchemaTransformObject,
-  });
-
-  await registerApiReference(fastify);
-
-  fastify.get("/", { schema: { hide: true } }, async (_request, reply) => {
-    return reply.redirect("/supervisor/");
-  });
-
-  fastify.register(apiRoutes, { prefix: "/supervisor/api" });
-
-  // Public endpoint to expose client configuration (plugins, publicRead, etc.)
-  fastify.get(
-    "/supervisor/api/client-config",
-    { schema: { hide: true } },
-    () => ({
-      plugins,
-      publicRead: process.env.PUBLIC_READ === "true",
-      permissions: PermissionEnum.options,
-    }),
-  );
-
-  // Conditionally load ERP plugin
-  if (plugins.includes("erp")) {
-    // Use variable to avoid compile-time type dependency on @naisys/erp (allows parallel builds)
-    const erpModule = "@naisys/erp";
-    const { erpPlugin, enableSupervisorAuth } = (await import(erpModule)) as {
-      erpPlugin: any;
-      enableSupervisorAuth: any;
-    };
-    enableSupervisorAuth();
-    await fastify.register(erpPlugin);
-  }
-
-  if (isProd) {
-    const clientDistPath = path.join(__dirname, "../client-dist");
-
-    await fastify.register(staticFiles, {
-      root: clientDistPath,
-      prefix: "/supervisor/",
-    });
-
-    fastify.setNotFoundHandler((request, reply) => {
-      if (request.url.match(/^\/(supervisor|erp)\/api\//)) {
-        reply.code(404).send({ error: "API endpoint not found" });
-      } else if (request.url.startsWith("/supervisor")) {
-        reply.sendFile("index.html");
-      } else {
-        reply.sendFile("index.html");
-      }
-    });
-  }
 
   try {
-    let port = Number(process.env.SUPERVISOR_PORT) || 3001;
+    let port = Number(process.env.SERVER_PORT) || 3001;
     const host = isProd ? "0.0.0.0" : "localhost";
     const maxAttempts = 100;
     let attempts = 0;
@@ -246,7 +311,6 @@ export const startServer: StartServer = async (
     while (attempts < maxAttempts) {
       try {
         await fastify.listen({ port, host });
-        initBrowserSocket(fastify.server, isProd);
         fastify.log.info(
           `[Supervisor] Running on http://${host}:${port}/supervisor`,
         );
@@ -288,7 +352,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         fields: [
           { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
           { key: "HUB_URL", label: "NAISYS Hub URL" },
-          { key: "SUPERVISOR_PORT", label: "Supervisor Server Port" },
+          { key: "SERVER_PORT", label: "Server Port" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
         ],
       },

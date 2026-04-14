@@ -84,7 +84,7 @@ Database schema is defined in `packages/database/prisma/schema.prisma`.
 
 - `NAISYS_FOLDER` - Path to NAISYS data folder (required)
 - `NODE_ENV` - Environment mode (development/production)
-- `SUPERVISOR_PORT` - Server port (defaults to 3001)
+- `SERVER_PORT` - Server port (defaults to 3001)
 
 ## API Endpoints
 

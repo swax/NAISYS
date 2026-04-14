@@ -8,6 +8,7 @@ node_modules/
 !.claude/commands/
 !.claude/commands/.env.nsapi.example
 .claude/commands/.env.nsapi
+.codex
 .test-naisys
 .turbo
 *.tsbuildinfo
