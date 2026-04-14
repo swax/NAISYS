@@ -1,7 +1,12 @@
 import "dotenv/config";
 import "./schema-registry.js";
 
-import { ensureDotEnv, expandNaisysFolder } from "@naisys/common-node";
+import {
+  ensureDotEnv,
+  expandNaisysFolder,
+  runSetupWizard,
+  type WizardConfig,
+} from "@naisys/common-node";
 expandNaisysFolder();
 
 // Important to load dotenv before any other imports, to ensure environment variables are available
@@ -354,7 +359,32 @@ async function startServer() {
 
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv.includes("--reset-password")) {
+  const erpWizardConfig: WizardConfig = {
+    title: "NAISYS ERP Setup",
+    sections: [
+      {
+        type: "fields",
+        comment: "ERP configuration",
+        fields: [
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "ERP_PORT", label: "ERP Server Port" },
+          { key: "SUPERVISOR_AUTH", label: "Use Supervisor for Auth" },
+          { key: "PUBLIC_READ", label: "Public Read Access" },
+        ],
+      },
+    ],
+  };
+
+  const erpExampleUrl = new URL("../.env.example", import.meta.url);
+
+  if (process.argv.includes("--setup")) {
+    await runSetupWizard(
+      path.resolve(".env"),
+      erpExampleUrl,
+      erpWizardConfig,
+    );
+    process.exit(0);
+  } else if (process.argv.includes("--reset-password")) {
     const usernameIdx = process.argv.indexOf("--username");
     const passwordIdx = process.argv.indexOf("--password");
     const username =
@@ -387,7 +417,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       void resetLocalPassword();
     }
   } else {
-    await ensureDotEnv(new URL("../.env.example", import.meta.url));
+    await ensureDotEnv(erpExampleUrl, erpWizardConfig);
     void startServer();
   }
 }

@@ -1,5 +1,10 @@
 import type { StartHub, StartServer } from "@naisys/common";
-import { ensureDotEnv, expandNaisysFolder } from "@naisys/common-node";
+import {
+  ensureDotEnv,
+  expandNaisysFolder,
+  runSetupWizard,
+  type WizardConfig,
+} from "@naisys/common-node";
 import { createHubDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
@@ -196,7 +201,30 @@ export const startHub: StartHub = async (
 // Start server if this file is run directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   dotenv.config({ quiet: true });
-  await ensureDotEnv(new URL("../.env.example", import.meta.url));
+
+  const hubWizardConfig: WizardConfig = {
+    title: "NAISYS Hub Setup",
+    sections: [
+      {
+        type: "fields",
+        comment: "Hub server configuration",
+        fields: [
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "HUB_PORT", label: "Hub Server Port" },
+        ],
+      },
+    ],
+  };
+
+  const hubExampleUrl = new URL("../.env.example", import.meta.url);
+
+  if (process.argv.includes("--setup")) {
+    const { default: path } = await import("path");
+    await runSetupWizard(path.resolve(".env"), hubExampleUrl, hubWizardConfig);
+    process.exit(0);
+  }
+
+  await ensureDotEnv(hubExampleUrl, hubWizardConfig);
   expandNaisysFolder();
 
   program
@@ -206,6 +234,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     )
     .option("--supervisor", "Start Supervisor web server")
     .option("--erp", "Start ERP web app (requires --supervisor)")
+    .option("--setup", "Run interactive setup wizard")
     .parse();
 
   const plugins: "erp"[] = [];

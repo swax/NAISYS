@@ -3,12 +3,18 @@ import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
 
+import { runSetupWizard, type WizardConfig } from "./setupWizard.js";
+
 /**
  * Checks for a .env file in the current working directory.
- * If missing, prints the .env.example contents and offers to copy it.
+ * If missing and a wizardConfig is provided, offers to run the setup wizard.
+ * Otherwise prints the .env.example contents and offers to copy it.
  * Exits the process so the user can review settings before starting.
  */
-export async function ensureDotEnv(exampleUrl: URL): Promise<void> {
+export async function ensureDotEnv(
+  exampleUrl: URL,
+  wizardConfig?: WizardConfig,
+): Promise<void> {
   const dotenvPath = path.resolve(".env");
 
   if (fs.existsSync(dotenvPath)) {
@@ -20,25 +26,46 @@ export async function ensureDotEnv(exampleUrl: URL): Promise<void> {
 
   console.log(`\n  .env file not found at: ${dotenvPath}`);
 
-  if (hasExample && process.stdin.isTTY) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+  if (process.stdin.isTTY) {
+    // Offer setup wizard if config is provided
+    if (wizardConfig) {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
 
-    const answer = await new Promise<string>((resolve) => {
-      rl.question(
-        `\n  Create .env from ${examplePath}? (y/N) `,
-        resolve,
-      );
-    });
-    rl.close();
+      const answer = await new Promise<string>((resolve) => {
+        rl.question("\n  Would you like to run the setup wizard? (Y/n) ", resolve);
+      });
+      rl.close();
 
-    if (answer.toLowerCase().startsWith("y")) {
-      fs.copyFileSync(examplePath, dotenvPath);
-      console.log(`\n  Created: ${dotenvPath}`);
-      console.log(`  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.\n`);
-      process.exit(0);
+      if (!answer || answer.toLowerCase().startsWith("y")) {
+        await runSetupWizard(dotenvPath, exampleUrl, wizardConfig);
+        process.exit(0);
+      }
+    }
+
+    // Fall back to copying the example file
+    if (hasExample) {
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      const answer = await new Promise<string>((resolve) => {
+        rl.question(
+          `\n  Create .env from ${examplePath}? (y/N) `,
+          resolve,
+        );
+      });
+      rl.close();
+
+      if (answer.toLowerCase().startsWith("y")) {
+        fs.copyFileSync(examplePath, dotenvPath);
+        console.log(`\n  Created: ${dotenvPath}`);
+        console.log(`  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.\n`);
+        process.exit(0);
+      }
     }
   }
 
