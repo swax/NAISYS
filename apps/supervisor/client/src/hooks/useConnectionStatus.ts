@@ -12,14 +12,18 @@ let hubConnectedCache: boolean | null = null;
 
 export function useConnectionStatus() {
   const { isAuthenticated } = useSession();
-  const [serverReachable, setServerReachable] = useState(
-    () => getSocket().connected,
-  );
+  const [serverReachable, setServerReachable] = useState(false);
   const [, setCacheVersion] = useState(0);
 
-  // Track socket.io connection state for server reachability
+  // Track socket.io connection state for server reachability (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) {
+      setServerReachable(false);
+      return;
+    }
+
     const socket = getSocket();
+    setServerReachable(socket.connected);
 
     const onConnect = () => setServerReachable(true);
     const onDisconnect = () => setServerReachable(false);
@@ -31,7 +35,7 @@ export function useConnectionStatus() {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   // Track hub connection status from WebSocket events
   const handleStatusUpdate = useCallback((event: HubStatusEvent) => {
@@ -39,7 +43,10 @@ export function useConnectionStatus() {
     setCacheVersion((v) => v + 1);
   }, []);
 
-  useSubscription<HubStatusEvent>("hub-status", handleStatusUpdate);
+  useSubscription<HubStatusEvent>(
+    isAuthenticated ? "hub-status" : null,
+    handleStatusUpdate,
+  );
 
   let status: ConnectionState;
   let label: string;

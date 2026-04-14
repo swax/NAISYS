@@ -6,6 +6,7 @@ import type {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
+import { useSession } from "../contexts/SessionContext";
 import { getAgentData } from "../lib/apiAgents";
 import type { Agent } from "../types/agent";
 import { useSubscription } from "./useSubscription";
@@ -16,6 +17,7 @@ let actionsCache: HateoasAction[] | undefined = undefined;
 let updatedSinceCache: string | undefined = undefined;
 
 export const useAgentData = () => {
+  const { isAuthenticated } = useSession();
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
   const queryClient = useQueryClient();
@@ -116,7 +118,10 @@ export const useAgentData = () => {
     [queryClient],
   );
 
-  useSubscription<AgentStatusEvent>("agent-status", handleStatusUpdate);
+  useSubscription<AgentStatusEvent>(
+    isAuthenticated ? "agent-status" : null,
+    handleStatusUpdate,
+  );
 
   return {
     agents: agentCache,
