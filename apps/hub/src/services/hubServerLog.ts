@@ -24,16 +24,10 @@ export function createHubServerLog(
       "hub-server.log",
     );
 
-    const logger = pino({
-      level: "info",
-      transport: {
-        target: "pino/file",
-        options: {
-          destination: logPath,
-          mkdir: true,
-        },
-      },
-    });
+    const logger = pino(
+      { level: "info" },
+      pino.destination({ dest: logPath, mkdir: true }),
+    );
 
     let consoleEnabled = true;
 
