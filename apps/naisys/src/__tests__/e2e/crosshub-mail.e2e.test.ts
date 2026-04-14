@@ -42,8 +42,8 @@ describe("Cross-Hub Mail E2E", () => {
   let hostA: NaisysTestProcess | null = null;
   let hostB: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 4101;
-  const HUB_URL = `http://localhost:${HUB_PORT}/hub`;
+  const SERVER_PORT = 4101;
+  const HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
 
   beforeEach(() => {
     testDir = getTestDir("crosshub_mail");
@@ -91,7 +91,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
 
   test("should send mail from alex on HOST-A to bob on HOST-B via hub", async () => {
     // --- Setup Hub with agent configs ---
-    createHubEnvFile(hubDir, { port: HUB_PORT, naisysFolder: hubDir });
+    createHubEnvFile(hubDir, { port: SERVER_PORT, naisysFolder: hubDir });
     createAgentYaml(hubDir, "alex.yaml", {
       username: "alex",
       title: "Test Agent Alex",

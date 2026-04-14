@@ -33,8 +33,7 @@ describe("ERP API Key Auth E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 4111;
-  const SUPERVISOR_PORT = 4012;
+  const SERVER_PORT = 4111;
 
   beforeEach(() => {
     testDir = getTestDir("erp_api_key");
@@ -55,8 +54,7 @@ describe("ERP API Key Auth E2E", () => {
 NAISYS_FOLDER="${dir}"
 NAISYS_HOSTNAME="TEST-ERP"
 SPEND_LIMIT_DOLLARS=10
-HUB_PORT=${HUB_PORT}
-SUPERVISOR_PORT=${SUPERVISOR_PORT}
+SERVER_PORT=${SERVER_PORT}
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }
@@ -94,7 +92,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
     // --- Send curl command using $api_key variable ---
     naisys.flushOutput();
     naisys.sendCommand(
-      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SUPERVISOR_PORT}/erp/api/auth/me`,
+      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me`,
     );
     await naisys.waitForOutput("testbot", 30000);
     await naisys.waitForPrompt();

@@ -27,7 +27,7 @@ describe("Basic Mail E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const HUB_PORT = 4121;
+  const SERVER_PORT = 4121;
 
   beforeEach(() => {
     testDir = getTestDir("basic_mail");
@@ -116,7 +116,7 @@ describe("Basic Mail E2E", () => {
 
   test("integrated-hub: send mail from alex to bob", async () => {
     createEnvFile(testDir);
-    appendFileSync(join(testDir, ".env"), `\nHUB_PORT=${HUB_PORT}`);
+    appendFileSync(join(testDir, ".env"), `\nSERVER_PORT=${SERVER_PORT}`);
     await runMailTest(["--integrated-hub"], true);
   });
 });

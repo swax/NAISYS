@@ -29,8 +29,7 @@ describe("Supervisor UI E2E", () => {
   let naisys: NaisysTestProcess | null = null;
   let browser: Browser | null = null;
 
-  const HUB_PORT = 4131;
-  const SUPERVISOR_PORT = 4032;
+  const SERVER_PORT = 4131;
 
   beforeEach(() => {
     testDir = getTestDir("supervisor_ui");
@@ -55,8 +54,7 @@ describe("Supervisor UI E2E", () => {
 NAISYS_FOLDER="${dir}"
 NAISYS_HOSTNAME="TEST-SUPERVISOR-UI"
 SPEND_LIMIT_DOLLARS=10
-HUB_PORT=${HUB_PORT}
-SUPERVISOR_PORT=${SUPERVISOR_PORT}
+SERVER_PORT=${SERVER_PORT}
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }
@@ -92,7 +90,7 @@ SUPERVISOR_PORT=${SUPERVISOR_PORT}
     const page: Page = await browser.newPage();
 
     // --- Login ---
-    await page.goto(`http://localhost:${SUPERVISOR_PORT}/supervisor/`);
+    await page.goto(`http://localhost:${SERVER_PORT}/supervisor/`);
     await page.getByLabel("Username").fill("superadmin");
     await page.getByLabel("Password").fill(adminPassword);
     await page.getByRole("button", { name: "Login" }).click();

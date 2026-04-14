@@ -12,7 +12,7 @@ import { useNativeWindows } from "./services/shellPlatform.js";
 
 export function createGlobalConfig(
   hubClient?: HubClient,
-  supervisorPort?: number,
+  supervisorUrl?: string,
 ) {
   type FullClientConfig = Awaited<ReturnType<typeof appendClientConfig>>;
 
@@ -73,7 +73,7 @@ export function createGlobalConfig(
       hostname,
       packageVersion,
       binPath,
-      supervisorPort,
+      supervisorUrl,
     };
   }
 

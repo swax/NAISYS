@@ -1,4 +1,4 @@
-import type { StartHub, StartServer } from "@naisys/common";
+import type { StartHub } from "@naisys/common";
 import {
   ensureDotEnv,
   expandNaisysFolder,
@@ -8,7 +8,7 @@ import {
 import { createHubDatabaseService } from "@naisys/hub-database";
 import { program } from "commander";
 import dotenv from "dotenv";
-import http from "http";
+import Fastify from "fastify";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
@@ -47,7 +47,7 @@ export const startHub: StartHub = async (
 
     logService.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
-    const hubPort = Number(process.env.HUB_PORT) || 3101;
+    const serverPort = Number(process.env.SERVER_PORT) || 3101;
 
     // Load or generate hub access key for client authentication
     const hubAccessKey = loadOrCreateAccessKey();
@@ -65,13 +65,14 @@ export const startHub: StartHub = async (
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
 
-    // Create HTTP server and Socket.IO instance (TLS is handled by the reverse proxy)
-    const httpServer = http.createServer();
+    // Create Fastify instance (TLS is handled by the reverse proxy)
+    const fastify = Fastify();
 
-    // Register HTTP attachment upload/download handler before Socket.IO
-    createHubAttachmentService(httpServer, hubDatabaseService, logService);
+    // Register HTTP attachment upload/download routes
+    createHubAttachmentService(fastify, hubDatabaseService, logService);
 
-    const io = new Server(httpServer, {
+    // Attach Socket.IO to the underlying HTTP server
+    const io = new Server(fastify.server, {
       path: "/hub/socket.io",
       cors: {
         origin: "*", // In production, restrict this
@@ -161,37 +162,33 @@ export const startHub: StartHub = async (
       configService,
     );
 
-    // Start listening
-    await new Promise<void>((resolve, reject) => {
-      httpServer.once("error", reject);
-      httpServer.listen(hubPort, () => {
-        httpServer.removeListener("error", reject);
-        logService.log(`[Hub] Server listening on port ${hubPort}`);
-        resolve();
-      });
-    });
-
-    logService.log(
-      `[Hub] Running on http://localhost:${hubPort}/hub, logs written to file`,
-    );
-    logService.disableConsole();
-
     /**
      * There should be no dependency between supervisor and hub
      * Sharing the same process space is to save 150 mb of node.js runtime memory on small servers
      */
-    let supervisorPort: number | undefined;
     if (startSupervisor) {
       // Don't import the whole fastify web server module tree unless needed
       // Use variable to avoid compile-time type dependency on @naisys/supervisor (allows parallel builds)
       const supervisorModule = "@naisys/supervisor";
-      const { startServer } = (await import(supervisorModule)) as {
-        startServer: StartServer;
+      const { supervisorPlugin } = (await import(supervisorModule)) as {
+        supervisorPlugin: any;
       };
-      supervisorPort = await startServer("hosted", plugins, hubPort);
+      await fastify.register(supervisorPlugin, {
+        plugins,
+        serverPort,
+        hosted: true,
+      });
     }
 
-    return { hubPort, supervisorPort };
+    // Start listening
+    await fastify.listen({ port: serverPort, host: "0.0.0.0" });
+
+    logService.log(
+      `[Hub] Running on http://localhost:${serverPort}/hub, logs written to file`,
+    );
+    logService.disableConsole();
+
+    return { serverPort };
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);
     process.exit(1);
@@ -210,7 +207,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         comment: "Hub server configuration",
         fields: [
           { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
-          { key: "HUB_PORT", label: "Hub Server Port" },
+          { key: "SERVER_PORT", label: "Server Port" },
         ],
       },
     ],
@@ -244,6 +241,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     "standalone",
     program.opts().supervisor,
     plugins,
-    program.args[0],
+    program.args[0] || ".",
   );
 }

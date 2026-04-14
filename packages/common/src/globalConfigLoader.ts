@@ -22,11 +22,10 @@ export interface ClientConfig {
 /** Keys that should never be distributed to clients */
 const EXCLUDED_KEYS = [
   "HUB_ACCESS_KEY",
-  "HUB_PORT",
   "NAISYS_FOLDER",
   "NAISYS_HOSTNAME",
   "NODE_ENV",
-  "SUPERVISOR_PORT",
+  "SERVER_PORT",
 ];
 
 /**

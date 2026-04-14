@@ -13,8 +13,7 @@ export type StartHub = (
   plugins?: "erp"[],
   startupAgentPath?: string,
 ) => Promise<{
-  hubPort: number;
-  supervisorPort?: number;
+  serverPort: number;
 }>;
 
 /** Starts the Supervisor web server. Exported by @naisys/supervisor */
