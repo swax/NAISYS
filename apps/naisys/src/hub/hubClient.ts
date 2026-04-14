@@ -79,7 +79,7 @@ export function createHubClient(
       disconnectNotified = true;
       promptNotification.notify({
         wake: "always",
-        commentOutput: ["Hub connection lost"],
+        errorOutput: ["Hub connection lost"],
       });
     }
   }

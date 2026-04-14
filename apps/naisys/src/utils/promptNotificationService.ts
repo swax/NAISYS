@@ -6,6 +6,7 @@ export interface PromptNotification {
   userId?: number;
   contextOutput?: string[];
   commentOutput?: string[];
+  errorOutput?: string[];
   commands?: string[];
   processed?: () => void | Promise<void>;
 }
@@ -16,7 +17,7 @@ export interface ProcessedResult {
 }
 
 export interface ProcessedOutput {
-  type: "context" | "comment";
+  type: "context" | "comment" | "error";
   text: string;
 }
 
@@ -82,6 +83,11 @@ export function createPromptNotificationService() {
     if (notification.commentOutput) {
       for (const text of notification.commentOutput) {
         result.output.push({ type: "comment", text });
+      }
+    }
+    if (notification.errorOutput) {
+      for (const text of notification.errorOutput) {
+        result.output.push({ type: "error", text });
       }
     }
     if (notification.commands) {
