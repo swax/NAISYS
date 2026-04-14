@@ -184,10 +184,13 @@ export function createNaisysServer(
       const hostType = (
         typeof rawHostType === "string" ? rawHostType : "naisys"
       ) as HostType;
+      const resolvedVersion =
+        typeof clientVersion === "string" ? clientVersion : "";
       const hostId = await hostRegistrar.registerHost(
         hostName,
         hostType,
         socket.handshake.address,
+        resolvedVersion,
       );
 
       // Reject duplicate naisys connections (supervisors may have multiple)
@@ -203,8 +206,7 @@ export function createNaisysServer(
       socket.data.hostId = hostId;
       socket.data.hostName = hostName;
       socket.data.hostType = hostType;
-      socket.data.clientVersion =
-        typeof clientVersion === "string" ? clientVersion : "";
+      socket.data.clientVersion = resolvedVersion;
       next();
     } catch (err) {
       logService.error(

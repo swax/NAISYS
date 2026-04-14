@@ -316,9 +316,9 @@ export const HostPage: React.FC = () => {
               {host?.online ? "online" : "offline"}
             </Badge>
           )}
-          {hostDetail?.version && host?.online && (
+          {(host?.version || hostDetail?.version) && (
             <Text size="sm" c="dimmed">
-              v{hostDetail.version}
+              v{host?.version || hostDetail?.version}
             </Text>
           )}
           {hostDetail?.lastIp && (

@@ -5,4 +5,4 @@ export function hubDbPath(): string {
 }
 
 /** We run migration scripts if this is greater than what's in the schema_version table */
-export const HUB_DB_VERSION = 35;
+export const HUB_DB_VERSION = 36;
