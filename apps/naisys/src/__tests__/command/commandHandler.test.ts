@@ -20,7 +20,7 @@ import {
 } from "../mocks.js";
 
 const userHostPrompt = "bob@naisys";
-const userHostPathPrompt = "bob@naisys:/home/bob";
+const userHostPathPrompt = "bob@naisys:/users/bob";
 
 function createPopFirstCommand() {
   const promptBuilder = createMockPromptBuilder(
