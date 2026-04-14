@@ -40,6 +40,7 @@ See [agents/template.yaml](agents/template.yaml) for all agent options and suppo
 Lightweight agent runner with no persistence or web UI. Runs agents on demand. Pass a directory to run all agent yamls in that folder.
 
 ```bash
+# Make sure you're running at least Node.js 22
 npx naisys agent.yaml
 ```
 
@@ -62,29 +63,34 @@ Open `http://localhost:3001/supervisor/` to monitor agents.
 Run Hub + Supervisor on a central server and extend it with NAISYS instances on other machines that the hub controls. Each instance can run many agents simultaneously with both console and desktop access. Manage it all through the Supervisor web UI. Best practice is to run NAISYS from a dedicated server or VM using a dedicated user account.
 
 ```bash
-# Setup PM2 (optional) to ensure your NAISYS server/clients stay up
+# Create dedicated user on server/clients for naisys
 npm install -g pm2
+sudo useradd -m -s /bin/bash naisys
+sudo su - naisys
 ```
 
 ```bash
-# On the server
-mkdir naisys && cd naisys
+mkdir server && cd server
+# On the server from the naisys home dir
 npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
-pm2 start npx -- naisys --integrated-hub --supervisor --erp
-# The first run will prompt you to setup the .env file
-# You can run the hub alone with: naisys-hub --supervisor --erp
+# Run this first to init the .env file, you only need to set NAISYS_FOLDER=~, the rest can be setup in supervisor
+npx naisys --integrated-hub --supervisor --erp
+# If you can access the naisys web UI, then exit naisys and restart it in pm2
+pm2 start npx --name naisys-server -- naisys --integrated-hub --supervisor --erp
 ```
 
 ```bash
-# On each client machine — set HUB_ACCESS_KEY in .env
-mkdir naisys && cd naisys
+mkdir client && cd client
+# On each client machine, from naisys home dir
 npm install naisys
-pm2 start npx -- naisys --hub=https://hub-server:3101
-# The first run will prompt you to setup the .env file with hub access key
+# Run naisys to init the .env file, set the NAISYS_FOLDER=~ and HUB_ACCESS_KEY
+npx naisys --hub=https://hub-server:3101
+# Once you validated you can connect to the hub, exit naisys and restart with pm2
+pm2 start npx --name naisys-client -- naisys --hub=https://hub-server:3101
 ```
 
 ```bash
-# Setup PM2 (optional) to launch NAISYS servers/clients on startup
+# Finish pm2 setup to ensure it starts naisys on boot
 pm2 startup   # enable start on boot (one-time sudo)
 pm2 save
 ```
