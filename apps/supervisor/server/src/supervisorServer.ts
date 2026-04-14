@@ -99,11 +99,13 @@ export const startServer: StartServer = async (
             transport: {
               target: "pino/file",
               options: {
-                destination: path.join(
-                  process.env.NAISYS_FOLDER || "",
-                  "logs",
-                  "supervisor.log",
-                ),
+                destination: path
+                  .join(
+                    process.env.NAISYS_FOLDER || "",
+                    "logs",
+                    "supervisor.log",
+                  )
+                  .replaceAll("\\", "/"),
                 mkdir: true,
               },
             },
