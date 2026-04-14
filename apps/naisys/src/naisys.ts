@@ -1,7 +1,14 @@
 import type { StartHub } from "@naisys/common";
-import { ensureDotEnv, expandNaisysFolder } from "@naisys/common-node";
+import {
+  ensureDotEnv,
+  expandNaisysFolder,
+  runSetupWizard,
+  type WizardConfig,
+} from "@naisys/common-node";
 import { program } from "commander";
 import dotenv from "dotenv";
+import os from "os";
+import path from "path";
 
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
@@ -25,12 +32,19 @@ dotenv.config({ quiet: true });
 const isHubClient = process.argv.some(
   (a) => a === "--hub" || a.startsWith("--hub="),
 );
-await ensureDotEnv(
-  new URL(
-    isHubClient ? "../.env.hub-client.example" : "../.env.example",
-    import.meta.url,
-  ),
+
+const wizardConfig = getNaisysWizardConfig(isHubClient);
+const exampleUrl = new URL(
+  isHubClient ? "../.env.hub-client.example" : "../.env.example",
+  import.meta.url,
 );
+
+if (process.argv.includes("--setup")) {
+  await runSetupWizard(path.resolve(".env"), exampleUrl, wizardConfig);
+  process.exit(0);
+}
+
+await ensureDotEnv(exampleUrl, wizardConfig);
 
 expandNaisysFolder();
 
@@ -53,6 +67,7 @@ program
   )
   .option("--erp", "Start ERP web app (requires --supervisor)")
   .option("--no-auto-update", "Disable automatic version updates")
+  .option("--setup", "Run interactive setup wizard")
   .parse();
 
 const agentPath = program.args[0];
@@ -160,3 +175,104 @@ if (updateService?.isUpdateInProgress()) {
 console.log(`[NAISYS] Exited`);
 
 process.exit(0);
+
+function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
+  if (hubClient) {
+    return {
+      title: "NAISYS Setup (Hub Client)",
+      sections: [
+        {
+          type: "fields",
+          comment:
+            "Copy value from Supervisor admin page or hub server's NAISYS_FOLDER/cert/hub-access-key",
+          fields: [{ key: "HUB_ACCESS_KEY", label: "Hub Access Key" }],
+        },
+        {
+          type: "fields",
+          comment: "Local configuration",
+          fields: [
+            { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+            { key: "NAISYS_HOSTNAME", label: "Hostname", defaultValue: os.hostname() },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {
+    title: "NAISYS Setup",
+    sections: [
+      {
+        type: "fields",
+        comment:
+          "Agent home files and NAISYS specific databases will be stored here",
+        fields: [
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "NAISYS_HOSTNAME", label: "Hostname", defaultValue: os.hostname() },
+        ],
+      },
+      {
+        type: "providers",
+        comment: "Leave API keys blank if not using the service",
+        label: "AI Providers",
+        options: [
+          {
+            name: "OpenAI",
+            fields: [{ key: "OPENAI_API_KEY", label: "OpenAI API Key" }],
+          },
+          {
+            name: "Google",
+            fields: [
+              { key: "GOOGLE_API_KEY", label: "Google API Key" },
+              {
+                key: "GOOGLE_SEARCH_ENGINE_ID",
+                label: "Google Search Engine ID",
+              },
+            ],
+          },
+          {
+            name: "Anthropic",
+            fields: [
+              { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key" },
+            ],
+          },
+          {
+            name: "XAI",
+            fields: [{ key: "XAI_API_KEY", label: "XAI API Key" }],
+          },
+          {
+            name: "OpenRouter",
+            fields: [
+              { key: "OPENROUTER_API_KEY", label: "OpenRouter API Key" },
+            ],
+          },
+        ],
+      },
+      {
+        type: "fields",
+        comment: "Spend limits apply to all agents using this .env file",
+        fields: [
+          { key: "SPEND_LIMIT_DOLLARS", label: "Spend Limit (dollars)" },
+          { key: "SPEND_LIMIT_HOURS", label: "Spend Limit Period (hours)" },
+        ],
+      },
+      {
+        type: "fields",
+        comment:
+          "Integrated supervisor configuration if the --supervisor option is used on startup",
+        fields: [
+          { key: "SUPERVISOR_PORT", label: "Supervisor Server Port" },
+          { key: "PUBLIC_READ", label: "Public Read Access" },
+        ],
+      },
+      {
+        type: "fields",
+        comment:
+          "Integrated Hub configuration if the --integrated-hub option is used on startup",
+        fields: [
+          { key: "HUB_PORT", label: "NAISYS Hub Server Port" },
+        ],
+      },
+    ],
+  };
+}

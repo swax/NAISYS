@@ -24,6 +24,7 @@ if (process.argv.length <= 2) {
     "    --erp               Start ERP web app (requires --supervisor)",
   );
   console.log("    --hub <url>         Connect to a remote Hub server");
+  console.log("    --setup             Run interactive setup wizard");
   console.log("");
   console.log("  Pass a directory to run all agent yamls in that folder.");
   process.exit(1);
