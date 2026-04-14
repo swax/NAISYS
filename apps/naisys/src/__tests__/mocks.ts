@@ -84,7 +84,7 @@ export function createMockShellWrapper() {
   const shellWrapper: ShellWrapper = {
     executeCommand: vi.fn(() => Promise.resolve("")),
     continueCommand: vi.fn(() => Promise.resolve("")),
-    getCurrentPath: vi.fn(() => Promise.resolve("/home/bob")),
+    getCurrentPath: vi.fn(() => Promise.resolve("/users/bob")),
     resolvePaths: vi.fn((paths: string[]) => Promise.resolve(paths)),
     terminate: vi.fn(() => Promise.resolve()),
     isShellSuspended: vi.fn(() => false),

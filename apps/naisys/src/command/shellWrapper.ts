@@ -114,7 +114,7 @@ export function createShellWrapper(
       const naisysFolder = process.env.NAISYS_FOLDER;
       if (naisysFolder) {
         // Hub mode: give each agent their own home directory
-        const homeDir = path.join(naisysFolder, "home", agentConfig().username);
+        const homeDir = path.join(naisysFolder, "users", agentConfig().username);
         errorIfNotEmpty(
           await executeCommand(platformConfig.mkdirCommand(homeDir)),
         );

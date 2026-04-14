@@ -87,12 +87,12 @@ async function ensureOpen() {
 
     errorIfNotEmpty(
       await executeCommand(
-        `mkdir -p ${config.naisysFolder}/home/` + config.agent.username
+        `mkdir -p ${config.naisysFolder}/users/` + config.agent.username
       )
     );
     errorIfNotEmpty(
       await executeCommand(
-        `cd ${config.naisysFolder}/home/` + config.agent.username
+        `cd ${config.naisysFolder}/users/` + config.agent.username
       )
     );
   } else {
