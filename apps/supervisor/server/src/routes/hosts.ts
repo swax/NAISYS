@@ -136,7 +136,7 @@ export default function hostsRoutes(
         return {
           ...host,
           online,
-          version: getHostVersion(host.id),
+          version: getHostVersion(host.id) || host.lastVersion,
           _actions: hostActions(host.name, user, online),
         };
       });
@@ -242,7 +242,7 @@ export default function hostsRoutes(
       return {
         ...host,
         online,
-        version: getHostVersion(host.id),
+        version: getHostVersion(host.id) || host.lastVersion,
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
         _actions: hostActions(hostname, user, online),

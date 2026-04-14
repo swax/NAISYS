@@ -1,10 +1,9 @@
 import { assertUrlSafeKey } from "@naisys/common";
-import type { Host, HostDetailResponse } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { resolveAgentId } from "./agentService.js";
 
-export async function getHosts(): Promise<Host[]> {
+export async function getHosts() {
   const hosts = await hubDb.hosts.findMany({
     select: {
       id: true,
@@ -12,6 +11,7 @@ export async function getHosts(): Promise<Host[]> {
       restricted: true,
       host_type: true,
       last_active: true,
+      last_version: true,
       _count: {
         select: { user_hosts: true },
       },
@@ -25,12 +25,13 @@ export async function getHosts(): Promise<Host[]> {
     agentCount: host._count.user_hosts,
     restricted: host.restricted,
     hostType: host.host_type,
+    lastVersion: host.last_version ?? "",
   }));
 }
 
 export async function getHostDetail(
   hostname: string,
-): Promise<HostDetailResponse | null> {
+) {
   const host = await hubDb.hosts.findUnique({
     where: { name: hostname },
     select: {
@@ -40,6 +41,7 @@ export async function getHostDetail(
       host_type: true,
       last_active: true,
       last_ip: true,
+      last_version: true,
       user_hosts: {
         select: {
           users: {
@@ -61,6 +63,7 @@ export async function getHostDetail(
     hostType: host.host_type,
     online: false, // Caller overrides from agentHostStatusService
     version: "", // Caller overrides from agentHostStatusService
+    lastVersion: host.last_version ?? "",
     assignedAgents: host.user_hosts.map((uh) => ({
       id: uh.users.id,
       name: uh.users.username,
