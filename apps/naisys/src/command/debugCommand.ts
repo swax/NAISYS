@@ -1,4 +1,4 @@
-import { SUPER_ADMIN_USERNAME } from "@naisys/common";
+import { ADMIN_USERNAME, SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
@@ -64,19 +64,33 @@ export function createDebugCommands(
     },
   };
 
+  let firstTalkMessage = true;
+
   const nsTalk: RegistrableCommand = {
     command: talkCmd,
-    handleCommand: (cmdArgs) => {
+    handleCommand: (cmdArgs): CommandResponse => {
       if (inputMode.isLLM()) {
-        return "Message sent!";
+        return { content: "Message sent!" };
       } else if (inputMode.isDebug()) {
         inputMode.setLLM();
         // Dont say specifically mail/chat was used for admin message so agent can choose from available reply methods (mail/chat/comment)
-        contextManager.append(`Message from admin: ${cmdArgs}`);
+        contextManager.append(`Message from ${ADMIN_USERNAME}: ${cmdArgs}`);
+        if (firstTalkMessage) {
+          contextManager.append(
+            `Reply with: ns-chat send ${ADMIN_USERNAME} <message>`,
+          );
+          firstTalkMessage = false;
+        }
         inputMode.setDebug();
-        return "";
+        return {
+          content: "",
+          nextCommandResponse: {
+            nextCommandAction: NextCommandAction.Continue,
+            switchToLLM: true,
+          },
+        };
       }
-      return "";
+      return { content: "" };
     },
   };
 
