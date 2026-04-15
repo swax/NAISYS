@@ -21,7 +21,7 @@ export function createHubConnection(
 ) {
   const hubUrl = hubClientConfig.hubUrl;
 
-  // Extract origin and base path from hub URL (e.g. "http://localhost:3101/hub" → origin + "/hub")
+  // Extract origin and base path from hub URL (e.g. "http://localhost:3300/hub" → origin + "/hub")
   // Socket.IO needs origin for connection and base path for its transport path
   const hubUrlParsed = new URL(hubUrl);
   const hubOrigin = hubUrlParsed.origin;
@@ -41,6 +41,9 @@ export function createHubConnection(
 
     socket = io(hubOrigin, {
       path: hubBasePath + "/socket.io",
+      extraHeaders: {
+        "ngrok-skip-browser-warning": "true",
+      },
       auth: (cb) => {
         // Re-read access key on each connection attempt so rotated keys are picked up
         cb({
