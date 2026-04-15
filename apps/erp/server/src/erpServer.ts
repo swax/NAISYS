@@ -2,6 +2,7 @@ import "dotenv/config";
 import "./schema-registry.js";
 
 import {
+  cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -250,7 +251,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         type: "fields",
         comment: "ERP configuration",
         fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
           { key: "SERVER_PORT", label: "Server Port" },
           { key: "SUPERVISOR_AUTH", label: "Use Supervisor for Auth" },
           { key: "PUBLIC_READ", label: "Public Read Access" },

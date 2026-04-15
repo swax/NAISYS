@@ -1,6 +1,7 @@
 import type { StartHub } from "@naisys/common";
 import {
   createDualLogger,
+  cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -208,7 +209,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         type: "fields",
         comment: "Hub server configuration",
         fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
           { key: "SERVER_PORT", label: "Server Port" },
         ],
       },

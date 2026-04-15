@@ -1,6 +1,7 @@
 import type { StartHub } from "@naisys/common";
 import {
   createDualLogger,
+  cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -193,7 +194,7 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
           type: "fields",
           comment: "Local configuration",
           fields: [
-            { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+            { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
             {
               key: "NAISYS_HOSTNAME",
               label: "Hostname",
@@ -213,7 +214,7 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
         comment:
           "Agent home files and NAISYS specific databases will be stored here",
         fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
           {
             key: "NAISYS_HOSTNAME",
             label: "Hostname",

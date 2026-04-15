@@ -34,9 +34,15 @@ export async function ensureDotEnv(
         output: process.stdout,
       });
 
+      rl.on("SIGINT", () => {
+        rl.close();
+        console.log("\n");
+        process.exit(0);
+      });
+
       const answer = await new Promise<string>((resolve) => {
         rl.question(
-          "\n  Would you like to run the setup wizard? (Y/n) ",
+          "  Would you like to run the setup wizard? (Y/n) ",
           resolve,
         );
       });
@@ -50,31 +56,36 @@ export async function ensureDotEnv(
 
     // Fall back to copying the example file
     if (hasExample) {
-      const rl = readline.createInterface({
+      const rl2 = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
       });
 
-      const answer = await new Promise<string>((resolve) => {
-        rl.question(`\n  Create .env from ${examplePath}? (y/N) `, resolve);
+      rl2.on("SIGINT", () => {
+        rl2.close();
+        console.log("\n");
+        process.exit(0);
       });
-      rl.close();
+
+      const answer = await new Promise<string>((resolve) => {
+        rl2.question(`  Create .env from ${examplePath}? (y/N) `, resolve);
+      });
+      rl2.close();
 
       if (answer.toLowerCase().startsWith("y")) {
         fs.copyFileSync(examplePath, dotenvPath);
-        console.log(`\n  Created: ${dotenvPath}`);
+        console.log(`  Created: ${dotenvPath}`);
         console.log(
-          `  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.\n`,
+          `  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.`,
         );
         process.exit(0);
       }
     }
   }
 
-  console.log(`\n  Please create a .env file to configure the application.`);
+  console.log(`  Please create a .env file to configure the application.`);
   if (hasExample) {
     console.log(`  See: ${examplePath}`);
   }
-  console.log();
   process.exit(1);
 }
