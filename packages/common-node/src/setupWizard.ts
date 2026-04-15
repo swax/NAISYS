@@ -53,15 +53,23 @@ export async function askQuestion(prompt: string): Promise<string> {
     output: process.stdout,
   });
 
-  rl.on("SIGINT", () => {
+  const exitCleanly = () => {
     rl.close();
     console.log("\n");
     process.exit(0);
-  });
+  };
+
+  rl.on("SIGINT", exitCleanly);
+
+  const onKeypress = (_str: string, key: { name?: string }) => {
+    if (key?.name === "escape") exitCleanly();
+  };
+  process.stdin.on("keypress", onKeypress);
 
   const answer = await new Promise<string>((resolve) =>
     rl.question(prompt, resolve),
   );
+  process.stdin.removeListener("keypress", onKeypress);
   rl.close();
   return answer;
 }
@@ -133,10 +141,16 @@ export async function runSetupWizard(
     output: process.stdout,
   });
 
-  rl.on("SIGINT", () => {
+  const exitCleanly = () => {
     rl.close();
     console.log("\n");
     process.exit(0);
+  };
+
+  rl.on("SIGINT", exitCleanly);
+
+  process.stdin.on("keypress", (_str: string, key: { name?: string }) => {
+    if (key?.name === "escape") exitCleanly();
   });
 
   const ask = (prompt: string): Promise<string> =>

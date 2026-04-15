@@ -168,11 +168,32 @@ export class AgentManager {
     // Wait for the command loop to actually finish and cleanup to complete
     const runPromise = this.runPromises.get(agentUserId);
     if (runPromise) {
-      await runPromise;
+      const result = await Promise.race([
+        runPromise.then(() => "done" as const),
+        new Promise<"timeout">((resolve) =>
+          setTimeout(() => resolve("timeout"), 10_000),
+        ),
+      ]);
+      if (result === "timeout") {
+        agent.output.error(
+          `[NAISYS] Force stopping ${agent.agentUsername} (timed out)`,
+        );
+        this.cleanupAgent(agent);
+      }
     }
   }
 
+  async stopAll(reason: string, excludeUserId?: number) {
+    const agents = this.runningAgents.filter(
+      (a) => a.agentUserId !== excludeUserId,
+    );
+    await Promise.all(agents.map((a) => this.stopAgent(a.agentUserId, reason)));
+  }
+
   private cleanupAgent(agent: AgentRuntime) {
+    const agentIndex = this.runningAgents.findIndex((a) => a === agent);
+    if (agentIndex < 0) return; // Already cleaned up (e.g. force-stopped after timeout)
+
     if (agent.output.isConsoleEnabled()) {
       const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
@@ -181,10 +202,7 @@ export class AgentManager {
       }
     }
 
-    const agentIndex = this.runningAgents.findIndex((a) => a === agent);
-    if (agentIndex >= 0) {
-      this.runningAgents.splice(agentIndex, 1);
-    }
+    this.runningAgents.splice(agentIndex, 1);
 
     this.onHeartbeatNeeded?.();
     agent.completeShutdown();

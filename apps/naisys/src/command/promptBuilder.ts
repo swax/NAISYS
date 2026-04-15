@@ -83,7 +83,7 @@ export function createPromptBuilder(
       let timeoutCancelled = false;
       let unsubscribeInput: (() => void) | undefined;
 
-      function clearTimers() {
+      function clearTimers(keepNotifications = false) {
         timeoutCancelled = true;
         if (unsubscribeInput) {
           unsubscribeInput();
@@ -91,7 +91,9 @@ export function createPromptBuilder(
         }
 
         clearTimeout(timeout);
-        clearInterval(notificationInterval);
+        if (!keepNotifications) {
+          clearInterval(notificationInterval);
+        }
       }
 
       /**
@@ -102,13 +104,14 @@ export function createPromptBuilder(
         ? getSharedReadline()
         : undefined;
 
-      /** Cancels waiting for user input */
+      /** Cancels auto-wait timers. Keeps the notification interval alive so
+       *  wake:"always" notifications (e.g. shutdown) can still break through. */
       const cancelWaitingForUserInput = (questionAborted: boolean) => {
         if (timeoutCancelled) {
           return;
         }
 
-        clearTimers();
+        clearTimers(true);
 
         if (questionAborted) {
           return;
@@ -149,7 +152,7 @@ export function createPromptBuilder(
       }
 
       function abortQuestion() {
-        cancelWaitingForUserInput(true);
+        clearTimers();
         questionController.abort();
         try {
           readlineInterface?.pause();
@@ -166,12 +169,15 @@ export function createPromptBuilder(
         timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
       }
 
-      // Poll for prompt notifications that should wake/interrupt
+      // Poll for prompt notifications that should wake/interrupt.
+      // After timers are cancelled (user started typing), pass false for
+      // wakeOnMessage so only wake:"always" notifications (e.g. shutdown)
+      // can still break through.
       notificationInterval = setInterval(() => {
         if (
           promptNotification.hasPending(
             localUserId,
-            agentConfig().wakeOnMessage,
+            timeoutCancelled ? false : agentConfig().wakeOnMessage,
           )
         ) {
           abortQuestion();
