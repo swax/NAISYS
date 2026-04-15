@@ -13,7 +13,6 @@ import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
 import type { HubLogBuffer } from "../hub/hubLogBuffer.js";
 import type { HostService } from "../services/hostService.js";
 import type { ModelService } from "../services/modelService.js";
-import { OutputColor } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { AgentRuntime } from "./agentRuntime.js";
 import { createAgentRuntime } from "./agentRuntime.js";
@@ -211,9 +210,8 @@ export class AgentManager {
 
     if (prevActiveAgent) {
       // Last output from the previously active agent
-      prevActiveAgent.output.write(
+      prevActiveAgent.output.notice(
         `Switching to agent ${newActiveAgent.agentUsername}`,
-        OutputColor.subagent,
       );
       prevActiveAgent.output.setConsoleEnabled(false);
     }

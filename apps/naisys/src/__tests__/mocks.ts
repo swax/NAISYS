@@ -224,6 +224,7 @@ export function createMockCostTracker() {
 
 export function createMockOutputService() {
   const output: OutputService = {
+    notice: vi.fn(),
     write: vi.fn(),
     comment: vi.fn(),
     commentAndLog: vi.fn(() => Promise.resolve()),

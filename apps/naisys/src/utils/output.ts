@@ -9,7 +9,7 @@ export enum OutputColor {
   llm = "magenta",
   console = "white",
   loading = "yellow",
-  subagent = "cyan",
+  notice = "cyan",
 }
 
 export function createOutputService(logService: LogService) {
@@ -56,6 +56,11 @@ export function createOutputService(logService: LogService) {
     }
   }
 
+  /* Important system messages we want the operator to notice in the console */
+  function notice(msg: string) {
+    write(msg, OutputColor.notice);
+  }
+
   /** Meant for non-content output we show in the console, but is not added to the context */
   function comment(msg: string) {
     write(msg, OutputColor.comment);
@@ -86,6 +91,7 @@ export function createOutputService(logService: LogService) {
   }
 
   return {
+    notice,
     write,
     comment,
     commentAndLog,
