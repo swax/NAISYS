@@ -16,7 +16,7 @@ export default defineConfig({
       name: "ui",
       testDir: "./e2e/ui",
       use: {
-        baseURL: "http://localhost:3202",
+        baseURL: "http://localhost:2202",
         headless: true,
       },
     },
@@ -24,13 +24,13 @@ export default defineConfig({
   webServer: [
     {
       command: "npm run dev",
-      port: 3201,
+      port: 3302,
       env: { NAISYS_FOLDER: testNaisysFolder, SUPERVISOR_AUTH: "false" },
       reuseExistingServer: !process.env.CI,
     },
     {
       command: "npm run dev --prefix ../client",
-      port: 3202,
+      port: 2202,
       reuseExistingServer: !process.env.CI,
     },
   ],

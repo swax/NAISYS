@@ -43,10 +43,10 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 3202,
+    port: 2202,
     proxy: {
       "/erp/api": {
-        target: "http://localhost:3201",
+        target: "http://localhost:3302",
         changeOrigin: true,
       },
     },

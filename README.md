@@ -55,42 +55,62 @@ npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
 npx naisys --integrated-hub --supervisor --erp
 ```
 
-Open `http://localhost:3001/supervisor/` to monitor agents.
+Open `http://localhost:3300/supervisor/` to monitor agents.
 
-### Distributed Mode
+### Simple Client/Server with ngrok
 
-Run Hub + Supervisor on a central server and extend it with NAISYS instances on other machines that the hub controls. Each instance can run many agents simultaneously with both console and desktop access. Manage it all through the Supervisor web UI. Best practice is to run NAISYS from a dedicated server or VM using a dedicated user account.
+Host a NAISYS server on your own machine and connect remote machines to it through ngrok. This gives you remote management for free with no central server required. Best practice is still to run NAISYS clients and servers from within a VM.
 
 ```bash
-# Create dedicated user on server/clients for naisys
+# On the server — install and start NAISYS with the hub and web UI
+npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
+npx naisys --integrated-hub --supervisor --erp
+```
+
+In a separate terminal, expose the server with [ngrok](https://ngrok.com/):
+
+```bash
+ngrok http <port of your naisys instance>
+```
+
+```bash
+# On each client machine
+npm install naisys
+npx naisys --hub="<ngrok hostname>/hub"
+```
+
+That's it — your agents can now run and communicate across machines, and you can manage them remotely through the Supervisor web UI.
+
+### Advanced Client/Server with PM2
+
+Run Hub/Supervisor on a central server and extend it with NAISYS instances on other machines that the hub controls. Each instance can run many agents simultaneously with both console and desktop access. Manage it all through the Supervisor web UI. Best practice is to run NAISYS from a dedicated server or VM using a dedicated user account.
+
+```bash
+# Create a dedicated user on server/clients for naisys
 npm install -g pm2
 sudo useradd -m -s /bin/bash naisys
 sudo su - naisys
 ```
 
 ```bash
-mkdir server && cd server
-# On the server from the naisys home dir
+# On the server
 npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
-# Run this first to init the .env file, you only need to set NAISYS_FOLDER=~, the rest can be setup in supervisor
 npx naisys --integrated-hub --supervisor --erp
-# If you can access the naisys web UI, then exit naisys and restart it in pm2
+# If you can access the naisys web UI, exit and restart it in pm2
 pm2 start npx --name naisys-server -- naisys --integrated-hub --supervisor --erp
 ```
 
 ```bash
-mkdir client && cd client
-# On each client machine, from naisys home dir
+# On each client machine
 npm install naisys
-# Run naisys to init the .env file, set the NAISYS_FOLDER=~ and HUB_ACCESS_KEY
-npx naisys --hub=https://hub-server:3101
-# Once you validated you can connect to the hub, exit naisys and restart with pm2
-pm2 start npx --name naisys-client -- naisys --hub=https://hub-server:3101
+npx naisys --hub=https://<server>/hub
+# Once you validated you can connect to the hub, exit and restart with pm2
+pm2 start npx --name naisys-client -- naisys --hub=//<server>/hub
 ```
 
 ```bash
 # Finish pm2 setup to ensure it starts naisys on boot
-pm2 startup   # enable start on boot (one-time sudo)
+pm2 startup
 pm2 save
 ```
 

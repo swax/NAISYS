@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 
-const API = "http://localhost:3201/erp/api";
+const API = "http://localhost:3302/erp/api";
 const TEST_PASSWORD = "testpass123";
 
 export function getTestCredentials(workerIndex: number) {

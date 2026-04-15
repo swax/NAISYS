@@ -130,7 +130,7 @@ export const supervisorPlugin: FastifyPluginAsync<
   fastify.setErrorHandler(commonErrorHandler);
 
   await fastify.register(cors, {
-    origin: isProd ? false : ["http://localhost:3002"],
+    origin: isProd ? false : ["http://localhost:2201"],
   });
 
   registerSecurityHeaders(fastify, { enforceHsts: isProd });
@@ -291,7 +291,7 @@ export const startServer: StartServer = async (
   });
 
   try {
-    let port = Number(process.env.SERVER_PORT) || 3001;
+    let port = Number(process.env.SERVER_PORT) || 3301;
     const host = isProd ? "0.0.0.0" : "localhost";
     const maxAttempts = 100;
     let attempts = 0;

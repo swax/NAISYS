@@ -16,7 +16,7 @@ export function initBrowserSocket(httpServer: http.Server, isProd: boolean) {
     path: "/supervisor/api/ws",
     cors: isProd
       ? undefined
-      : { origin: ["http://localhost:3002"], credentials: true },
+      : { origin: ["http://localhost:2201"], credentials: true },
   });
 
   // Auth middleware: validate session cookie or API key on handshake

@@ -55,7 +55,7 @@ export function initHubConnection(hubUrl: string) {
 
   getLogger().info(`[Supervisor:HubClient] Connecting to ${hubUrl}...`);
 
-  // Extract origin and base path from hub URL (e.g. "http://localhost:3101/hub")
+  // Extract origin and base path from hub URL (e.g. "http://localhost:3300/hub")
   const hubUrlParsed = new URL(hubUrl);
   const hubOrigin = hubUrlParsed.origin;
   const hubBasePath = hubUrlParsed.pathname.replace(/\/$/, "");
