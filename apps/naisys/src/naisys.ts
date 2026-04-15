@@ -42,7 +42,7 @@ const exampleUrl = new URL(
 
 if (process.argv.includes("--setup")) {
   await runSetupWizard(path.resolve(".env"), exampleUrl, wizardConfig);
-  process.exit(0);
+  expandNaisysFolder();
 }
 
 await ensureDotEnv(exampleUrl, wizardConfig);

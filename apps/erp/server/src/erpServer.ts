@@ -262,10 +262,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   const erpExampleUrl = new URL("../.env.example", import.meta.url);
 
-  if (process.argv.includes("--setup")) {
-    await runSetupWizard(path.resolve(".env"), erpExampleUrl, erpWizardConfig);
-    process.exit(0);
-  } else if (process.argv.includes("--reset-password")) {
+  if (process.argv.includes("--reset-password")) {
     const usernameIdx = process.argv.indexOf("--username");
     const passwordIdx = process.argv.indexOf("--password");
     const username =
@@ -298,6 +295,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       void resetLocalPassword();
     }
   } else {
+    if (process.argv.includes("--setup")) {
+      await runSetupWizard(
+        path.resolve(".env"),
+        erpExampleUrl,
+        erpWizardConfig,
+      );
+      expandNaisysFolder();
+    }
     await ensureDotEnv(erpExampleUrl, erpWizardConfig);
     void startServer();
   }

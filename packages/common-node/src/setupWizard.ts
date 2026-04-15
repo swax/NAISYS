@@ -46,8 +46,28 @@ export function cwdWithTilde(): string {
   return cwd;
 }
 
+/** Prompt the user with a question, returning their answer. Exits cleanly on Ctrl+C. */
+export async function askQuestion(prompt: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.on("SIGINT", () => {
+    rl.close();
+    console.log("\n");
+    process.exit(0);
+  });
+
+  const answer = await new Promise<string>((resolve) =>
+    rl.question(prompt, resolve),
+  );
+  rl.close();
+  return answer;
+}
+
 /** Parse a .env file into key-value pairs */
-function parseEnvFile(filePath: string): Record<string, string> {
+export function parseEnvFile(filePath: string): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};
   const content = fs.readFileSync(filePath, "utf-8");
   const result: Record<string, string> = {};
@@ -115,7 +135,7 @@ export async function runSetupWizard(
 
   rl.on("SIGINT", () => {
     rl.close();
-    console.log("\n\n  Setup cancelled.\n");
+    console.log("\n");
     process.exit(0);
   });
 
@@ -232,5 +252,16 @@ export async function runSetupWizard(
   fs.writeFileSync(dotenvPath, lines.join("\n"));
   console.log();
   console.log(`  Configuration saved to ${dotenvPath}`);
-  console.log(`  Review the file and restart.`);
+
+  const continueAnswer = await askQuestion("  Continue loading? (Y/n) ");
+
+  if (continueAnswer && !continueAnswer.toLowerCase().startsWith("y")) {
+    process.exit(0);
+  }
+
+  // Load the new .env into process.env so the app can continue without restart
+  const newEnv = parseEnvFile(dotenvPath);
+  for (const [key, value] of Object.entries(newEnv)) {
+    process.env[key] = value;
+  }
 }

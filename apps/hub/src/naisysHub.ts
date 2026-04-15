@@ -221,7 +221,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes("--setup")) {
     const { default: path } = await import("path");
     await runSetupWizard(path.resolve(".env"), hubExampleUrl, hubWizardConfig);
-    process.exit(0);
+    expandNaisysFolder();
   }
 
   await ensureDotEnv(hubExampleUrl, hubWizardConfig);
