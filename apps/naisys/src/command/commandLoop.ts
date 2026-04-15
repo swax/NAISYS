@@ -207,7 +207,7 @@ export function createCommandLoop(
       );
     }
 
-    output.commentAndLog("Use ns-help to see all available commands");
+    output.commentAndLog("Use ns-help to see all available commands, and @ to talk directly to agent");
 
     desktopService.logStartup();
 
@@ -350,8 +350,9 @@ export function createCommandLoop(
         llmErrorCount = 0;
       }
 
-      // If the user is in debug mode and they didn't enter anything, switch to LLM
-      if (inputMode.isDebug() && blankDebugInput) {
+      // If the user is in debug mode and they didn't enter anything, switch to LLM.
+      // Also switch immediately if the command requested it (e.g. ns-talk).
+      if (inputMode.isDebug() && (blankDebugInput || commandResult.switchToLLM)) {
         inputMode.setLLM();
       }
       // If in LLM mode, auto switch back to debug

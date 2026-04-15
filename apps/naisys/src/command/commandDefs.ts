@@ -11,6 +11,8 @@ export interface SubcommandDef {
 
 export interface CommandDef {
   name: string;
+  /** Alternative names that also invoke this command */
+  aliases?: string[];
   /** Inline usage hint shown in MOTD for commands without subcommands, e.g. '"<description>" <filepath>' */
   usage?: string;
   description: string;
@@ -260,6 +262,7 @@ export const superadminPasswordCmd: CommandDef = {
 
 export const talkCmd: CommandDef = {
   name: "ns-talk",
+  aliases: ["@"],
   description: "Send a message to the agent",
   isDebug: true,
 };

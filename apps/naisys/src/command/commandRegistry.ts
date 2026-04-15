@@ -18,6 +18,8 @@ export interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
   /** 0 means no wait, and -1 means wait indefinitely until a wake event occurs */
   pauseSeconds?: number;
+  /** If true, immediately switch to LLM mode for a follow-up response */
+  switchToLLM?: boolean;
 }
 
 /**
@@ -58,7 +60,7 @@ export function createCommandRegistry(
   const helpCommand: RegistrableCommand = {
     command: helpCmd,
     handleCommand: () => {
-      const allCommands = Array.from(registry.values()).sort((a, b) =>
+      const allCommands = Array.from(new Set(registry.values())).sort((a, b) =>
         a.command.name.localeCompare(b.command.name),
       );
 
@@ -67,7 +69,12 @@ export function createCommandRegistry(
 
       const formatTable = (cmds: RegistrableCommand[]) => {
         const rows = [
-          ...cmds.map((c) => [c.command.name, c.command.description || ""]),
+          ...cmds.map((c) => {
+            const aliases = c.command.aliases?.length
+              ? ` (${c.command.aliases.join(", ")})`
+              : "";
+            return [c.command.name + aliases, c.command.description || ""];
+          }),
         ];
         const colWidths = rows[0].map((_, i) =>
           Math.max(...rows.map((r) => r[i].length)),
@@ -96,6 +103,13 @@ export function createCommandRegistry(
       );
     }
     registry.set(command.command.name, command);
+
+    for (const alias of command.command.aliases ?? []) {
+      if (registry.has(alias)) {
+        throw new Error(`Duplicate command registration: ${alias}`);
+      }
+      registry.set(alias, command);
+    }
   }
 
   function get(commandName: string): RegistrableCommand | undefined {
