@@ -29,9 +29,7 @@ export async function getHosts() {
   }));
 }
 
-export async function getHostDetail(
-  hostname: string,
-) {
+export async function getHostDetail(hostname: string) {
   const host = await hubDb.hosts.findUnique({
     where: { name: hostname },
     select: {

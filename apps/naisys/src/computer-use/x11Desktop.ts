@@ -12,7 +12,9 @@ export function captureScreenshot(tmpFile: string): void {
     execFileSync("scrot", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
   } catch (e: any) {
-    errors.push(`scrot: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
+    errors.push(
+      `scrot: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+    );
   }
 
   // import: ImageMagick's screenshot tool
@@ -23,7 +25,9 @@ export function captureScreenshot(tmpFile: string): void {
     });
     return;
   } catch (e: any) {
-    errors.push(`import: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
+    errors.push(
+      `import: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+    );
   }
 
   throw new Error(

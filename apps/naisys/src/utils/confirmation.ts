@@ -30,8 +30,7 @@ export function getConfirmation(
         ? "console disabled"
         : "no interactive terminal";
       output.comment(
-        prompt +
-          (defaultAccept ? "<auto-approved>" : `<denied: ${reason}>`),
+        prompt + (defaultAccept ? "<auto-approved>" : `<denied: ${reason}>`),
       );
       resolve(defaultAccept);
       return;

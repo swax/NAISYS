@@ -2,7 +2,6 @@
 
 [NPM](https://www.npmjs.com/package/naisys) | [Website](https://naisys.org) | [Discord](https://discord.gg/JBUPWSbaEt) | [Demo Video](https://www.youtube.com/watch?v=Ttya3ixjumo)
 
-
 Self-hosted, cross-machine, AI agent runner and manager that runs on Node.js
 
 - **LLM support** — OpenAI, Google, Anthropic, and any OpenAI-compatible local LLM
@@ -13,12 +12,12 @@ Self-hosted, cross-machine, AI agent runner and manager that runs on Node.js
 
 ## Packages
 
-| Name | Description |
-|---------|-------------|
-| `naisys` | Agent runner — LLMs operate a Linux shell with built-in context management, multi-agent communication, and cost tracking |
-| `@naisys/hub` | Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite |
-| `@naisys/supervisor` | Web UI for monitoring agents, viewing logs, and managing inter-agent messaging |
-| `@naisys/erp` | Optional AI-driven order and work management. Runs integrated with Supervisor or standalone |
+| Name                 | Description                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `naisys`             | Agent runner — LLMs operate a Linux shell with built-in context management, multi-agent communication, and cost tracking        |
+| `@naisys/hub`        | Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite |
+| `@naisys/supervisor` | Web UI for monitoring agents, viewing logs, and managing inter-agent messaging                                                  |
+| `@naisys/erp`        | Optional AI-driven order and work management. Runs integrated with Supervisor or standalone                                     |
 
 ## Getting Started
 

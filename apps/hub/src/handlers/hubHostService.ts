@@ -1,8 +1,8 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HostList } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysConnection } from "../services/naisysConnection.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 import { getHubVersion } from "../version.js";

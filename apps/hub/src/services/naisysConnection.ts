@@ -1,6 +1,5 @@
-import type { Socket } from "socket.io";
-
 import type { DualLogger } from "@naisys/common-node";
+import type { Socket } from "socket.io";
 
 export interface HostConnectionInfo {
   hostId: number;

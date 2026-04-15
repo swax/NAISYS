@@ -201,9 +201,7 @@ export function createCommandLoop(
     inputMode.setLLM();
 
     if (globalConfig().supervisorUrl) {
-      output.comment(
-        `Supervisor available at ${globalConfig().supervisorUrl}`,
-      );
+      output.comment(`Supervisor available at ${globalConfig().supervisorUrl}`);
       output.comment(
         `  Use 'ns-superadmin-password <password>' to set password then login as superadmin`,
       );

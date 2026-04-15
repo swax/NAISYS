@@ -1,7 +1,7 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, type UserListResponse } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the user list to NAISYS instances when they connect or when users change */

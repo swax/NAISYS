@@ -6,13 +6,13 @@ import stringArgv from "string-argv";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import { desktopCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
-import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ComputerService, CoordScale } from "./computerService.js";
 import {
   checkActionBounds,

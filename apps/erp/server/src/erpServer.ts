@@ -21,6 +21,7 @@ import {
   registerLenientJsonParser,
   registerSecurityHeaders,
 } from "@naisys/common";
+import { createFileLogger } from "@naisys/common-node";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
@@ -38,7 +39,6 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import path from "path";
-import { createFileLogger } from "@naisys/common-node";
 import { fileURLToPath } from "url";
 
 import { registerApiReference } from "./api-reference.js";
@@ -374,11 +374,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const erpExampleUrl = new URL("../.env.example", import.meta.url);
 
   if (process.argv.includes("--setup")) {
-    await runSetupWizard(
-      path.resolve(".env"),
-      erpExampleUrl,
-      erpWizardConfig,
-    );
+    await runSetupWizard(path.resolve(".env"), erpExampleUrl, erpWizardConfig);
     process.exit(0);
   } else if (process.argv.includes("--reset-password")) {
     const usernameIdx = process.argv.indexOf("--username");

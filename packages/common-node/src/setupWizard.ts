@@ -112,7 +112,10 @@ export async function runSetupWizard(
     if (section.type === "fields") {
       for (const field of section.fields) {
         const effectiveDefault =
-          existingValues[field.key] ?? field.defaultValue ?? exampleValues[field.key] ?? "";
+          existingValues[field.key] ??
+          field.defaultValue ??
+          exampleValues[field.key] ??
+          "";
         const display = effectiveDefault ? ` [${effectiveDefault}]` : "";
         const answer = await ask(`  ${field.label}${display}: `);
         results[field.key] = answer || effectiveDefault;
@@ -146,9 +149,7 @@ export async function runSetupWizard(
         ? selStr
             .split(",")
             .map((s) => parseInt(s.trim()))
-            .filter(
-              (n) => !isNaN(n) && n >= 1 && n <= section.options.length,
-            )
+            .filter((n) => !isNaN(n) && n >= 1 && n <= section.options.length)
         : [];
 
       if (selected.length > 0) console.log();
@@ -158,7 +159,10 @@ export async function runSetupWizard(
         const provider = section.options[idx - 1];
         for (const field of provider.fields) {
           const effectiveDefault =
-            existingValues[field.key] ?? field.defaultValue ?? exampleValues[field.key] ?? "";
+            existingValues[field.key] ??
+            field.defaultValue ??
+            exampleValues[field.key] ??
+            "";
           const display = effectiveDefault ? ` [${effectiveDefault}]` : "";
           const answer = await ask(`  ${field.label}${display}: `);
           results[field.key] = answer || effectiveDefault;

@@ -6,12 +6,23 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   /** Cache of all known hosts keyed by id */
   const hostsById = new Map<
     number,
-    { hostName: string; restricted: boolean; hostType: HostType; lastVersion: string }
+    {
+      hostName: string;
+      restricted: boolean;
+      hostType: HostType;
+      lastVersion: string;
+    }
   >();
 
   // Seed the cache from the database
   const rows = await hubDb.hosts.findMany({
-    select: { id: true, name: true, restricted: true, host_type: true, last_version: true },
+    select: {
+      id: true,
+      name: true,
+      restricted: true,
+      host_type: true,
+      last_version: true,
+    },
   });
   for (const row of rows) {
     hostsById.set(row.id, {
@@ -68,7 +79,12 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       },
     });
 
-    hostsById.set(created.id, { hostName, restricted: false, hostType, lastVersion: clientVersion });
+    hostsById.set(created.id, {
+      hostName,
+      restricted: false,
+      hostType,
+      lastVersion: clientVersion,
+    });
 
     return created.id;
   }
@@ -93,7 +109,13 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   /** Re-read all hosts from DB and replace the in-memory cache */
   async function refreshHosts(): Promise<void> {
     const rows = await hubDb.hosts.findMany({
-      select: { id: true, name: true, restricted: true, host_type: true, last_version: true },
+      select: {
+        id: true,
+        name: true,
+        restricted: true,
+        host_type: true,
+        last_version: true,
+      },
     });
     hostsById.clear();
     for (const row of rows) {

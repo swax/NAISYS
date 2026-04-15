@@ -27,8 +27,7 @@ export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hosts, listActions, targetVersion, isLoading } =
-    useHostDataContext();
+  const { hosts, listActions, targetVersion, isLoading } = useHostDataContext();
   const { status: connectionStatus } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);

@@ -114,14 +114,11 @@ export function createUpdateService(
     // Stash any local changes (e.g. package-lock.json, file mode changes from install)
     let didStash = false;
     try {
-      const stashOutput = execSync(
-        'git stash push -m "NAISYS auto-update"',
-        {
-          cwd: repoRoot,
-          encoding: "utf-8",
-          stdio: ["pipe", "pipe", "pipe"],
-        },
-      ).trim();
+      const stashOutput = execSync('git stash push -m "NAISYS auto-update"', {
+        cwd: repoRoot,
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
       didStash = !stashOutput.includes("No local changes");
       if (didStash) log(`Stashed local changes`);
     } catch (error) {
@@ -150,7 +147,7 @@ export function createUpdateService(
     log(`Running npm ci...`);
     try {
       await runSpawn("npm", ["ci"], repoRoot);
-    } catch (error) {
+    } catch (_error) {
       logError(
         `npm install failed, rolling back to ${currentHash.substring(0, 8)}...`,
       );
@@ -169,7 +166,7 @@ export function createUpdateService(
     log(`Running npm run build...`);
     try {
       await runSpawn("npm", ["run", "build"], repoRoot);
-    } catch (error) {
+    } catch (_error) {
       logError(
         `Build failed, rolling back to ${currentHash.substring(0, 8)}...`,
       );
@@ -224,9 +221,7 @@ export function createUpdateService(
 
     const packages = detectInstalledNaisysPackages();
     if (!packages.length) {
-      logError(
-        `Cannot auto-update: no naisys packages found in package.json`,
-      );
+      logError(`Cannot auto-update: no naisys packages found in package.json`);
       return false;
     }
 

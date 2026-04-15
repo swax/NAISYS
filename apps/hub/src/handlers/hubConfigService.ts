@@ -1,10 +1,10 @@
 import { buildClientConfig } from "@naisys/common";
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { ConfigResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the global config to NAISYS instances when they connect or when variables change */

@@ -143,9 +143,7 @@ export async function rotateAgentApiKeyByUuid(
 /**
  * Read a variable value from the hub database.
  */
-export async function getHubVariable(
-  key: string,
-): Promise<string | null> {
+export async function getHubVariable(key: string): Promise<string | null> {
   if (!prisma) return null;
   const row = await prisma.variables.findUnique({ where: { key } });
   return row?.value ?? null;

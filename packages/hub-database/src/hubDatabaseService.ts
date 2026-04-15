@@ -7,7 +7,6 @@ import { HUB_DB_VERSION, hubDbPath } from "./dbConfig.js";
 import { createPrismaClient } from "./prismaClient.js";
 
 export async function createHubDatabaseService() {
-
   const dbPath = hubDbPath();
 
   // Ensure database directory exists

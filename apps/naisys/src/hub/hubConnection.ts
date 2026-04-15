@@ -1,9 +1,9 @@
+import type { DualLogger } from "@naisys/common-node";
 import { resolveHubAccessKey } from "@naisys/common-node";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
 import type { HubClientConfig } from "./hubClientConfig.js";
-import type { DualLogger } from "@naisys/common-node";
 
 /** Generic raise event function type */
 export type RaiseEventFn = (event: string, ...args: unknown[]) => void;

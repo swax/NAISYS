@@ -194,7 +194,10 @@ export function extractDesktopActions(
  */
 export function formatInputWithComputerUse(
   context: LlmMessage[],
-  formatContentBlocks: (content: string | ContentBlock[], role: string) => any[],
+  formatContentBlocks: (
+    content: string | ContentBlock[],
+    role: string,
+  ) => any[],
   formatSingleBlock: (block: ContentBlock, role: string) => any | null,
 ): any[] {
   const items: any[] = [];
@@ -283,7 +286,9 @@ export function formatInputWithComputerUse(
     // Regular ContentBlock[] message (no tool blocks)
     items.push({
       role: msg.role === "assistant" ? "assistant" : "user",
-      content: content.map((b) => formatSingleBlock(b, msg.role)).filter(Boolean),
+      content: content
+        .map((b) => formatSingleBlock(b, msg.role))
+        .filter(Boolean),
     });
   }
 

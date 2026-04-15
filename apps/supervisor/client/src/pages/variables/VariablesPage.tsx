@@ -99,7 +99,12 @@ export const VariablesPage: React.FC = () => {
   const handleSaveEdit = async (key: string) => {
     setSaving(true);
     try {
-      const result = await saveVariable(key, editValue, editExportToShell, editSensitive);
+      const result = await saveVariable(
+        key,
+        editValue,
+        editExportToShell,
+        editSensitive,
+      );
       if (result.success) {
         setEditingKey(null);
         void fetchData();
@@ -218,7 +223,13 @@ export const VariablesPage: React.FC = () => {
                       </Text>
                       {item.sensitive && (
                         <>
-                          <Tooltip label={revealedKeys.has(item.key) ? "Hide value" : "Show value"}>
+                          <Tooltip
+                            label={
+                              revealedKeys.has(item.key)
+                                ? "Hide value"
+                                : "Show value"
+                            }
+                          >
                             <ActionIcon
                               size="sm"
                               variant="subtle"
@@ -353,9 +364,7 @@ export const VariablesPage: React.FC = () => {
                 <Table.Td>
                   <Checkbox
                     checked={newSensitive}
-                    onChange={(e) =>
-                      setNewSensitive(e.currentTarget.checked)
-                    }
+                    onChange={(e) => setNewSensitive(e.currentTarget.checked)}
                     size="xs"
                   />
                 </Table.Td>

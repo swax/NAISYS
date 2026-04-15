@@ -196,18 +196,12 @@ export const AdminPage: React.FC = () => {
 
               <Group>
                 {canExport && (
-                  <Button
-                    onClick={handleExport}
-                    loading={exporting}
-                  >
+                  <Button onClick={handleExport} loading={exporting}>
                     Export Config
                   </Button>
                 )}
                 {canCheckUpdates && (
-                  <Button
-                    variant="light"
-                    onClick={() => setUpdateOpen(true)}
-                  >
+                  <Button variant="light" onClick={() => setUpdateOpen(true)}>
                     Check for Updates
                   </Button>
                 )}
@@ -232,7 +226,9 @@ export const AdminPage: React.FC = () => {
                   </Table.Tr>
                   <Table.Tr>
                     <Table.Td fw={600}>Version</Table.Td>
-                    <Table.Td>{data.hubVersion ? formatVersion(data.hubVersion) : "—"}</Table.Td>
+                    <Table.Td>
+                      {data.hubVersion ? formatVersion(data.hubVersion) : "—"}
+                    </Table.Td>
                   </Table.Tr>
                   <Table.Tr>
                     <Table.Td fw={600}>DB Path</Table.Td>

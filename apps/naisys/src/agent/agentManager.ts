@@ -139,12 +139,10 @@ export class AgentManager {
       this.setActiveConsoleAgent(agent.agentUserId);
     }
 
-    const runPromise = agent
-      .runCommandLoop()
-      .then((exitReason) => {
-        onStop?.(exitReason);
-        this.cleanupAgent(agent);
-      });
+    const runPromise = agent.runCommandLoop().then((exitReason) => {
+      onStop?.(exitReason);
+      this.cleanupAgent(agent);
+    });
 
     this.runPromises.set(userId, runPromise);
 

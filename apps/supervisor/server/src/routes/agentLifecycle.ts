@@ -1,3 +1,4 @@
+import { ADMIN_USERNAME } from "@naisys/common";
 import type {
   AgentActionResult,
   AgentStartRequest,
@@ -20,7 +21,6 @@ import {
   ErrorResponseSchema,
   SetLeadAgentRequestSchema,
 } from "@naisys/supervisor-shared";
-import { ADMIN_USERNAME } from "@naisys/common";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { requirePermission } from "../auth-middleware.js";
