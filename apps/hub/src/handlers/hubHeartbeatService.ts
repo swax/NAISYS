@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AgentsStatus } from "@naisys/hub-protocol";
 import {
@@ -6,7 +7,6 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */

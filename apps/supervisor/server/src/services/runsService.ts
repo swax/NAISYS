@@ -195,7 +195,10 @@ export async function getContextLog(
         id: log.attachment.public_id,
         filename: log.attachment.filename,
         fileSize: log.attachment.file_size,
-        downloadUrl: attachmentUrl(log.attachment.public_id, log.attachment.filename),
+        downloadUrl: attachmentUrl(
+          log.attachment.public_id,
+          log.attachment.filename,
+        ),
       },
     }),
   }));

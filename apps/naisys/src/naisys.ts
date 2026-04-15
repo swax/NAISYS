@@ -194,7 +194,11 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
           comment: "Local configuration",
           fields: [
             { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
-            { key: "NAISYS_HOSTNAME", label: "Hostname", defaultValue: os.hostname() },
+            {
+              key: "NAISYS_HOSTNAME",
+              label: "Hostname",
+              defaultValue: os.hostname(),
+            },
           ],
         },
       ],
@@ -210,7 +214,11 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
           "Agent home files and NAISYS specific databases will be stored here",
         fields: [
           { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
-          { key: "NAISYS_HOSTNAME", label: "Hostname", defaultValue: os.hostname() },
+          {
+            key: "NAISYS_HOSTNAME",
+            label: "Hostname",
+            defaultValue: os.hostname(),
+          },
         ],
       },
       {
@@ -234,9 +242,7 @@ function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
           },
           {
             name: "Anthropic",
-            fields: [
-              { key: "ANTHROPIC_API_KEY", label: "Anthropic API Key" },
-            ],
+            fields: [{ key: "ANTHROPIC_API_KEY", label: "Anthropic API Key" }],
           },
           {
             name: "XAI",

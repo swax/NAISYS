@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HubEvents,
@@ -10,7 +11,6 @@ import {
   MailUnreadRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubAgentService } from "./hubAgentService.js";
 import type { HubConfigService } from "./hubConfigService.js";

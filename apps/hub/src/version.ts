@@ -1,7 +1,8 @@
-import { getGitCommitHash } from "@naisys/common-node";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { getGitCommitHash } from "@naisys/common-node";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

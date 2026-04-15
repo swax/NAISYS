@@ -1,8 +1,10 @@
 import { mimeFromFilename } from "@naisys/common";
+import type { DualLogger } from "@naisys/common-node";
 import { extractBearerToken } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AttachmentPurpose } from "@naisys/hub-database";
 import { createHash, randomBytes } from "crypto";
+import type { FastifyInstance } from "fastify";
 import {
   createReadStream,
   createWriteStream,
@@ -12,11 +14,8 @@ import {
   statSync,
   unlinkSync,
 } from "fs";
-import type { FastifyInstance } from "fastify";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
-
-import type { DualLogger } from "@naisys/common-node";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -37,177 +36,178 @@ export function createHubAttachmentService(
   }
 
   // Upload route — encapsulated so the raw content-type parser doesn't leak
-  fastify.register(async (scope) => {
+  fastify.register((scope, _opts, done) => {
     // Prevent Fastify from consuming the request body — we stream it to disk
     scope.removeAllContentTypeParsers();
     scope.addContentTypeParser(
       "*",
-      (_request: unknown, _payload: unknown, done: (err: null) => void) => {
-        done(null);
+      (_request: unknown, _payload: unknown, cb: (err: null) => void) => {
+        cb(null);
       },
     );
 
     scope.post("/hub/attachments", async (request, reply) => {
-        try {
-          const apiKey = extractBearerToken(request.headers.authorization);
+      try {
+        const apiKey = extractBearerToken(request.headers.authorization);
 
-          if (!apiKey) {
-            return reply
-              .code(401)
-              .send({ error: "Missing Authorization header" });
-          }
+        if (!apiKey) {
+          return reply
+            .code(401)
+            .send({ error: "Missing Authorization header" });
+        }
 
-          const url = new URL(
-            request.url,
-            `https://${request.headers.host || "localhost"}`,
-          );
-          const filename = url.searchParams.get("filename");
-          const fileSizeStr = url.searchParams.get("filesize");
-          const fileHash = url.searchParams.get("filehash");
-          const purpose = url.searchParams.get("purpose");
+        const url = new URL(
+          request.url,
+          `https://${request.headers.host || "localhost"}`,
+        );
+        const filename = url.searchParams.get("filename");
+        const fileSizeStr = url.searchParams.get("filesize");
+        const fileHash = url.searchParams.get("filehash");
+        const purpose = url.searchParams.get("purpose");
 
-          if (!filename || !fileSizeStr || !fileHash || !purpose) {
-            return reply.code(400).send({
-              error:
-                "Missing required query params: filename, filesize, filehash, purpose",
-            });
-          }
-
-          if (purpose !== "mail" && purpose !== "context") {
-            return reply.code(400).send({
-              error: 'Invalid purpose. Must be "mail" or "context"',
-            });
-          }
-
-          const fileSize = parseInt(fileSizeStr, 10);
-          if (isNaN(fileSize) || fileSize <= 0) {
-            return reply.code(400).send({ error: "Invalid filesize" });
-          }
-
-          if (fileSize > MAX_FILE_SIZE) {
-            return reply.code(413).send({
-              error: `File too large. Max size: ${MAX_FILE_SIZE} bytes`,
-            });
-          }
-
-          const userId = await resolveUserByApiKey(apiKey);
-          if (userId == null) {
-            return reply.code(401).send({ error: "Invalid API key" });
-          }
-
-          // Stream to temp file, then move to content-addressable path
-          const tmpDir = join(naisysFolder, "tmp", "hub", "attachments");
-          mkdirSync(tmpDir, { recursive: true });
-
-          const tmpPath = join(
-            tmpDir,
-            `${Date.now()}_${userId}_${Math.random().toString(36).slice(2)}`,
-          );
-
-          const hash = createHash("sha256");
-          let bytesWritten = 0;
-          const fileStream = createWriteStream(tmpPath);
-
-          // Stream the raw request body (not consumed by Fastify thanks to our parser)
-          const req = request.raw;
-
-          const success = await new Promise<boolean>((resolve) => {
-            const sizeChecker = new Writable({
-              write(chunk: Buffer, _encoding, callback) {
-                bytesWritten += chunk.length;
-                if (bytesWritten > MAX_FILE_SIZE) {
-                  callback(new Error("File exceeds size limit"));
-                  return;
-                }
-                hash.update(chunk);
-                fileStream.write(chunk, callback);
-              },
-              final(callback) {
-                fileStream.end(callback);
-              },
-            });
-
-            pipeline(req, sizeChecker, (err) => {
-              if (err) {
-                fileStream.destroy();
-                try {
-                  unlinkSync(tmpPath);
-                } catch {
-                  /* ignore */
-                }
-                resolve(false);
-              } else {
-                resolve(true);
-              }
-            });
+        if (!filename || !fileSizeStr || !fileHash || !purpose) {
+          return reply.code(400).send({
+            error:
+              "Missing required query params: filename, filesize, filehash, purpose",
           });
+        }
 
-          if (!success) {
-            return reply
-              .code(413)
-              .send({ error: "File exceeds size limit during upload" });
-          }
+        if (purpose !== "mail" && purpose !== "context") {
+          return reply.code(400).send({
+            error: 'Invalid purpose. Must be "mail" or "context"',
+          });
+        }
 
-          // Verify hash
-          const computedHash = hash.digest("hex");
-          if (computedHash !== fileHash) {
-            try {
-              unlinkSync(tmpPath);
-            } catch {
-              /* ignore */
-            }
-            return reply.code(400).send({
-              error: `Hash mismatch. Expected: ${fileHash}, got: ${computedHash}`,
-            });
-          }
+        const fileSize = parseInt(fileSizeStr, 10);
+        if (isNaN(fileSize) || fileSize <= 0) {
+          return reply.code(400).send({ error: "Invalid filesize" });
+        }
 
-          // Move to content-addressable path: attachments/hub/<first2>/<next2>/<fullhash>
-          const storageDir = join(
-            naisysFolder,
-            "attachments",
-            "hub",
-            computedHash.slice(0, 2),
-            computedHash.slice(2, 4),
-          );
-          mkdirSync(storageDir, { recursive: true });
-          const storagePath = join(storageDir, computedHash);
+        if (fileSize > MAX_FILE_SIZE) {
+          return reply.code(413).send({
+            error: `File too large. Max size: ${MAX_FILE_SIZE} bytes`,
+          });
+        }
 
-          if (existsSync(storagePath)) {
-            // Dedup: identical file already on disk, discard temp
-            try {
-              unlinkSync(tmpPath);
-            } catch {
-              /* ignore */
-            }
-          } else {
-            renameSync(tmpPath, storagePath);
-          }
+        const userId = await resolveUserByApiKey(apiKey);
+        if (userId == null) {
+          return reply.code(401).send({ error: "Invalid API key" });
+        }
 
-          // Create DB record
-          const record = await hubDb.attachments.create({
-            data: {
-              public_id: randomBytes(8).toString("base64url").slice(0, 10),
-              filepath: storagePath,
-              filename,
-              file_size: bytesWritten,
-              file_hash: computedHash,
-              purpose: purpose as AttachmentPurpose,
-              uploaded_by: userId,
+        // Stream to temp file, then move to content-addressable path
+        const tmpDir = join(naisysFolder, "tmp", "hub", "attachments");
+        mkdirSync(tmpDir, { recursive: true });
+
+        const tmpPath = join(
+          tmpDir,
+          `${Date.now()}_${userId}_${Math.random().toString(36).slice(2)}`,
+        );
+
+        const hash = createHash("sha256");
+        let bytesWritten = 0;
+        const fileStream = createWriteStream(tmpPath);
+
+        // Stream the raw request body (not consumed by Fastify thanks to our parser)
+        const req = request.raw;
+
+        const success = await new Promise<boolean>((resolve) => {
+          const sizeChecker = new Writable({
+            write(chunk: Buffer, _encoding, callback) {
+              bytesWritten += chunk.length;
+              if (bytesWritten > MAX_FILE_SIZE) {
+                callback(new Error("File exceeds size limit"));
+                return;
+              }
+              hash.update(chunk);
+              fileStream.write(chunk, callback);
+            },
+            final(callback) {
+              fileStream.end(callback);
             },
           });
-          const attachmentId = record.id;
 
-          logService.log(
-            `[Hub:Attachment] Uploaded attachment ${attachmentId}: ${filename} (${bytesWritten} bytes) by user ${userId}`,
-          );
+          pipeline(req, sizeChecker, (err) => {
+            if (err) {
+              fileStream.destroy();
+              try {
+                unlinkSync(tmpPath);
+              } catch {
+                /* ignore */
+              }
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+        });
 
-          return reply.send({ id: attachmentId });
-        } catch (err) {
-          logService.error(`[Hub:Attachment] Upload error: ${err}`);
-          return reply.code(500).send({ error: "Internal server error" });
+        if (!success) {
+          return reply
+            .code(413)
+            .send({ error: "File exceeds size limit during upload" });
         }
-      },
-    );
+
+        // Verify hash
+        const computedHash = hash.digest("hex");
+        if (computedHash !== fileHash) {
+          try {
+            unlinkSync(tmpPath);
+          } catch {
+            /* ignore */
+          }
+          return reply.code(400).send({
+            error: `Hash mismatch. Expected: ${fileHash}, got: ${computedHash}`,
+          });
+        }
+
+        // Move to content-addressable path: attachments/hub/<first2>/<next2>/<fullhash>
+        const storageDir = join(
+          naisysFolder,
+          "attachments",
+          "hub",
+          computedHash.slice(0, 2),
+          computedHash.slice(2, 4),
+        );
+        mkdirSync(storageDir, { recursive: true });
+        const storagePath = join(storageDir, computedHash);
+
+        if (existsSync(storagePath)) {
+          // Dedup: identical file already on disk, discard temp
+          try {
+            unlinkSync(tmpPath);
+          } catch {
+            /* ignore */
+          }
+        } else {
+          renameSync(tmpPath, storagePath);
+        }
+
+        // Create DB record
+        const record = await hubDb.attachments.create({
+          data: {
+            public_id: randomBytes(8).toString("base64url").slice(0, 10),
+            filepath: storagePath,
+            filename,
+            file_size: bytesWritten,
+            file_hash: computedHash,
+            purpose: purpose as AttachmentPurpose,
+            uploaded_by: userId,
+          },
+        });
+        const attachmentId = record.id;
+
+        logService.log(
+          `[Hub:Attachment] Uploaded attachment ${attachmentId}: ${filename} (${bytesWritten} bytes) by user ${userId}`,
+        );
+
+        return reply.send({ id: attachmentId });
+      } catch (err) {
+        logService.error(`[Hub:Attachment] Upload error: ${err}`);
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+    });
+
+    done();
   });
 
   // Download routes

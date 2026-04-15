@@ -17,13 +17,13 @@ All server apps (Hub, Supervisor, ERP) use the same `SERVER_PORT` env var. When 
 
 ## Dev / Production Ports
 
-| Port | Service            | Env Var       |
-| ---- | ------------------ | ------------- |
-| 3001 | Supervisor server  | `SERVER_PORT` |
-| 3002 | Supervisor client  | (Vite config) |
-| 3101 | Hub server         | `SERVER_PORT` |
-| 3201 | ERP server         | `SERVER_PORT` |
-| 3202 | ERP client         | (Vite config) |
+| Port | Service           | Env Var       |
+| ---- | ----------------- | ------------- |
+| 3001 | Supervisor server | `SERVER_PORT` |
+| 3002 | Supervisor client | (Vite config) |
+| 3101 | Hub server        | `SERVER_PORT` |
+| 3201 | ERP server        | `SERVER_PORT` |
+| 3202 | ERP client        | (Vite config) |
 
 When running NAISYS with `--integrated-hub --supervisor --erp`, all servers share the Hub's `SERVER_PORT` (default 3101).
 

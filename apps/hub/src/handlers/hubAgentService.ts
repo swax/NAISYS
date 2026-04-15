@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentPeekRequestSchema,
@@ -7,7 +8,6 @@ import {
 } from "@naisys/hub-protocol";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";

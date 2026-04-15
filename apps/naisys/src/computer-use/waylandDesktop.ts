@@ -22,7 +22,9 @@ export function captureScreenshot(tmpFile: string): void {
     execFileSync("grim", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
   } catch (e: any) {
-    errors.push(`grim: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
+    errors.push(
+      `grim: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+    );
   }
 
   // gnome-screenshot: works on GNOME Wayland
@@ -33,7 +35,9 @@ export function captureScreenshot(tmpFile: string): void {
     });
     return;
   } catch (e: any) {
-    errors.push(`gnome-screenshot: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
+    errors.push(
+      `gnome-screenshot: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+    );
   }
 
   // GNOME Shell D-Bus Screenshot interface
@@ -57,7 +61,9 @@ export function captureScreenshot(tmpFile: string): void {
     );
     return;
   } catch (e: any) {
-    errors.push(`gdbus: ${e?.code === "ENOENT" ? "not installed" : (e?.stderr?.toString?.()?.trim() || e?.message || e)}`);
+    errors.push(
+      `gdbus: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+    );
   }
 
   throw new Error(

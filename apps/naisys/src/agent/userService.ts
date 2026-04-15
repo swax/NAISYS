@@ -97,7 +97,10 @@ export function createUserService(
     );
 
     if (leadAgents.length === 0) {
-      notify(adminId, `No agent param include at startup so you are in the admin shell which can be used for diagnostics.`);
+      notify(
+        adminId,
+        `No agent param include at startup so you are in the admin shell which can be used for diagnostics.`,
+      );
       return [adminId];
     }
 

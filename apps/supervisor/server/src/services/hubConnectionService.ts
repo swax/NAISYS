@@ -1,7 +1,4 @@
 import { resolveHubAccessKey } from "@naisys/common-node";
-
-import { attachmentUrl } from "../hateoas.js";
-import { getPackageVersion } from "../version.js";
 import type {
   AgentStartResponse,
   AgentStopResponse,
@@ -25,7 +22,9 @@ import { io } from "socket.io-client";
 
 import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission } from "../auth-middleware.js";
+import { attachmentUrl } from "../hateoas.js";
 import { getLogger } from "../logger.js";
+import { getPackageVersion } from "../version.js";
 import {
   emitAgentsListChanged,
   emitHubConnectionStatus,

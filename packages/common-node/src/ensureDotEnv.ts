@@ -35,7 +35,10 @@ export async function ensureDotEnv(
       });
 
       const answer = await new Promise<string>((resolve) => {
-        rl.question("\n  Would you like to run the setup wizard? (Y/n) ", resolve);
+        rl.question(
+          "\n  Would you like to run the setup wizard? (Y/n) ",
+          resolve,
+        );
       });
       rl.close();
 
@@ -53,17 +56,16 @@ export async function ensureDotEnv(
       });
 
       const answer = await new Promise<string>((resolve) => {
-        rl.question(
-          `\n  Create .env from ${examplePath}? (y/N) `,
-          resolve,
-        );
+        rl.question(`\n  Create .env from ${examplePath}? (y/N) `, resolve);
       });
       rl.close();
 
       if (answer.toLowerCase().startsWith("y")) {
         fs.copyFileSync(examplePath, dotenvPath);
         console.log(`\n  Created: ${dotenvPath}`);
-        console.log(`  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.\n`);
+        console.log(
+          `  Edit the file (especially NAISYS_FOLDER which controls where data is stored) and restart.\n`,
+        );
         process.exit(0);
       }
     }

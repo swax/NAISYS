@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type {
   HubFireAndForgetEventName,
   HubFireAndForgetEvents,
@@ -10,7 +11,6 @@ import type {
 import { hubCmd } from "../command/commandDefs.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { HubClientConfig } from "./hubClientConfig.js";
-import type { DualLogger } from "@naisys/common-node";
 import type { HubConnection } from "./hubConnection.js";
 import { createHubConnection } from "./hubConnection.js";
 

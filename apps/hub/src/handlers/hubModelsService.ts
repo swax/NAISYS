@@ -8,6 +8,7 @@ import {
   type ModelDbFields,
   type ModelDbRow,
 } from "@naisys/common";
+import type { DualLogger } from "@naisys/common-node";
 import { loadCustomModels } from "@naisys/common-node";
 import {
   type HubDatabaseService,
@@ -16,7 +17,6 @@ import {
 import type { ModelsResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import { ensureVariables } from "./hubConfigService.js";
 

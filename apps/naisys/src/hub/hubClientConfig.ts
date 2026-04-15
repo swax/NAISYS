@@ -1,5 +1,6 @@
-import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
 import { readFileSync } from "node:fs";
+
+import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
 import os from "os";
 
 import { getInstallPath } from "../services/pathService.js";

@@ -208,7 +208,8 @@ export function createSessionService(
 
     const localUser = userService.getUserById(localUserId);
     const recipientId =
-      localUser?.leadUserId ?? userService.getUserByName(ADMIN_USERNAME)?.userId;
+      localUser?.leadUserId ??
+      userService.getUserByName(ADMIN_USERNAME)?.userId;
 
     const recipient = recipientId
       ? userService.getUserById(recipientId)

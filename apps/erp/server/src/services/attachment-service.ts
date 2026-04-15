@@ -43,7 +43,12 @@ export async function uploadAttachment(
   const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
 
   // Write to temp, then move to content-addressable path
-  const tmpDir = join(process.env.NAISYS_FOLDER || "", "tmp", "erp", "attachments");
+  const tmpDir = join(
+    process.env.NAISYS_FOLDER || "",
+    "tmp",
+    "erp",
+    "attachments",
+  );
   mkdirSync(tmpDir, { recursive: true });
 
   const tmpPath = join(

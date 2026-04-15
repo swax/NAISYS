@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   HubEvents,
@@ -5,7 +6,6 @@ import {
   SessionIncrementRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Handles session_create and session_increment requests from NAISYS instances */

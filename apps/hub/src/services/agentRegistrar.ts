@@ -1,13 +1,12 @@
 import type { UserEntry } from "@naisys/common";
 import { adminAgentConfig, toUrlSafeKey } from "@naisys/common";
+import type { DualLogger } from "@naisys/common-node";
 import { loadAgentConfigs } from "@naisys/common-node";
 import {
   type HubDatabaseService,
   type PrismaClient,
 } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
-
-import type { DualLogger } from "@naisys/common-node";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(

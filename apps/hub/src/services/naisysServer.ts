@@ -1,3 +1,4 @@
+import type { DualLogger } from "@naisys/common-node";
 import type {
   HostType,
   HubFireAndForgetEventName,
@@ -14,7 +15,6 @@ import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
 import type { HostRegistrar } from "./hostRegistrar.js";
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysConnection } from "./naisysConnection.js";
 import { createNaisysConnection } from "./naisysConnection.js";
 

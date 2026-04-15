@@ -43,8 +43,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectedOption, setSelectedOption] =
-    useState<VersionOption>("latest");
+  const [selectedOption, setSelectedOption] = useState<VersionOption>("latest");
   const [customVersion, setCustomVersion] = useState("");
   const [customValid, setCustomValid] = useState<boolean | null>(null);
   const [validating, setValidating] = useState(false);
@@ -148,11 +147,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
     const hash = commitHash.trim();
     if (!npmVersion && !hash) return false;
     if (hash && !isValidFullHash(hash)) return false;
-    if (
-      selectedOption === "custom" &&
-      npmVersion &&
-      customValid === null
-    )
+    if (selectedOption === "custom" && npmVersion && customValid === null)
       return false;
     return true;
   };
@@ -213,9 +208,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         { success: boolean; message: string }
       >(apiEndpoints.adminTargetVersion, { version: "" });
       if (result.success) {
-        setNpmData((prev) =>
-          prev ? { ...prev, targetVersion: "" } : prev,
-        );
+        setNpmData((prev) => (prev ? { ...prev, targetVersion: "" } : prev));
         onUpdate();
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         notifications.show({
@@ -237,12 +230,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   };
 
   return (
-    <Modal
-      opened={opened}
-      onClose={onClose}
-      title="Software Update"
-      size="lg"
-    >
+    <Modal opened={opened} onClose={onClose} title="Software Update" size="lg">
       {loading ? (
         <Stack align="center" py="xl">
           <Loader />

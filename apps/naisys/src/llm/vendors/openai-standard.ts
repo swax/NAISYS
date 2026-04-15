@@ -163,7 +163,10 @@ function extractConsoleCommands(
 
 // --- Content formatting helpers (shared with openai-computer-use) ---
 
-function formatContentBlocks(content: string | ContentBlock[], role: string): any[] {
+function formatContentBlocks(
+  content: string | ContentBlock[],
+  role: string,
+): any[] {
   const textType = role === "assistant" ? "output_text" : "input_text";
   if (typeof content === "string") {
     return [{ type: textType, text: content }];

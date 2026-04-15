@@ -2,6 +2,7 @@ import {
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
 } from "@naisys/common";
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { PrismaClient } from "@naisys/hub-database";
 import {
@@ -10,7 +11,6 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";

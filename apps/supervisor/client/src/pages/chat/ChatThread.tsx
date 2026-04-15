@@ -15,7 +15,6 @@ import React, { useEffect, useRef } from "react";
 
 import type { ChatMessage } from "../../lib/apiClient";
 
-
 function isImageFilename(filename: string): boolean {
   return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
 }
