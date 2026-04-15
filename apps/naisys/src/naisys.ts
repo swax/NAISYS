@@ -163,6 +163,17 @@ for (const userId of startupUserIds) {
   await agentManager.startAgent(userId);
 }
 
+let shuttingDown = false;
+process.on("SIGINT", () => {
+  if (shuttingDown) {
+    console.log("\nForce exit");
+    process.exit(1);
+  }
+  shuttingDown = true;
+  console.log("\n[NAISYS] Shutting down...");
+  agentManager.stopAll("SIGINT").catch(() => {});
+});
+
 await agentManager.waitForAllAgentsToComplete();
 
 hubLogBuffer?.cleanup();

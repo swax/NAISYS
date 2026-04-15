@@ -25,6 +25,13 @@ export function getSharedReadline(): readline.Interface | null {
       terminal: isTTY,
     });
     instance.pause();
+
+    // In terminal mode, readline intercepts Ctrl+C and emits 'SIGINT' on the
+    // rl instance instead of letting the OS deliver it to the process. Re-emit
+    // as a process-level event so handlers in naisys.ts can respond.
+    instance.on("SIGINT", () => {
+      process.emit("SIGINT", "SIGINT");
+    });
   }
   return instance;
 }

@@ -91,11 +91,7 @@ export function createDebugCommands(
         output.comment(
           `Stopping agents: ${otherAgents.map((a) => a.agentUsername).join(", ")}...`,
         );
-        await Promise.all(
-          otherAgents.map((agent) =>
-            agentManager.stopAgent(agent.agentUserId, "exit all"),
-          ),
-        );
+        await agentManager.stopAll("exit all", localUserId);
 
         output.comment(`Stopped ${otherAgents.length} agent(s)`);
       }

@@ -69,16 +69,9 @@ export function createUpdateService(
     log(`Update installed. Stopping agents for restart...`);
 
     try {
-      await Promise.all(
-        agentManager.runningAgents.map((agent) =>
-          agentManager.stopAgent(
-            agent.agentUserId,
-            `Switching to version ${targetVersion}`,
-          ),
-        ),
-      );
+      await agentManager.stopAll(`Switching to version ${targetVersion}`);
     } catch (error) {
-      logError(`Error stopping agent: ${error}`);
+      logError(`Error stopping agents: ${error}`);
     }
 
     // If not managed by PM2, respawn as a detached process before exiting
