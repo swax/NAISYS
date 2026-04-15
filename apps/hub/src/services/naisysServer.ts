@@ -14,7 +14,7 @@ import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
 import type { HostRegistrar } from "./hostRegistrar.js";
-import type { HubServerLog } from "./hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysConnection } from "./naisysConnection.js";
 import { createNaisysConnection } from "./naisysConnection.js";
 
@@ -38,7 +38,7 @@ interface RegisteredHandler {
 export function createNaisysServer(
   nsp: Server,
   initialHubAccessKey: string,
-  logService: HubServerLog,
+  logService: DualLogger,
   hostRegistrar: HostRegistrar,
 ) {
   let hubAccessKey = initialHubAccessKey;

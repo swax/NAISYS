@@ -7,12 +7,12 @@ import {
 } from "@naisys/hub-database";
 import { randomBytes, randomUUID } from "crypto";
 
-import type { HubServerLog } from "./hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
   startupAgentPath?: string,
 ) {
   // Check if users table already has rows (seed-once pattern)
@@ -43,7 +43,7 @@ export async function seedAgentConfigs(
 
 async function seedUsersToDatabase(
   hubDb: PrismaClient,
-  logService: HubServerLog,
+  logService: DualLogger,
   users: Map<number, UserEntry>,
 ) {
   // First pass: create all users, build loader userId → DB id map

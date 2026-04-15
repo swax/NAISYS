@@ -38,7 +38,7 @@ import {
   type ZodTypeProvider,
 } from "fastify-type-provider-zod";
 import path from "path";
-import pino from "pino";
+import { createFileLogger } from "@naisys/common-node";
 import { fileURLToPath } from "url";
 
 import { registerApiReference } from "./api-reference.js";
@@ -145,11 +145,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   // ERP-specific file logger (works in both standalone and hosted mode)
   const naisysFolder = process.env.NAISYS_FOLDER;
   if (naisysFolder) {
-    const erpLogDest = path.join(naisysFolder, "logs", "erp.log");
-    const erpFileLogger = pino(
-      { level: "info" },
-      pino.destination({ dest: erpLogDest, mkdir: true }),
-    );
+    const erpFileLogger = createFileLogger("erp.log");
 
     erpFileLogger.info("ERP plugin initialized");
 

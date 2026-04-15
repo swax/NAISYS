@@ -1,5 +1,6 @@
 import type { StartHub } from "@naisys/common";
 import {
+  createDualLogger,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -16,7 +17,6 @@ import { createGlobalConfig } from "./globalConfig.js";
 import type { HubClient } from "./hub/hubClient.js";
 import { createHubClient } from "./hub/hubClient.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
-import { createHubClientLog } from "./hub/hubClientLog.js";
 import type { HubCostBuffer } from "./hub/hubCostBuffer.js";
 import { createHubCostBuffer } from "./hub/hubCostBuffer.js";
 import type { HubLogBuffer } from "./hub/hubLogBuffer.js";
@@ -102,7 +102,7 @@ let hubCostBuffer: HubCostBuffer | undefined;
 let hubLogBuffer: HubLogBuffer | undefined;
 if (hubUrl) {
   const hubClientConfig = createHubClientConfig(hubUrl);
-  const hubClientLog = createHubClientLog();
+  const hubClientLog = createDualLogger("hub-client.log");
   hubClient = createHubClient(
     hubClientConfig,
     hubClientLog,

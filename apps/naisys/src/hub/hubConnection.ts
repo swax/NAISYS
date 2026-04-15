@@ -3,7 +3,7 @@ import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
 import type { HubClientConfig } from "./hubClientConfig.js";
-import type { HubClientLog } from "./hubClientLog.js";
+import type { DualLogger } from "@naisys/common-node";
 
 /** Generic raise event function type */
 export type RaiseEventFn = (event: string, ...args: unknown[]) => void;
@@ -13,7 +13,7 @@ type AckCallback<T = unknown> = (response: T) => void;
 
 export function createHubConnection(
   hubClientConfig: HubClientConfig,
-  hubClientLog: HubClientLog,
+  hubClientLog: DualLogger,
   raiseEvent: RaiseEventFn,
   onConnected: () => void,
   onDisconnected: () => void,
@@ -31,7 +31,7 @@ export function createHubConnection(
   let connected = false;
 
   function connect() {
-    hubClientLog.write(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
+    hubClientLog.log(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
 
     const hubAccessKey = resolveHubAccessKey();
     if (!hubAccessKey) {
@@ -57,13 +57,13 @@ export function createHubConnection(
 
     socket.on("connect", () => {
       connected = true;
-      hubClientLog.write(`[NAISYS:HubClient] Connected to ${hubUrl}`);
+      hubClientLog.log(`[NAISYS:HubClient] Connected to ${hubUrl}`);
       onConnected();
     });
 
     socket.on("disconnect", (reason) => {
       connected = false;
-      hubClientLog.write(
+      hubClientLog.log(
         `[NAISYS:HubClient] Disconnected from ${hubUrl}: ${reason}`,
       );
       onDisconnected();
@@ -75,7 +75,7 @@ export function createHubConnection(
     });
 
     socket.on("connect_error", (error) => {
-      hubClientLog.write(
+      hubClientLog.log(
         `[NAISYS:HubClient] Connection error to ${hubUrl}: ${error.message}`,
       );
       onConnectError(error.message);
@@ -83,7 +83,7 @@ export function createHubConnection(
 
     // Forward all socket events to hubClient's event handlers
     socket.onAny((eventName: string, ...args: unknown[]) => {
-      hubClientLog.write(
+      hubClientLog.log(
         `[NAISYS:HubClient] Received ${eventName} from ${hubUrl}`,
       );
       raiseEvent(eventName, ...args);
@@ -95,7 +95,7 @@ export function createHubConnection(
       socket.disconnect();
       socket = null;
       connected = false;
-      hubClientLog.write(`[NAISYS:HubClient] Disconnected from ${hubUrl}`);
+      hubClientLog.log(`[NAISYS:HubClient] Disconnected from ${hubUrl}`);
     }
   }
 

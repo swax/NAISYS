@@ -1,14 +1,14 @@
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents, type UserListResponse } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the user list to NAISYS instances when they connect or when users change */
 export function createHubUserService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   async function buildUserListPayload(): Promise<UserListResponse> {
     const dbUsers = await hubDb.users.findMany({

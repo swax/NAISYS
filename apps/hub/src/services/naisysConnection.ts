@@ -1,6 +1,6 @@
 import type { Socket } from "socket.io";
 
-import type { HubServerLog } from "./hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 
 export interface HostConnectionInfo {
   hostId: number;
@@ -25,7 +25,7 @@ export function createNaisysConnection(
   socket: Socket,
   connectionInfo: HostConnectionInfo,
   raiseEvent: RaiseEventFn,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   const { hostId, hostName, connectedAt, hostType, clientVersion } =
     connectionInfo;

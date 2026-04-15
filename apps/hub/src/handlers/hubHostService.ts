@@ -2,7 +2,7 @@ import type { HostList } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysConnection } from "../services/naisysConnection.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 import { getHubVersion } from "../version.js";
@@ -11,7 +11,7 @@ import { getHubVersion } from "../version.js";
 export function createHubHostService(
   naisysServer: NaisysServer,
   hostRegistrar: HostRegistrar,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   let cachedHostListJson = "";
 

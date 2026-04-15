@@ -2,6 +2,7 @@ import "dotenv/config";
 import "./schema-registry.js";
 
 import {
+  createFileLogger,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -107,15 +108,7 @@ export const supervisorPlugin: FastifyPluginAsync<SupervisorPluginOptions> =
     // parent Fastify may not have one configured. In standalone mode the
     // parent's Fastify logger (configured by startServer) is used.
     if (opts.hosted && process.env.NAISYS_FOLDER) {
-      const { default: pino } = await import("pino");
-      const logDest = path
-        .join(process.env.NAISYS_FOLDER, "logs", "supervisor.log")
-        .replaceAll("\\", "/");
-      const fileLogger = pino(
-        { level: "info" },
-        pino.destination({ dest: logDest, mkdir: true }),
-      );
-      initLogger(fileLogger as any);
+      initLogger(createFileLogger("supervisor.log"));
     } else {
       initLogger(fastify.log);
     }

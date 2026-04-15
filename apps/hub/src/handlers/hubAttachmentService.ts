@@ -16,7 +16,7 @@ import type { FastifyInstance } from "fastify";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -27,7 +27,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 export function createHubAttachmentService(
   fastify: FastifyInstance,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   const naisysFolder = process.env.NAISYS_FOLDER || "";
 
