@@ -1,4 +1,6 @@
 import fs from "fs";
+import os from "os";
+import path from "path";
 import readline from "readline";
 import { fileURLToPath } from "url";
 
@@ -32,6 +34,16 @@ export type WizardSection = WizardFieldSection | WizardProviderSection;
 export interface WizardConfig {
   title: string;
   sections: WizardSection[];
+}
+
+/** Return the current working directory with the home directory prefix replaced by ~ */
+export function cwdWithTilde(): string {
+  const cwd = process.cwd();
+  const home = os.homedir();
+  if (cwd === home || cwd.startsWith(home + path.sep)) {
+    return "~" + cwd.slice(home.length);
+  }
+  return cwd;
 }
 
 /** Parse a .env file into key-value pairs */
@@ -101,14 +113,21 @@ export async function runSetupWizard(
     output: process.stdout,
   });
 
+  rl.on("SIGINT", () => {
+    rl.close();
+    console.log("\n\n  Setup cancelled.\n");
+    process.exit(0);
+  });
+
   const ask = (prompt: string): Promise<string> =>
     new Promise((resolve) => rl.question(prompt, resolve));
 
   const results: Record<string, string> = {};
 
-  console.log(`\n  === ${config.title} ===\n`);
+  console.log(`\n  === ${config.title} ===`);
 
   for (const section of config.sections) {
+    console.log();
     if (section.type === "fields") {
       for (const field of section.fields) {
         const effectiveDefault =
@@ -120,7 +139,6 @@ export async function runSetupWizard(
         const answer = await ask(`  ${field.label}${display}: `);
         results[field.key] = answer || effectiveDefault;
       }
-      console.log();
     } else {
       console.log(`  ${section.label}`);
 
@@ -141,7 +159,7 @@ export async function runSetupWizard(
       const hint = defaultSel || "none";
       const display = defaultSel ? ` [${defaultSel}]` : "";
       const answer = await ask(
-        `\n  Select (comma-separated numbers, Enter for ${hint})${display}: `,
+        `  Select (comma-separated numbers, Enter for ${hint})${display}: `,
       );
 
       const selStr = answer || defaultSel;
@@ -151,8 +169,6 @@ export async function runSetupWizard(
             .map((s) => parseInt(s.trim()))
             .filter((n) => !isNaN(n) && n >= 1 && n <= section.options.length)
         : [];
-
-      if (selected.length > 0) console.log();
 
       // Ask for keys of selected providers
       for (const idx of selected) {
@@ -177,7 +193,6 @@ export async function runSetupWizard(
           }
         }
       }
-      console.log();
     }
   }
 
@@ -215,6 +230,7 @@ export async function runSetupWizard(
   }
 
   fs.writeFileSync(dotenvPath, lines.join("\n"));
+  console.log();
   console.log(`  Configuration saved to ${dotenvPath}`);
-  console.log(`  Review the file and restart.\n`);
+  console.log(`  Review the file and restart.`);
 }

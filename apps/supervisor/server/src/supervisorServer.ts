@@ -3,6 +3,7 @@ import "./schema-registry.js";
 
 import {
   createFileLogger,
+  cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -338,7 +339,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         type: "fields",
         comment: "Supervisor configuration",
         fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder" },
+          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
           { key: "HUB_URL", label: "NAISYS Hub URL" },
           { key: "SERVER_PORT", label: "Server Port" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
