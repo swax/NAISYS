@@ -1,15 +1,12 @@
 import type { StartHub } from "@naisys/common";
 import {
   createDualLogger,
-  cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
-  type WizardConfig,
 } from "@naisys/common-node";
 import { program } from "commander";
 import dotenv from "dotenv";
-import os from "os";
 import path from "path";
 
 import { AgentManager } from "./agent/agentManager.js";
@@ -26,6 +23,7 @@ import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
 import { createUpdateService } from "./services/updateService.js";
+import { ensureAgentConfig, getNaisysWizardConfig } from "./naisysSetup.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
@@ -71,8 +69,9 @@ program
   .option("--setup", "Run interactive setup wizard")
   .parse();
 
-const agentPath = program.args[0];
+await ensureAgentConfig(program.args[0]);
 
+const agentPath = program.args[0];
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
 let supervisorUrl: string | undefined;
@@ -178,102 +177,3 @@ if (updateService?.isUpdateInProgress()) {
 console.log(`[NAISYS] Exited`);
 
 process.exit(0);
-
-function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
-  if (hubClient) {
-    return {
-      title: "NAISYS Setup (Hub Client)",
-      sections: [
-        {
-          type: "fields",
-          comment:
-            "Copy value from Supervisor admin page or hub server's NAISYS_FOLDER/cert/hub-access-key",
-          fields: [{ key: "HUB_ACCESS_KEY", label: "Hub Access Key" }],
-        },
-        {
-          type: "fields",
-          comment: "Local configuration",
-          fields: [
-            { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
-            {
-              key: "NAISYS_HOSTNAME",
-              label: "Hostname",
-              defaultValue: os.hostname(),
-            },
-          ],
-        },
-      ],
-    };
-  }
-
-  return {
-    title: "NAISYS Setup",
-    sections: [
-      {
-        type: "fields",
-        comment:
-          "Agent home files and NAISYS specific databases will be stored here",
-        fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
-          {
-            key: "NAISYS_HOSTNAME",
-            label: "Hostname",
-            defaultValue: os.hostname(),
-          },
-        ],
-      },
-      {
-        type: "providers",
-        comment: "Leave API keys blank if not using the service",
-        label: "AI Providers",
-        options: [
-          {
-            name: "OpenAI",
-            fields: [{ key: "OPENAI_API_KEY", label: "OpenAI API Key" }],
-          },
-          {
-            name: "Google",
-            fields: [
-              { key: "GOOGLE_API_KEY", label: "Google API Key" },
-              {
-                key: "GOOGLE_SEARCH_ENGINE_ID",
-                label: "Google Search Engine ID",
-              },
-            ],
-          },
-          {
-            name: "Anthropic",
-            fields: [{ key: "ANTHROPIC_API_KEY", label: "Anthropic API Key" }],
-          },
-          {
-            name: "XAI",
-            fields: [{ key: "XAI_API_KEY", label: "XAI API Key" }],
-          },
-          {
-            name: "OpenRouter",
-            fields: [
-              { key: "OPENROUTER_API_KEY", label: "OpenRouter API Key" },
-            ],
-          },
-        ],
-      },
-      {
-        type: "fields",
-        comment: "Spend limits apply to all agents using this .env file",
-        fields: [
-          { key: "SPEND_LIMIT_DOLLARS", label: "Spend Limit (dollars)" },
-          { key: "SPEND_LIMIT_HOURS", label: "Spend Limit Period (hours)" },
-        ],
-      },
-      {
-        type: "fields",
-        comment:
-          "Integrated server configuration if the --integrated-hub option is used on startup",
-        fields: [
-          { key: "SERVER_PORT", label: "Server Port" },
-          { key: "PUBLIC_READ", label: "Public Read Access" },
-        ],
-      },
-    ],
-  };
-}

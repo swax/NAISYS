@@ -162,8 +162,7 @@ export function buildDefaultAgentConfig(username: string): AgentConfigFile {
     shellModel: "none",
     agentPrompt:
       "You are ${agent.username} a ${agent.title} with the job of helping out the admin with what they want to do.",
-    tokenMax: 20000,
-    debugPauseSeconds: 5,
+    tokenMax: 30000,
     mailEnabled: true,
     chatEnabled: true,
     webEnabled: true,
