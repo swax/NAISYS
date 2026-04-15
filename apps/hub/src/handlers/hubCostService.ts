@@ -10,7 +10,7 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
@@ -21,7 +21,7 @@ const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 export function createHubCostService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
 ) {

@@ -10,7 +10,7 @@ import {
   MailUnreadRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubAgentService } from "./hubAgentService.js";
 import type { HubConfigService } from "./hubConfigService.js";
@@ -24,7 +24,7 @@ const MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000;
 export function createHubMailService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
   agentService: HubAgentService,

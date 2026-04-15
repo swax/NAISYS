@@ -6,14 +6,14 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   // Track active agent user IDs per host from heartbeat data
   const hostActiveAgents = new Map<number, number[]>();

@@ -5,14 +5,14 @@ import {
   SessionIncrementRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Handles session_create and session_increment requests from NAISYS instances */
 export function createHubRunService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   function pushSessionToSupervisors(session: {
     userId: number;

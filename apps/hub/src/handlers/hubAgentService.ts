@@ -7,7 +7,7 @@ import {
 } from "@naisys/hub-protocol";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
@@ -16,7 +16,7 @@ import type { HubSendMailService } from "./hubSendMailService.js";
 export function createHubAgentService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,

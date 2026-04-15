@@ -6,7 +6,7 @@ import {
   LogWriteRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 
@@ -14,7 +14,7 @@ import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 export function createHubLogService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
   heartbeatService: HubHeartbeatService,
 ) {
   // Track last pushed log ID per session for gap detection

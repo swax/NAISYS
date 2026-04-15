@@ -1,5 +1,54 @@
 import type fs from "node:fs";
 import fsp from "node:fs/promises";
+import path from "node:path";
+import pino from "pino";
+
+/**
+ * Create a pino file logger that writes to NAISYS_FOLDER/logs/<filename>.
+ */
+export function createFileLogger(filename: string): pino.Logger {
+  const logPath = path
+    .join(process.env.NAISYS_FOLDER || "", "logs", filename)
+    .replaceAll("\\", "/");
+
+  return pino(
+    { level: "info" },
+    pino.destination({ dest: logPath, mkdir: true }),
+  );
+}
+
+export interface DualLogger {
+  log: (message: string) => void;
+  error: (message: string) => void;
+  disableConsole: () => void;
+}
+
+/**
+ * Create a logger that writes to both a pino log file and the console.
+ * Call disableConsole() to silence console output after startup.
+ */
+export function createDualLogger(filename: string): DualLogger {
+  const logger = createFileLogger(filename);
+  let consoleEnabled = true;
+
+  return {
+    log: (message: string) => {
+      logger.info(message);
+      if (consoleEnabled) {
+        console.log(message);
+      }
+    },
+    error: (message: string) => {
+      logger.error(message);
+      if (consoleEnabled) {
+        console.error(message);
+      }
+    },
+    disableConsole: () => {
+      consoleEnabled = false;
+    },
+  };
+}
 
 export interface PinoLogEntry {
   level: number;

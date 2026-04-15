@@ -1,7 +1,7 @@
 import { HubEvents, RotateAccessKeyRequestSchema } from "@naisys/hub-protocol";
 
 import { rotateAccessKey } from "../services/accessKeyService.js";
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /**
@@ -12,7 +12,7 @@ import type { NaisysServer } from "../services/naisysServer.js";
  */
 export function createHubAccessKeyService(
   naisysServer: NaisysServer,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   naisysServer.registerEvent(
     HubEvents.ROTATE_ACCESS_KEY,

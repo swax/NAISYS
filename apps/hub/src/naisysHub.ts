@@ -1,5 +1,6 @@
 import type { StartHub } from "@naisys/common";
 import {
+  createDualLogger,
   ensureDotEnv,
   expandNaisysFolder,
   runSetupWizard,
@@ -28,7 +29,6 @@ import { createHubUserService } from "./handlers/hubUserService.js";
 import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
-import { createHubServerLog } from "./services/hubServerLog.js";
 import { createNaisysServer } from "./services/naisysServer.js";
 
 /**
@@ -43,7 +43,7 @@ export const startHub: StartHub = async (
 ) => {
   try {
     // Create log service first
-    const logService = createHubServerLog(startupType);
+    const logService = createDualLogger("hub-server.log");
 
     logService.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
@@ -186,7 +186,9 @@ export const startHub: StartHub = async (
     logService.log(
       `[Hub] Running on http://localhost:${serverPort}/hub, logs written to file`,
     );
-    logService.disableConsole();
+    if (startupType === "hosted") {
+      logService.disableConsole();
+    }
 
     return { serverPort };
   } catch (err) {

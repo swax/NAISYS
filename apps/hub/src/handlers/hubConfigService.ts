@@ -4,14 +4,14 @@ import type { ConfigResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 
 /** Pushes the global config to NAISYS instances when they connect or when variables change */
 export async function createHubConfigService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   let cachedConfig: ConfigResponse = {
     success: false,

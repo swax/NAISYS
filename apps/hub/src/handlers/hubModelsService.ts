@@ -16,7 +16,7 @@ import {
 import type { ModelsResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
-import type { HubServerLog } from "../services/hubServerLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { NaisysServer } from "../services/naisysServer.js";
 import { ensureVariables } from "./hubConfigService.js";
 
@@ -24,7 +24,7 @@ import { ensureVariables } from "./hubConfigService.js";
 export async function createHubModelsService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  logService: HubServerLog,
+  logService: DualLogger,
 ) {
   // Seed models table from built-in + YAML custom models (one-time, skips if non-empty)
   await seedModels(hubDb, logService);
@@ -90,7 +90,7 @@ export async function createHubModelsService(
 /** Seeds models table from built-in models + any YAML custom models.
  *  Built-in models are upserted on every startup unless the user has customized them.
  *  YAML custom models are only imported on first run (empty table). */
-async function seedModels(hubDb: PrismaClient, logService: HubServerLog) {
+async function seedModels(hubDb: PrismaClient, logService: DualLogger) {
   const existingRows = (await hubDb.models.findMany()) as ModelDbRow[];
   const isFirstRun = existingRows.length === 0;
 

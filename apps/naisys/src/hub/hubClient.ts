@@ -10,7 +10,7 @@ import type {
 import { hubCmd } from "../command/commandDefs.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { HubClientConfig } from "./hubClientConfig.js";
-import type { HubClientLog } from "./hubClientLog.js";
+import type { DualLogger } from "@naisys/common-node";
 import type { HubConnection } from "./hubConnection.js";
 import { createHubConnection } from "./hubConnection.js";
 
@@ -24,7 +24,7 @@ type EventHandler = (...args: any[]) => void;
 
 export function createHubClient(
   hubClientConfig: HubClientConfig,
-  hubClientLog: HubClientLog,
+  hubClientLog: DualLogger,
   promptNotification: PromptNotificationService,
 ) {
   const hubUrl = hubClientConfig.hubUrl;
@@ -132,7 +132,7 @@ export function createHubClient(
   ): boolean;
   function sendMessage(event: string, payload: unknown): boolean {
     if (!activeConnection) {
-      hubClientLog.write(
+      hubClientLog.log(
         "[NAISYS:HubClient] No active connection for sendMessage",
       );
       return false;
@@ -148,7 +148,7 @@ export function createHubClient(
   ): Promise<HubRequestEvents[E]["response"]>;
   function sendRequest(event: string, payload: unknown): Promise<unknown> {
     if (!activeConnection) {
-      hubClientLog.write(
+      hubClientLog.log(
         "[NAISYS:HubClient] No active connection for sendRequest",
       );
       return Promise.reject(new Error("No active hub connection"));
