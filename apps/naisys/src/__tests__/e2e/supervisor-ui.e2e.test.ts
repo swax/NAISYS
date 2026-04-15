@@ -29,7 +29,7 @@ describe("Supervisor UI E2E", () => {
   let naisys: NaisysTestProcess | null = null;
   let browser: Browser | null = null;
 
-  const SERVER_PORT = 4131;
+  const SERVER_PORT = 4404;
 
   beforeEach(() => {
     testDir = getTestDir("supervisor_ui");

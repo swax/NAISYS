@@ -198,7 +198,7 @@ async function startServer() {
   registerLenientJsonParser(fastify);
 
   await fastify.register(cors, {
-    origin: isProd ? false : ["http://localhost:3202"],
+    origin: isProd ? false : ["http://localhost:2202"],
     credentials: true,
   });
 
@@ -223,7 +223,7 @@ async function startServer() {
 
   await fastify.register(erpPlugin);
 
-  const port = Number(process.env.SERVER_PORT) || 3201;
+  const port = Number(process.env.SERVER_PORT) || 3302;
   const host = isProd ? "0.0.0.0" : "localhost";
 
   try {

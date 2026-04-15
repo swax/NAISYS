@@ -55,7 +55,7 @@ program
   )
   .option(
     "--hub <url>",
-    "Connect to a Hub server at the given URL (e.g. --hub=http://localhost:3101)",
+    "Connect to a Hub server at the given URL (e.g. --hub=http://localhost:3300)",
   )
   .option(
     "--integrated-hub",

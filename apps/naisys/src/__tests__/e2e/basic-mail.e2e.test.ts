@@ -27,7 +27,7 @@ describe("Basic Mail E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4121;
+  const SERVER_PORT = 4403;
 
   beforeEach(() => {
     testDir = getTestDir("basic_mail");

@@ -33,10 +33,10 @@ export default defineConfig({
   plugins: [zodJitless(), react()],
   base: "/supervisor/",
   server: {
-    port: 3002,
+    port: 2201,
     proxy: {
       "/supervisor/api": {
-        target: "http://localhost:3001",
+        target: "http://localhost:3301",
         changeOrigin: true,
       },
     },

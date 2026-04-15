@@ -42,7 +42,7 @@ The application provides a web interface to monitor NAISYS agents, view their lo
    npm run dev
    ```
 
-The application will be available at `http://localhost:3002/supervisor/` (development) or `http://localhost:3001/supervisor/` (production).
+The application will be available at `http://localhost:2201/supervisor/` (development) or `http://localhost:3301/supervisor/` (production).
 
 ## Architecture
 
@@ -84,7 +84,7 @@ Database schema is defined in `packages/database/prisma/schema.prisma`.
 
 - `NAISYS_FOLDER` - Path to NAISYS data folder (required)
 - `NODE_ENV` - Environment mode (development/production)
-- `SERVER_PORT` - Server port (defaults to 3001)
+- `SERVER_PORT` - Server port (defaults to 3301)
 
 ## API Endpoints
 

@@ -47,7 +47,7 @@ export const startHub: StartHub = async (
 
     logService.log(`[Hub] Starting Hub server in ${startupType} mode...`);
 
-    const serverPort = Number(process.env.SERVER_PORT) || 3101;
+    const serverPort = Number(process.env.SERVER_PORT) || 3300;
 
     // Load or generate hub access key for client authentication
     const hubAccessKey = loadOrCreateAccessKey();

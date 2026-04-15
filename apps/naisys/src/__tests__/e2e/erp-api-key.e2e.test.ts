@@ -33,7 +33,7 @@ describe("ERP API Key Auth E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4111;
+  const SERVER_PORT = 4402;
 
   beforeEach(() => {
     testDir = getTestDir("erp_api_key");

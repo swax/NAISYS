@@ -1,7 +1,7 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { loginAsTestUser } from "../auth-helper";
 
-const API = "http://localhost:3201/erp/api";
+const API = "http://localhost:3302/erp/api";
 
 test.describe("Order Runs - API happy path", () => {
   let orderKey: string;

@@ -42,7 +42,7 @@ describe("Cross-Hub Mail E2E", () => {
   let hostA: NaisysTestProcess | null = null;
   let hostB: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4101;
+  const SERVER_PORT = 4401;
   const HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
 
   beforeEach(() => {

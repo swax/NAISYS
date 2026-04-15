@@ -66,7 +66,7 @@ When running `naisys --integrated-hub`, the hub starts in-process and the access
    ```
    HUB_ACCESS_KEY=<the access key from step 1>
    ```
-3. Run naisys with `--hub=https://machine-a:3101`
+3. Run naisys with `--hub=https://machine-a:3300`
 4. The client connects over TLS and authenticates with the access key
 
 The access key only needs to be copied once per client machine. If the hub's cert directory is deleted and regenerated, all clients need the new access key.
