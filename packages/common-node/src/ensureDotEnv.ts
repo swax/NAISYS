@@ -1,9 +1,13 @@
 import fs from "fs";
 import path from "path";
-import readline from "readline";
 import { fileURLToPath } from "url";
 
-import { runSetupWizard, type WizardConfig } from "./setupWizard.js";
+import { expandNaisysFolder } from "./expandEnv.js";
+import {
+  askQuestion,
+  runSetupWizard,
+  type WizardConfig,
+} from "./setupWizard.js";
 
 /**
  * Checks for a .env file in the current working directory.
@@ -29,48 +33,22 @@ export async function ensureDotEnv(
   if (process.stdin.isTTY) {
     // Offer setup wizard if config is provided
     if (wizardConfig) {
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      rl.on("SIGINT", () => {
-        rl.close();
-        console.log("\n");
-        process.exit(0);
-      });
-
-      const answer = await new Promise<string>((resolve) => {
-        rl.question(
-          "  Would you like to run the setup wizard? (Y/n) ",
-          resolve,
-        );
-      });
-      rl.close();
+      const answer = await askQuestion(
+        "  Would you like to run the setup wizard? (Y/n) ",
+      );
 
       if (!answer || answer.toLowerCase().startsWith("y")) {
         await runSetupWizard(dotenvPath, exampleUrl, wizardConfig);
-        process.exit(0);
+        expandNaisysFolder();
+        return;
       }
     }
 
     // Fall back to copying the example file
     if (hasExample) {
-      const rl2 = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-
-      rl2.on("SIGINT", () => {
-        rl2.close();
-        console.log("\n");
-        process.exit(0);
-      });
-
-      const answer = await new Promise<string>((resolve) => {
-        rl2.question(`  Create .env from ${examplePath}? (y/N) `, resolve);
-      });
-      rl2.close();
+      const answer = await askQuestion(
+        `  Create .env from ${examplePath}? (y/N) `,
+      );
 
       if (answer.toLowerCase().startsWith("y")) {
         fs.copyFileSync(examplePath, dotenvPath);
