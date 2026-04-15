@@ -37,6 +37,7 @@ function uploadFileToHub(
         headers: {
           "Content-Length": fileSize,
           Authorization: `Bearer ${apiKey}`,
+          "ngrok-skip-browser-warning": "true",
         },
       },
       (res) => {
