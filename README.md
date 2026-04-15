@@ -21,105 +21,85 @@ Self-hosted, cross-machine, AI agent runner and manager that runs on Node.js
 
 ## Getting Started
 
-Create an agent YAML file (e.g. `agent.yaml`):
-
-```yaml
-username: steve
-title: Assistant
-shellModel: claude4sonnet
-agentPrompt: You are ${agent.username}, a helpful ${agent.title}.
-tokenMax: 50000
-spendLimitDollars: 3.00
-```
-
-See [agents/template.yaml](agents/template.yaml) for all agent options and supported models.
-
 ### Ephemeral Mode
 
-Lightweight agent runner with no persistence or web UI. Runs agents on demand. Pass a directory to run all agent yamls in that folder.
+Lightweight agent runner with no persistence or web UI. Runs agents on demand. Pass a directory to run all agent yamls in that folder. Make sure you're running at least Node.js 22 `node -v`
 
 ```bash
-# Make sure you're running at least Node.js 22
+npm install naisys
 npx naisys agent.yaml
 ```
 
-An `.env` file is auto-created on first run (see [.env.example](apps/naisys/.env.example) for options).
+The setup wizard on first run will guide you through creating a [.env](apps/naisys/.env.example) and [agent.yaml](agents/template.yaml) file.
 
 ### Integrated Mode
 
 Everything in a single process — Hub for persistence, Supervisor web UI, and optional ERP. Requires a local install since multiple packages are needed:
 
 ```bash
-mkdir naisys && cd naisys
 npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
 npx naisys --integrated-hub --supervisor --erp
 ```
 
-Open `http://localhost:3300/supervisor/` to monitor agents.
+When the process starts up it gives you a link to the supervisor UI and a command to change the superadmin password. 
 
 ### Simple Client/Server with ngrok
 
-Host a NAISYS server on your own machine and connect remote machines to it through ngrok. This gives you remote management for free with no central server required. Best practice is still to run NAISYS clients and servers from within a VM.
+Host a NAISYS server on your own machine and connect remote machines to it through ngrok. This gives you remote management for free with no central server required. Best practice is to run NAISYS clients and servers from within a VM on their own NAISYS account.
 
-```bash
-# On the server — install and start NAISYS with the hub and web UI
-npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
-npx naisys --integrated-hub --supervisor --erp
-```
-
-In a separate terminal, expose the server with [ngrok](https://ngrok.com/):
+Start with the integrated server command above, and then expose the server with [ngrok](https://ngrok.com/):
 
 ```bash
 ngrok http <port of your naisys instance>
 ```
 
+Then on each client machine run this command. This will allow NAISYS to start/stop agents on the machine.
+
 ```bash
-# On each client machine
 npm install naisys
-npx naisys --hub="<ngrok hostname>/hub"
+npx naisys --hub=https://<server>/hub
 ```
 
-That's it — your agents can now run and communicate across machines, and you can manage them remotely through the Supervisor web UI.
+That's it — you now have a self-hosted cluster of machines to run agents across. The agents can securely communicate with each other, all managed through the supervisor AI.
 
 ### Advanced Client/Server with PM2
 
-Run Hub/Supervisor on a central server and extend it with NAISYS instances on other machines that the hub controls. Each instance can run many agents simultaneously with both console and desktop access. Manage it all through the Supervisor web UI. Best practice is to run NAISYS from a dedicated server or VM using a dedicated user account.
+PM2 keeps NAISYS running through system restarts, NAISYS upgrades, and unexpected crashes. NAISYS server uses around 180MB, so if you want you could easily host it on a $6/month Digital Ocean Droplet VM.
 
-```bash
-# Create a dedicated user on server/clients for naisys
+Create a dedicated user on server/clients for NAISYS
+
+```bash 
 npm install -g pm2
 sudo useradd -m -s /bin/bash naisys
 sudo su - naisys
 ```
 
+Install NAISYS on the server like above then run:
+
 ```bash
-# On the server
-npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
-npx naisys --integrated-hub --supervisor --erp
-# If you can access the naisys web UI, exit and restart it in pm2
 pm2 start npx --name naisys-server -- naisys --integrated-hub --supervisor --erp
 ```
 
-```bash
-# On each client machine
-npm install naisys
-npx naisys --hub=https://<server>/hub
-# Once you validated you can connect to the hub, exit and restart with pm2
-pm2 start npx --name naisys-client -- naisys --hub=//<server>/hub
-```
+Similarly on each client install NAISYS then run
 
 ```bash
-# Finish pm2 setup to ensure it starts naisys on boot
+pm2 start npx --name naisys-client -- naisys --hub=https://<server>/hub
+```
+
+Finish PM2 setup to ensure it starts NAISYS on boot
+
+```bash
 pm2 startup
 pm2 save
 ```
 
-### From Source
+### Installing/Running from Source
 
 ```bash
+git clone https://github.com/swax/NAISYS.git
 npm install && npm run build
-cd apps/naisys
-node dist/naisys.js ../../agents/assistant.yaml --integrated-hub --supervisor --erp
+mkdir testrun && cd testrun
+node ../apps/naisys/dist/naisys.js --integrated-hub --supervisor --erp
 ```
 
 ### NAISYS ERP
