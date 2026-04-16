@@ -2,6 +2,7 @@ import type { AgentConfigFile } from "@naisys/common";
 import {
   AgentConfigFileSchema,
   calculatePeriodBoundaries,
+  extractTemplateKeys,
 } from "@naisys/common";
 import type { Agent, AgentDetailResponse } from "@naisys/supervisor-shared";
 
@@ -191,6 +192,8 @@ export async function getAgent(
     user.user_notifications?.spend_limit_reset_at ?? null,
   );
 
+  const resolvedEnvVars = await resolveEnvVarsForConfig(config);
+
   return {
     id: user.id,
     name: user.username,
@@ -208,6 +211,7 @@ export async function getAgent(
     spendLimitResetAt:
       user.user_notifications?.spend_limit_reset_at?.toISOString() ?? undefined,
     config,
+    resolvedEnvVars,
     assignedHosts: user.user_hosts.map((uh) => ({
       id: uh.host.id,
       name: uh.host.name,
@@ -316,6 +320,34 @@ export async function resetAgentSpend(id: number): Promise<void> {
       cost_suspended_reason: null,
     },
   });
+}
+
+/**
+ * Extract ${env.*} keys referenced in the agent's prompt and initialCommands,
+ * then look up their values from the variables table.
+ * Sensitive variables are returned as "••••••" instead of their real value.
+ */
+async function resolveEnvVarsForConfig(
+  config: AgentConfigFile,
+): Promise<Record<string, string> | undefined> {
+  const templates = [
+    config.agentPrompt,
+    ...(config.initialCommands ?? []),
+  ];
+
+  const keys = extractTemplateKeys(templates, "env");
+  if (keys.length === 0) return undefined;
+
+  const rows = await hubDb.variables.findMany({
+    where: { key: { in: keys } },
+    select: { key: true, value: true, sensitive: true },
+  });
+
+  const map: Record<string, string> = {};
+  for (const row of rows) {
+    map[row.key] = row.sensitive ? "\u2022\u2022\u2022\u2022\u2022\u2022" : row.value;
+  }
+  return map;
 }
 
 export async function deleteAgent(id: number): Promise<void> {

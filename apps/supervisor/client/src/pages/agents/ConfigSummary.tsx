@@ -14,10 +14,12 @@ import { IconRefresh } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
+import { TemplatedText } from "../../components/TemplatedText";
 import type { Agent, Host } from "../../types/agent";
 
 export const ConfigSummary: React.FC<{
   config: AgentDetailResponse["config"];
+  resolvedEnvVars?: Record<string, string>;
   leadUsername?: string;
   assignedHosts?: { id: number; name: string }[];
   hosts?: Host[];
@@ -29,6 +31,7 @@ export const ConfigSummary: React.FC<{
   onResetSpend?: () => void;
 }> = ({
   config,
+  resolvedEnvVars,
   leadUsername,
   assignedHosts,
   hosts,
@@ -235,7 +238,7 @@ export const ConfigSummary: React.FC<{
           Agent Prompt
         </Text>
         <Code block style={{ whiteSpace: "pre-wrap" }}>
-          {config.agentPrompt}
+          <TemplatedText template={config.agentPrompt} config={config} envVars={resolvedEnvVars} />
         </Code>
       </div>
 
@@ -244,7 +247,14 @@ export const ConfigSummary: React.FC<{
           <Text size="sm" c="dimmed" mb={4}>
             Initial Commands
           </Text>
-          <Code block>{config.initialCommands.join("\n\n")}</Code>
+          <Code block style={{ whiteSpace: "pre-wrap" }}>
+            {config.initialCommands.map((cmd, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && "\n\n"}
+                <TemplatedText template={cmd} config={config} envVars={resolvedEnvVars} />
+              </React.Fragment>
+            ))}
+          </Code>
         </div>
       )}
     </Stack>

@@ -84,12 +84,16 @@ export const AgentDetail: React.FC = () => {
   const [selectedRevision, setSelectedRevision] =
     useState<ConfigRevision | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [resolvedEnvVars, setResolvedEnvVars] = useState<
+    Record<string, string> | undefined
+  >();
 
   const fetchDetail = async () => {
     if (!username) return;
     try {
       const data = await getAgentDetail(username);
       setConfig(data.config);
+      setResolvedEnvVars(data.resolvedEnvVars);
       setAssignedHosts(data.assignedHosts);
       setCostSuspendedReason(data.costSuspendedReason);
       setCurrentSpend(data.currentSpend);
@@ -662,6 +666,7 @@ export const AgentDetail: React.FC = () => {
       {config && (
         <ConfigSummary
           config={config}
+          resolvedEnvVars={resolvedEnvVars}
           leadUsername={agentData?.leadUsername}
           assignedHosts={assignedHosts}
           hosts={hosts}

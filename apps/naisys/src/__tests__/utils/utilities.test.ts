@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { trimChars, valueFromString } from "../../utils/utilities.js";
+import { valueFromString } from "@naisys/common";
+
+import { trimChars } from "../../utils/utilities.js";
 
 describe("trimChars function", () => {
   test("trims the specified characters from the start and end of the string", () => {
