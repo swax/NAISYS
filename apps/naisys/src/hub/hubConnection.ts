@@ -49,6 +49,7 @@ export function createHubConnection(
         cb({
           hubAccessKey: resolveHubAccessKey(),
           hostName: hubClientConfig.hostname,
+          machineId: hubClientConfig.machineId || undefined,
           hostType: "naisys",
           clientVersion: hubClientConfig.clientVersion,
         });

@@ -26,7 +26,7 @@ import type {
   CostWriteResponse,
 } from "./schemas/costs.js";
 import type { AgentsStatus, Heartbeat } from "./schemas/heartbeat.js";
-import type { HostList } from "./schemas/hosts.js";
+import type { HostList, HostRegistered } from "./schemas/hosts.js";
 import type { LogPush, LogWriteRequest } from "./schemas/logs.js";
 import type {
   MailArchiveRequest,
@@ -138,6 +138,7 @@ export interface HubFireAndForgetEvents {
 /** Events pushed from Hub to NAISYS clients */
 export interface HubPushEvents {
   [HubEvents.USERS_UPDATED]: UserListResponse;
+  [HubEvents.HOST_REGISTERED]: HostRegistered;
   [HubEvents.HOSTS_UPDATED]: HostList;
   [HubEvents.VARIABLES_UPDATED]: ConfigResponse;
   [HubEvents.MODELS_UPDATED]: ModelsResponse;

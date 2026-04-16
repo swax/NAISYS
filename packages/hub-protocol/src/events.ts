@@ -51,6 +51,8 @@ export const HubEvents = {
   // Hub -> NAISYS push (targeted to specific host)
   // ---------------------------------------------------------------------------
 
+  /** Sent to a newly connected client with its assigned machineId and hostname */
+  HOST_REGISTERED: "host_registered",
   /** Spending limit enforcement, pushed to the host running the affected agent */
   COST_CONTROL: "cost_control",
   /** New mail notification, pushed to hosts running recipient agents */

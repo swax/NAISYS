@@ -14,6 +14,7 @@ import { createUserService } from "./agent/userService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import type { HubClient } from "./hub/hubClient.js";
 import { createHubClient } from "./hub/hubClient.js";
+import type { HubClientConfig } from "./hub/hubClientConfig.js";
 import { createHubClientConfig } from "./hub/hubClientConfig.js";
 import type { HubCostBuffer } from "./hub/hubCostBuffer.js";
 import { createHubCostBuffer } from "./hub/hubCostBuffer.js";
@@ -98,10 +99,11 @@ if (integratedHub) {
 const promptNotification = createPromptNotificationService();
 
 let hubClient: HubClient | undefined;
+let hubClientConfig: HubClientConfig | undefined;
 let hubCostBuffer: HubCostBuffer | undefined;
 let hubLogBuffer: HubLogBuffer | undefined;
 if (hubUrl) {
-  const hubClientConfig = createHubClientConfig(hubUrl);
+  hubClientConfig = createHubClientConfig(hubUrl);
   const hubClientLog = createDualLogger("hub-client.log");
   hubClient = createHubClient(
     hubClientConfig,
@@ -113,7 +115,7 @@ if (hubUrl) {
 }
 
 const globalConfig = createGlobalConfig(hubClient, supervisorUrl);
-const hostService = createHostService(hubClient, globalConfig);
+const hostService = createHostService(hubClient, hubClientConfig, globalConfig);
 const userService = createUserService(
   hubClient,
   promptNotification,

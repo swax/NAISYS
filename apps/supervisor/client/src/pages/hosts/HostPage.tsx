@@ -285,46 +285,12 @@ export const HostPage: React.FC = () => {
                 <ActionIcon
                   variant="subtle"
                   color="gray"
-                  onClick={() => {
-                    const confirmed = window.confirm(
-                      "Changing the host name here will not change the name on the NAISYS instance. " +
-                        "You must also update the NAISYS_HOSTNAME environment variable in the instance's .env file.",
-                    );
-                    if (confirmed) setNameEditable(true);
-                  }}
+                  onClick={() => setNameEditable(true)}
                 >
                   <IconEdit size={16} />
                 </ActionIcon>
               )}
             </>
-          )}
-          {hostDetail?.hostType && (
-            <Badge
-              size="lg"
-              variant="light"
-              color={hostDetail.hostType === "supervisor" ? "violet" : "blue"}
-            >
-              {hostDetail.hostType}
-            </Badge>
-          )}
-          {connectionStatus === "connected" && (
-            <Badge
-              size="lg"
-              variant="light"
-              color={host?.online ? "green" : "gray"}
-            >
-              {host?.online ? "online" : "offline"}
-            </Badge>
-          )}
-          {(host?.version || hostDetail?.version) && (
-            <Text size="sm" c="dimmed">
-              v{host?.version || hostDetail?.version}
-            </Text>
-          )}
-          {hostDetail?.lastIp && (
-            <Text size="sm" c="dimmed">
-              IP: {hostDetail.lastIp}
-            </Text>
           )}
         </Group>
         <Group gap="xs">
@@ -352,124 +318,198 @@ export const HostPage: React.FC = () => {
         </Group>
       </Group>
 
-      {/* Restricted toggle */}
-      {hasAction(actions, "update") && (
-        <Switch
-          label="Restricted"
-          description="Only assigned agents can run on this host"
-          checked={editRestricted}
-          onChange={(e) => setEditRestricted(e.currentTarget.checked)}
-        />
-      )}
-      {!hasAction(actions, "update") && host?.restricted && (
-        <Badge size="sm" variant="light" color="orange">
-          Restricted
-        </Badge>
-      )}
-
-      {/* Active Agents */}
-      <Title order={4}>Active Agents</Title>
-      {activeAgents.length === 0 ? (
-        <Text c="dimmed" size="sm">
-          No agents currently active on this host
-        </Text>
-      ) : (
-        <Table striped highlightOnHover>
-          <Table.Thead>
+      {/* Host Details */}
+      <Table withRowBorders={false}>
+        <Table.Tbody>
+          {hostDetail?.hostType && (
             <Table.Tr>
-              <Table.Th>Username</Table.Th>
-              <Table.Th>Title</Table.Th>
+              <Table.Td c="dimmed">Type</Table.Td>
+              <Table.Td>
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={
+                    hostDetail.hostType === "supervisor" ? "violet" : "blue"
+                  }
+                >
+                  {hostDetail.hostType}
+                </Badge>
+              </Table.Td>
             </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {activeAgents.map((agent) => (
-              <Table.Tr
-                key={agent.id}
-                style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/agents/${agent.name}`)}
-              >
-                <Table.Td>{agent.name}</Table.Td>
-                <Table.Td>{agent.title}</Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      )}
-
-      {/* Assigned Agents */}
-      <Title order={4}>Assigned Agents</Title>
-      {hostDetail && hostDetail.assignedAgents.length === 0 ? (
-        <Text c="dimmed" size="sm">
-          No agents assigned (any agent can use this host)
-        </Text>
-      ) : (
-        <Table striped highlightOnHover>
-          <Table.Thead>
+          )}
+          {connectionStatus === "connected" && (
             <Table.Tr>
-              <Table.Th>Username</Table.Th>
-              <Table.Th>Title</Table.Th>
-              {hasAction(actions, "assign-agent") && (
-                <Table.Th style={{ width: 50 }}></Table.Th>
-              )}
+              <Table.Td c="dimmed">Status</Table.Td>
+              <Table.Td>
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={host?.online ? "green" : "gray"}
+                >
+                  {host?.online ? "online" : "offline"}
+                </Badge>
+              </Table.Td>
             </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {hostDetail?.assignedAgents.map((agent) => (
-              <Table.Tr
-                key={agent.id}
-                style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/agents/${agent.name}`)}
-              >
-                <Table.Td>{agent.name}</Table.Td>
-                <Table.Td>{agent.title}</Table.Td>
-                {hasActionTemplate(
-                  hostDetail?._actionTemplates,
-                  "unassignAgent",
-                ) && (
-                  <Table.Td>
-                    <Button
-                      size="compact-xs"
-                      variant="subtle"
-                      color="red"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleUnassign(agent.name);
-                      }}
-                    >
-                      <IconX size={14} />
-                    </Button>
-                  </Table.Td>
+          )}
+          {(host?.version || hostDetail?.version) && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Version</Table.Td>
+              <Table.Td>{host?.version || hostDetail?.version}</Table.Td>
+            </Table.Tr>
+          )}
+          {hostDetail?.machineId && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Machine ID</Table.Td>
+              <Table.Td>{hostDetail.machineId}</Table.Td>
+            </Table.Tr>
+          )}
+          {hostDetail?.lastIp && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Last IP</Table.Td>
+              <Table.Td>{hostDetail.lastIp}</Table.Td>
+            </Table.Tr>
+          )}
+          {hostDetail?.lastActive && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Last Active</Table.Td>
+              <Table.Td>
+                {new Date(hostDetail.lastActive).toLocaleString()}
+              </Table.Td>
+            </Table.Tr>
+          )}
+          {hostDetail?.hostType !== "supervisor" && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Restricted</Table.Td>
+              <Table.Td>
+                {hasAction(actions, "update") ? (
+                  <Switch
+                    checked={editRestricted}
+                    onChange={(e) => setEditRestricted(e.currentTarget.checked)}
+                    label="Only assigned agents can run on this host"
+                    size="sm"
+                  />
+                ) : (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color={host?.restricted ? "orange" : "gray"}
+                  >
+                    {host?.restricted ? "Yes" : "No"}
+                  </Badge>
                 )}
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      )}
+              </Table.Td>
+            </Table.Tr>
+          )}
+        </Table.Tbody>
+      </Table>
 
-      {/* Assign agent form */}
-      {hasAction(actions, "assign-agent") && (
-        <Group gap="xs">
-          <NativeSelect
-            value={selectedAgentId}
-            onChange={(e) => setSelectedAgentId(e.currentTarget.value)}
-            data={[
-              { value: "", label: "Select agent..." },
-              ...unassignedAgents.map((a) => ({
-                value: String(a.id),
-                label: `${a.name} — ${a.title}`,
-              })),
-            ]}
-            style={{ flex: 1, maxWidth: 300 }}
-          />
-          <Button
-            leftSection={<IconPlus size={16} />}
-            loading={assigning}
-            disabled={!selectedAgentId}
-            onClick={handleAssign}
-          >
-            Assign
-          </Button>
-        </Group>
+      {/* Active Agents — not applicable for supervisor hosts */}
+      {hostDetail?.hostType !== "supervisor" && (
+        <>
+          <Title order={4}>Active Agents</Title>
+          {activeAgents.length === 0 ? (
+            <Text c="dimmed" size="sm">
+              No agents currently active on this host
+            </Text>
+          ) : (
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Username</Table.Th>
+                  <Table.Th>Title</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {activeAgents.map((agent) => (
+                  <Table.Tr
+                    key={agent.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/agents/${agent.name}`)}
+                  >
+                    <Table.Td>{agent.name}</Table.Td>
+                    <Table.Td>{agent.title}</Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
+
+          {/* Assigned Agents */}
+          <Title order={4}>Assigned Agents</Title>
+          {hostDetail && hostDetail.assignedAgents.length === 0 ? (
+            <Text c="dimmed" size="sm">
+              No agents assigned (any agent can use this host)
+            </Text>
+          ) : (
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Username</Table.Th>
+                  <Table.Th>Title</Table.Th>
+                  {hasAction(actions, "assign-agent") && (
+                    <Table.Th style={{ width: 50 }}></Table.Th>
+                  )}
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {hostDetail?.assignedAgents.map((agent) => (
+                  <Table.Tr
+                    key={agent.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate(`/agents/${agent.name}`)}
+                  >
+                    <Table.Td>{agent.name}</Table.Td>
+                    <Table.Td>{agent.title}</Table.Td>
+                    {hasActionTemplate(
+                      hostDetail?._actionTemplates,
+                      "unassignAgent",
+                    ) && (
+                      <Table.Td>
+                        <Button
+                          size="compact-xs"
+                          variant="subtle"
+                          color="red"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleUnassign(agent.name);
+                          }}
+                        >
+                          <IconX size={14} />
+                        </Button>
+                      </Table.Td>
+                    )}
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          )}
+
+          {/* Assign agent form */}
+          {hasAction(actions, "assign-agent") && (
+            <Group gap="xs">
+              <NativeSelect
+                value={selectedAgentId}
+                onChange={(e) => setSelectedAgentId(e.currentTarget.value)}
+                data={[
+                  { value: "", label: "Select agent..." },
+                  ...unassignedAgents.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.name} — ${a.title}`,
+                  })),
+                ]}
+                style={{ flex: 1, maxWidth: 300 }}
+              />
+              <Button
+                leftSection={<IconPlus size={16} />}
+                loading={assigning}
+                disabled={!selectedAgentId}
+                onClick={handleAssign}
+              >
+                Assign
+              </Button>
+            </Group>
+          )}
+        </>
       )}
     </Stack>
   );

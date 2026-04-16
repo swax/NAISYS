@@ -257,6 +257,7 @@ model schema_version {
 model hosts {
   id                 Int                  @id @default(autoincrement())
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
+  machine_id         String?              @unique(map: "unq_hosts_machine_id")
   restricted         Boolean              @default(false)
   host_type          HostType             @default(naisys)
   last_ip            String?

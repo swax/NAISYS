@@ -50,12 +50,14 @@ import {
 type HostCtx = {
   user: SupervisorUser | undefined;
   isOnline: boolean;
+  hostType: string;
 };
 
 function hostActions(
   hostname: string,
   user: SupervisorUser | undefined,
   isOnline: boolean,
+  hostType: string,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/hosts/${hostname}`;
 
@@ -67,32 +69,37 @@ function hostActions(
         title: "Update Host",
         permission: "manage_hosts",
       },
-      {
-        rel: "assign-agent",
-        path: "/agents",
-        method: "POST",
-        title: "Assign Agent",
-        permission: "manage_hosts",
-      },
+      ...(hostType !== "supervisor"
+        ? [
+            {
+              rel: "assign-agent" as const,
+              path: "/agents",
+              method: "POST" as const,
+              title: "Assign Agent",
+              permission: "manage_hosts" as const,
+            },
+          ]
+        : []),
       {
         rel: "delete",
         method: "DELETE",
         title: "Delete Host",
         permission: "manage_hosts",
-        disabledWhen: (ctx) =>
+        disabledWhen: (ctx: HostCtx) =>
           ctx.isOnline ? "Host must be offline before deletion" : null,
       },
     ],
     href,
-    { user, isOnline },
+    { user, isOnline, hostType },
   );
 }
 
 function hostActionTemplates(
   hostname: string,
   hasManageHostsPermission: boolean,
+  hostType: string,
 ) {
-  if (!hasManageHostsPermission) return [];
+  if (!hasManageHostsPermission || hostType === "supervisor") return [];
   return [
     {
       rel: "unassignAgent",
@@ -137,7 +144,7 @@ export default function hostsRoutes(
           ...host,
           online,
           version: getHostVersion(host.id) || host.lastVersion,
-          _actions: hostActions(host.name, user, online),
+          _actions: hostActions(host.name, user, online, host.hostType),
         };
       });
 
@@ -245,10 +252,11 @@ export default function hostsRoutes(
         version: getHostVersion(host.id) || host.lastVersion,
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
-        _actions: hostActions(hostname, user, online),
+        _actions: hostActions(hostname, user, online, host.hostType),
         _actionTemplates: hostActionTemplates(
           hostname,
           hasManageHostsPermission,
+          host.hostType,
         ),
       };
     },
@@ -282,18 +290,9 @@ export default function hostsRoutes(
         const { hostname } = request.params;
         const body = request.body;
 
-        // Look up host to get id for online check
         const host = await getHostDetail(hostname);
         if (!host) {
           return notFound(reply, `Host "${hostname}" not found`);
-        }
-
-        // Name change only allowed when offline
-        if (body.name !== undefined && isHostConnected(host.id)) {
-          return badRequest(
-            reply,
-            "Cannot rename an online host. Disconnect it first.",
-          );
         }
 
         await updateHost(hostname, body);
@@ -409,6 +408,9 @@ export default function hostsRoutes(
         }
         if (errorMessage.includes("already assigned")) {
           return conflict(reply, errorMessage);
+        }
+        if (errorMessage.includes("Cannot assign")) {
+          return badRequest(reply, errorMessage);
         }
 
         throw error;
