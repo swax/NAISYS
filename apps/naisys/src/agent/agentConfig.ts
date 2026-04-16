@@ -1,11 +1,10 @@
 import type { AgentConfigFile } from "@naisys/common";
-import { sanitizeSpendLimit } from "@naisys/common";
+import { resolveTemplateString, sanitizeSpendLimit } from "@naisys/common";
 import table from "text-table";
 
 import { agentConfigCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { GlobalConfig } from "../globalConfig.js";
-import { valueFromString } from "../utils/utilities.js";
 import type { UserService } from "./userService.js";
 
 export function createAgentConfig(
@@ -39,36 +38,18 @@ export function createAgentConfig(
     }
 
     // Resolve model configs
-    const shellModel = resolveConfigVars(config.shellModel);
+    const varMaps = {
+      agent: config as Record<string, unknown>,
+      env: globalConfig().variableMap as Record<string, unknown>,
+    };
+
+    const shellModel = resolveTemplateString(config.shellModel, varMaps);
     const imageModel = config.imageModel
-      ? resolveConfigVars(config.imageModel)
+      ? resolveTemplateString(config.imageModel, varMaps)
       : undefined;
 
     function resolveConfigVars(templateString: string) {
-      let resolvedString = templateString;
-      resolvedString = resolveTemplateVars(resolvedString, "agent", config);
-      resolvedString = resolveTemplateVars(
-        resolvedString,
-        "env",
-        globalConfig().variableMap,
-      );
-      return resolvedString;
-    }
-
-    function resolveTemplateVars(
-      templateString: string,
-      allowedVarString: string,
-      mappedVar: any,
-    ) {
-      const pattern = new RegExp(`\\$\\{${allowedVarString}\\.([^}]+)\\}`, "g");
-
-      return templateString.replace(pattern, (_match, key) => {
-        const value = valueFromString(mappedVar, key);
-        if (value === undefined) {
-          throw `Agent config: Error, ${key} is not defined`;
-        }
-        return value;
-      });
+      return resolveTemplateString(templateString, varMaps);
     }
 
     return {

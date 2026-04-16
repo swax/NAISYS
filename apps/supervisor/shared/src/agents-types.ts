@@ -83,6 +83,7 @@ export const AgentDetailResponseSchema = z.object({
   currentSpend: z.number().optional(),
   spendLimitResetAt: z.string().optional(),
   config: AgentConfigFileSchema,
+  resolvedEnvVars: z.record(z.string(), z.string()).optional(),
   assignedHosts: z
     .array(z.object({ id: z.number(), name: z.string() }))
     .optional(),

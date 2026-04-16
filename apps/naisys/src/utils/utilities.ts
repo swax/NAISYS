@@ -1,19 +1,5 @@
 import { get_encoding } from "tiktoken";
 
-export function valueFromString(obj: any, path: string, defaultValue?: string) {
-  if (!path) {
-    return obj;
-  }
-  const keys = path.split(".");
-  let result = obj;
-  for (const key of keys) {
-    result = result?.[key];
-    if (result === undefined) {
-      return defaultValue;
-    }
-  }
-  return result;
-}
 
 const _gpt2encoding = get_encoding("gpt2");
 
