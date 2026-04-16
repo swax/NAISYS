@@ -224,7 +224,7 @@ export const workspaceCmd: CommandDef = {
 // --- Debug commands ---
 
 export const agentConfigCmd: CommandDef = {
-  name: "ns-agent-config",
+  name: "ns-config",
   description:
     "View or update agent config (update only lasts for current session)",
   isDebug: true,
