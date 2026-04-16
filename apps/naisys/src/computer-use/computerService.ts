@@ -19,7 +19,10 @@ import * as waylandDesktop from "./waylandDesktop.js";
 import * as windowsDesktop from "./windowsDesktop.js";
 import * as x11Desktop from "./x11Desktop.js";
 
-type Platform = { backend: typeof windowsDesktop; name: string };
+type DesktopBackend = typeof windowsDesktop & {
+  checkDependencies?: () => void;
+};
+type Platform = { backend: DesktopBackend; name: string };
 
 function detectPlatform(): Platform | null {
   if (process.platform === "win32")
@@ -417,6 +420,7 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
       initError = "No display server detected (no X11 or Wayland session).";
     } else {
       try {
+        platform.backend.checkDependencies?.();
         await captureNativeScreenshot();
       } catch (e) {
         initError = e instanceof Error ? e.message : String(e);
