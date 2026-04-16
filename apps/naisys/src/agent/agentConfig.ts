@@ -106,10 +106,6 @@ export function createAgentConfig(
     else if (!isNaN(Number(value)) && value.trim() !== "")
       typedValue = Number(value);
 
-    if (!(field in user.config)) {
-      throw new Error(`Config field '${field}' does not exist`);
-    }
-
     // set field
     (user.config as any)[field] = typedValue;
 

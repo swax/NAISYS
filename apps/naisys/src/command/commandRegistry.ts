@@ -88,7 +88,7 @@ export function createCommandRegistry(
 
       let output = "Commands:\n" + formatTable(mainCommands);
       if (inputMode.isDebug() && debugCommands.length > 0) {
-        output += "\n\nDebug commands:\n" + formatTable(debugCommands);
+        output += "\n\nDebug commands: (Not visible to LLM)\n" + formatTable(debugCommands);
       }
 
       return output;

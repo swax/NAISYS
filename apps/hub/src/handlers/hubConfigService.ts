@@ -1,4 +1,8 @@
-import { buildClientConfig } from "@naisys/common";
+import {
+  buildClientConfig,
+  builtInImageModels,
+  builtInLlmModels,
+} from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { ConfigResponse } from "@naisys/hub-protocol";
@@ -18,6 +22,13 @@ export async function createHubConfigService(
     error: "Not yet loaded",
   };
 
+  // API key variable names referenced by built-in models — always sensitive
+  const sensitiveKeys = new Set(
+    [...builtInLlmModels, ...builtInImageModels]
+      .map((m) => m.apiKeyVar)
+      .filter(Boolean),
+  );
+
   // Seed DB from .env on first run
   const existing = await hubDb.variables.findMany();
   if (existing.length > 0) {
@@ -32,6 +43,7 @@ export async function createHubConfigService(
         data: entries.map(([key, value]) => ({
           key,
           value,
+          sensitive: sensitiveKeys.has(key),
           created_by: "hub",
           updated_by: "hub",
         })),
@@ -122,7 +134,9 @@ export type HubConfigService = Awaited<
   ReturnType<typeof createHubConfigService>
 >;
 
-/** Create variable placeholders if they don't already exist */
+/** Create variable placeholders if they don't already exist.
+ *  If a variable already exists and `sensitive` is explicitly true,
+ *  upgrade it to sensitive (e.g. API keys seeded before model init). */
 export async function ensureVariables(
   hubDb: HubDatabaseService["hubDb"],
   keys: { key: string; sensitive?: boolean }[],
@@ -139,6 +153,11 @@ export async function ensureVariables(
           created_by: "hub",
           updated_by: "hub",
         },
+      });
+    } else if (sensitive && !existing.sensitive) {
+      await hubDb.variables.update({
+        where: { key },
+        data: { sensitive: true },
       });
     }
   }
