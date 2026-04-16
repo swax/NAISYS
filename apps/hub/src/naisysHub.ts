@@ -43,6 +43,8 @@ export const startHub: StartHub = async (
   startupAgentPath,
 ) => {
   try {
+    const agentPath = startupAgentPath || ".";
+
     // Create log service first
     const logService = createDualLogger("hub-server.log");
 
@@ -61,7 +63,7 @@ export const startHub: StartHub = async (
     const hubDatabaseService = await createHubDatabaseService();
 
     // Seed database with agent configs from yaml files (one-time, skips if non-empty)
-    await seedAgentConfigs(hubDatabaseService, logService, startupAgentPath);
+    await seedAgentConfigs(hubDatabaseService, logService, agentPath);
 
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
@@ -244,6 +246,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     "standalone",
     program.opts().supervisor,
     plugins,
-    program.args[0] || ".",
+    program.args[0],
   );
 }
