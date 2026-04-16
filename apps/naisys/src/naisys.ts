@@ -71,7 +71,7 @@ program
 
 await ensureAgentConfig(program.args[0]);
 
-const agentPath = program.args[0];
+const agentPath = program.args[0] || ".";
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
 let supervisorUrl: string | undefined;
@@ -87,7 +87,7 @@ if (integratedHub) {
     "hosted",
     program.opts().supervisor,
     plugins,
-    agentPath || ".",
+    agentPath,
   );
   hubUrl = `http://localhost:${hubResult.serverPort}/hub`;
   if (program.opts().supervisor) {
