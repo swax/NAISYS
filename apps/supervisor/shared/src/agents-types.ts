@@ -167,6 +167,7 @@ const AssignedAgentSchema = z.object({
 export const HostDetailResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
+  machineId: z.string().nullable(),
   lastActive: z.string().nullable(),
   lastIp: z.string().nullable(),
   restricted: z.boolean(),

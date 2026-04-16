@@ -2,6 +2,7 @@ import type { ClientConfig } from "@naisys/common";
 import { buildClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
+import fs from "fs";
 import { readFile } from "fs/promises";
 import os from "os";
 import path from "path";
@@ -112,12 +113,53 @@ export function createGlobalConfig(
     return binPath;
   }
 
+  /**
+   * Update a single key in the .env file, preserving comments and ordering.
+   * If the key exists, its value is replaced in-place.
+   * If the key does not exist, it is appended to the end of the file.
+   * Also updates process.env so the change is visible immediately.
+   */
+  function updateEnvValue(key: string, value: string): void {
+    const dotenvPath = path.resolve(".env");
+    const content = fs.existsSync(dotenvPath)
+      ? fs.readFileSync(dotenvPath, "utf-8")
+      : "";
+    const lines = content.split("\n");
+    let found = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const lineKey = trimmed.substring(0, eqIdx).trim();
+      if (lineKey === key) {
+        lines[i] = `${key}=${value}`;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      lines.push(`${key}=${value}`);
+    }
+
+    fs.writeFileSync(dotenvPath, lines.join("\n"));
+    process.env[key] = value;
+
+    // Patch cachedConfig for keys that map to config fields
+    if (cachedConfig && key === "NAISYS_HOSTNAME") {
+      cachedConfig.hostname = value;
+    }
+  }
+
   return {
     globalConfig: () => cachedConfig,
     waitForConfig: () => configReadyPromise,
     onConfigChanged: (handler: () => void) => {
       configChangedHandler = handler;
     },
+    updateEnvValue,
   };
 }
 

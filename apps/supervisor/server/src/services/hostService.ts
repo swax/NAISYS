@@ -35,6 +35,7 @@ export async function getHostDetail(hostname: string) {
     select: {
       id: true,
       name: true,
+      machine_id: true,
       restricted: true,
       host_type: true,
       last_active: true,
@@ -55,6 +56,7 @@ export async function getHostDetail(hostname: string) {
   return {
     id: host.id,
     name: host.name,
+    machineId: host.machine_id ?? null,
     lastActive: host.last_active?.toISOString() ?? null,
     lastIp: host.last_ip ?? null,
     restricted: host.restricted,
@@ -122,6 +124,10 @@ export async function assignAgentToHost(
   const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
   if (!host) {
     throw new Error(`Host "${hostname}" not found`);
+  }
+
+  if (host.host_type === "supervisor") {
+    throw new Error("Cannot assign agents to a supervisor host");
   }
 
   const agent = await hubDb.users.findUnique({ where: { id: agentId } });

@@ -13,6 +13,7 @@ export function createHubClientConfig(hubUrl: string) {
   }
 
   const hostname = process.env.NAISYS_HOSTNAME || os.hostname();
+  const machineId = process.env.NAISYS_MACHINE_ID || "";
 
   let clientVersion = "";
   try {
@@ -32,6 +33,7 @@ export function createHubClientConfig(hubUrl: string) {
   return {
     hubUrl,
     hostname,
+    machineId,
     clientVersion,
   };
 }

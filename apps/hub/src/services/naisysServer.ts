@@ -11,6 +11,8 @@ import type {
   HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
+import type { HostRegistered } from "@naisys/hub-protocol";
 import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
@@ -164,6 +166,7 @@ export function createNaisysServer(
     const {
       hubAccessKey: clientAccessKey,
       hostName,
+      machineId: rawMachineId,
       hostType: rawHostType,
       clientVersion,
     } = socket.handshake.auth;
@@ -186,25 +189,40 @@ export function createNaisysServer(
       ) as HostType;
       const resolvedVersion =
         typeof clientVersion === "string" ? clientVersion : "";
-      const hostId = await hostRegistrar.registerHost(
-        hostName,
-        hostType,
-        socket.handshake.address,
-        resolvedVersion,
-      );
+      const machineId =
+        typeof rawMachineId === "string" && rawMachineId
+          ? rawMachineId
+          : undefined;
+
+      const result =
+        hostType === "supervisor"
+          ? await hostRegistrar.registerSupervisor(
+              hostName,
+              socket.handshake.address,
+              resolvedVersion,
+            )
+          : await hostRegistrar.registerNaisysClient(
+              hostName,
+              machineId,
+              socket.handshake.address,
+              resolvedVersion,
+            );
 
       // Reject duplicate naisys connections (supervisors may have multiple)
-      if (hostType === "naisys" && naisysConnections.has(hostId)) {
+      if (hostType === "naisys" && naisysConnections.has(result.hostId)) {
         logService.log(
-          `[Hub] Connection rejected: host '${hostName}' is already connected`,
+          `[Hub] Connection rejected: host '${result.hostName}' is already connected`,
         );
         return next(
-          new Error(`Host '${hostName}' already has an active connection`),
+          new Error(
+            `Host '${result.hostName}' already has an active connection`,
+          ),
         );
       }
 
-      socket.data.hostId = hostId;
-      socket.data.hostName = hostName;
+      socket.data.hostId = result.hostId;
+      socket.data.hostName = result.hostName;
+      socket.data.machineId = result.machineId;
       socket.data.hostType = hostType;
       socket.data.clientVersion = resolvedVersion;
       next();
@@ -218,7 +236,12 @@ export function createNaisysServer(
 
   // Handle new connections
   nsp.on("connection", (socket) => {
-    const { hostId, hostName, hostType, clientVersion } = socket.data;
+    const { hostId, hostName, machineId, hostType, clientVersion } =
+      socket.data;
+
+    // Send the client its assigned machineId and authoritative hostname
+    const registered: HostRegistered = { machineId, hostName };
+    socket.emit(HubEvents.HOST_REGISTERED, registered);
 
     // Create connection handler for this socket, passing our emit function
     const connection = createNaisysConnection(

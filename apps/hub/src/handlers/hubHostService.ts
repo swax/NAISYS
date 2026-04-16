@@ -26,7 +26,11 @@ export function createHubHostService(
     const hosts = hostRegistrar.getAllHosts().map((h) => {
       const client = clientByHostId.get(h.hostId);
       return {
-        ...h,
+        hostId: h.hostId,
+        hostName: h.hostName,
+        machineId: h.machineId,
+        restricted: h.restricted,
+        hostType: h.hostType,
         online: !!client,
         version: client?.getClientVersion() || "",
       };

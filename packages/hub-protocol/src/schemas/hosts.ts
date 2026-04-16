@@ -10,6 +10,7 @@ export const HostListSchema = z.object({
     z.object({
       hostId: z.number(),
       hostName: z.string(),
+      machineId: z.string(),
       restricted: z.boolean(),
       hostType: HostTypeEnum,
       online: z.boolean(),
@@ -18,3 +19,10 @@ export const HostListSchema = z.object({
   ),
 });
 export type HostList = z.infer<typeof HostListSchema>;
+
+/** Sent from hub to a newly connected client with its assigned identity */
+export const HostRegisteredSchema = z.object({
+  machineId: z.string(),
+  hostName: z.string(),
+});
+export type HostRegistered = z.infer<typeof HostRegisteredSchema>;
