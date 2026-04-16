@@ -75,6 +75,34 @@ function jxa(script: string) {
   });
 }
 
+// --- Dependency check ---
+
+/**
+ * Verify that cliclick is installed and has Accessibility permission.
+ * Called at init time to fail fast with actionable error messages
+ * instead of timing out during action execution.
+ */
+export function checkDependencies(): void {
+  try {
+    // "p:." prints cursor position — read-only, non-destructive
+    execFileSync("cliclick", ["p:."], { stdio: "pipe", timeout: 3000 });
+  } catch (e: any) {
+    if (e?.code === "ENOENT") {
+      throw new Error(
+        "cliclick is not installed. Install it with: brew install cliclick",
+      );
+    }
+    if (e?.killed || e?.code === "ETIMEDOUT" || e?.signal === "SIGTERM") {
+      throw new Error(
+        "cliclick timed out — likely missing Accessibility permission. " +
+          "Grant it in System Settings → Privacy & Security → Accessibility for your terminal app, " +
+          "then restart the terminal.",
+      );
+    }
+    // Other errors (e.g. non-zero exit) — at least it's installed and responsive
+  }
+}
+
 // --- Exported functions ---
 
 export function captureScreenshot(tmpFile: string): void {
