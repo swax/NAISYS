@@ -15,7 +15,8 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import type { HateoasAction } from "@naisys/common";
-import { hasAction, hasActionTemplate } from "@naisys/common";
+import { formatVersion, hasAction, hasActionTemplate } from "@naisys/common";
+import { VersionBadge } from "@naisys/common-browser";
 import type { HostDetailResponse } from "@naisys/supervisor-shared";
 import { IconEdit, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -382,7 +383,16 @@ export const HostPage: React.FC = () => {
           {(host?.version || hostDetail?.version) && (
             <Table.Tr>
               <Table.Td c="dimmed">Version</Table.Td>
-              <Table.Td>{host?.version || hostDetail?.version}</Table.Td>
+              <Table.Td>
+                <Group gap="xs" wrap="nowrap">
+                  <Text size="sm">
+                    {formatVersion(host?.version || hostDetail?.version || "")}
+                  </Text>
+                  <VersionBadge
+                    version={host?.version || hostDetail?.version}
+                  />
+                </Group>
+              </Table.Td>
             </Table.Tr>
           )}
           {hostDetail?.environment && (

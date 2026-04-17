@@ -17,9 +17,11 @@
     "npm:publish": "npm publish --access public"
   },
   "dependencies": {
+    "semver": "^7.7.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/semver": "^7.7.1",
     "typescript": "^5.9.3"
   },
   "exports": {

@@ -2,6 +2,7 @@ import {
   Anchor,
   Badge,
   Button,
+  Checkbox,
   Group,
   Loader,
   Modal,
@@ -14,6 +15,7 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { formatVersion, parseVersion } from "@naisys/common";
+import { VersionBadge } from "@naisys/common-browser";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
@@ -49,6 +51,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const [validating, setValidating] = useState(false);
 
   const [commitHash, setCommitHash] = useState("");
+  const [allowNewer, setAllowNewer] = useState(true);
 
   const [saving, setSaving] = useState(false);
 
@@ -65,11 +68,14 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
       // Initialize form from current target version
       if (result.targetVersion) {
-        const { npm: npmPart, hash: hashPart } = parseVersion(
-          result.targetVersion,
-        );
+        const {
+          operator,
+          npm: npmPart,
+          hash: hashPart,
+        } = parseVersion(result.targetVersion);
 
         if (hashPart) setCommitHash(hashPart);
+        setAllowNewer(operator === ">=");
 
         if (!npmPart) {
           setSelectedOption("none");
@@ -99,6 +105,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
       setCustomVersion("");
       setCustomValid(null);
       setCommitHash("");
+      setAllowNewer(true);
       void fetchNpmVersions();
     }
   }, [opened, fetchNpmVersions]);
@@ -135,8 +142,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const getTargetVersion = (): string => {
     const npmVersion = getSelectedNpmVersion();
     const hash = commitHash.trim();
-    if (hash) return `${npmVersion}/${hash}`;
-    return npmVersion;
+    const npmPart = allowNewer && npmVersion ? `>=${npmVersion}` : npmVersion;
+    if (hash) return `${npmPart}/${hash}`;
+    return npmPart;
   };
 
   const isValidFullHash = (hash: string) => /^[0-9a-f]{40}$/i.test(hash);
@@ -248,7 +256,12 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <Table.Tbody>
               <Table.Tr>
                 <Table.Td fw={600}>Installed Version</Table.Td>
-                <Table.Td>{formatVersion(currentVersion)}</Table.Td>
+                <Table.Td>
+                  <Group gap="xs">
+                    <span>{formatVersion(currentVersion)}</span>
+                    <VersionBadge version={currentVersion} />
+                  </Group>
+                </Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td fw={600}>Latest Stable</Table.Td>
@@ -282,7 +295,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             onChange={(v) => setSelectedOption(v as VersionOption)}
             label={
               <Group gap="xs">
-                <span>Set npm target version</span>
+                <span>npm hosts — target version</span>
                 <Anchor
                   href="https://www.npmjs.com/package/naisys?activeTab=versions"
                   target="_blank"
@@ -292,6 +305,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 </Anchor>
               </Group>
             }
+            description="Applied to hosts installed from the npm package"
           >
             <Stack gap="xs" mt="xs">
               {hasGitHosts && <Radio value="none" label="None" />}
@@ -344,10 +358,17 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             </Stack>
           </Radio.Group>
 
+          <Checkbox
+            label="Allow newer versions (don't downgrade hosts above this version)"
+            checked={allowNewer}
+            disabled={selectedOption === "none"}
+            onChange={(e) => setAllowNewer(e.currentTarget.checked)}
+          />
+
           {hasGitHosts && (
             <TextInput
-              label="Git commit hash"
-              description="Full 40-character commit hash for git-based hosts"
+              label="git hosts — commit hash"
+              description="Applied to hosts installed from a git checkout. Full 40-character commit hash."
               placeholder="e.g. a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
               value={commitHash}
               onChange={(e) => setCommitHash(e.currentTarget.value)}
@@ -366,6 +387,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Host</Table.Th>
+                <Table.Th>Type</Table.Th>
                 <Table.Th>Version</Table.Th>
                 <Table.Th>Status</Table.Th>
               </Table.Tr>
@@ -373,7 +395,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <Table.Tbody>
               {hosts.length === 0 ? (
                 <Table.Tr>
-                  <Table.Td colSpan={3}>
+                  <Table.Td colSpan={4}>
                     <Text c="dimmed" size="sm" ta="center">
                       No hosts
                     </Text>
@@ -383,6 +405,13 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 hosts.map((host) => (
                   <Table.Tr key={host.id}>
                     <Table.Td>{host.name}</Table.Td>
+                    <Table.Td>
+                      {host.version ? (
+                        <VersionBadge version={host.version} />
+                      ) : (
+                        "\u2014"
+                      )}
+                    </Table.Td>
                     <Table.Td>
                       {host.version ? formatVersion(host.version) : "\u2014"}
                     </Table.Td>

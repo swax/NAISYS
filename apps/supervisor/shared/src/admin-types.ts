@@ -104,8 +104,20 @@ export const NpmVersionsResponseSchema = z.object({
 });
 export type NpmVersionsResponse = z.infer<typeof NpmVersionsResponseSchema>;
 
+// Empty clears the target. Otherwise:
+//   <npm>           e.g. "1.2.3" or "1.2.3-beta.1"  (npm clients pin to exact version)
+//   >=<npm>         e.g. ">=1.2.3"                  (npm clients: this version or newer)
+//   <npm>/<hash>    npm + git spec bundled          (npm clients use <npm>, git clients use <hash>)
+//   >=<npm>/<hash>  same, with range on npm part
+//   /<hash>         git clients only
+// The ">=" operator only affects the npm part; git clients always compare hash exactly.
+const TARGET_VERSION_PATTERN =
+  /^$|^(>=)?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\/[0-9a-f]{40})?$|^\/[0-9a-f]{40}$/;
+
 export const SetTargetVersionRequestSchema = z.object({
-  version: z.string(),
+  version: z
+    .string()
+    .regex(TARGET_VERSION_PATTERN, "Invalid target version format"),
 });
 export type SetTargetVersionRequest = z.infer<
   typeof SetTargetVersionRequestSchema
