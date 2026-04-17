@@ -170,7 +170,7 @@ export const ModelPage: React.FC = () => {
   // --- Create mode ---
   if (isNew) {
     return (
-      <Stack gap="md">
+      <Stack gap="md" maw={1000}>
         <Title order={2}>
           {isNewLlm ? "Create LLM Model" : "Create Image Model"}
         </Title>
@@ -206,7 +206,7 @@ export const ModelPage: React.FC = () => {
   // --- Edit mode ---
   if (isEditing) {
     return (
-      <Stack gap="md">
+      <Stack gap="md" maw={1000}>
         <Title order={2}>
           Edit: {llm?.label || img?.label}
           {!isCustom && (
@@ -248,7 +248,7 @@ export const ModelPage: React.FC = () => {
 
   // --- Read-only view ---
   return (
-    <Stack gap="md">
+    <Stack gap="md" maw={1000}>
       <Group justify="space-between">
         <Title order={2}>{llm?.label || img?.label}</Title>
         {hasAction(
@@ -365,7 +365,7 @@ function LlmReadOnlyTable({
   rows.push(["Supports Hearing", model.supportsHearing ? "Yes" : "No"]);
 
   return (
-    <Table striped>
+    <Table striped style={{ maxWidth: 600 }}>
       <Table.Tbody>
         {rows.map(([label, value]) => (
           <Table.Tr key={label}>
@@ -408,7 +408,7 @@ function ImageReadOnlyTable({
   }
 
   return (
-    <Table striped>
+    <Table striped style={{ maxWidth: 600 }}>
       <Table.Tbody>
         {rows.map(([label, value]) => (
           <Table.Tr key={label}>

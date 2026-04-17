@@ -93,6 +93,19 @@ export async function getAgentConfigById(id: number): Promise<AgentConfigFile> {
 }
 
 /**
+ * Get the list of hosts assigned to an agent.
+ */
+export async function getAgentAssignedHosts(
+  id: number,
+): Promise<{ id: number; name: string }[]> {
+  const rows = await hubDb.user_hosts.findMany({
+    where: { user_id: id },
+    select: { host: { select: { id: true, name: true } } },
+  });
+  return rows.map((r) => ({ id: r.host.id, name: r.host.name }));
+}
+
+/**
  * Build config object in canonical field order for consistent JSON output.
  */
 function canonicalConfigOrder(

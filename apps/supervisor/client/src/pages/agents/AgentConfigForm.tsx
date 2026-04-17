@@ -1,6 +1,10 @@
 import {
+  ActionIcon,
+  Badge,
   Button,
+  CloseButton,
   Group,
+  Menu,
   NumberInput,
   Select,
   type SelectProps,
@@ -14,13 +18,18 @@ import { useForm } from "@mantine/form";
 import type { AgentConfigFile } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useBlocker } from "react-router-dom";
+import { Link, useBlocker } from "react-router-dom";
 
 interface ModelOption {
   value: string;
   label: string;
+}
+
+interface HostOption {
+  id: number;
+  name: string;
 }
 
 interface AgentConfigFormProps {
@@ -29,6 +38,11 @@ interface AgentConfigFormProps {
   imageModelOptions: ModelOption[];
   saving?: boolean;
   onSave?: (config: AgentConfigFile) => void;
+  assignedHosts?: HostOption[];
+  availableHosts?: HostOption[];
+  hostActionInProgress?: boolean;
+  onAssignHost?: (hostname: string) => void;
+  onUnassignHost?: (hostname: string) => void;
 }
 
 /** Convert form values to AgentConfigFile, omitting empty optionals. */
@@ -148,7 +162,19 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   imageModelOptions,
   saving,
   onSave,
+  assignedHosts,
+  availableHosts,
+  hostActionInProgress,
+  onAssignHost,
+  onUnassignHost,
 }) => {
+  const showHostsSection = assignedHosts !== undefined;
+  const unassignedHosts = useMemo(() => {
+    if (!availableHosts || !assignedHosts) return [];
+    const assignedIds = new Set(assignedHosts.map((h) => h.id));
+    return availableHosts.filter((h) => !assignedIds.has(h.id));
+  }, [availableHosts, assignedHosts]);
+
   const form = useForm<FormValues>({
     initialValues: {
       username: config.username,
@@ -229,6 +255,87 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("title")}
           {...form.getInputProps("title")}
         />
+
+        {/* Assigned Hosts */}
+        {showHostsSection && (
+          <>
+            <Group gap="xs" align="center">
+              <Text fw={600} size="sm" c="dimmed">
+                Assigned Hosts
+              </Text>
+              {onAssignHost && (
+                <Menu shadow="md" width={260} position="bottom-start">
+                  <Menu.Target>
+                    <ActionIcon
+                      size="sm"
+                      variant="subtle"
+                      color="blue"
+                      loading={hostActionInProgress}
+                      disabled={unassignedHosts.length === 0}
+                      title="Assign host"
+                    >
+                      <IconPlus size={14} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    {unassignedHosts.map((h) => (
+                      <Menu.Item
+                        key={h.id}
+                        onClick={() => onAssignHost(h.name)}
+                      >
+                        {h.name}
+                      </Menu.Item>
+                    ))}
+                  </Menu.Dropdown>
+                </Menu>
+              )}
+            </Group>
+            <Group gap="xs" wrap="wrap">
+              {assignedHosts.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                  Any host (unrestricted)
+                </Text>
+              ) : (
+                assignedHosts.map((h) => (
+                  <Badge
+                    key={h.id}
+                    component={Link}
+                    to={`/hosts/${h.name}`}
+                    variant="light"
+                    color="blue"
+                    size="lg"
+                    style={{ cursor: "pointer", textTransform: "none" }}
+                    styles={{
+                      section: {
+                        borderLeft:
+                          "1px solid var(--mantine-color-blue-light-hover)",
+                        marginLeft: 6,
+                        paddingLeft: 2,
+                      },
+                    }}
+                    rightSection={
+                      onUnassignHost ? (
+                        <CloseButton
+                          size="xs"
+                          variant="transparent"
+                          disabled={hostActionInProgress}
+                          aria-label="Unassign host"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onUnassignHost(h.name);
+                          }}
+                        />
+                      ) : undefined
+                    }
+                  >
+                    {h.name}
+                  </Badge>
+                ))
+              )}
+            </Group>
+          </>
+        )}
 
         {/* Prompt */}
         <Text fw={600} size="sm" c="dimmed">

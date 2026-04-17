@@ -29,6 +29,7 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
 import {
+  getAgentAssignedHosts,
   getAgentConfigById,
   getConfigRevisions,
   updateAgentConfigById,
@@ -105,6 +106,7 @@ export default function agentConfigRoutes(
         }
 
         const config = await getAgentConfigById(id);
+        const assignedHosts = await getAgentAssignedHosts(id);
 
         const canManage = hasPermission(
           request.supervisorUser,
@@ -112,6 +114,7 @@ export default function agentConfigRoutes(
         );
         return {
           config,
+          assignedHosts,
           _actions: canManage
             ? [
                 {
