@@ -145,13 +145,15 @@ function formatUser(
   if (!user) return null;
   const isSelf = user.id === currentUserId;
   const isAdmin = currentUserPermissions.includes("supervisor_admin");
+  const apiKeyValue = options?.apiKey ?? null;
   return {
     id: user.id,
     username: user.username,
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
-    apiKey: isAdmin ? (options?.apiKey ?? null) : undefined,
+    apiKey: isAdmin ? apiKeyValue : undefined,
+    hasApiKey: apiKeyValue !== null,
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
@@ -212,7 +214,6 @@ export default function userRoutes(
   app.get(
     "/",
     {
-      preHandler: adminPreHandler,
       schema: {
         description: "List all users with pagination",
         tags: ["Users"],
@@ -228,24 +229,30 @@ export default function userRoutes(
       const { page, pageSize, search } = request.query;
       const result = await userService.listUsers({ page, pageSize, search });
 
-      const actions: HateoasAction[] = [
-        {
-          rel: "create",
-          href: `${API_PREFIX}/users`,
-          method: "POST",
-          title: "Create User",
-          schema: `${API_PREFIX}/schemas/CreateUser`,
-          body: { username: "", password: "" },
-        },
-        {
-          rel: "create-from-agent",
-          href: `${API_PREFIX}/users/from-agent`,
-          method: "POST",
-          title: "Import User from Agent",
-          schema: `${API_PREFIX}/schemas/CreateAgentUser`,
-          body: { agentId: 0 },
-        },
-      ];
+      const isAdmin =
+        request.supervisorUser?.permissions.includes("supervisor_admin") ??
+        false;
+      const actions: HateoasAction[] = [];
+      if (isAdmin) {
+        actions.push(
+          {
+            rel: "create",
+            href: `${API_PREFIX}/users`,
+            method: "POST",
+            title: "Create User",
+            schema: `${API_PREFIX}/schemas/CreateUser`,
+            body: { username: "", password: "" },
+          },
+          {
+            rel: "create-from-agent",
+            href: `${API_PREFIX}/users/from-agent`,
+            method: "POST",
+            title: "Import User from Agent",
+            schema: `${API_PREFIX}/schemas/CreateAgentUser`,
+            body: { agentId: 0 },
+          },
+        );
+      }
 
       return {
         items: result.items.map(formatListUser),
@@ -370,11 +377,10 @@ export default function userRoutes(
 
   const usernameParams = z.object({ username: z.string() });
 
-  // GET USER (admin or self)
+  // GET USER
   app.get(
     "/:username",
     {
-      preHandler: [requireAdminOrSelf],
       schema: {
         description: "Get user details",
         tags: ["Users"],
@@ -400,8 +406,8 @@ export default function userRoutes(
 
       return formatUser(
         user,
-        request.supervisorUser!.id,
-        request.supervisorUser!.permissions,
+        request.supervisorUser?.id ?? 0,
+        request.supervisorUser?.permissions ?? [],
         { agentUsername, apiKey },
       );
     },

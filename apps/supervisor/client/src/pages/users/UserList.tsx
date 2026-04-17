@@ -14,6 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { hasAction } from "@naisys/common";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -135,22 +136,25 @@ export const UserList: React.FC = () => {
   };
 
   const totalPages = data ? Math.ceil(data.total / data.pageSize) : 0;
+  const canCreate = hasAction(data?._actions, "create");
 
   return (
     <Container size="lg" py="xl" w="100%">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
-        <Group gap="xs">
-          <Button onClick={openCreate}>Create New</Button>
-          <Button variant="outline" onClick={handleOpenAgentModal}>
-            Create Agent User
-          </Button>
-          <HelpTooltip
-            label="An agent user is a user that can log in and operate the supervisor console themselves, scoped by the permissions it has been granted."
-            ariaLabel="What is an agent user?"
-            width={320}
-          />
-        </Group>
+        {canCreate && (
+          <Group gap="xs">
+            <Button onClick={openCreate}>Create New</Button>
+            <Button variant="outline" onClick={handleOpenAgentModal}>
+              Create Agent User
+            </Button>
+            <HelpTooltip
+              label="An agent user is a user that can log in and operate the supervisor console themselves, scoped by the permissions it has been granted."
+              ariaLabel="What is an agent user?"
+              width={320}
+            />
+          </Group>
+        )}
       </Group>
 
       <Group mb="md">

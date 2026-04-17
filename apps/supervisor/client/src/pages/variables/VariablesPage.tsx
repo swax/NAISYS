@@ -221,7 +221,7 @@ export const VariablesPage: React.FC = () => {
                           ? "••••••••"
                           : item.value}
                       </Text>
-                      {item.sensitive && (
+                      {item.sensitive && canManage && (
                         <>
                           <Tooltip
                             label={
