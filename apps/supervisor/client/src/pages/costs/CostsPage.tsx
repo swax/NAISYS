@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import type { CostsHistogramResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
+import { useBoomGuard } from "../../lib/useBoomGuard";
 
 const TIME_RANGES = [
   { value: "24", label: "Last 24 hours" },
@@ -49,6 +50,7 @@ const AGENT_COLORS = [
 ];
 
 export const CostsPage: React.FC = () => {
+  useBoomGuard("costs");
   const { agents } = useAgentDataContext();
   const [data, setData] = useState<CostsHistogramResponse | null>(null);
   const [loading, setLoading] = useState(true);

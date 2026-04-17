@@ -18,6 +18,7 @@ import { IconApi, IconEye, IconLogout, IconUser } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
+import { RouteErrorBoundary } from "./ErrorBoundary";
 import { LoginModal } from "./LoginModal";
 
 const navLinks = [
@@ -297,7 +298,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
             <Text size="xs">Public read-only mode — login for full access</Text>
           </Alert>
         )}
-        <Outlet context={{ supervisorAuth }} />
+        <RouteErrorBoundary>
+          <Outlet context={{ supervisorAuth }} />
+        </RouteErrorBoundary>
       </AppShell.Main>
 
       <LoginModal opened={loginOpen} onClose={closeLogin} />

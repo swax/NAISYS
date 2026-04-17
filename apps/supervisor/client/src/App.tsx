@@ -19,6 +19,7 @@ import {
 import { LoginDialog } from "./components/LoginDialog";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
+import { RouteErrorPage } from "./components/RouteErrorPage";
 import { NAV_HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
@@ -27,6 +28,7 @@ import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { DisconnectedBanner } from "./headers/DisconnectedBanner";
 import { queryClient } from "./lib/queryClient";
+import { useBoomGuard } from "./lib/useBoomGuard";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { AgentConfig } from "./pages/agents/AgentConfig";
 import { AgentDetail } from "./pages/agents/AgentDetail";
@@ -53,6 +55,7 @@ export interface AppOutletContext {
 }
 
 const AppContent: React.FC = () => {
+  useBoomGuard("root");
   const [opened, { toggle, close }] = useDisclosure();
   const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
@@ -144,33 +147,33 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<AppContent />} errorElement={<RootErrorPage />}>
       <Route path="/agents" element={<AgentsLayout />}>
-        <Route index element={<AgentIndex />} />
-        <Route path=":username" element={<AgentDetail />} />
-        <Route path=":username/config" element={<AgentConfig />} />
-        <Route path=":username/runs" element={<AgentRuns />} />
-        <Route path=":username/runs/:runKey" element={<AgentRuns />} />
-        <Route path=":username/mail" element={<AgentMail />} />
-        <Route path=":username/mail/with/*" element={<AgentMail />} />
-        <Route path=":username/mail/about/*" element={<AgentMail />} />
-        <Route path=":username/chat" element={<AgentChat />} />
-        <Route path=":username/chat/:participants" element={<AgentChat />} />
+        <Route index element={<AgentIndex />} errorElement={<RouteErrorPage />} />
+        <Route path=":username" element={<AgentDetail />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/config" element={<AgentConfig />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/runs" element={<AgentRuns />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/runs/:runKey" element={<AgentRuns />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/mail" element={<AgentMail />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/mail/with/*" element={<AgentMail />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/mail/about/*" element={<AgentMail />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/chat" element={<AgentChat />} errorElement={<RouteErrorPage />} />
+        <Route path=":username/chat/:participants" element={<AgentChat />} errorElement={<RouteErrorPage />} />
         <Route path=":username/*" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route path="/hosts" element={<HostsLayout />}>
-        <Route index element={<HostIndex />} />
-        <Route path=":hostname" element={<HostPage />} />
+        <Route index element={<HostIndex />} errorElement={<RouteErrorPage />} />
+        <Route path=":hostname" element={<HostPage />} errorElement={<RouteErrorPage />} />
       </Route>
       <Route path="/models" element={<ModelsLayout />}>
-        <Route index element={<ModelIndex />} />
-        <Route path="calculator" element={<ModelCalculator />} />
-        <Route path=":key" element={<ModelPage />} />
+        <Route index element={<ModelIndex />} errorElement={<RouteErrorPage />} />
+        <Route path="calculator" element={<ModelCalculator />} errorElement={<RouteErrorPage />} />
+        <Route path=":key" element={<ModelPage />} errorElement={<RouteErrorPage />} />
       </Route>
-      <Route path="/costs" element={<CostsPage />} />
-      <Route path="/variables" element={<VariablesPage />} />
-      <Route path="/admin" element={<AdminPage />} />
-      <Route path="/users" element={<UserList />} />
-      <Route path="/users/:username" element={<UserDetail />} />
+      <Route path="/costs" element={<CostsPage />} errorElement={<RouteErrorPage />} />
+      <Route path="/variables" element={<VariablesPage />} errorElement={<RouteErrorPage />} />
+      <Route path="/admin" element={<AdminPage />} errorElement={<RouteErrorPage />} />
+      <Route path="/users" element={<UserList />} errorElement={<RouteErrorPage />} />
+      <Route path="/users/:username" element={<UserDetail />} errorElement={<RouteErrorPage />} />
       <Route path="/" element={<Navigate to="/agents" replace />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>,
