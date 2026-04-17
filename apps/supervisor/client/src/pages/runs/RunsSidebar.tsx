@@ -84,6 +84,16 @@ export const getRunIdLabel = (run: RunSession) => {
   return `#${run.runId}`;
 };
 
+const PLATFORM_META: Record<string, { label: string; color: string }> = {
+  macos: { label: "macOS", color: "gray" },
+  linux: { label: "Linux", color: "orange" },
+  windows: { label: "Windows", color: "blue" },
+  wsl: { label: "WSL", color: "teal" },
+};
+
+export const getPlatformBadge = (platform: string | undefined) =>
+  PLATFORM_META[platform ?? ""] ?? { label: platform || "?", color: "gray" };
+
 export const getRowKey = (run: RunSession) =>
   `${run.userId}-${run.runId}-${run.sessionId}`;
 
@@ -155,20 +165,41 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                 to={`/agents/${agentName}/runs/${runKey}`}
                 onClick={onNavLinkClick}
                 label={
-                  <Group gap="xs" wrap="nowrap">
-                    <Text size="sm" fw={500}>
-                      {formatPrimaryTime(run.createdAt)}
-                    </Text>
-                    <Badge size="xs" variant="light" color="blue">
-                      {run.modelName}
-                    </Badge>
-                  </Group>
-                }
-                description={
-                  <Text size="xs" c="dimmed">
-                    {getRunIdLabel(run)} &middot;{" "}
-                    {formatDuration(run.createdAt, run.lastActive)}
-                  </Text>
+                  <Stack gap={2}>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text size="sm" fw={500}>
+                        {formatPrimaryTime(run.createdAt)}
+                      </Text>
+                      {run.hostName && (
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color="cyan"
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          {run.hostName}
+                        </Badge>
+                      )}
+                    </Group>
+                    <Group gap="xs" wrap="nowrap">
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        style={{ minWidth: 75, whiteSpace: "nowrap" }}
+                      >
+                        {getRunIdLabel(run)} &middot;{" "}
+                        {formatDuration(run.createdAt, run.lastActive)}
+                      </Text>
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color="blue"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        {run.modelName}
+                      </Badge>
+                    </Group>
+                  </Stack>
                 }
                 rightSection={
                   <Stack gap={2} align="flex-end">
