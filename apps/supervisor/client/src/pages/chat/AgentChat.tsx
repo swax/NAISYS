@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
+import { ParticipantInfo } from "../../components/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
@@ -143,6 +144,25 @@ export const AgentChat: React.FC = () => {
     [agentId, agents, username, closeDrawer, navigate],
   );
 
+  const otherParticipantNames = useMemo(
+    () =>
+      selectedParticipants
+        ?.split(",")
+        .filter((name) => name !== username) ?? [],
+    [selectedParticipants, username],
+  );
+
+  const handleSwitchPerspective = useCallback(
+    (name: string) => {
+      if (!username) return;
+      const newOthers = otherParticipantNames
+        .filter((n) => n !== name)
+        .concat(username);
+      void navigate(`/agents/${name}/chat/${newOthers.join(",")}`);
+    },
+    [username, otherParticipantNames, navigate],
+  );
+
   if (!username) {
     return (
       <Stack gap="md">
@@ -186,11 +206,6 @@ export const AgentChat: React.FC = () => {
       onArchiveAll={handleArchiveAll}
     />
   );
-
-  const conversationLabel = selectedParticipants
-    ?.split(",")
-    .filter((name) => name !== username)
-    .join(", ");
 
   return (
     <Box
@@ -259,7 +274,7 @@ export const AgentChat: React.FC = () => {
               px="md"
               style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
             >
-              {/* Mobile conversation toggle (icon + label) */}
+              {/* Mobile conversation toggle */}
               <UnstyledButton
                 hiddenFrom="sm"
                 onClick={openDrawer}
@@ -268,14 +283,12 @@ export const AgentChat: React.FC = () => {
                 <ActionIcon variant="subtle" color="gray" component="span">
                   <IconMessageCircle size="1.2rem" />
                 </ActionIcon>
-                <Text size="sm" fw={600}>
-                  {conversationLabel}
-                </Text>
               </UnstyledButton>
-              {/* Desktop label only */}
-              <Text size="sm" fw={600} visibleFrom="sm">
-                {conversationLabel}
-              </Text>
+              <ParticipantInfo
+                names={otherParticipantNames}
+                agents={agents}
+                onSwitch={handleSwitchPerspective}
+              />
             </Group>
 
             {msgLoading && messages.length === 0 ? (
@@ -304,6 +317,10 @@ export const AgentChat: React.FC = () => {
                 onSend={handleSendMessage}
                 disabled={!selectedParticipants}
                 focusKey={selectedParticipants}
+                recipients={otherParticipantNames}
+                showImpersonationWarning={
+                  !!agent.shellModel && agent.shellModel !== "none"
+                }
               />
             )}
           </>

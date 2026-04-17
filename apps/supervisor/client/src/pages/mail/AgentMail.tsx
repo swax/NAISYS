@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
+import { ParticipantInfo } from "../../components/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useMailData } from "../../hooks/useMailData";
@@ -214,6 +215,40 @@ export const AgentMail: React.FC = () => {
     }
   };
 
+  const otherParticipantNames = useMemo(
+    () =>
+      selectedConversation
+        ? selectedConversation.participantNames.filter((n) => n !== agentName)
+        : [],
+    [selectedConversation, agentName],
+  );
+
+  const handleSwitchPerspective = useCallback(
+    (name: string) => {
+      if (!agentName) return;
+      if (groupBySubject && selectedConversation?.normalizedSubject) {
+        void navigate(
+          `/agents/${name}/mail/about/${encodeURIComponent(
+            selectedConversation.normalizedSubject,
+          )}`,
+        );
+        return;
+      }
+      const newOthers = otherParticipantNames
+        .filter((n) => n !== name)
+        .concat(agentName)
+        .sort();
+      void navigate(`/agents/${name}/mail/with/${newOthers.join(",")}`);
+    },
+    [
+      agentName,
+      groupBySubject,
+      selectedConversation,
+      otherParticipantNames,
+      navigate,
+    ],
+  );
+
   if (!username) {
     return (
       <Stack gap="md">
@@ -250,6 +285,7 @@ export const AgentMail: React.FC = () => {
       onToggleGroupBySubject={handleToggleGroupBySubject}
       currentAgentName={agentName}
       agentName={username}
+      agents={agents}
       totalMessages={totalMail}
       loadedMessages={allMail.length}
       hasMore={hasMore}
@@ -259,12 +295,6 @@ export const AgentMail: React.FC = () => {
       onArchiveAll={handleArchiveAll}
     />
   );
-
-  const conversationLabel = groupBySubject
-    ? selectedConversation?.normalizedSubject
-    : selectedConversation?.participantNames
-        .filter((n) => n !== agentName)
-        .join(", ") || selectedConversation?.participantNames.join(", ");
 
   return (
     <Box
@@ -337,7 +367,7 @@ export const AgentMail: React.FC = () => {
               px="md"
               style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
             >
-              {/* Mobile conversation toggle (icon + label) */}
+              {/* Mobile conversation toggle */}
               <UnstyledButton
                 hiddenFrom="sm"
                 onClick={openDrawer}
@@ -345,20 +375,25 @@ export const AgentMail: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
-                  flex: 1,
+                  flexShrink: 0,
                 }}
               >
                 <ActionIcon variant="subtle" color="gray" component="span">
                   <IconMail size="1.2rem" />
                 </ActionIcon>
-                <Text size="sm" fw={600}>
-                  {conversationLabel}
-                </Text>
               </UnstyledButton>
-              {/* Desktop label only */}
-              <Text size="sm" fw={600} style={{ flex: 1 }} visibleFrom="sm">
-                {conversationLabel}
-              </Text>
+              <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                {groupBySubject && selectedConversation?.normalizedSubject && (
+                  <Text size="sm" fw={600} truncate>
+                    {selectedConversation.normalizedSubject}
+                  </Text>
+                )}
+                <ParticipantInfo
+                  names={otherParticipantNames}
+                  agents={agents}
+                  onSwitch={handleSwitchPerspective}
+                />
+              </Stack>
               {canSend && (
                 <Button
                   variant="light"

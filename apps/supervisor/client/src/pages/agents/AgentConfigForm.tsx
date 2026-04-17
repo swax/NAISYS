@@ -18,7 +18,7 @@ import { useForm } from "@mantine/form";
 import type { AgentConfigFile } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
-import { IconCheck, IconPlus, IconX } from "@tabler/icons-react";
+import { IconCheck, IconPlus, IconServer, IconX } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useBlocker } from "react-router-dom";
 
@@ -304,15 +304,8 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
                     variant="light"
                     color="blue"
                     size="lg"
+                    leftSection={<IconServer size={14} />}
                     style={{ cursor: "pointer", textTransform: "none" }}
-                    styles={{
-                      section: {
-                        borderLeft:
-                          "1px solid var(--mantine-color-blue-light-hover)",
-                        marginLeft: 6,
-                        paddingLeft: 2,
-                      },
-                    }}
                     rightSection={
                       onUnassignHost ? (
                         <CloseButton

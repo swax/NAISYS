@@ -11,6 +11,8 @@ import { IconArchive, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
+import { AgentModelIcon } from "../../components/AgentModelIcon";
+import type { Agent } from "../../types/agent";
 import type { MailConversation } from "./mailConversations";
 
 interface MailConversationListProps {
@@ -23,6 +25,7 @@ interface MailConversationListProps {
   onToggleGroupBySubject: () => void;
   currentAgentName: string;
   agentName: string;
+  agents: Agent[];
   totalMessages: number;
   loadedMessages: number;
   hasMore: boolean;
@@ -42,6 +45,7 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
   onToggleGroupBySubject,
   currentAgentName,
   agentName,
+  agents,
   totalMessages,
   loadedMessages,
   hasMore,
@@ -121,6 +125,10 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                   .filter((n) => n !== currentAgentName)
                   .sort()
                   .join(",")}`;
+            const iconName =
+              conv.participantNames.find((n) => n !== currentAgentName) ??
+              conv.participantNames[0];
+            const iconAgent = agents.find((a) => a.name === iconName);
 
             return (
               <NavLink
@@ -137,6 +145,14 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                         style={{ opacity: 0.5, flexShrink: 0 }}
                       />
                     )}
+                    <AgentModelIcon
+                      shellModel={iconAgent?.shellModel}
+                      size={14}
+                      style={{
+                        flexShrink: 0,
+                        opacity: conv.isArchived ? 0.5 : undefined,
+                      }}
+                    />
                     <Text
                       size="sm"
                       lineClamp={1}

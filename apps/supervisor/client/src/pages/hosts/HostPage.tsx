@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { AgentModelIcon } from "../../components/AgentModelIcon";
 import { PlatformBadge } from "../../components/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
@@ -436,6 +437,11 @@ export const HostPage: React.FC = () => {
               <Stack gap={4} pl="md">
                 {activeAgents.map((agent) => (
                   <Group key={agent.id} gap="xs" wrap="nowrap">
+                    <AgentModelIcon
+                      shellModel={agent.shellModel}
+                      size={14}
+                      style={{ flexShrink: 0 }}
+                    />
                     <Anchor
                       size="sm"
                       onClick={() => navigate(`/agents/${agent.name}`)}
@@ -485,8 +491,15 @@ export const HostPage: React.FC = () => {
           <Stack gap="md" pl="md">
             {hostDetail && hostDetail.assignedAgents.length > 0 && (
               <Stack gap={4}>
-                {hostDetail.assignedAgents.map((agent) => (
+                {hostDetail.assignedAgents.map((agent) => {
+                  const fullAgent = agents.find((a) => a.id === agent.id);
+                  return (
                   <Group key={agent.id} gap="xs" wrap="nowrap">
+                    <AgentModelIcon
+                      shellModel={fullAgent?.shellModel}
+                      size={14}
+                      style={{ flexShrink: 0 }}
+                    />
                     <Anchor
                       size="sm"
                       onClick={() => navigate(`/agents/${agent.name}`)}
@@ -512,7 +525,8 @@ export const HostPage: React.FC = () => {
                       </ActionIcon>
                     )}
                   </Group>
-                ))}
+                  );
+                })}
               </Stack>
             )}
 
@@ -572,6 +586,9 @@ export const HostPage: React.FC = () => {
               {hostRuns.map((run) => {
                 const runKey = getRunKey(run);
                 const canNavigate = Boolean(run.username);
+                const runAgent = run.username
+                  ? agents.find((a) => a.name === run.username)
+                  : undefined;
                 return (
                   <Table.Tr
                     key={`${run.userId}-${runKey}`}
@@ -586,7 +603,20 @@ export const HostPage: React.FC = () => {
                   >
                     <Table.Td>{formatPrimaryTime(run.createdAt)}</Table.Td>
                     <Table.Td>{getRunIdLabel(run)}</Table.Td>
-                    <Table.Td>{run.username ?? "—"}</Table.Td>
+                    <Table.Td>
+                      {run.username ? (
+                        <Group gap={6} wrap="nowrap">
+                          <AgentModelIcon
+                            shellModel={runAgent?.shellModel}
+                            size={14}
+                            style={{ flexShrink: 0 }}
+                          />
+                          {run.username}
+                        </Group>
+                      ) : (
+                        "—"
+                      )}
+                    </Table.Td>
                     <Table.Td>
                       <Badge size="xs" variant="light" color="blue">
                         {run.modelName}

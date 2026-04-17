@@ -1,10 +1,14 @@
 import { Anchor, Box, Image, Stack, Text } from "@mantine/core";
-import { ATTACHMENT_NO_ACCESS, formatFileSize } from "@naisys/common";
+import {
+  ATTACHMENT_NO_ACCESS,
+  formatFileSize,
+  isImageFilename,
+} from "@naisys/common";
 import { IconFile } from "@tabler/icons-react";
 import React from "react";
 
 import type { LogEntry } from "../../lib/apiClient";
-import { isImageFilename, useImageGallery } from "./ImageGallery";
+import { useImageGallery } from "./ImageGallery";
 
 export const getLogColor = (log: LogEntry) => {
   if (log.type === "comment") return "green";

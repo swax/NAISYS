@@ -6,6 +6,7 @@ import {
   IconCpu,
   IconPhoto,
   IconPlus,
+  IconUser,
 } from "@tabler/icons-react";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -147,7 +148,11 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               }}
             >
               <Group gap="xs" align="center" wrap="nowrap">
-                <IconCpu size="1rem" style={{ flexShrink: 0 }} />
+                {model.key === "none" ? (
+                  <IconUser size="1rem" style={{ flexShrink: 0 }} />
+                ) : (
+                  <IconCpu size="1rem" style={{ flexShrink: 0 }} />
+                )}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <Group gap={4} wrap="nowrap">
                     <Text size="sm" fw={500} truncate="end">

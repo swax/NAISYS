@@ -1,5 +1,5 @@
 import { ActionIcon, Image, Modal } from "@mantine/core";
-import { ATTACHMENT_NO_ACCESS } from "@naisys/common";
+import { ATTACHMENT_NO_ACCESS, isImageFilename } from "@naisys/common";
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import React, {
   createContext,
@@ -11,10 +11,6 @@ import React, {
 } from "react";
 
 import type { LogEntry } from "../../lib/apiClient";
-
-export function isImageFilename(filename: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
-}
 
 type GalleryImage = {
   url: string;

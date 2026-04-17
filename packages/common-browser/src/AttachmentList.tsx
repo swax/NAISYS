@@ -8,8 +8,8 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { formatFileSize } from "@naisys/common";
-import { IconDownload, IconRefresh } from "@tabler/icons-react";
+import { formatFileSize, isImageFilename } from "@naisys/common";
+import { IconDownload, IconPhoto, IconRefresh } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 export interface AttachmentItem {
@@ -66,9 +66,14 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
     void fetchAttachments();
   }, [fetchAttachments]);
 
-  const handleDownload = (id: string, filename: string) => {
+  const handleOpen = (id: string, filename: string) => {
+    const url = getDownloadUrl(id);
+    if (isImageFilename(filename)) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
     const link = document.createElement("a");
-    link.href = getDownloadUrl(id);
+    link.href = url;
     link.download = filename;
     link.click();
   };
@@ -122,7 +127,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
                 <Table.Tr
                   key={att.id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => handleDownload(att.id, att.filename)}
+                  onClick={() => handleOpen(att.id, att.filename)}
                 >
                   <Table.Td>{att.filename}</Table.Td>
                   <Table.Td>{formatFileSize(att.fileSize)}</Table.Td>
@@ -134,7 +139,11 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
                     {new Date(att.createdAt).toLocaleString()}
                   </Table.Td>
                   <Table.Td>
-                    <IconDownload size={16} />
+                    {isImageFilename(att.filename) ? (
+                      <IconPhoto size={16} />
+                    ) : (
+                      <IconDownload size={16} />
+                    )}
                   </Table.Td>
                 </Table.Tr>
               ))}

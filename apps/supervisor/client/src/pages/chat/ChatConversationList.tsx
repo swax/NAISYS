@@ -3,6 +3,7 @@ import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { AgentModelIcon } from "../../components/AgentModelIcon";
 import type { Agent, ChatConversation } from "../../lib/apiClient";
 import { NewChatDialog } from "./NewChatDialog";
 
@@ -86,6 +87,10 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
               .split(",")
               .filter((n) => n !== agentName)
               .join(",");
+            const iconName =
+              conv.participantNames.find((n) => n !== agentName) ??
+              conv.participantNames[0];
+            const iconAgent = agents.find((a) => a.name === iconName);
 
             return (
               <NavLink
@@ -102,6 +107,14 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
                         style={{ opacity: 0.5, flexShrink: 0 }}
                       />
                     )}
+                    <AgentModelIcon
+                      shellModel={iconAgent?.shellModel}
+                      size={14}
+                      style={{
+                        flexShrink: 0,
+                        opacity: conv.isArchived ? 0.5 : undefined,
+                      }}
+                    />
                     <Text
                       size="sm"
                       lineClamp={1}

@@ -22,6 +22,7 @@ import type {
   HateoasActionTemplate,
   UploadAttachmentResponse,
 } from "@naisys/erp-shared";
+import { isImageFilename } from "@naisys/common";
 import { FieldType } from "@naisys/erp-shared";
 import {
   IconAlertCircle,
@@ -35,6 +36,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { api, showErrorNotification } from "../lib/api";
+import { hasActionTemplate } from "../lib/hateoas";
 
 function formatDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -42,22 +44,6 @@ function formatDate(d: Date): string {
 
 function formatDateTime(d: Date): string {
   return `${formatDate(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-import { hasActionTemplate } from "../lib/hateoas";
-
-const IMAGE_EXTENSIONS = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".svg",
-  ".bmp",
-]);
-
-function isImageFilename(filename: string): boolean {
-  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-  return IMAGE_EXTENSIONS.has(ext);
 }
 
 /** Check if a field type represents an array (e.g. "string[]") */

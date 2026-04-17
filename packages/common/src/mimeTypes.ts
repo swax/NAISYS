@@ -24,3 +24,7 @@ export function mimeFromFilename(filename: string): string {
   const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
   return MIME_TYPES[ext] ?? "application/octet-stream";
 }
+
+export function isImageFilename(filename: string): boolean {
+  return mimeFromFilename(filename).startsWith("image/");
+}

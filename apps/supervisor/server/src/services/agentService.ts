@@ -50,24 +50,28 @@ export async function getAgents(
       : undefined,
   });
 
-  const agents: AgentWithConfig[] = users.map((user) => ({
-    id: user.id,
-    uuid: user.uuid,
-    name: user.username,
-    title: user.title,
-    host: user.user_notifications?.host?.name ?? "",
-    lastActive: user.user_notifications?.last_active?.toISOString(),
-    leadUsername: user.lead_user?.username || undefined,
-    latestLogId: user.user_notifications?.latest_log_id ?? 0,
-    latestMailId: user.user_notifications?.latest_mail_id ?? 0,
-    enabled: user.enabled,
-    archived: user.archived,
-    budgetLeft:
-      user.user_notifications?.budget_left != null
-        ? Number(user.user_notifications.budget_left)
-        : undefined,
-    config: parseConfig(user.config),
-  }));
+  const agents: AgentWithConfig[] = users.map((user) => {
+    const config = parseConfig(user.config);
+    return {
+      id: user.id,
+      uuid: user.uuid,
+      name: user.username,
+      title: user.title,
+      host: user.user_notifications?.host?.name ?? "",
+      lastActive: user.user_notifications?.last_active?.toISOString(),
+      leadUsername: user.lead_user?.username || undefined,
+      latestLogId: user.user_notifications?.latest_log_id ?? 0,
+      latestMailId: user.user_notifications?.latest_mail_id ?? 0,
+      enabled: user.enabled,
+      archived: user.archived,
+      budgetLeft:
+        user.user_notifications?.budget_left != null
+          ? Number(user.user_notifications.budget_left)
+          : undefined,
+      config,
+      shellModel: config?.shellModel,
+    };
+  });
 
   updateAgentHostAssignments(
     users.map((user) => ({
