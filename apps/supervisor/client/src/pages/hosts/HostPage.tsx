@@ -1,10 +1,11 @@
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Button,
   Group,
   Loader,
-  NativeSelect,
+  Menu,
   Stack,
   Switch,
   Table,
@@ -21,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { PlatformBadge } from "../../components/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
@@ -61,7 +63,6 @@ export const HostPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const host = hostname ? hosts.find((h) => h.name === hostname) : undefined;
 
@@ -192,18 +193,17 @@ export const HostPage: React.FC = () => {
     }
   };
 
-  const handleAssign = async () => {
-    if (!hostname || !selectedAgentId) return;
+  const handleAssign = async (agentId: number) => {
+    if (!hostname) return;
     setAssigning(true);
     try {
-      const result = await assignAgentToHost(hostname, Number(selectedAgentId));
+      const result = await assignAgentToHost(hostname, agentId);
       if (result.success) {
         notifications.show({
           title: "Agent Assigned",
           message: result.message,
           color: "green",
         });
-        setSelectedAgentId("");
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
         void fetchDetail();
@@ -388,14 +388,19 @@ export const HostPage: React.FC = () => {
             <Table.Tr>
               <Table.Td c="dimmed">Environment</Table.Td>
               <Table.Td>
-                {hostDetail.environment.osVersion} ·{" "}
-                {hostDetail.environment.shell}
-                {hostDetail.environment.arch
-                  ? ` · ${hostDetail.environment.arch}`
-                  : ""}
-                {hostDetail.environment.nodeVersion
-                  ? ` · node ${hostDetail.environment.nodeVersion}`
-                  : ""}
+                <Group gap="xs" wrap="nowrap">
+                  <PlatformBadge platform={hostDetail.environment.platform} />
+                  <Text size="sm">
+                    {hostDetail.environment.osVersion} ·{" "}
+                    {hostDetail.environment.shell}
+                    {hostDetail.environment.arch
+                      ? ` · ${hostDetail.environment.arch}`
+                      : ""}
+                    {hostDetail.environment.nodeVersion
+                      ? ` · node ${hostDetail.environment.nodeVersion}`
+                      : ""}
+                  </Text>
+                </Group>
               </Table.Td>
             </Table.Tr>
           )}
@@ -419,154 +424,147 @@ export const HostPage: React.FC = () => {
               </Table.Td>
             </Table.Tr>
           )}
-          {hostDetail?.hostType !== "supervisor" && (
-            <Table.Tr>
-              <Table.Td c="dimmed">Restricted</Table.Td>
-              <Table.Td>
-                {hasAction(actions, "update") ? (
-                  <Switch
-                    checked={editRestricted}
-                    onChange={(e) => setEditRestricted(e.currentTarget.checked)}
-                    label="Only assigned agents can run on this host"
-                    size="sm"
-                  />
-                ) : (
-                  <Badge
-                    size="sm"
-                    variant="light"
-                    color={host?.restricted ? "orange" : "gray"}
-                  >
-                    {host?.restricted ? "Yes" : "No"}
-                  </Badge>
-                )}
-              </Table.Td>
-            </Table.Tr>
-          )}
         </Table.Tbody>
       </Table>
 
       {/* Active Agents — not applicable for supervisor hosts */}
       {hostDetail?.hostType !== "supervisor" && (
         <>
-          <Title order={4}>Active Agents</Title>
-          {activeAgents.length === 0 ? (
-            <Text c="dimmed" size="sm">
-              No agents currently active on this host
-            </Text>
-          ) : (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Username</Table.Th>
-                  <Table.Th>Title</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {activeAgents.map((agent) => (
-                  <Table.Tr
-                    key={agent.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/agents/${agent.name}`)}
-                  >
-                    <Table.Td>{agent.name}</Table.Td>
-                    <Table.Td>{agent.title}</Table.Td>
+          {activeAgents.length > 0 && (
+            <>
+              <Title order={4} pl="xs">Active Agents</Title>
+              <Table
+                striped
+                highlightOnHover
+                ml="md"
+                style={{ maxWidth: 600 }}
+              >
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Username</Table.Th>
+                    <Table.Th>Title</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {activeAgents.map((agent) => (
+                    <Table.Tr
+                      key={agent.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => navigate(`/agents/${agent.name}`)}
+                    >
+                      <Table.Td>{agent.name}</Table.Td>
+                      <Table.Td>{agent.title}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </>
           )}
 
           {/* Assigned Agents */}
-          <Title order={4}>Assigned Agents</Title>
-          {hostDetail && hostDetail.assignedAgents.length === 0 ? (
-            <Text c="dimmed" size="sm">
-              No agents assigned (any agent can use this host)
-            </Text>
-          ) : (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Username</Table.Th>
-                  <Table.Th>Title</Table.Th>
-                  {hasAction(actions, "assign-agent") && (
-                    <Table.Th style={{ width: 50 }}></Table.Th>
-                  )}
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {hostDetail?.assignedAgents.map((agent) => (
-                  <Table.Tr
-                    key={agent.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => navigate(`/agents/${agent.name}`)}
+          <Group gap="xs" pl="xs">
+            <Title order={4}>Assigned Agents</Title>
+            {hasAction(actions, "assign-agent") && (
+              <Menu shadow="md" width={260} position="bottom-start">
+                <Menu.Target>
+                  <ActionIcon
+                    size="sm"
+                    variant="subtle"
+                    color="blue"
+                    loading={assigning}
+                    disabled={unassignedAgents.length === 0}
+                    title="Assign agent"
                   >
-                    <Table.Td>{agent.name}</Table.Td>
-                    <Table.Td>{agent.title}</Table.Td>
+                    <IconPlus size={16} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {unassignedAgents.map((a) => (
+                    <Menu.Item
+                      key={a.id}
+                      onClick={() => void handleAssign(a.id)}
+                    >
+                      {a.name} — {a.title}
+                    </Menu.Item>
+                  ))}
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </Group>
+          <Stack gap="md" pl="md">
+            {hostDetail && hostDetail.assignedAgents.length > 0 && (
+              <Stack gap={4}>
+                {hostDetail.assignedAgents.map((agent) => (
+                  <Group key={agent.id} gap="xs" wrap="nowrap">
+                    <Anchor
+                      size="sm"
+                      onClick={() => navigate(`/agents/${agent.name}`)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {agent.name}
+                    </Anchor>
+                    <Text size="sm" c="dimmed">
+                      ({agent.title})
+                    </Text>
                     {hasActionTemplate(
                       hostDetail?._actionTemplates,
                       "unassignAgent",
                     ) && (
-                      <Table.Td>
-                        <Button
-                          size="compact-xs"
-                          variant="subtle"
-                          color="red"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleUnassign(agent.name);
-                          }}
-                        >
-                          <IconX size={14} />
-                        </Button>
-                      </Table.Td>
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        color="red"
+                        onClick={() => void handleUnassign(agent.name)}
+                        title="Unassign"
+                      >
+                        <IconX size={14} />
+                      </ActionIcon>
                     )}
-                  </Table.Tr>
+                  </Group>
                 ))}
-              </Table.Tbody>
-            </Table>
-          )}
+              </Stack>
+            )}
 
-          {/* Assign agent form */}
-          {hasAction(actions, "assign-agent") && (
-            <Group gap="xs">
-              <NativeSelect
-                value={selectedAgentId}
-                onChange={(e) => setSelectedAgentId(e.currentTarget.value)}
-                data={[
-                  { value: "", label: "Select agent..." },
-                  ...unassignedAgents.map((a) => ({
-                    value: String(a.id),
-                    label: `${a.name} — ${a.title}`,
-                  })),
-                ]}
-                style={{ flex: 1, maxWidth: 300 }}
+            {/* Restricted toggle */}
+            {hasAction(actions, "update") ? (
+              <Switch
+                checked={editRestricted}
+                onChange={(e) => setEditRestricted(e.currentTarget.checked)}
+                label="Restricted — only assigned agents can run on this host"
+                size="sm"
               />
-              <Button
-                leftSection={<IconPlus size={16} />}
-                loading={assigning}
-                disabled={!selectedAgentId}
-                onClick={handleAssign}
-              >
-                Assign
-              </Button>
-            </Group>
-          )}
+            ) : (
+              <Group gap="xs">
+                <Text size="sm" c="dimmed">
+                  Restricted:
+                </Text>
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color={host?.restricted ? "orange" : "gray"}
+                >
+                  {host?.restricted ? "Yes" : "No"}
+                </Badge>
+              </Group>
+            )}
+          </Stack>
         </>
       )}
 
       {/* Latest Runs */}
-      <Title order={4}>Latest Runs</Title>
-      {hostRunsLoading && hostRuns.length === 0 ? (
-        <Group justify="center" p="md">
-          <Loader size="sm" />
-          <Text size="sm">Loading runs...</Text>
-        </Group>
-      ) : hostRuns.length === 0 ? (
-        <Text c="dimmed" size="sm">
-          No runs have been recorded on this host
-        </Text>
-      ) : (
-        <>
+      <Title order={4} pl="xs">Latest Runs</Title>
+      <Stack gap="md" pl="md">
+        {hostRunsLoading && hostRuns.length === 0 ? (
+          <Group justify="center" p="md">
+            <Loader size="sm" />
+            <Text size="sm">Loading runs...</Text>
+          </Group>
+        ) : hostRuns.length === 0 ? (
+          <Text c="dimmed" size="sm">
+            No runs have been recorded on this host
+          </Text>
+        ) : (
+          <>
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -639,7 +637,8 @@ export const HostPage: React.FC = () => {
             )}
           </Group>
         </>
-      )}
+        )}
+      </Stack>
     </Stack>
   );
 };

@@ -15,6 +15,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
+import { getPlatformBadge } from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
@@ -24,7 +25,6 @@ import {
   formatCost,
   formatDuration,
   formatPrimaryTime,
-  getPlatformBadge,
   getRunIdLabel,
   getRunKey,
   RunsSidebar,

@@ -4,20 +4,17 @@
 
 Self-hosted, cross-machine, AI agent runner and manager that runs on Node.js
 
-- **LLM support** — OpenAI, Google, Anthropic, and any OpenAI-compatible local LLM
-- **Console & desktop control** — Agents operate a shell and can control the GUI/desktop
+- **Collaborative** — Invite others with fine-grained permissions to manage agents, teams, and machines together
 - **Multi-agent** — Organize agents into teams, communicate via mail, wake on messages, and scale across machines through a self-hosted hub
-- **Web management** — Monitor agents, logs, costs, and messaging through a browser UI
+- **Computer use support** — In addition to the shell, agents can control any Windows/Mac/Linux GUI
 - **Cost controls** — Costs tightly tracked, requiring a spend limit (fixed or rolling window), no uncapped runs
+- **All vendors supported** — OpenAI, Google, Anthropic, OpenRouter and local LLMs
+- **Remote management** — Manage agents, hosts, costs, and messaging through your self-hosted server
+
 
 ## Packages
 
-| Name                 | Description                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `naisys`             | Agent runner — LLMs operate a Linux shell with built-in context management, multi-agent communication, and cost tracking        |
-| `@naisys/hub`        | Central server that adds persistence and enables agents to communicate across machines. Tracks logs, costs, and mail via SQLite |
-| `@naisys/supervisor` | Web UI for monitoring agents, viewing logs, and managing inter-agent messaging                                                  |
-| `@naisys/erp`        | Optional AI-driven order and work management. Runs integrated with Supervisor or standalone                                     |
+NAISYS is split into four packages: `naisys` (the agent runner), `@naisys/hub` (central server for persistence and cross-machine communication), `@naisys/supervisor` (web UI for monitoring and managing agents), and `@naisys/erp` (AI optmized task management system).
 
 ## Getting Started
 
