@@ -346,7 +346,7 @@ export const HostPage: React.FC = () => {
       </Group>
 
       {/* Host Details */}
-      <Table withRowBorders={false}>
+      <Table withRowBorders={false} style={{ maxWidth: 600 }}>
         <Table.Tbody>
           {hostDetail?.hostType && (
             <Table.Tr>
@@ -433,31 +433,22 @@ export const HostPage: React.FC = () => {
           {activeAgents.length > 0 && (
             <>
               <Title order={4} pl="xs">Active Agents</Title>
-              <Table
-                striped
-                highlightOnHover
-                ml="md"
-                style={{ maxWidth: 600 }}
-              >
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Username</Table.Th>
-                    <Table.Th>Title</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {activeAgents.map((agent) => (
-                    <Table.Tr
-                      key={agent.id}
-                      style={{ cursor: "pointer" }}
+              <Stack gap={4} pl="md">
+                {activeAgents.map((agent) => (
+                  <Group key={agent.id} gap="xs" wrap="nowrap">
+                    <Anchor
+                      size="sm"
                       onClick={() => navigate(`/agents/${agent.name}`)}
+                      style={{ cursor: "pointer" }}
                     >
-                      <Table.Td>{agent.name}</Table.Td>
-                      <Table.Td>{agent.title}</Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
+                      {agent.name}
+                    </Anchor>
+                    <Text size="sm" c="dimmed">
+                      ({agent.title})
+                    </Text>
+                  </Group>
+                ))}
+              </Stack>
             </>
           )}
 

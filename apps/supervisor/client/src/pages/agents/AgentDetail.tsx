@@ -31,7 +31,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
@@ -408,7 +408,7 @@ export const AgentDetail: React.FC = () => {
   }
 
   return (
-    <Stack p="xs">
+    <Stack p="xs" maw={1000}>
       <Group wrap="nowrap" style={{ overflowX: "auto" }}>
         {(() => {
           const startAction = hasAction(actions, "start", {
@@ -651,9 +651,21 @@ export const AgentDetail: React.FC = () => {
             {agentData.status}
           </Badge>
           {agentData.status === "active" && agentData.host && (
-            <Text size="sm" c="dimmed">
-              Running on {agentData.host}
-            </Text>
+            <Group gap={4} align="center">
+              <Text size="sm" c="dimmed">
+                Running on
+              </Text>
+              <Badge
+                component={Link}
+                to={`/hosts/${agentData.host}`}
+                size="sm"
+                variant="light"
+                color="blue"
+                style={{ cursor: "pointer" }}
+              >
+                {agentData.host}
+              </Badge>
+            </Group>
           )}
           {agentData.status === "suspended" && costSuspendedReason && (
             <Text size="sm" c="red">

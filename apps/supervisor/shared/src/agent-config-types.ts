@@ -54,6 +54,9 @@ export const ImportAgentConfigResponseSchema = z.object({
 
 export const GetAgentConfigResponseSchema = z.object({
   config: AgentConfigFileSchema,
+  assignedHosts: z
+    .array(z.object({ id: z.number(), name: z.string() }))
+    .optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

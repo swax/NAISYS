@@ -54,7 +54,7 @@ export const ConfigSummary: React.FC<{
 
   return (
     <Stack gap="sm">
-      <Table withRowBorders={false}>
+      <Table withRowBorders={false} style={{ maxWidth: 600 }}>
         <Table.Tbody>
           {config.title && (
             <Table.Tr>
