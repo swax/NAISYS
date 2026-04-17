@@ -24,6 +24,7 @@ import {
   AttachmentList,
   SecretField,
   ServerLogViewer,
+  VersionBadge,
 } from "@naisys/common-browser";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
@@ -158,6 +159,7 @@ export const AdminPage: React.FC = () => {
                     <Table.Td>
                       <Group gap="xs">
                         <span>{formatVersion(data.supervisorVersion)}</span>
+                        <VersionBadge version={data.supervisorVersion} />
                         {data.targetVersion && (
                           <Badge
                             size="sm"
@@ -227,7 +229,14 @@ export const AdminPage: React.FC = () => {
                   <Table.Tr>
                     <Table.Td fw={600}>Version</Table.Td>
                     <Table.Td>
-                      {data.hubVersion ? formatVersion(data.hubVersion) : "—"}
+                      {data.hubVersion ? (
+                        <Group gap="xs">
+                          <span>{formatVersion(data.hubVersion)}</span>
+                          <VersionBadge version={data.hubVersion} />
+                        </Group>
+                      ) : (
+                        "—"
+                      )}
                     </Table.Td>
                   </Table.Tr>
                   <Table.Tr>

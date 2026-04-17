@@ -1,4 +1,4 @@
-import { ADMIN_USERNAME, parseVersion } from "@naisys/common";
+import { ADMIN_USERNAME, compareSemver, parseVersion } from "@naisys/common";
 import { getGitCommitHash, getGitRepoRoot } from "@naisys/common-node";
 import { execSync, spawn } from "child_process";
 import { readFileSync } from "fs";
@@ -26,7 +26,11 @@ export function createUpdateService(
       globalConfig.globalConfig()?.variableMap.TARGET_VERSION;
     if (!targetVersion) return;
 
-    const { npm: npmVersion, hash: commitHash } = parseVersion(targetVersion);
+    const {
+      operator,
+      npm: npmVersion,
+      hash: commitHash,
+    } = parseVersion(targetVersion);
 
     // Determine if this target is relevant for our install type
     if (repoRoot) {
@@ -36,7 +40,11 @@ export function createUpdateService(
     } else {
       if (!npmVersion) return; // No version in target, not for npm clients
       const currentVersion = globalConfig.globalConfig().packageVersion;
-      if (npmVersion === currentVersion) return; // Already on this version
+      if (operator === ">=") {
+        if (compareSemver(currentVersion, npmVersion) >= 0) return; // Already at or above floor
+      } else if (npmVersion === currentVersion) {
+        return; // Already on this version
+      }
     }
 
     updateInProgress = true;

@@ -15,4 +15,5 @@ export type {
   ServerLogViewerProps,
 } from "./ServerLogViewer.js";
 export { ServerLogViewer } from "./ServerLogViewer.js";
+export { VersionBadge } from "./VersionBadge.js";
 export { zodResolver } from "./zodResolver.js";

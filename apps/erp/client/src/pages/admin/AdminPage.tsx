@@ -18,7 +18,11 @@ import type {
   AttachmentListData,
   ServerLogResponse,
 } from "@naisys/common-browser";
-import { AttachmentList, ServerLogViewer } from "@naisys/common-browser";
+import {
+  AttachmentList,
+  ServerLogViewer,
+  VersionBadge,
+} from "@naisys/common-browser";
 import type { AdminInfoResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
@@ -103,6 +107,7 @@ export const AdminPage: React.FC = () => {
                   <Table.Td>
                     <Group gap="xs">
                       <span>{formatVersion(data.erpVersion)}</span>
+                      <VersionBadge version={data.erpVersion} />
                       {data.targetVersion && (
                         <Badge
                           size="sm"
