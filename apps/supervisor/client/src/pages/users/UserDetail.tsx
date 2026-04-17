@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Button,
   Card,
+  Code,
   Container,
   Group,
   Loader,
@@ -29,7 +30,6 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
-import { useSession } from "../../contexts/SessionContext";
 import {
   changePassword,
   deleteUser,
@@ -43,7 +43,6 @@ import {
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useSession();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
@@ -225,12 +224,7 @@ export const UserDetail: React.FC = () => {
           </Tooltip>
         </Group>
         <Group>
-          <Button
-            variant="subtle"
-            onClick={() =>
-              navigate(hasPermission("supervisor_admin") ? "/users" : "/agents")
-            }
-          >
+          <Button variant="subtle" onClick={() => navigate("/users")}>
             Back
           </Button>
           {hasAction(user._actions, "change-password") && (
@@ -294,20 +288,26 @@ export const UserDetail: React.FC = () => {
               </Group>
             );
           })()}
-          {(apiKey || hasAction(user._actions, "rotate-key")) && (
+          {(user.hasApiKey || hasAction(user._actions, "rotate-key")) && (
             <Group>
               <Text fw={600} w={120}>
                 API Key:
               </Text>
-              <SecretField
-                value={apiKey}
-                onRotate={
-                  hasAction(user._actions, "rotate-key")
-                    ? handleRotateKey
-                    : undefined
-                }
-                rotating={rotating}
-              />
+              {apiKey !== null || hasAction(user._actions, "rotate-key") ? (
+                <SecretField
+                  value={apiKey}
+                  onRotate={
+                    hasAction(user._actions, "rotate-key")
+                      ? handleRotateKey
+                      : undefined
+                  }
+                  rotating={rotating}
+                />
+              ) : (
+                <Code>
+                  {"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"}
+                </Code>
+              )}
             </Group>
           )}
         </Stack>

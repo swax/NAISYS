@@ -57,7 +57,6 @@ export default function variablesRoutes(
   fastify.get<{ Reply: VariablesResponse | ErrorResponse }>(
     "/",
     {
-      preHandler: [requirePermission("manage_variables")],
       schema: {
         description: "List all variables",
         tags: ["Variables"],
@@ -77,7 +76,7 @@ export default function variablesRoutes(
       return {
         items: items.map((v) => ({
           key: v.key,
-          value: v.value,
+          value: v.sensitive && !hasManagePermission ? "" : v.value,
           exportToShell: v.export_to_shell,
           sensitive: v.sensitive,
         })),
