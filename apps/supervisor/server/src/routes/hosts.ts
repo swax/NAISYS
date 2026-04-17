@@ -7,6 +7,8 @@ import type {
   HostDetailResponse,
   HostListResponse,
   HostNameParams,
+  RunsDataRequest,
+  RunsDataResponse,
   UpdateHostRequest,
 } from "@naisys/supervisor-shared";
 import {
@@ -18,6 +20,8 @@ import {
   HostDetailResponseSchema,
   HostListResponseSchema,
   HostNameParamsSchema,
+  RunsDataRequestSchema,
+  RunsDataResponseSchema,
   UpdateHostRequestSchema,
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
@@ -46,6 +50,7 @@ import {
   sendHostsChanged,
   sendUserListChanged,
 } from "../services/hubConnectionService.js";
+import { getRunsData } from "../services/runsService.js";
 
 type HostCtx = {
   user: SupervisorUser | undefined;
@@ -415,6 +420,57 @@ export default function hostsRoutes(
 
         throw error;
       }
+    },
+  );
+
+  // GET /:hostname/runs — Runs that ran on this host
+  fastify.get<{
+    Params: HostNameParams;
+    Querystring: RunsDataRequest;
+    Reply: RunsDataResponse | ErrorResponse;
+  }>(
+    "/:hostname/runs",
+    {
+      schema: {
+        description: "Get run sessions that ran on a specific host",
+        tags: ["Hosts"],
+        params: HostNameParamsSchema,
+        querystring: RunsDataRequestSchema,
+        response: {
+          200: RunsDataResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { hostname } = request.params;
+      const { updatedSince, page, count } = request.query;
+
+      const host = await getHostDetail(hostname);
+      if (!host) {
+        return notFound(reply, `Host "${hostname}" not found`);
+      }
+
+      const data = await getRunsData(
+        { hostName: hostname },
+        updatedSince,
+        page,
+        count,
+      );
+
+      return {
+        success: true,
+        message: "Host runs retrieved successfully",
+        data,
+        _links: [
+          {
+            rel: "next",
+            href: `${API_PREFIX}/hosts/${hostname}/runs?updatedSince=${encodeURIComponent(data.timestamp)}`,
+            title: "Poll for updated runs",
+          },
+        ],
+      };
     },
   );
 

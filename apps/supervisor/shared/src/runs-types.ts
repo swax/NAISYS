@@ -7,6 +7,7 @@ import { LogEntrySchema } from "./log-types.js";
 // Zod schemas
 export const RunSessionSchema = z.object({
   userId: z.number(),
+  username: z.string().optional(),
   runId: z.number(),
   sessionId: z.number(),
   createdAt: z.string(),

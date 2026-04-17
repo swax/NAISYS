@@ -58,7 +58,12 @@ export default function agentRunsRoutes(
         return notFound(reply, `Agent '${username}' not found`);
       }
 
-      const data = await getRunsData(id, updatedSince, page, count);
+      const data = await getRunsData(
+        { userId: id },
+        updatedSince,
+        page,
+        count,
+      );
 
       return {
         success: true,

@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Group,
+  Loader,
   NativeSelect,
   Stack,
   Switch,
@@ -23,6 +24,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
+import { useHostRuns } from "../../hooks/useHostRuns";
 import {
   assignAgentToHost,
   deleteHost,
@@ -30,6 +32,12 @@ import {
   unassignAgentFromHost,
   updateHostApi,
 } from "../../lib/apiAgents";
+import {
+  formatCost,
+  formatPrimaryTime,
+  getRunIdLabel,
+  getRunKey,
+} from "../runs/RunsSidebar";
 
 export const HostPage: React.FC = () => {
   const { hostname } = useParams<{ hostname: string }>();
@@ -56,6 +64,15 @@ export const HostPage: React.FC = () => {
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const host = hostname ? hosts.find((h) => h.name === hostname) : undefined;
+
+  const {
+    runs: hostRuns,
+    total: hostRunsTotal,
+    isLoading: hostRunsLoading,
+    loadMore: loadMoreHostRuns,
+    loadingMore: hostRunsLoadingMore,
+    hasMore: hostRunsHasMore,
+  } = useHostRuns(hostname);
 
   const fetchDetail = useCallback(async () => {
     if (!hostname) return;
@@ -534,6 +551,93 @@ export const HostPage: React.FC = () => {
               </Button>
             </Group>
           )}
+        </>
+      )}
+
+      {/* Latest Runs */}
+      <Title order={4}>Latest Runs</Title>
+      {hostRunsLoading && hostRuns.length === 0 ? (
+        <Group justify="center" p="md">
+          <Loader size="sm" />
+          <Text size="sm">Loading runs...</Text>
+        </Group>
+      ) : hostRuns.length === 0 ? (
+        <Text c="dimmed" size="sm">
+          No runs have been recorded on this host
+        </Text>
+      ) : (
+        <>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Time</Table.Th>
+                <Table.Th>Run</Table.Th>
+                <Table.Th>Username</Table.Th>
+                <Table.Th>Model</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>Cost</Table.Th>
+                <Table.Th style={{ textAlign: "right" }}>Lines</Table.Th>
+                <Table.Th>Status</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {hostRuns.map((run) => {
+                const runKey = getRunKey(run);
+                const canNavigate = Boolean(run.username);
+                return (
+                  <Table.Tr
+                    key={`${run.userId}-${runKey}`}
+                    style={{ cursor: canNavigate ? "pointer" : "default" }}
+                    onClick={() => {
+                      if (canNavigate) {
+                        void navigate(
+                          `/agents/${run.username}/runs/${runKey}`,
+                        );
+                      }
+                    }}
+                  >
+                    <Table.Td>{formatPrimaryTime(run.createdAt)}</Table.Td>
+                    <Table.Td>{getRunIdLabel(run)}</Table.Td>
+                    <Table.Td>{run.username ?? "—"}</Table.Td>
+                    <Table.Td>
+                      <Badge size="xs" variant="light" color="blue">
+                        {run.modelName}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}>
+                      <Text size="sm" c="green" fw={500}>
+                        {formatCost(run.totalCost)}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td style={{ textAlign: "right" }}>
+                      {run.totalLines.toLocaleString()}
+                    </Table.Td>
+                    <Table.Td>
+                      {run.isOnline && (
+                        <Badge size="xs" variant="dot" color="green">
+                          Online
+                        </Badge>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
+            </Table.Tbody>
+          </Table>
+          <Group justify="center" gap="sm">
+            <Text c="dimmed" size="xs">
+              Showing {hostRuns.length} / {hostRunsTotal} runs
+            </Text>
+            {hostRunsHasMore && (
+              <Button
+                variant="subtle"
+                size="compact-xs"
+                loading={hostRunsLoadingMore}
+                onClick={loadMoreHostRuns}
+              >
+                Load More
+              </Button>
+            )}
+          </Group>
         </>
       )}
     </Stack>

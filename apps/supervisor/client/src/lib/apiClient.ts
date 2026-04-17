@@ -195,6 +195,7 @@ export const apiEndpoints = {
   hostUnassignAgent: (hostname: string, agentName: string) =>
     `/hosts/${hostname}/agents/${agentName}`,
   hostDelete: (hostname: string) => `/hosts/${hostname}`,
+  hostRuns: (hostname: string) => `/hosts/${hostname}/runs`,
   models: "/models",
   saveLlmModel: "/models/llm",
   saveImageModel: "/models/image",
