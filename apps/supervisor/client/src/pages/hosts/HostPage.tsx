@@ -275,6 +275,16 @@ export const HostPage: React.FC = () => {
             <TextInput
               value={editName}
               onChange={(e) => setEditName(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleSave();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  handleDiscard();
+                }
+              }}
+              autoFocus
               size="lg"
               styles={{ input: { fontWeight: 700 } }}
             />

@@ -12,7 +12,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { IconList, IconSend } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { SIDEBAR_WIDTH } from "../../constants";
@@ -24,6 +24,7 @@ import {
   formatCost,
   formatDuration,
   formatPrimaryTime,
+  getPlatformBadge,
   getRunIdLabel,
   getRunKey,
   RunsSidebar,
@@ -272,7 +273,42 @@ export const AgentRuns: React.FC = () => {
                 <Text size="sm" fw={600} visibleFrom="sm">
                   {formatPrimaryTime(selectedRun.createdAt)}
                 </Text>
-                <Badge size="sm" variant="light" color="blue">
+                {selectedRun.hostName && (
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color="cyan"
+                    component={Link}
+                    to={`/hosts/${selectedRun.hostName}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {selectedRun.hostName}
+                  </Badge>
+                )}
+                {selectedRun.hostEnvironment &&
+                  (() => {
+                    const meta = getPlatformBadge(
+                      selectedRun.hostEnvironment.platform,
+                    );
+                    return (
+                      <>
+                        <Badge size="sm" variant="light" color={meta.color}>
+                          {meta.label}
+                        </Badge>
+                        <Text size="xs" c="dimmed" visibleFrom="sm">
+                          {selectedRun.hostEnvironment.osVersion}
+                        </Text>
+                      </>
+                    );
+                  })()}
+                <Badge
+                  size="sm"
+                  variant="light"
+                  color="blue"
+                  component={Link}
+                  to={`/models/${encodeURIComponent(selectedRun.modelName)}`}
+                  style={{ cursor: "pointer" }}
+                >
                   {selectedRun.modelName}
                 </Badge>
                 {selectedRun.isOnline && (

@@ -1,9 +1,24 @@
 import { ATTACHMENT_NO_ACCESS } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
-import type { LogEntry, RunSession } from "@naisys/supervisor-shared";
+import type {
+  HostEnvironment,
+  LogEntry,
+  RunSession,
+} from "@naisys/supervisor-shared";
+import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
+
+function parseHostEnvironment(raw: string | null): HostEnvironment | null {
+  if (!raw) return null;
+  try {
+    const parsed = HostEnvironmentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface RunsData {
   runs: RunSession[];
@@ -113,6 +128,9 @@ export async function getRunsData(
     },
     skip: (page - 1) * count,
     take: count,
+    include: {
+      host: { select: { name: true, environment: true } },
+    },
   });
 
   // Map database records to our API format
@@ -127,6 +145,8 @@ export async function getRunsData(
       latestLogId: session.latest_log_id,
       totalLines: session.total_lines,
       totalCost: session.total_cost,
+      hostName: session.host?.name ?? null,
+      hostEnvironment: parseHostEnvironment(session.host?.environment ?? null),
     };
   });
 
