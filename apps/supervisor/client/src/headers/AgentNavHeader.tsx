@@ -13,12 +13,12 @@ import {
   IconInfoCircle,
   IconMail,
   IconMessageCircle,
-  IconRobot,
   IconSettings,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { AgentModelIcon } from "../components/AgentModelIcon";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { getAgentDetail } from "../lib/apiAgents";
@@ -131,7 +131,11 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
             flexShrink: 0,
           }}
         >
-          <IconRobot size="1.2rem" color="var(--mantine-color-dimmed)" />
+          <AgentModelIcon
+            shellModel={currentAgent?.shellModel}
+            size="1.2rem"
+            color="var(--mantine-color-dimmed)"
+          />
           {agentUsername && (
             <Text size="sm" fw={600}>
               {agentUsername}
