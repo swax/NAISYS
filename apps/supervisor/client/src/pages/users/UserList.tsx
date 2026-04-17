@@ -17,6 +17,8 @@ import { useDisclosure } from "@mantine/hooks";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
+import { AgentModelIcon } from "../../components/AgentModelIcon";
+import { HelpTooltip } from "../../components/HelpTooltip";
 import { getAgentData } from "../../lib/apiAgents";
 import { createAgentUser, createUser, getUsers } from "../../lib/apiUsers";
 
@@ -103,7 +105,10 @@ export const UserList: React.FC = () => {
       const existingUuids = new Set(allUsers.map((u: any) => u.uuid));
       const filtered = agentResponse.items
         .filter((a) => !a.archived && !existingUuids.has(a.uuid))
-        .map((a) => ({ value: String(a.id), label: a.name }));
+        .map((a) => ({
+          value: String(a.id),
+          label: a.title ? `${a.name} (${a.title})` : a.name,
+        }));
       setAvailableAgents(filtered);
     } catch {
       setAgentError("Failed to load agents");
@@ -135,11 +140,16 @@ export const UserList: React.FC = () => {
     <Container size="lg" py="xl" w="100%">
       <Group justify="space-between" mb="lg">
         <Title order={2}>Users</Title>
-        <Group>
+        <Group gap="xs">
+          <Button onClick={openCreate}>Create New</Button>
           <Button variant="outline" onClick={handleOpenAgentModal}>
             Create Agent User
           </Button>
-          <Button onClick={openCreate}>Create New</Button>
+          <HelpTooltip
+            label="An agent user is a user that can log in and operate the supervisor console themselves, scoped by the permissions it has been granted."
+            ariaLabel="What is an agent user?"
+            width={320}
+          />
         </Group>
       </Group>
 
@@ -179,7 +189,13 @@ export const UserList: React.FC = () => {
                 <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                   <Table.Td>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
-                      {item.username}
+                      <Group gap={6} wrap="nowrap">
+                        <AgentModelIcon
+                          shellModel={item.isAgent ? "agent" : "none"}
+                          size={16}
+                        />
+                        {item.username}
+                      </Group>
                     </Link>
                   </Table.Td>
                   <Table.Td>

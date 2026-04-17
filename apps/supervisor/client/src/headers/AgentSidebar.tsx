@@ -15,11 +15,11 @@ import {
   IconFileText,
   IconMail,
   IconPlus,
-  IconRobot,
 } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { AgentModelIcon } from "../components/AgentModelIcon";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
@@ -288,7 +288,11 @@ export const AgentSidebar: React.FC = () => {
       <Stack gap={2}>
         <Group justify="space-between" align="center" wrap="nowrap">
           <Group gap="xs" align="center" wrap="nowrap" style={{ minWidth: 0 }}>
-            <IconRobot size="1rem" style={{ flexShrink: 0 }} />
+            <AgentModelIcon
+              shellModel={agent.shellModel}
+              size="1rem"
+              style={{ flexShrink: 0 }}
+            />
             <Text size="sm" fw={500} truncate="end">
               {agent.name}
             </Text>

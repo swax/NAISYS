@@ -6,19 +6,30 @@ import {
   Stack,
   Textarea,
 } from "@mantine/core";
-import { IconPaperclip, IconSend, IconX } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconPaperclip,
+  IconSend,
+  IconX,
+} from "@tabler/icons-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+
+import { HelpTooltip } from "../../components/HelpTooltip";
 
 interface ChatInputProps {
   onSend: (message: string, files?: File[]) => Promise<void>;
   disabled?: boolean;
   focusKey?: string | null;
+  recipients?: string[];
+  showImpersonationWarning?: boolean;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
   onSend,
   disabled,
   focusKey,
+  recipients,
+  showImpersonationWarning,
 }) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -140,7 +151,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </ActionIcon>
         <Textarea
           ref={inputRef}
-          placeholder="Type a message..."
+          placeholder={
+            recipients && recipients.length > 0
+              ? `Type a message to send to ${recipients.join(", ")}...`
+              : "Type a message..."
+          }
           value={message}
           onChange={(e) => setMessage(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
@@ -150,6 +165,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           maxRows={4}
           style={{ flex: 1 }}
         />
+        {showImpersonationWarning && (
+          <HelpTooltip
+            label="You are impersonating this agent. If you want to talk to this agent, switch to an appropriate user listed in the chat header."
+            ariaLabel="Impersonation warning"
+            color="orange"
+            icon={<IconAlertTriangle size={18} />}
+          />
+        )}
         <ActionIcon
           variant="filled"
           color="blue"

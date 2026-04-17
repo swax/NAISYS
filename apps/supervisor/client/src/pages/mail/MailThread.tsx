@@ -10,7 +10,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { formatFileSize } from "@naisys/common";
+import { formatFileSize, isImageFilename } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import {
   IconArchive,
@@ -21,10 +21,6 @@ import {
 import React, { useRef } from "react";
 
 import type { MailMessage } from "../../lib/apiClient";
-
-function isImageFilename(filename: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
-}
 
 interface MailThreadProps {
   messages: MailMessage[];

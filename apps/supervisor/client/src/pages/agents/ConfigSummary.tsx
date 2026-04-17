@@ -10,10 +10,11 @@ import {
   Tooltip,
 } from "@mantine/core";
 import type { AgentDetailResponse } from "@naisys/supervisor-shared";
-import { IconRefresh } from "@tabler/icons-react";
+import { IconRefresh, IconServer } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
+import { AgentModelIcon } from "../../components/AgentModelIcon";
 import { TemplatedText } from "../../components/TemplatedText";
 import type { Agent, Host } from "../../types/agent";
 
@@ -97,15 +98,13 @@ export const ConfigSummary: React.FC<{
                     const isOnline = hostData?.online ?? false;
                     return (
                       <Group key={h.id} gap={4} wrap="nowrap">
-                        <div
+                        <IconServer
+                          size={14}
                           style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: "50%",
-                            backgroundColor: isOnline
+                            flexShrink: 0,
+                            color: isOnline
                               ? "var(--mantine-color-green-6)"
                               : "var(--mantine-color-red-6)",
-                            flexShrink: 0,
                           }}
                         />
                         <Anchor
@@ -121,15 +120,13 @@ export const ConfigSummary: React.FC<{
                 </Group>
               ) : (
                 <Group gap={4} wrap="nowrap">
-                  <div
+                  <IconServer
+                    size={14}
                     style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      backgroundColor: hosts?.some((h) => h.online)
+                      flexShrink: 0,
+                      color: hosts?.some((h) => h.online)
                         ? "var(--mantine-color-green-6)"
                         : "var(--mantine-color-red-6)",
-                      flexShrink: 0,
                     }}
                   />
                   <Text size="sm">Any host</Text>
@@ -140,13 +137,16 @@ export const ConfigSummary: React.FC<{
           <Table.Tr>
             <Table.Td c="dimmed">Shell Model</Table.Td>
             <Table.Td>
-              <Anchor
-                component={Link}
-                to={`/models/${encodeURIComponent(config.shellModel)}`}
-                size="sm"
-              >
-                {config.shellModel}
-              </Anchor>
+              <Group gap={6} wrap="nowrap">
+                <AgentModelIcon shellModel={config.shellModel} size={16} />
+                <Anchor
+                  component={Link}
+                  to={`/models/${encodeURIComponent(config.shellModel)}`}
+                  size="sm"
+                >
+                  {config.shellModel}
+                </Anchor>
+              </Group>
             </Table.Td>
           </Table.Tr>
           {config.imageModel && (

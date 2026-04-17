@@ -28,6 +28,7 @@ export const AgentSchema = z.object({
   enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
   budgetLeft: z.number().nullable().optional(),
+  shellModel: z.string().optional(),
   status: z
     .enum(["active", "available", "disabled", "offline", "suspended"])
     .optional(),

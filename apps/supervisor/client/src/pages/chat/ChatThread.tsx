@@ -9,15 +9,11 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { formatFileSize } from "@naisys/common";
+import { formatFileSize, isImageFilename } from "@naisys/common";
 import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
 import React, { useEffect, useRef } from "react";
 
 import type { ChatMessage } from "../../lib/apiClient";
-
-function isImageFilename(filename: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(filename);
-}
 
 interface ChatThreadProps {
   messages: ChatMessage[];

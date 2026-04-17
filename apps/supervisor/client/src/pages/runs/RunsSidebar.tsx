@@ -156,7 +156,11 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                 onClick={onNavLinkClick}
                 label={
                   <Stack gap={2}>
-                    <Group gap="xs" wrap="nowrap">
+                    <Group
+                      gap="xs"
+                      wrap="nowrap"
+                      justify="space-between"
+                    >
                       <Text size="sm" fw={500}>
                         {formatPrimaryTime(run.createdAt)}
                       </Text>
@@ -171,11 +175,15 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                         </Badge>
                       )}
                     </Group>
-                    <Group gap="xs" wrap="nowrap">
+                    <Group
+                      gap="xs"
+                      wrap="nowrap"
+                      justify="space-between"
+                    >
                       <Text
                         size="xs"
                         c="dimmed"
-                        style={{ minWidth: 75, whiteSpace: "nowrap" }}
+                        style={{ whiteSpace: "nowrap" }}
                       >
                         {getRunIdLabel(run)} &middot;{" "}
                         {formatDuration(run.createdAt, run.lastActive)}
