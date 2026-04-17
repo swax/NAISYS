@@ -27,6 +27,28 @@ export const getRunsData = async (
   return await api.get<RunsDataResponse>(url);
 };
 
+export interface HostRunsParams {
+  hostname: string;
+  page?: number;
+  count?: number;
+}
+
+export const getHostRuns = async (
+  params: HostRunsParams,
+): Promise<RunsDataResponse> => {
+  const queryParams = new URLSearchParams();
+  if (params.page !== undefined) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params.count !== undefined) {
+    queryParams.append("count", params.count.toString());
+  }
+
+  const query = queryParams.toString();
+  const url = `${apiEndpoints.hostRuns(params.hostname)}${query ? `?${query}` : ""}`;
+  return await api.get<RunsDataResponse>(url);
+};
+
 export interface ContextLogParams {
   agentUsername: string;
   runId: number;

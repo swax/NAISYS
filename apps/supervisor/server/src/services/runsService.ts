@@ -97,16 +97,25 @@ export function obfuscatePushEntries(entries: LogPushEntry[]): LogPushEntry[] {
   }));
 }
 
+export interface RunsFilter {
+  userId?: number;
+  hostName?: string;
+}
+
 export async function getRunsData(
-  userId: number,
+  filter: RunsFilter,
   updatedSince?: string,
   page: number = 1,
   count: number = 50,
 ): Promise<RunsData> {
   // Build the where clause
-  const where: any = {
-    user_id: userId,
-  };
+  const where: any = {};
+  if (filter.userId !== undefined) {
+    where.user_id = filter.userId;
+  }
+  if (filter.hostName !== undefined) {
+    where.host = { name: filter.hostName };
+  }
 
   // If updatedSince is provided, only fetch runs that were updated after that time
   if (updatedSince) {
@@ -130,6 +139,7 @@ export async function getRunsData(
     take: count,
     include: {
       host: { select: { name: true, environment: true } },
+      users: { select: { username: true } },
     },
   });
 
@@ -137,6 +147,7 @@ export async function getRunsData(
   const runs: RunSession[] = runSessions.map((session) => {
     return {
       userId: session.user_id,
+      username: session.users.username,
       runId: session.run_id,
       sessionId: session.session_id,
       createdAt: session.created_at.toISOString(),
