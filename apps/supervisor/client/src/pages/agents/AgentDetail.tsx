@@ -48,9 +48,11 @@ import {
   stopAgent,
   unarchiveAgent,
 } from "../../lib/apiAgents";
+import { useBoomGuard } from "../../lib/useBoomGuard";
 import { ConfigSummary } from "./ConfigSummary";
 
 export const AgentDetail: React.FC = () => {
+  useBoomGuard("agent");
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();

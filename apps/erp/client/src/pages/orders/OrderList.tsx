@@ -20,8 +20,10 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { hasAction } from "../../lib/hateoas";
 import { cellLinkStyle } from "../../lib/tableStyles";
+import { useBoomGuard } from "../../lib/useBoomGuard";
 
 export const OrderList: React.FC = () => {
+  useBoomGuard("orders");
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 

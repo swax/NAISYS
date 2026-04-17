@@ -9,7 +9,10 @@ import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AppLayout } from "./components/AppLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RootErrorPage } from "./components/RootErrorPage";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
+import { useBoomGuard } from "./lib/useBoomGuard";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { DispatchList } from "./pages/dispatch/DispatchList";
 import { InventoryList } from "./pages/inventory/InventoryList";
@@ -38,6 +41,7 @@ import { WorkCenterDetail } from "./pages/work-centers/WorkCenterDetail";
 import { WorkCenterList } from "./pages/work-centers/WorkCenterList";
 
 const AppContent: React.FC = () => {
+  useBoomGuard("root");
   const [publicRead, setPublicRead] = React.useState(false);
   const [supervisorAuth, setSupervisorAuth] = React.useState(false);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
@@ -119,7 +123,11 @@ const App: React.FC = () => {
         <Notifications position="top-right" />
         <BrowserRouter basename="/erp">
           <AuthProvider>
-            <AppContent />
+            <ErrorBoundary
+              fallback={(error) => <RootErrorPage error={error} />}
+            >
+              <AppContent />
+            </ErrorBoundary>
           </AuthProvider>
         </BrowserRouter>
       </DatesProvider>
