@@ -84,16 +84,6 @@ export const getRunIdLabel = (run: RunSession) => {
   return `#${run.runId}`;
 };
 
-const PLATFORM_META: Record<string, { label: string; color: string }> = {
-  macos: { label: "macOS", color: "gray" },
-  linux: { label: "Linux", color: "orange" },
-  windows: { label: "Windows", color: "blue" },
-  wsl: { label: "WSL", color: "teal" },
-};
-
-export const getPlatformBadge = (platform: string | undefined) =>
-  PLATFORM_META[platform ?? ""] ?? { label: platform || "?", color: "gray" };
-
 export const getRowKey = (run: RunSession) =>
   `${run.userId}-${run.runId}-${run.sessionId}`;
 

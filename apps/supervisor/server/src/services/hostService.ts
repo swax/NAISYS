@@ -14,6 +14,7 @@ export async function getHosts() {
       host_type: true,
       last_active: true,
       last_version: true,
+      environment: true,
       _count: {
         select: { user_hosts: true },
       },
@@ -28,6 +29,7 @@ export async function getHosts() {
     restricted: host.restricted,
     hostType: host.host_type,
     lastVersion: host.last_version ?? "",
+    platform: parseEnvironment(host.environment)?.platform ?? null,
   }));
 }
 

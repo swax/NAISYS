@@ -42,6 +42,7 @@ export const HostSchema = z.object({
   hostType: z.string().optional(),
   online: z.boolean().optional(),
   version: z.string().optional(),
+  platform: z.string().nullable().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

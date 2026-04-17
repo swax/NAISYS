@@ -11,12 +11,13 @@ import {
   TextInput,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { hasAction, versionsMatch } from "@naisys/common";
+import { hasAction } from "@naisys/common";
 import { IconPlus, IconServer } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { PlatformBadge } from "../components/PlatformBadge";
 import { ROUTER_BASENAME } from "../constants";
 import { useHostDataContext } from "../contexts/HostDataContext";
 import { useConnectionStatus } from "../hooks/useConnectionStatus";
@@ -27,7 +28,7 @@ export const HostSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { hosts, listActions, targetVersion, isLoading } = useHostDataContext();
+  const { hosts, listActions, isLoading } = useHostDataContext();
   const { status: connectionStatus } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -125,45 +126,36 @@ export const HostSidebar: React.FC = () => {
                     {host.name}
                   </Text>
                 </Group>
-                <Text
-                  size="xs"
-                  c={
-                    targetVersion &&
-                    host.version &&
-                    !versionsMatch(host.version, targetVersion)
-                      ? "red"
-                      : "dimmed"
-                  }
-                >
-                  {host.agentCount} agent{host.agentCount !== 1 ? "s" : ""}
-                  {targetVersion &&
-                  host.version &&
-                  !versionsMatch(host.version, targetVersion)
-                    ? ` · v${host.version}`
-                    : ""}
-                </Text>
+                <Group gap={4} mt={6} wrap="nowrap">
+                  {host.hostType === "supervisor" ? (
+                    <Badge size="xs" variant="light" color="violet">
+                      Supervisor
+                    </Badge>
+                  ) : (
+                    <PlatformBadge platform={host.platform} />
+                  )}
+                  {host.agentCount > 0 && (
+                    <Badge size="xs" variant="light" color="gray">
+                      {host.agentCount} assigned
+                    </Badge>
+                  )}
+                  {host.restricted && (
+                    <Badge size="xs" variant="light" color="orange">
+                      Restricted
+                    </Badge>
+                  )}
+                </Group>
               </div>
-              <Group gap={4} style={{ flexShrink: 0 }} wrap="nowrap">
-                {host.hostType === "supervisor" && (
-                  <Badge size="xs" variant="light" color="violet">
-                    SV
-                  </Badge>
-                )}
-                {host.restricted && (
-                  <Badge size="xs" variant="light" color="orange">
-                    R
-                  </Badge>
-                )}
-                {connectionStatus === "connected" && (
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={host.online ? "green" : "gray"}
-                  >
-                    {host.online ? "online" : "offline"}
-                  </Badge>
-                )}
-              </Group>
+              {connectionStatus === "connected" && (
+                <Badge
+                  size="xs"
+                  variant="light"
+                  color={host.online ? "green" : "gray"}
+                  style={{ flexShrink: 0 }}
+                >
+                  {host.online ? "online" : "offline"}
+                </Badge>
+              )}
             </Group>
           </Card>
         ))}
