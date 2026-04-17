@@ -38,6 +38,9 @@ export function createShellWrapper(
   let _resolveCurrentCommand: ((value: string) => void) | undefined;
   let _currentCommandTimeout: NodeJS.Timeout | undefined;
   let _currentCommandText: string | undefined;
+  /** Lines actually written to shell stdin — used to filter echoed input from output.
+   *  Diverges from _currentCommandText when the multi-line wrapper rewrites the command. */
+  let _shellInputLines: string[] = [];
 
   /** How we know the command has completed when running the command inside a shell like bash or wsl.
    *  Random suffix per session so the LLM cannot spoof it with crafted output. */
@@ -154,23 +157,14 @@ export function createShellWrapper(
     if (platformConfig.platform !== "windows") {
       return str;
     }
-    // Get command lines to filter (the echoed command)
-    const commandLines = _currentCommandText
-      ? _currentCommandText.split("\n").map((l) => l.trim())
-      : [];
-
     return str
       .split("\n")
       .filter((line) => {
         const trimmed = line.trim();
         // Filter out PS prompts (PS C:\...>)
         if (/^PS [A-Za-z]:\\.*>/.test(trimmed)) return false;
-        // Filter out the delimiter echo
-        if (
-          trimmed.includes("Write-Host") &&
-          trimmed.includes(_commandDelimiter)
-        )
-          return false;
+        // Filter out the delimiter echo command and its output
+        if (trimmed.includes(_commandDelimiter)) return false;
         // Filter out PSReadline warnings
         if (trimmed.includes("Cannot load PSReadline module")) return false;
         if (trimmed.includes("Console is running without PSReadline"))
@@ -179,8 +173,8 @@ export function createShellWrapper(
         if (trimmed.startsWith("New-Item -ItemType Directory")) return false;
         if (trimmed.startsWith("Set-Location ")) return false;
         if (trimmed === "(Get-Location).Path") return false;
-        // Filter out the echoed command itself
-        if (commandLines.includes(trimmed)) return false;
+        // Filter out echoed lines we sent to stdin (original command or wrapper invocation)
+        if (_shellInputLines.includes(trimmed)) return false;
         return true;
       })
       .join("\n");
@@ -318,7 +312,6 @@ export function createShellWrapper(
     await ensureOpen();
 
     if (_currentPath && command.split("\n").length > 1) {
-      // } || command.includes("&&"))){
       command = putMultilineCommandInAScript(command);
     }
 
@@ -331,6 +324,7 @@ export function createShellWrapper(
       }
 
       const commandWithDelimiter = `${command}\n${platformConfig.echoDelimiter(_commandDelimiter)}\n`;
+      _shellInputLines = command.split("\n").map((l) => l.trim());
       _process.stdin.write(commandWithDelimiter);
 
       // Set timeout to wait for response from command
@@ -407,6 +401,7 @@ export function createShellWrapper(
           return;
         }
 
+        _shellInputLines = command.split("\n").map((l) => l.trim());
         _process.stdin.write(command + "\n");
         setCommandTimeout("start");
       }
@@ -509,6 +504,7 @@ export function createShellWrapper(
     _commandOutput = "";
     _writeWatermark = 0;
     _currentCommandText = undefined;
+    _shellInputLines = [];
 
     resetTerminal();
 
@@ -581,11 +577,18 @@ export function createShellWrapper(
     // Build platform-specific script content
     let scriptContent: string;
     if (platformConfig.platform === "windows") {
-      // PowerShell script
+      // Dot-sourced so cd/variable changes persist; try/finally restores
+      // $ErrorActionPreference so strict mode doesn't leak to parent shell
       scriptContent = `${platformConfig.scriptHeader}
+$__naisys_prevEAP = $ErrorActionPreference
 ${platformConfig.scriptSetError}
+try {
 Set-Location "${_currentPath}"
-${command.trim()}`;
+${command.trim()}
+} finally {
+$ErrorActionPreference = $__naisys_prevEAP
+Remove-Variable __naisys_prevEAP
+}`;
     } else {
       // Bash script
       scriptContent = `${platformConfig.scriptHeader}

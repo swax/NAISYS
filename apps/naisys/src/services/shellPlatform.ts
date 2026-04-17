@@ -52,7 +52,13 @@ function getWindowsConfig(): PlatformConfig {
   return {
     platform: "windows",
     shellCommand: "powershell.exe",
-    shellArgs: ["-NoProfile", "-NoLogo", "-NonInteractive"],
+    shellArgs: [
+      "-NoProfile",
+      "-NoLogo",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+    ],
     echoDelimiter: (delimiter: string) => `Write-Host "${delimiter}"`,
     pwdCommand: "(Get-Location).Path",
     mkdirCommand: (path: string) =>
@@ -63,7 +69,7 @@ function getWindowsConfig(): PlatformConfig {
     scriptSetError: "$ErrorActionPreference = 'Stop'",
     pathSeparator: ";",
     sourceScript: (binPath: string, scriptPath: string) =>
-      `$env:PATH = "${binPath};$env:PATH"; & "${scriptPath}"`,
+      `$env:PATH = "${binPath};$env:PATH"; . "${scriptPath}"`,
     displayName: "WINDOWS",
     shellName: "PowerShell",
     commandNotFoundSuffix: "is not recognized",
