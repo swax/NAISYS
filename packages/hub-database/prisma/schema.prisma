@@ -262,6 +262,7 @@ model hosts {
   host_type          HostType             @default(naisys)
   last_ip            String?
   last_version       String?
+  environment        String? // JSON blob: { platform, osVersion, shell, arch, nodeVersion }
   last_active        DateTime?
   created_at         DateTime             @default(now())
   user_notifications user_notifications[]

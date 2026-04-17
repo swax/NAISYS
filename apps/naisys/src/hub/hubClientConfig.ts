@@ -4,6 +4,7 @@ import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
 import os from "os";
 
 import { getInstallPath } from "../services/pathService.js";
+import { detectHostEnvironment } from "./hostEnvironment.js";
 
 export function createHubClientConfig(hubUrl: string) {
   if (!resolveHubAccessKey()) {
@@ -30,11 +31,14 @@ export function createHubClientConfig(hubUrl: string) {
     clientVersion += `/${commitHash}`;
   }
 
+  const environment = detectHostEnvironment();
+
   return {
     hubUrl,
     hostname,
     machineId,
     clientVersion,
+    environment,
   };
 }
 

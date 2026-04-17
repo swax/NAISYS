@@ -1,4 +1,6 @@
 import { assertUrlSafeKey } from "@naisys/common";
+import type { HostEnvironment } from "@naisys/supervisor-shared";
+import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { resolveAgentId } from "./agentService.js";
@@ -41,6 +43,7 @@ export async function getHostDetail(hostname: string) {
       last_active: true,
       last_ip: true,
       last_version: true,
+      environment: true,
       user_hosts: {
         select: {
           users: {
@@ -64,6 +67,7 @@ export async function getHostDetail(hostname: string) {
     online: false, // Caller overrides from agentHostStatusService
     version: "", // Caller overrides from agentHostStatusService
     lastVersion: host.last_version ?? "",
+    environment: parseEnvironment(host.environment),
     assignedAgents: host.user_hosts.map((uh) => ({
       id: uh.users.id,
       name: uh.users.username,
@@ -71,6 +75,16 @@ export async function getHostDetail(hostname: string) {
     })),
     _links: [],
   };
+}
+
+function parseEnvironment(raw: string | null): HostEnvironment | null {
+  if (!raw) return null;
+  try {
+    const parsed = HostEnvironmentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function createHost(name: string): Promise<{ id: number }> {

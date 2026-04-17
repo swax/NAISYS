@@ -52,6 +52,7 @@ export function createHubConnection(
           machineId: hubClientConfig.machineId || undefined,
           hostType: "naisys",
           clientVersion: hubClientConfig.clientVersion,
+          environment: hubClientConfig.environment,
         });
       },
       reconnection: true,

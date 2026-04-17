@@ -164,6 +164,15 @@ const AssignedAgentSchema = z.object({
   title: z.string(),
 });
 
+export const HostEnvironmentSchema = z.object({
+  platform: z.string(),
+  osVersion: z.string(),
+  shell: z.string(),
+  arch: z.string().optional(),
+  nodeVersion: z.string().optional(),
+});
+export type HostEnvironment = z.infer<typeof HostEnvironmentSchema>;
+
 export const HostDetailResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -174,6 +183,7 @@ export const HostDetailResponseSchema = z.object({
   hostType: z.string(),
   online: z.boolean(),
   version: z.string(),
+  environment: HostEnvironmentSchema.nullable(),
   assignedAgents: z.array(AssignedAgentSchema),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
