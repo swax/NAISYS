@@ -357,6 +357,21 @@ export const HostPage: React.FC = () => {
               <Table.Td>{host?.version || hostDetail?.version}</Table.Td>
             </Table.Tr>
           )}
+          {hostDetail?.environment && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Environment</Table.Td>
+              <Table.Td>
+                {hostDetail.environment.osVersion} ·{" "}
+                {hostDetail.environment.shell}
+                {hostDetail.environment.arch
+                  ? ` · ${hostDetail.environment.arch}`
+                  : ""}
+                {hostDetail.environment.nodeVersion
+                  ? ` · node ${hostDetail.environment.nodeVersion}`
+                  : ""}
+              </Table.Td>
+            </Table.Tr>
+          )}
           {hostDetail?.machineId && (
             <Table.Tr>
               <Table.Td c="dimmed">Machine ID</Table.Td>

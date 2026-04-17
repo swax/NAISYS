@@ -169,6 +169,7 @@ export function createNaisysServer(
       machineId: rawMachineId,
       hostType: rawHostType,
       clientVersion,
+      environment: rawEnvironment,
     } = socket.handshake.auth;
 
     if (!clientAccessKey || clientAccessKey !== hubAccessKey) {
@@ -193,6 +194,10 @@ export function createNaisysServer(
         typeof rawMachineId === "string" && rawMachineId
           ? rawMachineId
           : undefined;
+      const environment =
+        rawEnvironment && typeof rawEnvironment === "object"
+          ? (rawEnvironment as Record<string, unknown>)
+          : undefined;
 
       const result =
         hostType === "supervisor"
@@ -206,6 +211,7 @@ export function createNaisysServer(
               machineId,
               socket.handshake.address,
               resolvedVersion,
+              environment,
             );
 
       // Reject duplicate naisys connections (supervisors may have multiple)

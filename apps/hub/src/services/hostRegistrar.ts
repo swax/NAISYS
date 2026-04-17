@@ -9,6 +9,7 @@ interface HostCacheEntry {
   restricted: boolean;
   hostType: HostType;
   lastVersion: string;
+  environment: string | null;
 }
 
 export interface RegisterHostResult {
@@ -30,6 +31,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       restricted: true,
       host_type: true,
       last_version: true,
+      environment: true,
     },
   });
   for (const row of rows) {
@@ -39,6 +41,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       restricted: row.restricted,
       hostType: row.host_type,
       lastVersion: row.last_version ?? "",
+      environment: row.environment,
     });
   }
 
@@ -95,6 +98,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
         restricted: existing.restricted,
         hostType,
         lastVersion: clientVersion,
+        environment: existing.environment,
       });
       return { hostId: existing.id, machineId: "", hostName };
     }
@@ -114,6 +118,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       restricted: false,
       hostType,
       lastVersion: clientVersion,
+      environment: null,
     });
     return { hostId: created.id, machineId: "", hostName };
   }
@@ -130,9 +135,11 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     machineId: string | undefined,
     lastIp: string,
     clientVersion: string,
+    environment: Record<string, unknown> | undefined,
   ): Promise<RegisterHostResult> {
     hostName = toUrlSafeKey(hostName);
     const hostType: HostType = "naisys";
+    const environmentJson = environment ? JSON.stringify(environment) : null;
 
     // --- Lookup by machineId (returning client) ---
     if (machineId) {
@@ -148,6 +155,9 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
             host_type: hostType,
             last_ip: lastIp,
             last_version: clientVersion,
+            ...(environmentJson !== null
+              ? { environment: environmentJson }
+              : {}),
           },
         });
         updateCache(byMachineId.id, {
@@ -156,6 +166,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
           restricted: byMachineId.restricted,
           hostType,
           lastVersion: clientVersion,
+          environment: environmentJson ?? byMachineId.environment,
         });
         // Return the DB hostname (may differ from what the client sent if renamed)
         return {
@@ -185,6 +196,9 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
             host_type: hostType,
             last_ip: lastIp,
             last_version: clientVersion,
+            ...(environmentJson !== null
+              ? { environment: environmentJson }
+              : {}),
           },
         });
         updateCache(byName.id, {
@@ -193,6 +207,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
           restricted: byName.restricted,
           hostType,
           lastVersion: clientVersion,
+          environment: environmentJson ?? byName.environment,
         });
         return { hostId: byName.id, machineId: newMachineId, hostName };
       }
@@ -209,6 +224,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
         host_type: hostType,
         last_ip: lastIp,
         last_version: clientVersion,
+        environment: environmentJson,
         last_active: new Date().toISOString(),
       },
     });
@@ -219,6 +235,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       restricted: false,
       hostType,
       lastVersion: clientVersion,
+      environment: environmentJson,
     });
 
     return { hostId: created.id, machineId: newMachineId, hostName };
@@ -232,6 +249,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
     restricted: boolean;
     hostType: HostType;
     lastVersion: string;
+    environment: string | null;
   }[] {
     return Array.from(hostsById, ([hostId, entry]) => ({
       hostId,
@@ -240,6 +258,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
       restricted: entry.restricted,
       hostType: entry.hostType,
       lastVersion: entry.lastVersion,
+      environment: entry.environment,
     }));
   }
 
@@ -253,6 +272,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
         restricted: true,
         host_type: true,
         last_version: true,
+        environment: true,
       },
     });
     hostsById.clear();
@@ -263,6 +283,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
         restricted: row.restricted,
         hostType: row.host_type,
         lastVersion: row.last_version ?? "",
+        environment: row.environment,
       });
     }
   }
