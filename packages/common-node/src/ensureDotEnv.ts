@@ -18,11 +18,11 @@ import {
 export async function ensureDotEnv(
   exampleUrl: URL,
   wizardConfig?: WizardConfig,
-): Promise<void> {
+): Promise<boolean> {
   const dotenvPath = path.resolve(".env");
 
   if (fs.existsSync(dotenvPath)) {
-    return;
+    return false;
   }
 
   const examplePath = fileURLToPath(exampleUrl);
@@ -40,7 +40,7 @@ export async function ensureDotEnv(
       if (!answer || answer.toLowerCase().startsWith("y")) {
         await runSetupWizard(dotenvPath, exampleUrl, wizardConfig);
         expandNaisysFolder();
-        return;
+        return true;
       }
     }
 

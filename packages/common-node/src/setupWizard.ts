@@ -127,7 +127,7 @@ export async function runSetupWizard(
   dotenvPath: string,
   exampleUrl: URL,
   config: WizardConfig,
-): Promise<void> {
+): Promise<boolean> {
   if (!process.stdin.isTTY) {
     console.log("\n  Setup wizard requires an interactive terminal.\n");
     process.exit(1);
@@ -278,4 +278,6 @@ export async function runSetupWizard(
   for (const [key, value] of Object.entries(newEnv)) {
     process.env[key] = value;
   }
+
+  return true;
 }

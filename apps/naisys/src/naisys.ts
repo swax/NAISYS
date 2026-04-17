@@ -39,13 +39,13 @@ const exampleUrl = new URL(
   import.meta.url,
 );
 
+let wizardRan = false;
 if (process.argv.includes("--setup")) {
-  await runSetupWizard(path.resolve(".env"), exampleUrl, wizardConfig);
+  wizardRan = await runSetupWizard(path.resolve(".env"), exampleUrl, wizardConfig);
   expandNaisysFolder();
 }
 
-await ensureDotEnv(exampleUrl, wizardConfig);
-
+wizardRan = (await ensureDotEnv(exampleUrl, wizardConfig)) || wizardRan;
 expandNaisysFolder();
 
 program
@@ -70,7 +70,9 @@ program
   .option("--setup", "Run interactive setup wizard")
   .parse();
 
-await ensureAgentConfig(program.args[0]);
+if (wizardRan) {
+  await ensureAgentConfig(program.args[0]);
+}
 
 const agentPath = program.args[0] || ".";
 let hubUrl: string | undefined = program.opts().hub;
