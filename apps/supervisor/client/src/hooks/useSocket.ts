@@ -15,3 +15,21 @@ export function getSocket(): Socket {
   }
   return socket;
 }
+
+/**
+ * Force the socket to (re)connect. Used after login to retry with the
+ * freshly-issued session cookie, since Socket.IO's reconnection manager
+ * doesn't kick in for middleware-level auth rejects.
+ */
+export function reconnectSocket(): void {
+  const s = getSocket();
+  if (!s.connected) s.connect();
+}
+
+/**
+ * Disconnect the socket. Used on logout so the server drops all room
+ * memberships and the next login opens a fresh, correctly-authed socket.
+ */
+export function disconnectSocket(): void {
+  if (socket) socket.disconnect();
+}
