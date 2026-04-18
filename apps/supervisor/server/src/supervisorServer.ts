@@ -6,6 +6,7 @@ import {
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
+  promptSuperAdminPassword,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -64,6 +65,8 @@ interface SupervisorPluginOptions {
   plugins?: "erp"[];
   serverPort?: number;
   hosted?: boolean;
+  /** If provided, used when creating or updating the superadmin. Prompt in the caller (not here) to avoid Fastify's plugin-registration timeout. */
+  superAdminPassword?: string;
 }
 
 /**
@@ -98,12 +101,18 @@ export const supervisorPlugin: FastifyPluginAsync<
   // Populate in-memory user lookup for username ↔ id resolution
   await refreshUserLookup();
 
-  const superAdminResult = await ensureSuperAdmin();
+  const superAdminResult = await ensureSuperAdmin(opts.superAdminPassword);
   if (superAdminResult.created) {
-    console.log(
-      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
-    );
-    console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+    if (superAdminResult.generatedPassword) {
+      console.log(
+        `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
+      );
+      console.log(`  Change it via the web UI or ns-admin-pw command\n`);
+    } else {
+      console.log(`\n  ${SUPER_ADMIN_USERNAME} user created.\n`);
+    }
+  } else if (superAdminResult.passwordUpdated) {
+    console.log(`\n  ${SUPER_ADMIN_USERNAME} password updated.\n`);
   }
 
   // Logger — in hosted mode create a dedicated file logger since the
@@ -246,6 +255,7 @@ export const startServer: StartServer = async (
   startupType,
   plugins = [],
   hubPort?,
+  wizardRan?,
 ) => {
   if (startupType === "hosted") {
     process.env.NODE_ENV = "production";
@@ -285,10 +295,15 @@ export const startServer: StartServer = async (
           },
   }).withTypeProvider<ZodTypeProvider>();
 
+  const superAdminPassword = wizardRan
+    ? await promptSuperAdminPassword("Supervisor Setup")
+    : undefined;
+
   await fastify.register(supervisorPlugin, {
     plugins,
     serverPort: hubPort,
     hosted: startupType === "hosted",
+    superAdminPassword,
   });
 
   try {
@@ -372,15 +387,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       password,
     });
   } else {
+    let wizardRan = false;
     if (process.argv.includes("--setup")) {
-      await runSetupWizard(
+      wizardRan = await runSetupWizard(
         path.resolve(".env"),
         supervisorExampleUrl,
         supervisorWizardConfig,
       );
       expandNaisysFolder();
     }
-    await ensureDotEnv(supervisorExampleUrl, supervisorWizardConfig);
-    void startServer("standalone");
+    wizardRan =
+      (await ensureDotEnv(supervisorExampleUrl, supervisorWizardConfig)) ||
+      wizardRan;
+    void startServer("standalone", [], undefined, wizardRan);
   }
 }

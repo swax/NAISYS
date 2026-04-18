@@ -5,6 +5,7 @@ import {
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
+  promptSuperAdminPassword,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -58,11 +59,20 @@ export { enableSupervisorAuth } from "./supervisorAuth.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/** Plugin options for registering ERP inside another Fastify app */
+interface ErpPluginOptions {
+  /** If provided, used when creating or updating the local superadmin. Prompt in the caller (not here) to avoid Fastify's plugin-registration timeout. Ignored in supervisor-auth mode. */
+  superAdminPassword?: string;
+}
+
 /**
  * Fastify plugin that registers ERP routes and static files.
  * Can be used standalone or registered inside another Fastify app (e.g. supervisor).
  */
-export const erpPlugin: FastifyPluginAsync = async (fastify) => {
+export const erpPlugin: FastifyPluginAsync<ErpPluginOptions> = async (
+  fastify,
+  opts,
+) => {
   const isProd = process.env.NODE_ENV === "production";
 
   // Cookie plugin (guard for supervisor embedding)
@@ -107,7 +117,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
 
     await ensureSupervisorSuperAdmin();
   } else {
-    await ensureLocalSuperAdmin();
+    await ensureLocalSuperAdmin(opts.superAdminPassword);
   }
 
   fastify.setErrorHandler(commonErrorHandler);
@@ -181,7 +191,7 @@ export const erpPlugin: FastifyPluginAsync = async (fastify) => {
   }
 };
 
-async function startServer() {
+async function startServer(wizardRan?: boolean) {
   const isProd = process.env.NODE_ENV === "production";
 
   const fastify = Fastify({
@@ -222,7 +232,12 @@ async function startServer() {
     return reply.redirect("/erp/");
   });
 
-  await fastify.register(erpPlugin);
+  const superAdminPassword =
+    wizardRan && !isSupervisorAuth()
+      ? await promptSuperAdminPassword("ERP Setup")
+      : undefined;
+
+  await fastify.register(erpPlugin, { superAdminPassword });
 
   const port = Number(process.env.SERVER_PORT) || 3302;
   const host = isProd ? "0.0.0.0" : "localhost";
@@ -295,15 +310,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       void resetLocalPassword();
     }
   } else {
+    let wizardRan = false;
     if (process.argv.includes("--setup")) {
-      await runSetupWizard(
+      wizardRan = await runSetupWizard(
         path.resolve(".env"),
         erpExampleUrl,
         erpWizardConfig,
       );
       expandNaisysFolder();
     }
-    await ensureDotEnv(erpExampleUrl, erpWizardConfig);
-    void startServer();
+    wizardRan =
+      (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
+    void startServer(wizardRan);
   }
 }

@@ -1,3 +1,4 @@
+import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -72,6 +73,21 @@ export async function askQuestion(prompt: string): Promise<string> {
   process.stdin.removeListener("keypress", onKeypress);
   rl.close();
   return answer;
+}
+
+/**
+ * Prompt the user for a superadmin password during initial setup.
+ * Returns the entered password, or undefined if blank (caller keeps existing or generates a new one).
+ * Prints a visible section header so it's not lost among init logs.
+ */
+export async function promptSuperAdminPassword(
+  title: string,
+): Promise<string | undefined> {
+  console.log(`\n  === ${title} ===\n`);
+  const answer = await askQuestion(
+    `  ${SUPER_ADMIN_USERNAME} password (leave blank to keep existing / generate new): `,
+  );
+  return answer || undefined;
 }
 
 /** Parse a .env file into key-value pairs */

@@ -91,6 +91,7 @@ if (integratedHub) {
     program.opts().supervisor,
     plugins,
     agentPath,
+    wizardRan,
   );
   hubUrl = `http://localhost:${hubResult.serverPort}/hub`;
   if (program.opts().supervisor) {
