@@ -165,13 +165,8 @@ export async function deleteSession(tokenHash: string): Promise<void> {
 }
 
 export interface EnsureSuperAdminResult {
-  /** Whether the superadmin was newly created */
-  created: boolean;
-  /** Whether an existing superadmin's password was updated */
-  passwordUpdated?: boolean;
-  /** The generated password (only set when created without a supplied password) */
+  /** The randomly generated password — set only when a new superadmin was created without a supplied password (bootstrap fallback) */
   generatedPassword?: string;
-  /** The superadmin user info */
   user: {
     uuid: string;
     username: string;
@@ -202,8 +197,6 @@ export async function ensureSuperAdmin(
         data: { passwordHash },
       });
       return {
-        created: false,
-        passwordUpdated: true,
         user: {
           uuid: existing.uuid,
           username: existing.username,
@@ -213,7 +206,6 @@ export async function ensureSuperAdmin(
       };
     }
     return {
-      created: false,
       user: {
         uuid: existing.uuid,
         username: existing.username,
@@ -237,7 +229,6 @@ export async function ensureSuperAdmin(
   });
 
   return {
-    created: true,
     generatedPassword: password ? undefined : suppliedPassword,
     user: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
   };
