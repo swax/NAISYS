@@ -105,7 +105,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
 }) => {
   return (
     <Stack gap={0} style={{ height: "100%" }}>
-      <RunsCostChart runs={runs} />
+      <RunsCostChart runs={runs} agentName={agentName} />
 
       {runsLoading && runs.length === 0 && (
         <Group justify="center" p="md">

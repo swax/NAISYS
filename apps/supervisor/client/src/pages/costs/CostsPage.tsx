@@ -1,6 +1,4 @@
-import { BarChart, PieChart } from "@mantine/charts";
 import {
-  ColorSwatch,
   Container,
   Group,
   Loader,
@@ -12,11 +10,20 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import type {
+  Chart,
+  ChartData,
+  ChartOptions,
+  ChartType,
+  Plugin,
+} from "chart.js";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Bar, Pie } from "react-chartjs-2";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import type { CostsHistogramResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
+import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
 import { useBoomGuard } from "../../lib/useBoomGuard";
 
 const TIME_RANGES = [
@@ -36,22 +43,48 @@ const BASE_BUCKET_SIZES = [
   { value: "168", label: "1 week" },
 ];
 
-const AGENT_COLORS = [
-  "blue.6",
-  "teal.6",
-  "orange.6",
-  "grape.6",
-  "cyan.6",
-  "pink.6",
-  "lime.6",
-  "violet.6",
-  "yellow.6",
-  "red.6",
-];
+interface SpendLimitLineOptions {
+  value: number;
+  color: string;
+  label: string;
+}
+
+declare module "chart.js" {
+  interface PluginOptionsByType<TType extends ChartType> {
+    spendLimitLine?: SpendLimitLineOptions;
+  }
+}
+
+const spendLimitLinePlugin: Plugin<"bar"> = {
+  id: "spendLimitLine",
+  afterDatasetsDraw(chart: Chart) {
+    const opts = chart.options.plugins?.spendLimitLine;
+    if (!opts || opts.value == null || !opts.color || !opts.label) return;
+    const { ctx, chartArea, scales } = chart;
+    const y = scales.y?.getPixelForValue(opts.value);
+    if (y == null || y < chartArea.top || y > chartArea.bottom) return;
+    ctx.save();
+    ctx.strokeStyle = opts.color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, y);
+    ctx.lineTo(chartArea.right, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = opts.color;
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "bottom";
+    ctx.fillText(opts.label, chartArea.right - 4, y - 2);
+    ctx.restore();
+  },
+};
 
 export const CostsPage: React.FC = () => {
   useBoomGuard("costs");
   const { agents } = useAgentDataContext();
+  const resolveColor = useColorResolver();
   const [data, setData] = useState<CostsHistogramResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [rangeHours, setRangeHours] = useState("168");
@@ -163,36 +196,114 @@ export const CostsPage: React.FC = () => {
     return new Map(data.byAgent.map((a) => [a.username, a.title]));
   }, [data]);
 
-  const barSeries = useMemo(() => {
-    return agentNames.map((name, i) => {
-      const title = titleMap.get(name);
-      return {
-        name,
-        label: title ? `${name} (${title})` : name,
-        color: AGENT_COLORS[i % AGENT_COLORS.length],
-      };
-    });
-  }, [agentNames, titleMap]);
+  const barChartData = useMemo<ChartData<"bar">>(() => {
+    return {
+      labels: chartData.map((d) => d.label as string),
+      datasets: agentNames.map((name, i) => {
+        const title = titleMap.get(name);
+        const color = resolveColor(
+          AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length],
+        );
+        return {
+          label: title ? `${name} (${title})` : name,
+          data: chartData.map((d) => Number(d[name] ?? 0)),
+          backgroundColor: color,
+          maxBarThickness: 50,
+          stack: "agents",
+        };
+      }),
+    };
+  }, [chartData, agentNames, titleMap, resolveColor]);
 
   const totalCost = useMemo(() => {
     if (!data) return 0;
     return data.buckets.reduce((sum, b) => sum + b.cost, 0);
   }, [data]);
 
-  const pieData = useMemo(() => {
-    if (!data?.byAgent.length) return [];
-    return data.byAgent.map((entry, i) => ({
-      name: `${entry.username} (${entry.title})`,
-      value: entry.cost,
-      color: AGENT_COLORS[i % AGENT_COLORS.length],
-    }));
-  }, [data]);
+  const pieChartData = useMemo<ChartData<"pie">>(() => {
+    if (!data?.byAgent.length) {
+      return { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
+    }
+    return {
+      labels: data.byAgent.map((e) => `${e.username} (${e.title})`),
+      datasets: [
+        {
+          data: data.byAgent.map((e) => e.cost),
+          backgroundColor: data.byAgent.map((_, i) =>
+            resolveColor(AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length]),
+          ),
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [data, resolveColor]);
 
   // Show the spend limit reference line when bucket size matches the spend limit hours
   const showSpendLimitLine =
     data?.spendLimitDollars != null &&
     data?.spendLimitHours != null &&
     effectiveBucketHours === data.spendLimitHours;
+
+  const limitLineColor = resolveColor("red.5");
+
+  const barOptions = useMemo<ChartOptions<"bar">>(() => {
+    const opts: ChartOptions<"bar"> = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          itemSort: (a, b) => Number(b.parsed.y) - Number(a.parsed.y),
+          filter: (item) => Number(item.parsed.y) > 0,
+          callbacks: {
+            label: (ctx) =>
+              `${ctx.dataset.label}: $${Number(ctx.parsed.y).toFixed(2)}`,
+            footer: (items) => {
+              const total = items.reduce(
+                (s, it) => s + Number(it.parsed.y || 0),
+                0,
+              );
+              return `Total: $${total.toFixed(2)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: {
+          stacked: true,
+          ticks: { callback: (v) => `$${Number(v).toFixed(2)}` },
+        },
+      },
+    };
+    if (showSpendLimitLine && data?.spendLimitDollars != null && opts.plugins) {
+      opts.plugins.spendLimitLine = {
+        value: data.spendLimitDollars,
+        color: limitLineColor,
+        label: `Limit: $${data.spendLimitDollars}`,
+      };
+    }
+    return opts;
+  }, [showSpendLimitLine, data?.spendLimitDollars, limitLineColor]);
+
+  const pieOptions = useMemo<ChartOptions<"pie">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { position: "right", labels: { boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) =>
+              `${ctx.label}: $${Number(ctx.parsed).toFixed(2)}`,
+          },
+        },
+      },
+    }),
+    [],
+  );
 
   return (
     <Container size="lg" py="xl" w="100%">
@@ -272,79 +383,13 @@ export const CostsPage: React.FC = () => {
         ) : chartData.length > 0 ? (
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
             <Paper p="md" withBorder>
-              <BarChart
-                h={350}
-                data={chartData}
-                dataKey="label"
-                series={barSeries}
-                type="stacked"
-                valueFormatter={(value: number) => `$${value.toFixed(2)}`}
-                tickLine="y"
-                gridAxis="y"
-                barProps={{ maxBarSize: 50 }}
-                tooltipProps={{
-                  content: ({ payload, label }) => {
-                    if (!payload?.length) return null;
-                    const items = payload
-                      .filter((p) => Number(p.value ?? 0) > 0)
-                      .sort(
-                        (a, b) => Number(b.value ?? 0) - Number(a.value ?? 0),
-                      );
-                    if (!items.length) return null;
-                    const total = items.reduce(
-                      (s, p) => s + Number(p.value ?? 0),
-                      0,
-                    );
-                    return (
-                      <Paper
-                        p="xs"
-                        withBorder
-                        shadow="sm"
-                        style={{ background: "var(--mantine-color-body)" }}
-                      >
-                        <Text size="xs" fw={500} mb={4}>
-                          {label as string}
-                        </Text>
-                        {items.map((p) => {
-                          const name = String(p.name ?? "");
-                          const title = titleMap.get(name);
-                          const displayName = title
-                            ? `${name} (${title})`
-                            : name;
-                          return (
-                            <Group key={name} gap={6}>
-                              <ColorSwatch
-                                color={p.color ?? "gray"}
-                                size={10}
-                              />
-                              <Text size="xs">
-                                {displayName}: $
-                                {Number(p.value ?? 0).toFixed(2)}
-                              </Text>
-                            </Group>
-                          );
-                        })}
-                        <Text size="xs" fw={500} mt={4}>
-                          Total: ${total.toFixed(2)}
-                        </Text>
-                      </Paper>
-                    );
-                  },
-                }}
-                cursorFill="transparent"
-                referenceLines={
-                  showSpendLimitLine
-                    ? [
-                        {
-                          y: data!.spendLimitDollars!,
-                          color: "red.5",
-                          label: `Limit: $${data!.spendLimitDollars}`,
-                          labelPosition: "insideTopRight",
-                        },
-                      ]
-                    : undefined
-                }
-              />
+              <div style={{ height: 350 }}>
+                <Bar
+                  data={barChartData}
+                  options={barOptions}
+                  plugins={[spendLimitLinePlugin]}
+                />
+              </div>
               {showSpendLimitLine && (
                 <Text size="xs" c="red" mt="xs">
                   Dashed line: ${data!.spendLimitDollars} spend limit per{" "}
@@ -352,20 +397,16 @@ export const CostsPage: React.FC = () => {
                 </Text>
               )}
             </Paper>
-            {pieData.length > 0 && (
+            {data?.byAgent.length ? (
               <Paper p="md" withBorder>
                 <Text size="sm" fw={500} mb="sm">
                   Cost by Agent
                 </Text>
-                <PieChart
-                  h={350}
-                  data={pieData}
-                  withTooltip
-                  tooltipDataSource="segment"
-                  valueFormatter={(value: number) => `$${value.toFixed(2)}`}
-                />
+                <div style={{ height: 350 }}>
+                  <Pie data={pieChartData} options={pieOptions} />
+                </div>
               </Paper>
-            )}
+            ) : null}
           </SimpleGrid>
         ) : (
           <Text c="dimmed" ta="center" py="xl">
