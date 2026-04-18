@@ -1,6 +1,7 @@
 import type { AuthUser, Permission } from "@naisys/supervisor-shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
+import { disconnectSocket, reconnectSocket } from "../hooks/useSocket";
 import { getMe, login as apiLogin, logout as apiLogout } from "../lib/apiAuth";
 import { queryClient } from "../lib/queryClient";
 
@@ -39,6 +40,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (username: string, password: string) => {
     const result = await apiLogin(username, password);
     setUser(result.user);
+    reconnectSocket();
     void queryClient.invalidateQueries();
   };
 
@@ -46,6 +48,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       await apiLogout();
     } finally {
+      disconnectSocket();
       setUser(null);
     }
   };
