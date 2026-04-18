@@ -30,8 +30,13 @@ export interface PlatformConfig {
   scriptSetError: string;
   /** Path environment separator */
   pathSeparator: string;
-  /** Command to set PATH and run a script */
-  sourceScript: (binPath: string, scriptPath: string) => string;
+  /** Dot-source/source a script so variable/cwd changes persist */
+  sourceScript: (scriptPath: string) => string;
+  /** One-liner that installs a shell-level handler intercepting any `ns-*`
+   *  command that leaks into the shell (e.g. `echo foo && ns-mail ...`) and
+   *  reminds the LLM that NAISYS commands must run on their own line.
+   *  Injected once per shell session; pattern-based so new commands need no sync. */
+  nsCommandNotFoundHandler: string;
   /** Platform name for display in MOTD */
   displayName: string;
   /** Shell name for display */
@@ -47,6 +52,9 @@ export interface PlatformConfig {
   /** Prompt suffix for admin/root user */
   adminPromptSuffix: string;
 }
+
+const nsCommandHandlerMessage =
+  "is a NAISYS command and must be run on its own line, not combined with shell commands. Run 'ns-help' to see available NAISYS commands.";
 
 function getWindowsConfig(): PlatformConfig {
   return {
@@ -68,8 +76,8 @@ function getWindowsConfig(): PlatformConfig {
     scriptHeader: "# PowerShell script",
     scriptSetError: "$ErrorActionPreference = 'Stop'",
     pathSeparator: ";",
-    sourceScript: (binPath: string, scriptPath: string) =>
-      `$env:PATH = "${binPath};$env:PATH"; . "${scriptPath}"`,
+    sourceScript: (scriptPath: string) => `. "${scriptPath}"`,
+    nsCommandNotFoundHandler: `$ExecutionContext.InvokeCommand.CommandNotFoundAction = { param($n, $e) if ($n -like 'ns-*') { Write-Host "NAISYS: '$n' ${nsCommandHandlerMessage}"; $e.CommandScriptBlock = { }; $e.StopSearch = $true } }`,
     displayName: "WINDOWS",
     shellName: "PowerShell",
     commandNotFoundSuffix: "is not recognized",
@@ -94,8 +102,8 @@ function getLinuxConfig(): PlatformConfig {
     scriptHeader: "#!/bin/bash",
     scriptSetError: "set -e",
     pathSeparator: ":",
-    sourceScript: (binPath: string, scriptPath: string) =>
-      `PATH=${binPath}:$PATH source "${scriptPath}"`,
+    sourceScript: (scriptPath: string) => `source "${scriptPath}"`,
+    nsCommandNotFoundHandler: `command_not_found_handle() { case "$1" in ns-*) echo "NAISYS: '$1' ${nsCommandHandlerMessage}" >&2; return 127 ;; *) echo "bash: $1: command not found" >&2; return 127 ;; esac; }`,
     displayName: "LINUX",
     shellName: "bash",
     commandNotFoundSuffix: "command not found",

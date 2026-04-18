@@ -284,7 +284,6 @@ export function createMockGlobalConfig(): GlobalConfig {
       spendLimitHours: undefined,
       useToolsForLlmConsoleResponses: true,
       packageVersion: "1.0.0",
-      binPath: "/bin",
       supervisorUrl: undefined,
       autoStartAgentsOnMessage: true,
     }),

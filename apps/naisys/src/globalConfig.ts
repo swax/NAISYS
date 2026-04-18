@@ -9,7 +9,6 @@ import path from "path";
 
 import type { HubClient } from "./hub/hubClient.js";
 import * as pathService from "./services/pathService.js";
-import { useNativeWindows } from "./services/shellPlatform.js";
 
 export function createGlobalConfig(
   hubClient?: HubClient,
@@ -67,13 +66,11 @@ export function createGlobalConfig(
     const hostname = process.env.NAISYS_HOSTNAME || os.hostname();
 
     const packageVersion = await getVersion();
-    const binPath = getBinPath();
 
     return {
       ...clientConfig,
       hostname,
       packageVersion,
-      binPath,
       supervisorUrl,
     };
   }
@@ -94,23 +91,6 @@ export function createGlobalConfig(
     } catch (_e) {
       return "Error getting NAISYS verison";
     }
-  }
-
-  function getBinPath() {
-    // Get the bin path relative to this file
-    const binUrl = new URL("../bin", import.meta.url);
-    let binPath = binUrl.pathname;
-
-    // On Windows, pathname starts with /C: which needs fixing
-    if (useNativeWindows() && binPath.startsWith("/")) {
-      // Remove leading slash: /C:/git/naisys/bin -> C:/git/naisys/bin
-      binPath = binPath.substring(1);
-
-      // For native Windows (PowerShell), use Windows-style path
-      binPath = binPath.replace(/\//g, "\\");
-    }
-
-    return binPath;
   }
 
   /**

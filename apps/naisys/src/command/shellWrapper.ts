@@ -107,6 +107,13 @@ export function createShellWrapper(
       processOutput(Buffer.from(`${code}`), "exit", pid);
     });
 
+    // Install pattern-based handler that catches any `ns-*` command leaking into
+    // the shell (e.g. `echo foo && ns-mail ...`) and tells the LLM to run NAISYS
+    // commands on their own line. Pattern-based so new ns-* commands need no sync.
+    errorIfNotEmpty(
+      await executeCommand(platformConfig.nsCommandNotFoundHandler),
+    );
+
     // Init users home dir on first run, on shell crash/rerun go back to the current path
     if (!_currentPath) {
       output.commentAndLog(
@@ -600,9 +607,7 @@ ${command.trim()}`;
     // create/write file
     fs.writeFileSync(scriptPath, scriptContent);
 
-    // `Path` is set to the ./bin folder because custom NAISYS commands that follow shell commands will be handled by the shell, which will fail
-    // so we need to remind the LLM that 'naisys commands cannot be used with other commands on the same prompt'
-    return platformConfig.sourceScript(globalConfig().binPath, scriptPath);
+    return platformConfig.sourceScript(scriptPath);
   }
 
   function _completeCommand(output: string) {
