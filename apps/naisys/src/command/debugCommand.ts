@@ -1,24 +1,15 @@
-import { ADMIN_USERNAME, SUPER_ADMIN_USERNAME } from "@naisys/common";
-import { spawnSync } from "child_process";
-import { fileURLToPath } from "url";
+import { ADMIN_USERNAME } from "@naisys/common";
 
 import type { IAgentManager } from "../agent/agentManagerInterface.js";
-import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { LlmRole } from "../llm/llmDtos.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
-import {
-  contextCmd,
-  exitCmd,
-  superadminPasswordCmd,
-  talkCmd,
-} from "./commandDefs.js";
+import { contextCmd, exitCmd, talkCmd } from "./commandDefs.js";
 import type { CommandResponse, RegistrableCommand } from "./commandRegistry.js";
 import { NextCommandAction } from "./commandRegistry.js";
 
 export function createDebugCommands(
-  globalConfig: GlobalConfig,
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
@@ -119,36 +110,5 @@ export function createDebugCommands(
     },
   };
 
-  const commands: RegistrableCommand[] = [nsContext, nsTalk, nsExit];
-
-  if (globalConfig.globalConfig().supervisorUrl) {
-    const nsAdminPw: RegistrableCommand = {
-      command: superadminPasswordCmd,
-      handleCommand: (cmdArgs) => {
-        const serverUrl = import.meta.resolve("@naisys/supervisor");
-        const serverPath = fileURLToPath(serverUrl);
-
-        const args = [serverPath, "--reset-password"];
-        const parts = cmdArgs.trim().split(/\s+/);
-        args.push("--username", SUPER_ADMIN_USERNAME);
-        if (parts[0]) {
-          args.push("--password", parts[0]);
-        }
-
-        const result = spawnSync("node", args, {
-          stdio: "inherit",
-        });
-
-        if (result.status !== 0) {
-          return `Reset password failed with exit code ${result.status}`;
-        }
-
-        return "Password reset complete.";
-      },
-    };
-
-    commands.push(nsAdminPw);
-  }
-
-  return commands;
+  return [nsContext, nsTalk, nsExit];
 }

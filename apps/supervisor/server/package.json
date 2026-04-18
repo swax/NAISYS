@@ -14,7 +14,6 @@
     "clean": "npx rimraf dist client-dist",
     "dev": "tsx watch src/supervisorServer.ts",
     "start": "node dist/supervisorServer.js",
-    "start:reset-password": "node dist/supervisorServer.js --reset-password",
     "build": "tsc",
     "bundle": "npx shx rm -rf client-dist && npx shx cp -r ../client/dist client-dist",
     "test": "vitest run",

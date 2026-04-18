@@ -2,7 +2,6 @@ import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
-import readline from "readline/promises";
 
 import erpDb from "./erpDb.js";
 
@@ -48,7 +47,7 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
       console.log(
         `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${finalPassword}`,
       );
-      console.log(`  Change it via --reset-password\n`);
+      console.log(`  Change it via the admin UI or with --setup\n`);
     }
   }
 
@@ -107,38 +106,3 @@ export async function ensureErpAdminPermission(userId: number): Promise<void> {
   }
 }
 
-/**
- * Interactive CLI to reset a local user's password.
- * For standalone mode (no supervisor auth).
- */
-export async function resetLocalPassword(): Promise<void> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  try {
-    const username = await rl.question("Username: ");
-    const user = await erpDb.user.findUnique({ where: { username } });
-    if (!user) {
-      console.error(`User '${username}' not found.`);
-      process.exit(1);
-    }
-
-    const password = await rl.question("New password: ");
-    if (password.length < 6) {
-      console.error("Password must be at least 6 characters.");
-      process.exit(1);
-    }
-
-    const hash = await bcrypt.hash(password, SALT_ROUNDS);
-    await erpDb.user.update({
-      where: { id: user.id },
-      data: { passwordHash: hash },
-    });
-
-    console.log(`Password reset for '${username}'.`);
-  } finally {
-    rl.close();
-  }
-}

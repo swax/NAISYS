@@ -21,9 +21,7 @@ export {
   ensureSuperAdmin,
   findSession,
   findUserByApiKey,
-  handleResetPassword,
   lookupUsername,
-  resetPassword,
   updateUserPassword,
 } from "./sessionService.js";
 // Re-export Prisma Client and all generated types

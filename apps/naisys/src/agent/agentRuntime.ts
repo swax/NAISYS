@@ -242,7 +242,6 @@ export async function createAgentRuntime(
   );
 
   const debugCommands = createDebugCommands(
-    globalConfig,
     contextManager,
     output,
     inputMode,

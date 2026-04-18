@@ -1,4 +1,4 @@
-import { LlmApiType, sleep } from "@naisys/common";
+import { LlmApiType, sleep, SUPER_ADMIN_USERNAME } from "@naisys/common";
 import chalk from "chalk";
 import * as readline from "readline";
 
@@ -203,7 +203,7 @@ export function createCommandLoop(
     if (globalConfig().supervisorUrl) {
       output.notice(`Supervisor available at ${globalConfig().supervisorUrl}`);
       output.notice(
-        `  Use 'ns-superadmin-password <password>' to set password then login as superadmin`,
+        `  Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Run --setup again to change it.`,
       );
     }
 

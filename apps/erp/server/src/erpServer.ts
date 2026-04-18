@@ -22,16 +22,14 @@ import {
   commonErrorHandler,
   registerLenientJsonParser,
   registerSecurityHeaders,
+  SUPER_ADMIN_USERNAME,
 } from "@naisys/common";
 import { createFileLogger } from "@naisys/common-node";
 import {
   createHubDatabaseClient,
   deployPrismaMigrations,
 } from "@naisys/hub-database";
-import {
-  createSupervisorDatabaseClient,
-  handleResetPassword,
-} from "@naisys/supervisor-database";
+import { createSupervisorDatabaseClient } from "@naisys/supervisor-database";
 import Fastify, { type FastifyPluginAsync } from "fastify";
 import {
   jsonSchemaTransform,
@@ -52,7 +50,6 @@ import { isSupervisorAuth } from "./supervisorAuth.js";
 import {
   ensureLocalSuperAdmin,
   ensureSupervisorSuperAdmin,
-  resetLocalPassword,
 } from "./userService.js";
 export { enableSupervisorAuth } from "./supervisorAuth.js";
 
@@ -251,6 +248,11 @@ async function startServer(wizardRan?: boolean) {
     console.log(
       `[ERP] Auth mode: ${isSupervisorAuth() ? "supervisor" : "standalone"}`,
     );
+    if (!isSupervisorAuth()) {
+      console.log(
+        `[ERP] Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Run --setup again to change it.`,
+      );
+    }
   } catch (err) {
     console.error("[ERP] Failed to start:", err);
     process.exit(1);
@@ -277,50 +279,16 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   const erpExampleUrl = new URL("../.env.example", import.meta.url);
 
-  if (process.argv.includes("--reset-password")) {
-    const usernameIdx = process.argv.indexOf("--username");
-    const passwordIdx = process.argv.indexOf("--password");
-    const username =
-      usernameIdx !== -1 ? process.argv[usernameIdx + 1] : undefined;
-    const password =
-      passwordIdx !== -1 ? process.argv[passwordIdx + 1] : undefined;
-
-    await initErpDb();
-
-    if (isSupervisorAuth()) {
-      void handleResetPassword({
-        findLocalUser: async (username) => {
-          const prisma = (await import("./erpDb.js")).default;
-          const user = await prisma.user.findUnique({ where: { username } });
-          return user
-            ? { id: user.id, username: user.username, uuid: user.uuid }
-            : null;
-        },
-        updateLocalPassword: async (userId, passwordHash) => {
-          const prisma = (await import("./erpDb.js")).default;
-          await prisma.user.update({
-            where: { id: userId },
-            data: { passwordHash },
-          });
-        },
-        username,
-        password,
-      });
-    } else {
-      void resetLocalPassword();
-    }
-  } else {
-    let wizardRan = false;
-    if (process.argv.includes("--setup")) {
-      wizardRan = await runSetupWizard(
-        path.resolve(".env"),
-        erpExampleUrl,
-        erpWizardConfig,
-      );
-      expandNaisysFolder();
-    }
-    wizardRan =
-      (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
-    void startServer(wizardRan);
+  let wizardRan = false;
+  if (process.argv.includes("--setup")) {
+    wizardRan = await runSetupWizard(
+      path.resolve(".env"),
+      erpExampleUrl,
+      erpWizardConfig,
+    );
+    expandNaisysFolder();
   }
+  wizardRan =
+    (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
+  void startServer(wizardRan);
 }
