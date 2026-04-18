@@ -27,6 +27,7 @@ import { SessionProvider, useSession } from "./contexts/SessionContext";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { DisconnectedBanner } from "./headers/DisconnectedBanner";
+import { useChartThemeSync } from "./lib/charts";
 import { queryClient } from "./lib/queryClient";
 import { useBoomGuard } from "./lib/useBoomGuard";
 import { AdminPage } from "./pages/admin/AdminPage";
@@ -181,14 +182,23 @@ const router = createBrowserRouter(
   { basename: ROUTER_BASENAME },
 );
 
+const AppRoot: React.FC = () => {
+  useChartThemeSync();
+  return (
+    <>
+      <Notifications />
+      <SessionProvider>
+        <RouterProvider router={router} />
+      </SessionProvider>
+    </>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="dark">
-        <Notifications />
-        <SessionProvider>
-          <RouterProvider router={router} />
-        </SessionProvider>
+        <AppRoot />
       </MantineProvider>
     </QueryClientProvider>
   );

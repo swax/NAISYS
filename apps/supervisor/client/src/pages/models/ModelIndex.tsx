@@ -1,100 +1,109 @@
-import type { ScatterChartSeries } from "@mantine/charts";
-import { ScatterChart } from "@mantine/charts";
 import { Paper, SimpleGrid, Stack, Table, Text, Title } from "@mantine/core";
+import type { ChartData, ChartOptions } from "chart.js";
 import React, { useMemo } from "react";
+import { Scatter } from "react-chartjs-2";
 
+import { useColorResolver } from "../../lib/charts";
 import { useModelsContext } from "./ModelsLayout";
 
-/** Map from "seriesName:index" to model label, used by the custom tooltip */
-type LabelMap = Map<string, string>;
-
-function buildLabelKey(seriesName: string, idx: number) {
-  return `${seriesName}:${idx}`;
+interface ScatterPanelProps {
+  title: string;
+  points: { x: number; y: number; label: string }[];
+  color: string;
+  xAxisLabel: string;
+  yAxisLabel: string;
+  height: number;
 }
 
-interface ScatterTooltipProps {
-  labelMap: LabelMap;
-  xLabel: string;
-  yLabel: string;
-  payload?: ReadonlyArray<{ payload?: Record<string, unknown> }>;
-}
-
-const ScatterTooltip: React.FC<ScatterTooltipProps> = ({
-  labelMap,
-  xLabel,
-  yLabel,
-  payload,
+const ScatterPanel: React.FC<ScatterPanelProps> = ({
+  title,
+  points,
+  color,
+  xAxisLabel,
+  yAxisLabel,
+  height,
 }) => {
-  if (!payload?.length) return null;
-  const point = payload[0]?.payload;
-  if (!point) return null;
+  const data = useMemo<ChartData<"scatter">>(
+    () => ({
+      datasets: [
+        {
+          label: title,
+          data: points.map((p) => ({ x: p.x, y: p.y })),
+          backgroundColor: color,
+          borderColor: color,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+      ],
+    }),
+    [title, points, color],
+  );
 
-  const seriesName = String(point.name ?? "");
-  const idx = Number(point.idx ?? 0);
-  const modelLabel = labelMap.get(buildLabelKey(seriesName, idx)) ?? "";
+  const labels = useMemo(() => points.map((p) => p.label), [points]);
+
+  const options = useMemo<ChartOptions<"scatter">>(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => labels[items[0]?.dataIndex ?? 0] ?? "",
+            label: (ctx) =>
+              `${xAxisLabel}: $${Number(ctx.parsed.x).toFixed(2)}, ${yAxisLabel}: $${Number(ctx.parsed.y).toFixed(2)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: "linear",
+          title: { display: true, text: xAxisLabel },
+          ticks: { callback: (v) => `$${Number(v).toFixed(2)}` },
+        },
+        y: {
+          type: "linear",
+          title: { display: true, text: yAxisLabel },
+          ticks: { callback: (v) => `$${Number(v).toFixed(2)}` },
+        },
+      },
+    }),
+    [labels, xAxisLabel, yAxisLabel],
+  );
 
   return (
-    <Paper
-      p="xs"
-      withBorder
-      shadow="sm"
-      style={{ background: "var(--mantine-color-body)" }}
-    >
-      <Text size="sm" fw={500}>
-        {modelLabel}
-      </Text>
-      <Text size="xs">
-        {xLabel}: ${Number(point.x).toFixed(2)}
-      </Text>
-      <Text size="xs">
-        {yLabel}: ${Number(point.y).toFixed(2)}
-      </Text>
-    </Paper>
+    <div style={{ height }}>
+      <Scatter data={data} options={options} />
+    </div>
   );
 };
 
 export const ModelIndex: React.FC = () => {
   const { llmModels, imageModels } = useModelsContext();
+  const resolveColor = useColorResolver();
 
-  const { ioData, ioLabelMap, cacheData, cacheLabelMap } = useMemo(() => {
-    const ioLabels: LabelMap = new Map();
-    const cacheLabels: LabelMap = new Map();
+  const ioPoints = useMemo(
+    () =>
+      llmModels.map((m) => ({
+        x: m.inputCost,
+        y: m.outputCost,
+        label: m.label,
+      })),
+    [llmModels],
+  );
 
-    const ioName = "Input / Output";
-    const ioSeries: ScatterChartSeries[] = [
-      {
-        name: ioName,
-        color: "blue.6",
-        data: llmModels.map((m, i) => {
-          ioLabels.set(buildLabelKey(ioName, i), m.label);
-          return { x: m.inputCost, y: m.outputCost, idx: i };
-        }),
-      },
-    ];
-
-    const cacheName = "Cache Read";
-    const cacheModels = llmModels.filter((m) => m.cacheReadCost != null);
-    const cacheSeries: ScatterChartSeries[] =
-      cacheModels.length > 0
-        ? [
-            {
-              name: cacheName,
-              color: "teal.6",
-              data: cacheModels.map((m, i) => {
-                cacheLabels.set(buildLabelKey(cacheName, i), m.label);
-                return { x: m.cacheReadCost!, y: m.cacheReadCost!, idx: i };
-              }),
-            },
-          ]
-        : [];
-
-    return {
-      ioData: ioSeries,
-      ioLabelMap: ioLabels,
-      cacheData: cacheSeries,
-      cacheLabelMap: cacheLabels,
-    };
-  }, [llmModels]);
+  const cachePoints = useMemo(
+    () =>
+      llmModels
+        .filter((m) => m.cacheReadCost != null)
+        .map((m) => ({
+          x: m.cacheReadCost!,
+          y: m.cacheReadCost!,
+          label: m.label,
+        })),
+    [llmModels],
+  );
 
   const sortedImageModels = useMemo(
     () => [...imageModels].sort((a, b) => a.cost - b.cost),
@@ -111,60 +120,28 @@ export const ModelIndex: React.FC = () => {
             <Text size="sm" fw={500} mb="sm">
               Input / Output Cost (per 1M tokens)
             </Text>
-            <ScatterChart
-              h={300}
-              data={ioData}
-              dataKey={{ x: "x", y: "y" }}
+            <ScatterPanel
+              title="Input / Output"
+              points={ioPoints}
+              color={resolveColor("blue.6")}
               xAxisLabel="Input ($)"
               yAxisLabel="Output ($)"
-              valueFormatter={(value: number) => `$${value.toFixed(2)}`}
-              tooltipProps={{
-                content: ({
-                  payload,
-                }: {
-                  payload?: ReadonlyArray<{
-                    payload?: Record<string, unknown>;
-                  }>;
-                }) => (
-                  <ScatterTooltip
-                    labelMap={ioLabelMap}
-                    xLabel="Input"
-                    yLabel="Output"
-                    payload={payload}
-                  />
-                ),
-              }}
+              height={300}
             />
           </Paper>
 
-          {cacheData.length > 0 && (
+          {cachePoints.length > 0 && (
             <Paper p="md" withBorder>
               <Text size="sm" fw={500} mb="sm">
                 Cache Read Cost (per 1M tokens)
               </Text>
-              <ScatterChart
-                h={300}
-                data={cacheData}
-                dataKey={{ x: "x", y: "y" }}
+              <ScatterPanel
+                title="Cache Read"
+                points={cachePoints}
+                color={resolveColor("teal.6")}
                 xAxisLabel="Cache Read ($)"
                 yAxisLabel="Cache Read ($)"
-                valueFormatter={(value: number) => `$${value.toFixed(2)}`}
-                tooltipProps={{
-                  content: ({
-                    payload,
-                  }: {
-                    payload?: ReadonlyArray<{
-                      payload?: Record<string, unknown>;
-                    }>;
-                  }) => (
-                    <ScatterTooltip
-                      labelMap={cacheLabelMap}
-                      xLabel="Cache Read"
-                      yLabel="Cache Read"
-                      payload={payload}
-                    />
-                  ),
-                }}
+                height={300}
               />
             </Paper>
           )}

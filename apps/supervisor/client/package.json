@@ -12,7 +12,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@mantine/charts": "^8.3.16",
     "@mantine/core": "^8.3.16",
     "@mantine/dropzone": "^8.3.16",
     "@mantine/form": "^8.3.16",
@@ -24,7 +23,9 @@
     "@naisys/hub-protocol": "3.0.0",
     "@tabler/icons-react": "^3.40.0",
     "@tanstack/react-query": "^5.90.21",
+    "chart.js": "^4.4.6",
     "react": "^19.2.4",
+    "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.1",

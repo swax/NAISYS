@@ -1,4 +1,3 @@
-import { LineChart } from "@mantine/charts";
 import {
   NumberInput,
   Paper,
@@ -8,8 +7,11 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import type { ChartData, ChartOptions } from "chart.js";
 import React, { useMemo, useState } from "react";
+import { Line } from "react-chartjs-2";
 
+import { useColorResolver } from "../../lib/charts";
 import { useModelsContext } from "./ModelsLayout";
 
 function sessionCost({
@@ -56,6 +58,7 @@ function sessionCost({
 
 export const ModelCalculator: React.FC = () => {
   const { llmModels } = useModelsContext();
+  const resolveColor = useColorResolver();
 
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [sessionSize, setSessionSize] = useState<number | string>(20000);
@@ -201,16 +204,52 @@ export const ModelCalculator: React.FC = () => {
           <Text size="sm" fw={500} mb="sm">
             Cost by Session Size
           </Text>
-          <LineChart
-            h={200}
-            data={chartData}
-            dataKey="session"
-            series={[{ name: "cost", color: "blue.6", label: "Cost ($)" }]}
-            curveType="natural"
-            valueFormatter={(value: number) => `$${value.toFixed(2)}`}
-            xAxisLabel="Session Size"
-            yAxisLabel="Cost ($)"
-          />
+          <div style={{ height: 200 }}>
+            <Line
+              data={
+                {
+                  labels: chartData.map((d) => d.session),
+                  datasets: [
+                    {
+                      label: "Cost ($)",
+                      data: chartData.map((d) => d.cost),
+                      borderColor: resolveColor("blue.6"),
+                      backgroundColor: resolveColor("blue.6"),
+                      borderWidth: 2,
+                      pointRadius: 2,
+                      tension: 0.4,
+                    },
+                  ],
+                } as ChartData<"line">
+              }
+              options={
+                {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  animation: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (ctx) => `$${Number(ctx.parsed.y).toFixed(2)}`,
+                      },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      title: { display: true, text: "Session Size" },
+                    },
+                    y: {
+                      title: { display: true, text: "Cost ($)" },
+                      ticks: {
+                        callback: (v) => `$${Number(v).toFixed(2)}`,
+                      },
+                    },
+                  },
+                } as ChartOptions<"line">
+              }
+            />
+          </div>
         </Paper>
       )}
     </Stack>
