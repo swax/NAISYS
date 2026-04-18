@@ -18,13 +18,18 @@ export function useSubscription<T>(
 
     const socket = getSocket();
 
-    socket.emit("subscribe", { room });
+    const subscribe = () => socket.emit("subscribe", { room });
+    subscribe();
 
     const handler = (data: T) => callbackRef.current(data);
     socket.on(room, handler);
+    // Socket.IO drops server-side room membership on disconnect; re-emit
+    // subscribe on every reconnect so pushes keep flowing after an outage.
+    socket.on("connect", subscribe);
 
     return () => {
       socket.off(room, handler);
+      socket.off("connect", subscribe);
       socket.emit("unsubscribe", { room });
     };
   }, [room]);
