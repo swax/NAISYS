@@ -22,6 +22,7 @@
     "npm:publish": "npm publish --access public"
   },
   "files": [
+    "npm-shrinkwrap.json",
     "dist",
     "bin",
     ".env.example",

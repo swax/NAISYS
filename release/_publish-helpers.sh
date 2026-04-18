@@ -4,6 +4,61 @@
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPTS="$ROOT/release"
 
+# Packages end-users install directly. Each gets an npm-shrinkwrap.json at
+# publish time to pin all transitive deps. Library packages installed only as
+# transitive deps are covered by these shrinkwraps, so they don't need their own.
+LEAF_PACKAGES=(
+  "naisys"
+  "@naisys/hub"
+  "@naisys/supervisor"
+  "@naisys/erp"
+)
+
+is_leaf_package() {
+  local name="$1"
+  for leaf in "${LEAF_PACKAGES[@]}"; do
+    [[ "$name" == "$leaf" ]] && return 0
+  done
+  return 1
+}
+
+# Generate npm-shrinkwrap.json for a package by resolving its deps in an
+# isolated temp dir (outside the workspace). --prefer-offline reuses the npm
+# cache populated by the most recent `npm install` at the workspace root, so
+# transitive deps resolve to the same versions you tested with rather than
+# whatever's latest on the registry at publish time. Workspace sibling deps
+# get fetched from npm (cache miss) — they were published earlier in the loop.
+generate_shrinkwrap() {
+  local pkg_dir="$1"
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
+
+  cp "$pkg_dir/package.json" "$tmp_dir/package.json"
+
+  (
+    cd "$tmp_dir"
+    npm install --package-lock-only --prefer-offline --ignore-scripts --omit=dev >/dev/null
+  ) || {
+    rm -rf "$tmp_dir"
+    return 1
+  }
+
+  mv "$tmp_dir/package-lock.json" "$pkg_dir/npm-shrinkwrap.json"
+  rm -rf "$tmp_dir"
+}
+
+# Remove any npm-shrinkwrap.json files in leaf packages. Safe to call multiple
+# times — use from EXIT traps to guarantee cleanup on abnormal exits.
+cleanup_all_shrinkwraps() {
+  for i in "${!PACKAGE_DIRS[@]}"; do
+    local name="${PACKAGE_NAMES[$i]}"
+    local dir="${PACKAGE_DIRS[$i]}"
+    if is_leaf_package "$name"; then
+      rm -f "$dir/npm-shrinkwrap.json"
+    fi
+  done
+}
+
 # Populates PACKAGE_DIRS and PACKAGE_NAMES arrays with publishable packages
 # in workspace order (dependency order from root package.json).
 collect_packages() {
@@ -86,8 +141,25 @@ publish_packages() {
     local name="${PACKAGE_NAMES[$i]}"
     echo ""
     echo "--- $name ---"
+
+    local generated_shrinkwrap=0
+    if is_leaf_package "$name"; then
+      echo "Generating npm-shrinkwrap.json..."
+      if generate_shrinkwrap "$dir"; then
+        generated_shrinkwrap=1
+      else
+        echo "ERROR: Failed to generate shrinkwrap for $name"
+        failed+=("$name")
+        continue
+      fi
+    fi
+
     if ! npm publish --access public "${tag_args[@]}" --workspace "$dir" 2>&1; then
       failed+=("$name")
+    fi
+
+    if [[ "$generated_shrinkwrap" == "1" ]]; then
+      rm -f "$dir/npm-shrinkwrap.json"
     fi
   done
 
