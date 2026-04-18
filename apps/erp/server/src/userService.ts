@@ -10,18 +10,26 @@ const SALT_ROUNDS = 10;
 
 /**
  * Ensure a superadmin user exists in the local ERP database.
+ * If a password is supplied, it is used on create and updates the existing one if present.
  * For standalone mode (no supervisor auth).
  */
-export async function ensureLocalSuperAdmin(): Promise<void> {
+export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
   const existing = await erpDb.user.findUnique({
     where: { username: SUPER_ADMIN_USERNAME },
   });
   if (existing) {
-    // Ensure superadmin has erp_admin permission
     await ensureErpAdminPermission(existing.id);
+    if (password) {
+      const hash = await bcrypt.hash(password, SALT_ROUNDS);
+      await erpDb.user.update({
+        where: { id: existing.id },
+        data: { passwordHash: hash },
+      });
+      console.log(`\n  ${SUPER_ADMIN_USERNAME} password updated.\n`);
+    }
   } else {
-    const password = randomUUID().slice(0, 8);
-    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const finalPassword = password || randomUUID().slice(0, 8);
+    const hash = await bcrypt.hash(finalPassword, SALT_ROUNDS);
 
     const user = await erpDb.user.create({
       data: {
@@ -34,10 +42,14 @@ export async function ensureLocalSuperAdmin(): Promise<void> {
 
     await ensureErpAdminPermission(user.id);
 
-    console.log(
-      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${password}`,
-    );
-    console.log(`  Change it via --reset-password\n`);
+    if (password) {
+      console.log(`\n  ${SUPER_ADMIN_USERNAME} user created.\n`);
+    } else {
+      console.log(
+        `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${finalPassword}`,
+      );
+      console.log(`  Change it via --reset-password\n`);
+    }
   }
 
   // Warn if agent users exist without supervisor auth
@@ -78,12 +90,6 @@ export async function ensureSupervisorSuperAdmin(): Promise<void> {
   });
   if (localSuperAdmin) {
     await ensureErpAdminPermission(localSuperAdmin.id);
-  }
-
-  if (result.created) {
-    console.log(
-      `[ERP] ${SUPER_ADMIN_USERNAME} user created. Password: ${result.generatedPassword}`,
-    );
   }
 }
 

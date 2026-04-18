@@ -12,6 +12,7 @@ export type StartHub = (
   startSupervisor?: boolean,
   plugins?: "erp"[],
   startupAgentPath?: string,
+  wizardRan?: boolean,
 ) => Promise<{
   serverPort: number;
 }>;
@@ -21,4 +22,5 @@ export type StartServer = (
   startupType: "standalone" | "hosted",
   plugins?: "erp"[],
   hubPort?: number,
+  wizardRan?: boolean,
 ) => Promise<number>;

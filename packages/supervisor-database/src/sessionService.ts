@@ -168,7 +168,9 @@ export async function deleteSession(tokenHash: string): Promise<void> {
 export interface EnsureSuperAdminResult {
   /** Whether the superadmin was newly created */
   created: boolean;
-  /** The generated password (only set when created) */
+  /** Whether an existing superadmin's password was updated */
+  passwordUpdated?: boolean;
+  /** The generated password (only set when created without a supplied password) */
   generatedPassword?: string;
   /** The superadmin user info */
   user: {
@@ -181,9 +183,12 @@ export interface EnsureSuperAdminResult {
 
 /**
  * Ensure a "superadmin" user exists in the supervisor database.
- * If already exists, returns it as-is. Otherwise creates with generated credentials.
+ * If a password is supplied, it is used on create and updates the existing one if present.
+ * If no password is supplied, the existing record is returned as-is, or a random one is generated on create.
  */
-export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
+export async function ensureSuperAdmin(
+  password?: string,
+): Promise<EnsureSuperAdminResult> {
   if (!supervisorDb) throw new Error("Supervisor DB not initialized");
 
   const existing = await supervisorDb.user.findUnique({
@@ -191,6 +196,23 @@ export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
   });
 
   if (existing) {
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      await supervisorDb.user.update({
+        where: { id: existing.id },
+        data: { passwordHash },
+      });
+      return {
+        created: false,
+        passwordUpdated: true,
+        user: {
+          uuid: existing.uuid,
+          username: existing.username,
+          passwordHash,
+          apiKey: existing.apiKey,
+        },
+      };
+    }
     return {
       created: false,
       user: {
@@ -203,8 +225,8 @@ export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
   }
 
   const uuid = randomUUID();
-  const password = randomUUID().slice(0, 8);
-  const passwordHash = await bcrypt.hash(password, 10);
+  const suppliedPassword = password || randomUUID().slice(0, 8);
+  const passwordHash = await bcrypt.hash(suppliedPassword, 10);
   const apiKey = randomBytes(32).toString("hex");
 
   const user = await supervisorDb.user.create({
@@ -217,7 +239,7 @@ export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
 
   return {
     created: true,
-    generatedPassword: password,
+    generatedPassword: password ? undefined : suppliedPassword,
     user: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
   };
 }

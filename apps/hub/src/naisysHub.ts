@@ -4,6 +4,7 @@ import {
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
+  promptSuperAdminPassword,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -41,6 +42,7 @@ export const startHub: StartHub = async (
   startSupervisor,
   plugins,
   startupAgentPath,
+  wizardRan,
 ) => {
   try {
     const agentPath = startupAgentPath || ".";
@@ -176,10 +178,15 @@ export const startHub: StartHub = async (
       const { supervisorPlugin } = (await import(supervisorModule)) as {
         supervisorPlugin: any;
       };
+      const superAdminPassword = wizardRan
+        ? await promptSuperAdminPassword("Supervisor Setup")
+        : undefined;
+
       await fastify.register(supervisorPlugin, {
         plugins,
         serverPort,
         hosted: true,
+        superAdminPassword,
       });
     }
 
@@ -220,13 +227,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   const hubExampleUrl = new URL("../.env.example", import.meta.url);
 
+  let wizardRan = false;
   if (process.argv.includes("--setup")) {
     const { default: path } = await import("path");
-    await runSetupWizard(path.resolve(".env"), hubExampleUrl, hubWizardConfig);
+    wizardRan = await runSetupWizard(
+      path.resolve(".env"),
+      hubExampleUrl,
+      hubWizardConfig,
+    );
     expandNaisysFolder();
   }
 
-  await ensureDotEnv(hubExampleUrl, hubWizardConfig);
+  wizardRan = (await ensureDotEnv(hubExampleUrl, hubWizardConfig)) || wizardRan;
   expandNaisysFolder();
 
   program
@@ -247,5 +259,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     program.opts().supervisor,
     plugins,
     program.args[0],
+    wizardRan,
   );
 }
