@@ -203,7 +203,7 @@ export function createCommandLoop(
     if (globalConfig().supervisorUrl) {
       output.notice(`Supervisor available at ${globalConfig().supervisorUrl}`);
       output.notice(
-        `  Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Run --setup again to change it.`,
+        `  Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Use --setup to change it.`,
       );
     }
 

@@ -1,4 +1,5 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
+import { randomUUID } from "crypto";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -77,17 +78,20 @@ export async function askQuestion(prompt: string): Promise<string> {
 
 /**
  * Prompt the user for a superadmin password during initial setup.
- * Returns the entered password, or undefined if blank (caller keeps existing or generates a new one).
- * Prints a visible section header so it's not lost among init logs.
+ * If they leave it blank, generate one, print it, and wait for them to acknowledge before continuing.
+ * Always returns a non-empty password.
  */
-export async function promptSuperAdminPassword(
-  title: string,
-): Promise<string | undefined> {
+export async function promptSuperAdminPassword(title: string): Promise<string> {
   console.log(`\n  === ${title} ===\n`);
   const answer = await askQuestion(
-    `  ${SUPER_ADMIN_USERNAME} password (leave blank to keep existing / generate new): `,
+    `  ${SUPER_ADMIN_USERNAME} password (leave blank to generate new): `,
   );
-  return answer || undefined;
+  if (answer) return answer;
+
+  const generated = randomUUID().slice(0, 8);
+  console.log(`\n  Generated password: ${generated}`);
+  await askQuestion(`  Save this password, then press Enter to continue...`);
+  return generated;
 }
 
 /** Parse a .env file into key-value pairs */

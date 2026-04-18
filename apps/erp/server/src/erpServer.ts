@@ -250,7 +250,7 @@ async function startServer(wizardRan?: boolean) {
     );
     if (!isSupervisorAuth()) {
       console.log(
-        `[ERP] Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Run --setup again to change it.`,
+        `[ERP] Sign in as '${SUPER_ADMIN_USERNAME}' with the password set during setup. Use --setup to change it.`,
       );
     }
   } catch (err) {

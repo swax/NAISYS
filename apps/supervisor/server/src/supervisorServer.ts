@@ -100,17 +100,11 @@ export const supervisorPlugin: FastifyPluginAsync<
   await refreshUserLookup();
 
   const superAdminResult = await ensureSuperAdmin(opts.superAdminPassword);
-  if (superAdminResult.created) {
-    if (superAdminResult.generatedPassword) {
-      console.log(
-        `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
-      );
-      console.log(`  Change it via the web UI.\n`);
-    } else {
-      console.log(`\n  ${SUPER_ADMIN_USERNAME} user created.\n`);
-    }
-  } else if (superAdminResult.passwordUpdated) {
-    console.log(`\n  ${SUPER_ADMIN_USERNAME} password updated.\n`);
+  if (superAdminResult.generatedPassword) {
+    console.log(
+      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
+    );
+    console.log(`  Change it via the web UI or with --setup.\n`);
   }
 
   // Logger — in hosted mode create a dedicated file logger since the

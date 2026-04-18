@@ -24,7 +24,6 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
         where: { id: existing.id },
         data: { passwordHash: hash },
       });
-      console.log(`\n  ${SUPER_ADMIN_USERNAME} password updated.\n`);
     }
   } else {
     const finalPassword = password || randomUUID().slice(0, 8);
@@ -41,9 +40,7 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
 
     await ensureErpAdminPermission(user.id);
 
-    if (password) {
-      console.log(`\n  ${SUPER_ADMIN_USERNAME} user created.\n`);
-    } else {
+    if (!password) {
       console.log(
         `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${finalPassword}`,
       );
