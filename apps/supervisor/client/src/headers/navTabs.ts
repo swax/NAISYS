@@ -8,10 +8,10 @@ export interface NavTab {
 
 export const navTabs: NavTab[] = [
   { path: "/agents", label: "Agents" },
-  { path: "/costs", label: "Costs" },
-  { path: "/models", label: "Models" },
   { path: "/hosts", label: "Hosts" },
   { path: "/variables", label: "Variables" },
+  { path: "/models", label: "Models" },
+  { path: "/costs", label: "Costs" },
   { path: "/users", label: "Users" },
   { path: "/admin", label: "Admin", permission: "supervisor_admin" },
 ];

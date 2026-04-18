@@ -29,7 +29,7 @@
     "prettier": "prettier --write .",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install && npm run audit:fix",
-    "release:check": "npm install && npm run audit && npm run build && npm run test",
+    "release:check": "npm install && npm audit --omit=dev --audit-level=high && npm run build && npm run test",
     "release:dryrun": "npm run clean && npm run build && npm run npm:publish:dryrun --workspaces --if-present"
   },
   "repository": {

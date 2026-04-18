@@ -25,7 +25,11 @@ export default defineConfig({
     {
       command: "npm run dev",
       port: 3302,
-      env: { NAISYS_FOLDER: testNaisysFolder, SUPERVISOR_AUTH: "false" },
+      env: {
+        NAISYS_FOLDER: testNaisysFolder,
+        SUPERVISOR_AUTH: "false",
+        SERVER_PORT: "3302",
+      },
       reuseExistingServer: !process.env.CI,
     },
     {

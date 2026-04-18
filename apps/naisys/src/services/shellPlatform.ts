@@ -54,7 +54,7 @@ export interface PlatformConfig {
 }
 
 const nsCommandHandlerMessage =
-  "is a NAISYS command and must be run on its own line, not combined with shell commands. Run 'ns-help' to see available NAISYS commands.";
+  "is a NAISYS command and must be run on its own line, not combined with shell commands.";
 
 function getWindowsConfig(): PlatformConfig {
   return {
@@ -77,6 +77,10 @@ function getWindowsConfig(): PlatformConfig {
     scriptSetError: "$ErrorActionPreference = 'Stop'",
     pathSeparator: ";",
     sourceScript: (scriptPath: string) => `. "${scriptPath}"`,
+    // Empty CommandScriptBlock + StopSearch suppresses PS's native "not
+    // recognized" block so the LLM only sees our single clean message.
+    // Cost: $? stays True, so PS7 &&/|| chains continue past an ns-* line
+    // rather than short-circuiting. Acceptable — LLMs read the message.
     nsCommandNotFoundHandler: `$ExecutionContext.InvokeCommand.CommandNotFoundAction = { param($n, $e) if ($n -like 'ns-*') { Write-Host "NAISYS: '$n' ${nsCommandHandlerMessage}"; $e.CommandScriptBlock = { }; $e.StopSearch = $true } }`,
     displayName: "WINDOWS",
     shellName: "PowerShell",
