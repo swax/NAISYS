@@ -254,12 +254,6 @@ export const hubCmd: CommandDef = {
   isDebug: true,
 };
 
-export const superadminPasswordCmd: CommandDef = {
-  name: "ns-superadmin-password",
-  description: "Change the superadmin's password",
-  isDebug: true,
-};
-
 export const talkCmd: CommandDef = {
   name: "ns-talk",
   aliases: ["@"],
