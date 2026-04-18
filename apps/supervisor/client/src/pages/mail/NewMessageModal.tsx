@@ -7,7 +7,6 @@ import {
   Group,
   Image,
   Modal,
-  MultiSelect,
   Paper,
   Stack,
   Text,
@@ -18,6 +17,7 @@ import { Dropzone } from "@mantine/dropzone";
 import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 
+import { RecipientMultiSelect } from "../../components/RecipientMultiSelect";
 import type { Agent } from "../../lib/apiClient";
 
 interface FileAttachment {
@@ -125,14 +125,6 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
       ? `${currentAgent.name} (${currentAgent.title})`
       : currentAgent.name
     : "";
-
-  // Filter out the current agent from the recipients list
-  const availableRecipients = agents
-    .filter((agent) => agent.id !== currentAgentId)
-    .map((agent) => ({
-      value: String(agent.id),
-      label: agent.title ? `${agent.name} (${agent.title})` : agent.name,
-    }));
 
   const handleFilesAdd = (files: File[]) => {
     const newAttachments: FileAttachment[] = [];
@@ -277,14 +269,12 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
         <TextInput label="From" value={currentAgentLabel} readOnly />
 
-        <MultiSelect
-          label="To"
-          placeholder="Select recipients"
-          data={availableRecipients}
+        <RecipientMultiSelect
+          agents={agents}
+          currentAgentId={currentAgentId}
           value={recipientIds}
           onChange={setRecipientIds}
           required
-          searchable
           disabled={isLoading}
         />
 

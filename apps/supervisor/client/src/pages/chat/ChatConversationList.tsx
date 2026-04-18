@@ -1,11 +1,19 @@
-import { Button, Group, NavLink, ScrollArea, Stack, Text } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Modal,
+  NavLink,
+  ScrollArea,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AgentModelIcon } from "../../components/AgentModelIcon";
+import { RecipientMultiSelect } from "../../components/RecipientMultiSelect";
 import type { Agent, ChatConversation } from "../../lib/apiClient";
-import { NewChatDialog } from "./NewChatDialog";
 
 interface ChatConversationListProps {
   conversations: ChatConversation[];
@@ -41,6 +49,20 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   onArchiveAll,
 }) => {
   const [newChatOpened, setNewChatOpened] = useState(false);
+  const [newChatRecipientIds, setNewChatRecipientIds] = useState<string[]>([]);
+
+  const handleNewChatClose = () => {
+    setNewChatRecipientIds([]);
+    setNewChatOpened(false);
+  };
+
+  const handleStartChat = () => {
+    if (newChatRecipientIds.length > 0) {
+      onNewChat(newChatRecipientIds.map(Number));
+      setNewChatRecipientIds([]);
+      setNewChatOpened(false);
+    }
+  };
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -198,16 +220,31 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
         </Stack>
       )}
 
-      <NewChatDialog
+      <Modal
         opened={newChatOpened}
-        onClose={() => setNewChatOpened(false)}
-        onNewChat={(toIds) => {
-          onNewChat(toIds);
-          setNewChatOpened(false);
-        }}
-        agents={agents}
-        currentAgentId={currentAgentId}
-      />
+        onClose={handleNewChatClose}
+        title="New Chat"
+        size="sm"
+      >
+        <Stack gap="md">
+          <RecipientMultiSelect
+            agents={agents}
+            currentAgentId={currentAgentId}
+            value={newChatRecipientIds}
+            onChange={setNewChatRecipientIds}
+            label="Chat with"
+            placeholder="Select an agent"
+          />
+          <Group justify="flex-end">
+            <Button
+              onClick={handleStartChat}
+              disabled={newChatRecipientIds.length === 0}
+            >
+              Start Chat
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   );
 };
