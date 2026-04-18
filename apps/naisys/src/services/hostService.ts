@@ -9,6 +9,7 @@ import { hostCmd } from "../command/commandDefs.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { HubClientConfig } from "../hub/hubClientConfig.js";
+import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 interface HostEntry {
   hostName: string;
@@ -23,6 +24,7 @@ export function createHostService(
   hubClient: HubClient | undefined,
   hubClientConfig: HubClientConfig | undefined,
   globalConfig: GlobalConfig,
+  promptNotification: PromptNotificationService,
 ) {
   const hostMap = new Map<number, HostEntry>();
   let localMachineId = hubClientConfig?.machineId ?? "";
@@ -56,7 +58,16 @@ export function createHostService(
           host.machineId === localMachineId &&
           host.hostName !== process.env.NAISYS_HOSTNAME
         ) {
+          const oldName = process.env.NAISYS_HOSTNAME;
           globalConfig.updateEnvValue("NAISYS_HOSTNAME", host.hostName);
+          if (oldName) {
+            promptNotification.notify({
+              wake: "always",
+              commentOutput: [
+                `Hostname changed: ${oldName} → ${host.hostName}`,
+              ],
+            });
+          }
         }
       }
     });
