@@ -25,6 +25,7 @@
     "test": "vitest run && npx playwright test"
   },
   "files": [
+    "npm-shrinkwrap.json",
     "dist",
     "client-dist",
     "bin",

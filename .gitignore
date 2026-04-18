@@ -1,6 +1,7 @@
 dist/
 logs/
 node_modules/
+npm-shrinkwrap.json
 .env*
 !.env*.example
 .npmrc

@@ -9,6 +9,7 @@
     "naisys": "bin/naisys.js"
   },
   "files": [
+    "npm-shrinkwrap.json",
     "dist",
     "bin",
     ".env.example",

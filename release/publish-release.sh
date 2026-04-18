@@ -24,7 +24,7 @@ show_packages "$VERSION"
 confirm_or_exit
 
 setup_readme
-trap "restore_readme" EXIT
+trap "cleanup_all_shrinkwraps; restore_readme" EXIT
 
 build_and_format
 publish_packages

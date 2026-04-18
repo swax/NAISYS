@@ -30,7 +30,7 @@ confirm_or_exit
 "$SCRIPTS/set-version.sh" "$BASE_VERSION" "$BETA_VERSION"
 
 # Always revert versions and readme, even if build or publish fails
-trap "restore_readme; $SCRIPTS/set-version.sh $BETA_VERSION $BASE_VERSION; echo; echo '=== Reverted version bumps ==='" EXIT
+trap "cleanup_all_shrinkwraps; restore_readme; $SCRIPTS/set-version.sh $BETA_VERSION $BASE_VERSION; echo; echo '=== Reverted version bumps ==='" EXIT
 
 setup_readme
 build_and_format
