@@ -2,7 +2,7 @@
  * A bad play on words, but this is like lynx but for LLMs..
  */
 
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
@@ -233,38 +233,45 @@ export function createLynxService(
     return new Promise<string>((resolve, reject) => {
       // Option here to output the content and links separately, might be useful in future
       // mode == RunMode.Content ? "-nolist" : "-listonly";
-      const modeParams = "";
+      const modeParams: string[] = [];
 
-      const ifWindows = os.platform() === "win32" ? "wsl " : "";
+      const isWindows = os.platform() === "win32";
       const timeoutSecs = globalConfig().shellCommand.timeoutSeconds;
 
-      exec(
-        `${ifWindows}timeout ${timeoutSecs}s lynx -dump ${modeParams} "${url}"`,
-        (error, stdout, stderr) => {
-          let output = "";
+      const timeoutArgs = [
+        `${timeoutSecs}s`,
+        "lynx",
+        "-dump",
+        ...modeParams,
+        url,
+      ];
+      const cmd = isWindows ? "wsl" : "timeout";
+      const cmdArgs = isWindows ? ["timeout", ...timeoutArgs] : timeoutArgs;
 
-          if (stdout) {
-            output += stdout;
-          }
+      execFile(cmd, cmdArgs, (error, stdout, stderr) => {
+        let output = "";
 
-          // I've only seen either/or, but just in case
-          if (stdout && stderr) {
-            output += "\nError:\n";
-          }
+        if (stdout) {
+          output += stdout;
+        }
 
-          if (stderr) {
-            output += stderr;
-          }
+        // I've only seen either/or, but just in case
+        if (stdout && stderr) {
+          output += "\nError:\n";
+        }
 
-          if (output.includes("Exiting via interrupt")) {
-            reject("Timed out loading URL: May be inaccessible");
-          } else if (error && !output) {
-            reject(`Failed to load URL: ${error.message}`);
-          } else {
-            resolve(output);
-          }
-        },
-      );
+        if (stderr) {
+          output += stderr;
+        }
+
+        if (output.includes("Exiting via interrupt")) {
+          reject("Timed out loading URL: May be inaccessible");
+        } else if (error && !output) {
+          reject(`Failed to load URL: ${error.message}`);
+        } else {
+          resolve(output);
+        }
+      });
     });
   }
 
