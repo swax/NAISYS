@@ -18,7 +18,11 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission } from "../auth-middleware.js";
 import { notFound } from "../error-helpers.js";
-import { API_PREFIX } from "../hateoas.js";
+import {
+  API_PREFIX,
+  idCursorLinks,
+  timestampCursorLinks,
+} from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import {
   getContextLog,
@@ -51,7 +55,7 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       const { username } = request.params;
-      const { updatedSince, page, count } = request.query;
+      const { updatedSince, updatedBefore, page, count } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
@@ -61,9 +65,14 @@ export default function agentRunsRoutes(
       const data = await getRunsData(
         { userId: id },
         updatedSince,
+        updatedBefore,
         page,
         count,
       );
+
+      const oldest = data.runs.length
+        ? data.runs[data.runs.length - 1].lastActive
+        : undefined;
 
       return {
         success: true,
@@ -75,15 +84,11 @@ export default function agentRunsRoutes(
             hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/logs`,
           },
         ],
-        _links: data
-          ? [
-              {
-                rel: "next",
-                href: `${API_PREFIX}/agents/${username}/runs?updatedSince=${encodeURIComponent(data.timestamp)}`,
-                title: "Poll for updated runs",
-              },
-            ]
-          : undefined,
+        _links: timestampCursorLinks(
+          `/agents/${username}/runs`,
+          data.timestamp,
+          oldest,
+        ),
       };
     },
   );
@@ -109,7 +114,7 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       const { username, runId, sessionId } = request.params;
-      const { logsAfter, logsBefore } = request.query;
+      const { logsAfter, logsBefore, limit } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
@@ -122,6 +127,7 @@ export default function agentRunsRoutes(
         sessionId,
         logsAfter,
         logsBefore,
+        limit,
       );
 
       // Obfuscate log text for users without view_run_logs permission
@@ -132,18 +138,22 @@ export default function agentRunsRoutes(
       const maxLogId = data?.logs.length
         ? Math.max(...data.logs.map((l) => l.id))
         : (logsAfter ?? 0);
+      const minLogId = data?.logs.length
+        ? Math.min(...data.logs.map((l) => l.id))
+        : undefined;
 
       return {
         success: true,
         message: "Context log retrieved successfully",
         data,
-        _links: [
-          {
-            rel: "next",
-            href: `${API_PREFIX}/agents/${username}/runs/${runId}/sessions/${sessionId}/logs?logsAfter=${maxLogId}`,
-            title: "Poll for newer logs",
-          },
-        ],
+        _links: idCursorLinks(
+          `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
+          "logsAfter",
+          "logsBefore",
+          maxLogId,
+          minLogId,
+          limit !== undefined ? `limit=${limit}` : undefined,
+        ),
       };
     },
   );

@@ -3,6 +3,7 @@ import type { ChatConversation, ChatMessage } from "@naisys/supervisor-shared";
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
 import { getLogger } from "../logger.js";
+import { timestampCursorWhere } from "../paging.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
 
 /**
@@ -127,6 +128,7 @@ export async function getConversations(
 export async function getMessages(
   participants: string,
   updatedSince?: string,
+  updatedBefore?: string,
   page: number = 1,
   count: number = 50,
 ): Promise<{
@@ -139,14 +141,14 @@ export async function getMessages(
     participants,
   };
 
-  if (updatedSince) {
-    whereClause.created_at = { gte: updatedSince };
-  }
+  const cursorWhere = timestampCursorWhere(updatedSince, updatedBefore);
+  if (cursorWhere) whereClause.created_at = cursorWhere;
 
   // Only get total on initial fetch
-  const total = updatedSince
-    ? undefined
-    : await hubDb.mail_messages.count({ where: whereClause });
+  const total =
+    updatedSince || updatedBefore
+      ? undefined
+      : await hubDb.mail_messages.count({ where: whereClause });
 
   const dbMessages = await hubDb.mail_messages.findMany({
     where: whereClause,

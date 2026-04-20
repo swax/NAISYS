@@ -1,5 +1,7 @@
-import { HateoasActionSchema } from "@naisys/common";
+import { HateoasActionSchema, HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
+
+import { timestampPagingQuery } from "./pagination-types.js";
 
 export const ChatConversationSchema = z.object({
   participants: z.string(),
@@ -42,9 +44,7 @@ export const ChatConversationsResponseSchema = z.object({
 });
 
 export const ChatMessagesRequestSchema = z.object({
-  updatedSince: z.string().optional(),
-  page: z.coerce.number().optional().default(1),
-  count: z.coerce.number().optional().default(50),
+  ...timestampPagingQuery(),
 });
 
 export const ChatMessagesResponseSchema = z.object({
@@ -52,6 +52,7 @@ export const ChatMessagesResponseSchema = z.object({
   messages: z.array(ChatMessageSchema),
   total: z.number().optional(),
   timestamp: z.string(),
+  _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

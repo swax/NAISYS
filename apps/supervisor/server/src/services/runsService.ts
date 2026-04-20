@@ -9,6 +9,7 @@ import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
+import { timestampCursorWhere } from "../paging.js";
 
 function parseHostEnvironment(raw: string | null): HostEnvironment | null {
   if (!raw) return null;
@@ -105,6 +106,7 @@ export interface RunsFilter {
 export async function getRunsData(
   filter: RunsFilter,
   updatedSince?: string,
+  updatedBefore?: string,
   page: number = 1,
   count: number = 50,
 ): Promise<RunsData> {
@@ -117,17 +119,14 @@ export async function getRunsData(
     where.host = { name: filter.hostName };
   }
 
-  // If updatedSince is provided, only fetch runs that were updated after that time
-  if (updatedSince) {
-    where.last_active = {
-      gt: updatedSince,
-    };
-  }
+  const cursorWhere = timestampCursorWhere(updatedSince, updatedBefore, "gt");
+  if (cursorWhere) where.last_active = cursorWhere;
 
-  // Only get total count on initial fetch (when updatedSince is not set)
-  const total = updatedSince
-    ? undefined
-    : await hubDb.run_session.count({ where });
+  // Only get total count on initial fetch (no cursor filters)
+  const total =
+    updatedSince || updatedBefore
+      ? undefined
+      : await hubDb.run_session.count({ where });
 
   // Get paginated runs
   const runSessions = await hubDb.run_session.findMany({
@@ -174,6 +173,7 @@ export async function getContextLog(
   sessionId: number,
   logsAfter?: number,
   logsBefore?: number,
+  limit?: number,
 ): Promise<ContextLogData> {
   const where: any = {
     user_id: userId,
@@ -191,6 +191,7 @@ export async function getContextLog(
   const dbLogs = await hubDb.context_log.findMany({
     where,
     orderBy: { id: "desc" },
+    ...(limit !== undefined && { take: limit }),
     select: {
       id: true,
       role: true,
