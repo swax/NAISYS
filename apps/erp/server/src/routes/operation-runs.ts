@@ -123,7 +123,11 @@ async function opRunItemActions(
         method: "POST",
         title: "Skip",
         permission: "order_manager",
-        statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+        statuses: [
+          OperationRunStatus.blocked,
+          OperationRunStatus.pending,
+          OperationRunStatus.in_progress,
+        ],
         disabledWhen: () => wcErr,
       },
       {

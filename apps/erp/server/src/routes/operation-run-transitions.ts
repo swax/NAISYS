@@ -191,10 +191,12 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     },
   });
 
-  // SKIP (pending → skipped)
+  // SKIP (blocked/pending/in_progress → skipped)
   app.post("/:seqNo/skip", {
     schema: {
-      description: "Skip an operation run (pending → skipped)",
+      description:
+        "Skip an operation run (blocked/pending/in_progress → skipped). " +
+        "When skipping an in_progress op, any open labor tickets are clocked out.",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
       body: TransitionNoteSchema,
@@ -225,8 +227,15 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const statusErr = validateStatusFor("skip", resolved.opRun.status, [
         OperationRunStatus.blocked,
         OperationRunStatus.pending,
+        OperationRunStatus.in_progress,
       ]);
       if (statusErr) return conflict(reply, statusErr);
+
+      // If the op was in progress, close out any active labor tickets so the
+      // recorded cost is accurate before we mark the op skipped.
+      if (resolved.opRun.status === OperationRunStatus.in_progress) {
+        await clockOutAllForOpRun(resolved.opRun.id, userId);
+      }
 
       const cost = await sumLaborTicketCosts(resolved.opRun.id);
       const opRun = await transitionStatus(
@@ -234,7 +243,8 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         "skip",
         resolved.opRun.status as
           | typeof OperationRunStatus.blocked
-          | typeof OperationRunStatus.pending,
+          | typeof OperationRunStatus.pending
+          | typeof OperationRunStatus.in_progress,
         OperationRunStatus.skipped,
         userId,
         { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
