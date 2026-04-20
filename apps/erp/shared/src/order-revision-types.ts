@@ -5,6 +5,7 @@ import {
   HateoasLinkSchema,
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 // Operation summary embedded in revision GET responses
 export const RevisionOperationSummarySchema = z.object({
@@ -62,8 +63,7 @@ export type UpdateOrderRevision = z.infer<typeof UpdateOrderRevisionSchema>;
 
 // Query params for listing revisions
 export const OrderRevisionListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   status: RevisionStatusEnum.optional(),
   includeObsolete: z
     .enum(["true", "false"])

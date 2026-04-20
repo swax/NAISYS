@@ -7,6 +7,7 @@ import {
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
 import { OperationRunStatusEnum } from "./operation-run-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 // Operation summary embedded in order run GET responses
 export const OperationRunSummarySchema = z.object({
@@ -113,8 +114,7 @@ export type CompleteOrderRun = z.infer<typeof CompleteOrderRunSchema>;
 
 // Query params for listing order runs
 export const OrderRunListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   status: OrderRunStatusEnum.optional(),
   priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),
@@ -137,8 +137,7 @@ export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;
 
 // Query params for dispatch view (operation runs across open orders)
 export const DispatchListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   status: OperationRunStatusEnum.optional(),
   priority: OrderRunPriorityEnum.optional(),
   search: z.string().optional(),

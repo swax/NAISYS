@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 
+import { paginationQuery } from "./pagination-types.js";
+
 export const ErpPermissionEnum = z.enum([
   "erp_admin",
   "order_planner",
@@ -105,7 +107,6 @@ export const UserListResponseSchema = z.object({
 export type UserListResponse = z.infer<typeof UserListResponseSchema>;
 
 export const UserListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  ...paginationQuery(),
   search: z.string().optional(),
 });

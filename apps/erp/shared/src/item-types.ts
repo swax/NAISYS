@@ -6,6 +6,7 @@ import {
   HateoasLinkSchema,
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 // Full item response shape
 export const ItemSchema = z.object({
@@ -60,8 +61,7 @@ export type UpdateItem = z.infer<typeof UpdateItemSchema>;
 
 // Query params for listing items
 export const ItemListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   search: z.string().optional(),
 });
 
