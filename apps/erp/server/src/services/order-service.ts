@@ -1,3 +1,5 @@
+import { RevisionStatus } from "@naisys/erp-shared";
+
 import erpDb from "../erpDb.js";
 import type { OrderModel } from "../generated/prisma/models/Order.js";
 import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
@@ -47,6 +49,18 @@ export async function checkHasRevisions(orderId: number): Promise<boolean> {
     where: { orderId },
   });
   return revisionCount > 0;
+}
+
+// --- Derived fields ---
+
+export async function getLatestApprovedRevNo(
+  orderId: number,
+): Promise<number | null> {
+  const result = await erpDb.orderRevision.aggregate({
+    where: { orderId, status: RevisionStatus.approved },
+    _max: { revNo: true },
+  });
+  return result._max.revNo ?? null;
 }
 
 // --- Mutations ---
