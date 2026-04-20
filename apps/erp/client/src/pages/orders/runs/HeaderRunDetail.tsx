@@ -11,7 +11,6 @@ import { hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import type {
   OperationRunListResponse,
-  OrderRevision,
   OrderRun,
   UpdateOrderRun,
 } from "@naisys/erp-shared";
@@ -40,23 +39,10 @@ export const HeaderRunDetail: React.FC = () => {
   const { orderRun, onOrderRunUpdate } =
     useOutletContext<OrderRunOutletContext>();
   const [editing, setEditing] = useState(false);
-  const [revDescription, setRevDescription] = useState<string | null>(null);
   const [operations, setOperations] = useState<OperationRunListResponse | null>(
     null,
   );
   const [opsLoading, setOpsLoading] = useState(true);
-
-  const fetchRevision = useCallback(async () => {
-    if (!orderKey) return;
-    try {
-      const rev = await api.get<OrderRevision>(
-        apiEndpoints.orderRev(orderKey, orderRun.revNo),
-      );
-      setRevDescription(rev.description || null);
-    } catch {
-      // ignore – revision description is supplementary
-    }
-  }, [orderKey, orderRun.revNo]);
 
   const fetchOperations = useCallback(async () => {
     if (!orderKey || !runNo) return;
@@ -74,9 +60,8 @@ export const HeaderRunDetail: React.FC = () => {
   }, [orderKey, runNo]);
 
   useEffect(() => {
-    void fetchRevision();
     void fetchOperations();
-  }, [fetchRevision, fetchOperations]);
+  }, [fetchOperations]);
 
   const handleUpdate = async (data: UpdateOrderRun) => {
     try {
@@ -149,8 +134,8 @@ export const HeaderRunDetail: React.FC = () => {
                 <Text fw={600} w={140}>
                   Description:
                 </Text>
-                {revDescription ? (
-                  <CompactMarkdown>{revDescription}</CompactMarkdown>
+                {orderRun.description ? (
+                  <CompactMarkdown>{orderRun.description}</CompactMarkdown>
                 ) : (
                   <Text c="dimmed">{"\u2014"}</Text>
                 )}

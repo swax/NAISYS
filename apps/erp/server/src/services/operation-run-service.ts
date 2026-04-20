@@ -28,6 +28,11 @@ export const includeOp = {
       workCenter: { select: { key: true } },
     },
   },
+  orderRun: {
+    select: {
+      orderRev: { select: { revNo: true, description: true } },
+    },
+  },
   assignedTo: { select: { username: true } },
   createdBy: { select: { username: true } },
   updatedBy: { select: { username: true } },
@@ -39,6 +44,9 @@ export type OpRunWithOp = OperationRunModel & {
     title: string;
     description: string;
     workCenter: { key: string } | null;
+  };
+  orderRun: {
+    orderRev: { revNo: number; description: string };
   };
   assignedTo: { username: string } | null;
   createdBy: { username: string };
@@ -74,6 +82,11 @@ export async function listOpRuns(runId: number): Promise<OpRunWithSummary[]> {
             include: { predecessor: { select: { seqNo: true, title: true } } },
             orderBy: { predecessor: { seqNo: "asc" } },
           },
+        },
+      },
+      orderRun: {
+        select: {
+          orderRev: { select: { revNo: true, description: true } },
         },
       },
       _count: { select: { stepRuns: true } },
