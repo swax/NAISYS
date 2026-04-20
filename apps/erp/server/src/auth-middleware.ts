@@ -62,6 +62,7 @@ export function requirePermission(permission: ErpPermission) {
         statusCode: 403,
         error: "Forbidden",
         message: `Permission '${permission}' required`,
+        missingPermission: permission,
       });
       return;
     }
