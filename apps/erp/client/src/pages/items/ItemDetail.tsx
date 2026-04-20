@@ -10,6 +10,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { Item, UpdateItem } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -17,7 +18,6 @@ import { useNavigate, useParams } from "react-router";
 import { FieldDefList } from "../../components/FieldDefList";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 
 export const ItemDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();

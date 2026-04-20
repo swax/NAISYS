@@ -12,6 +12,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { UpdateWorkCenter, WorkCenter } from "@naisys/erp-shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
@@ -20,7 +21,6 @@ import { useNavigate, useParams } from "react-router";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 
 export const WorkCenterDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();

@@ -104,13 +104,15 @@ function hostActionTemplates(
   hasManageHostsPermission: boolean,
   hostType: string,
 ) {
-  if (!hasManageHostsPermission || hostType === "supervisor") return [];
+  // Supervisor hosts can't have agents unassigned — hide entirely (state guard)
+  if (hostType === "supervisor") return [];
   return [
     {
       rel: "unassignAgent",
       hrefTemplate: `${API_PREFIX}/hosts/${hostname}/agents/{agentName}`,
       method: "DELETE",
       title: "Unassign Agent",
+      ...permGate(hasManageHostsPermission, "manage_hosts"),
     },
   ];
 }

@@ -118,13 +118,13 @@ function laborTicketActionTemplates(
   seqNo: number,
   user: ErpUser | undefined,
 ) {
-  if (!hasPermission(user, "order_manager")) return [];
   return [
     {
       rel: "deleteTicket",
       hrefTemplate: `${API_PREFIX}/${laborResource(orderKey, runNo, seqNo)}/{ticketId}`,
       method: "DELETE",
       title: "Delete Ticket",
+      ...permGate(hasPermission(user, "order_manager"), "order_manager"),
     },
   ];
 }

@@ -13,6 +13,8 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput, DateTimePicker } from "@mantine/dates";
+import { isImageFilename } from "@naisys/common";
+import { hasActionTemplate } from "@naisys/common";
 import type {
   FieldAttachment,
   FieldValue,
@@ -22,7 +24,6 @@ import type {
   HateoasActionTemplate,
   UploadAttachmentResponse,
 } from "@naisys/erp-shared";
-import { isImageFilename } from "@naisys/common";
 import { FieldType } from "@naisys/erp-shared";
 import {
   IconAlertCircle,
@@ -36,7 +37,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { api, showErrorNotification } from "../lib/api";
-import { hasActionTemplate } from "../lib/hateoas";
 
 function formatDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

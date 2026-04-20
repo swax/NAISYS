@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { hasAction } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import type { Operation, OperationListResponse } from "@naisys/erp-shared";
 import { CreateOperationSchema } from "@naisys/erp-shared";
@@ -19,7 +20,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 interface Props {
   orderKey: string;

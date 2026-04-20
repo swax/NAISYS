@@ -9,6 +9,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type {
   OperationRunComment,
   OperationRunCommentListResponse,
@@ -16,7 +17,6 @@ import type {
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 const TYPE_COLORS: Record<string, string> = {
   note: "blue",

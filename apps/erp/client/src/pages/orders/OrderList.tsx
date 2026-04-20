@@ -12,13 +12,13 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { OrderListResponse } from "@naisys/erp-shared";
 import { OrderStatus, OrderStatusEnum } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 import { cellLinkStyle } from "../../lib/tableStyles";
 import { useBoomGuard } from "../../lib/useBoomGuard";
 

@@ -1,4 +1,8 @@
-import type { HateoasAction, HateoasLink } from "@naisys/common";
+import type {
+  HateoasAction,
+  HateoasActionTemplate,
+  HateoasLink,
+} from "@naisys/common";
 import {
   CreateItemInstanceSchema,
   DeleteSetMutateResponseSchema,
@@ -30,6 +34,7 @@ import {
 import {
   formatAuditFields,
   mutationResult,
+  permGate,
   useFullSerializer,
   wantsFullResponse,
 } from "../route-helpers.js";
@@ -120,8 +125,8 @@ function instanceActions(
   instanceId: number,
   user: ErpUser | undefined,
 ): HateoasAction[] {
-  if (!hasPermission(user, "item_manager")) return [];
   const href = `${API_PREFIX}/${instanceBasePath(itemKey)}/${instanceId}`;
+  const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
   return [
     {
       rel: "update",
@@ -130,12 +135,14 @@ function instanceActions(
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateItemInstance`,
       body: { key: "" },
+      ...gate,
     },
     {
       rel: "delete",
       href,
       method: "DELETE",
       title: "Delete",
+      ...gate,
     },
   ];
 }
@@ -215,17 +222,35 @@ function buildActionTemplates(
   instanceId: number,
   user: ErpUser | undefined,
   hasFields: boolean,
-) {
-  if (!hasPermission(user, "item_manager") || !hasFields) return [];
+): HateoasActionTemplate[] {
+  if (!hasFields) return [];
   const instanceHref = `${API_PREFIX}/${instanceBasePath(itemKey)}/${instanceId}`;
+  const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
   return [
     {
-      rel: "updateField",
+      rel: "update-field-value",
       hrefTemplate: `${instanceHref}/fields/{fieldSeqNo}`,
       method: "PUT" as const,
-      title: "Update Field Value",
+      title: "Update Field Value (implicit set 0)",
       schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
       body: { value: "" },
+      ...gate,
+    },
+    {
+      rel: "update-set-field-value",
+      hrefTemplate: `${instanceHref}/sets/{setIndex}/fields/{fieldSeqNo}`,
+      method: "PUT" as const,
+      title: "Update Field Value (explicit set index)",
+      schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+      body: { value: "" },
+      ...gate,
+    },
+    {
+      rel: "delete-set",
+      hrefTemplate: `${instanceHref}/sets/{setIndex}`,
+      method: "DELETE" as const,
+      title: "Delete Field Value Set",
+      ...gate,
     },
   ];
 }
@@ -315,18 +340,20 @@ export default function itemInstanceRoutes(fastify: FastifyInstance) {
             hrefTemplate: `${API_PREFIX}/items/${key}/instances/{id}`,
           },
         ],
-        _actions: hasPermission(request.erpUser, "item_manager")
-          ? [
-              {
-                rel: "create",
-                href: `${API_PREFIX}/${base}`,
-                method: "POST" as const,
-                title: "Create Instance",
-                schema: `${API_PREFIX}/schemas/CreateItemInstance`,
-                body: { key: "" },
-              },
-            ]
-          : [],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}/${base}`,
+            method: "POST" as const,
+            title: "Create Instance",
+            schema: `${API_PREFIX}/schemas/CreateItemInstance`,
+            body: { key: "" },
+            ...permGate(
+              hasPermission(request.erpUser, "item_manager"),
+              "item_manager",
+            ),
+          },
+        ],
       };
     },
   });

@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import type {
   OperationRunListResponse,
@@ -22,7 +23,6 @@ import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { OrderRunForm } from "../../../components/OrderRunForm";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 import type { OrderRunOutletContext } from "./OrderRunDetail";
 
 const PRIORITY_COLORS: Record<string, string> = {

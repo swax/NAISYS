@@ -9,6 +9,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import { zodResolver } from "@naisys/common-browser";
 import type {
@@ -23,7 +24,6 @@ import { Link, useParams } from "react-router";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 export const HeaderDetail: React.FC = () => {
   const { orderKey, revNo } = useParams<{

@@ -14,6 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
 import {
   type ErpPermission,
@@ -27,7 +28,6 @@ import { useNavigate, useOutletContext, useParams } from "react-router";
 import type { AppOutletContext } from "../../components/AppLayout";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();

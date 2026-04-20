@@ -28,6 +28,7 @@ import {
   childItemLinks,
   formatAuditFields,
   mutationResult,
+  permGate,
 } from "../route-helpers.js";
 import type { FieldWithUsers } from "../services/field-service.js";
 import {
@@ -54,8 +55,8 @@ function itemLinks(key: string): HateoasLink[] {
 }
 
 function itemActions(key: string, user: ErpUser | undefined): HateoasAction[] {
-  if (!hasPermission(user, "item_manager")) return [];
   const href = `${API_PREFIX}/${RESOURCE}/${key}`;
+  const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
   return [
     {
       rel: "update",
@@ -63,12 +64,14 @@ function itemActions(key: string, user: ErpUser | undefined): HateoasAction[] {
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateItem`,
+      ...gate,
     },
     {
       rel: "delete",
       href,
       method: "DELETE",
       title: "Delete",
+      ...gate,
     },
   ];
 }
@@ -85,17 +88,16 @@ function formatItemFieldListResponse(
     total: fields.length,
     nextSeqNo: calcNextSeqNo(maxSeq),
     _links: [selfLink(base)],
-    _actions: hasPermission(user, "item_manager")
-      ? [
-          {
-            rel: "create" as const,
-            href: `${API_PREFIX}${base}`,
-            method: "POST" as const,
-            title: "Add Field",
-            schema: `${API_PREFIX}/schemas/CreateField`,
-          },
-        ]
-      : [],
+    _actions: [
+      {
+        rel: "create" as const,
+        href: `${API_PREFIX}${base}`,
+        method: "POST" as const,
+        title: "Add Field",
+        schema: `${API_PREFIX}/schemas/CreateField`,
+        ...permGate(hasPermission(user, "item_manager"), "item_manager"),
+      },
+    ],
   };
 }
 
@@ -122,23 +124,26 @@ function formatItemField(
       "Item",
       "Field",
     ),
-    _actions: hasPermission(user, "item_manager")
-      ? [
-          {
-            rel: "update",
-            href: `${API_PREFIX}${base}/${field.seqNo}`,
-            method: "PUT" as const,
-            title: "Update",
-            schema: `${API_PREFIX}/schemas/UpdateField`,
-          },
-          {
-            rel: "delete",
-            href: `${API_PREFIX}${base}/${field.seqNo}`,
-            method: "DELETE" as const,
-            title: "Delete",
-          },
-        ]
-      : [],
+    _actions: (() => {
+      const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
+      return [
+        {
+          rel: "update",
+          href: `${API_PREFIX}${base}/${field.seqNo}`,
+          method: "PUT" as const,
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateField`,
+          ...gate,
+        },
+        {
+          rel: "delete",
+          href: `${API_PREFIX}${base}/${field.seqNo}`,
+          method: "DELETE" as const,
+          title: "Delete",
+          ...gate,
+        },
+      ];
+    })(),
   };
 }
 
@@ -207,17 +212,19 @@ export default function itemRoutes(fastify: FastifyInstance) {
         _linkTemplates: [
           { rel: "item", hrefTemplate: `${API_PREFIX}/items/{key}` },
         ],
-        _actions: hasPermission(request.erpUser, "item_manager")
-          ? [
-              {
-                rel: "create",
-                href: `${API_PREFIX}/${RESOURCE}`,
-                method: "POST" as const,
-                title: "Create Item",
-                schema: `${API_PREFIX}/schemas/CreateItem`,
-              },
-            ]
-          : [],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}/${RESOURCE}`,
+            method: "POST" as const,
+            title: "Create Item",
+            schema: `${API_PREFIX}/schemas/CreateItem`,
+            ...permGate(
+              hasPermission(request.erpUser, "item_manager"),
+              "item_manager",
+            ),
+          },
+        ],
       };
     },
   });

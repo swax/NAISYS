@@ -11,6 +11,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type {
   OrderRevision,
   OrderRevisionListResponse,
@@ -20,7 +21,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../lib/api";
-import { hasAction } from "../lib/hateoas";
 import { cellLinkStyle } from "../lib/tableStyles";
 
 const STATUS_COLORS: Record<string, string> = {

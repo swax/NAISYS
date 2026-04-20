@@ -1,3 +1,4 @@
+import type { HateoasActionTemplate } from "@naisys/common";
 import {
   InventoryListQuerySchema,
   InventoryListResponseSchema,
@@ -5,8 +6,42 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
+import type { ErpUser } from "../auth-middleware.js";
+import { hasPermission } from "../auth-middleware.js";
 import erpDb from "../erpDb.js";
 import { API_PREFIX, paginationLinks } from "../hateoas.js";
+
+function buildInventoryActionTemplates(
+  user: ErpUser | undefined,
+): HateoasActionTemplate[] {
+  const templates: HateoasActionTemplate[] = [
+    {
+      rel: "viewInstance",
+      hrefTemplate: `${API_PREFIX}/items/{itemKey}/instances/{id}`,
+      method: "GET",
+      title: "View Instance",
+    },
+  ];
+  if (hasPermission(user, "item_manager")) {
+    templates.push({
+      rel: "update-field-value",
+      hrefTemplate: `${API_PREFIX}/items/{itemKey}/instances/{id}/fields/{fieldSeqNo}`,
+      method: "PUT",
+      title: "Update Field Value (implicit set 0)",
+      schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+      body: { value: "" },
+    });
+    templates.push({
+      rel: "update-set-field-value",
+      hrefTemplate: `${API_PREFIX}/items/{itemKey}/instances/{id}/sets/{setIndex}/fields/{fieldSeqNo}`,
+      method: "PUT",
+      title: "Update Field Value (explicit set index)",
+      schema: `${API_PREFIX}/schemas/UpdateFieldValue`,
+      body: { value: "" },
+    });
+  }
+  return templates;
+}
 
 export default function inventoryRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -67,14 +102,7 @@ export default function inventoryRoutes(fastify: FastifyInstance) {
         _links: paginationLinks("inventory", page, pageSize, total, {
           search,
         }),
-        _actionTemplates: [
-          {
-            rel: "viewInstance",
-            hrefTemplate: `${API_PREFIX}/items/{itemKey}/instances/{id}`,
-            method: "GET",
-            title: "View Instance",
-          },
-        ],
+        _actionTemplates: buildInventoryActionTemplates(request.erpUser),
       };
     },
   });

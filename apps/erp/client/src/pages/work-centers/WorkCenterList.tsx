@@ -10,12 +10,12 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { WorkCenterListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const WorkCenterList: React.FC = () => {

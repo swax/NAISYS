@@ -13,12 +13,12 @@ import {
   Title,
   UnstyledButton,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { FieldRef, FieldRefListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 interface AvailableStep {
   opSeqNo: number;
