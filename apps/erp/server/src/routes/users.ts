@@ -190,6 +190,7 @@ export default function userRoutes(fastify: FastifyInstance) {
         statusCode: 403,
         error: "Forbidden",
         message: "Permission 'erp_admin' required",
+        missingPermission: "erp_admin",
       });
       return;
     }
