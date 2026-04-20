@@ -8,6 +8,11 @@ import {
 import { writeAuditEntry } from "../audit.js";
 import erpDb from "../erpDb.js";
 import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
+import {
+  deserializeFieldValue,
+  upsertFieldValue,
+  validateFieldSet,
+} from "./field-value-service.js";
 
 // --- Prisma include & result type ---
 
@@ -348,21 +353,27 @@ async function autoGenerateInstanceKey(
   return { key: String(Math.floor(num) + 1) };
 }
 
+export type CompleteOrderRunResult =
+  | { run: OrderRunWithRev; error?: undefined; status?: undefined }
+  | {
+      error: string;
+      status: 400 | 422;
+      missingFields?: string[];
+      run?: undefined;
+    };
+
 export async function completeOrderRun(
   orderRunId: number,
   orderId: number,
   data: {
     instanceKey?: string;
     quantity?: number | null;
-    fieldValues?: { fieldId: number; value: string; setIndex?: number }[];
+    fieldValues?: { fieldSeqNo: number; value: string; setIndex?: number }[];
   },
   userId: number,
-): Promise<
-  | { run: OrderRunWithRev; error?: undefined }
-  | { error: string; run?: undefined }
-> {
+): Promise<CompleteOrderRunResult> {
   return erpDb.$transaction(async (erpTx) => {
-    // Load the order with its item
+    // Load the order with its item and full item field definitions.
     const order = await erpTx.order.findUniqueOrThrow({
       where: { id: orderId },
       select: {
@@ -373,7 +384,15 @@ export async function completeOrderRun(
             fieldSet: {
               select: {
                 fields: {
-                  select: { id: true },
+                  select: {
+                    id: true,
+                    seqNo: true,
+                    label: true,
+                    type: true,
+                    isArray: true,
+                    required: true,
+                  },
+                  orderBy: { seqNo: "asc" as const },
                 },
               },
             },
@@ -383,14 +402,67 @@ export async function completeOrderRun(
     });
 
     if (!order.item) {
-      return { error: "Order has no item assigned — cannot complete" };
+      return {
+        error: "Order has no item assigned — cannot complete",
+        status: 422,
+      };
+    }
+
+    const itemFields = order.item.fieldSet?.fields ?? [];
+    const fieldsBySeqNo = new Map(itemFields.map((f) => [f.seqNo, f]));
+    const fieldsById = new Map(itemFields.map((f) => [f.id, f]));
+
+    // Validate caller-supplied fieldSeqNos exist on the item.
+    const callerValues = data.fieldValues ?? [];
+    for (const fv of callerValues) {
+      if (!fieldsBySeqNo.has(fv.fieldSeqNo)) {
+        return {
+          error: `Unknown item field seqNo ${fv.fieldSeqNo} — item has no field with that sequence number`,
+          status: 400,
+        };
+      }
+    }
+
+    // Resolve caller-supplied values into a map keyed by (fieldId, setIndex).
+    type ResolvedValue = { fieldId: number; value: string; setIndex: number };
+    const resolved = new Map<string, ResolvedValue>();
+    const keyOf = (fieldId: number, setIndex: number) =>
+      `${fieldId}:${setIndex}`;
+
+    for (const fv of callerValues) {
+      const def = fieldsBySeqNo.get(fv.fieldSeqNo)!;
+      const setIndex = fv.setIndex ?? 0;
+      resolved.set(keyOf(def.id, setIndex), {
+        fieldId: def.id,
+        value: fv.value,
+        setIndex,
+      });
+    }
+
+    // Validate all item fields against caller-supplied values at setIndex 0.
+    // `fieldValues[]` on CompleteOrderRun is flat (no multi-set support), so
+    // we only validate set 0. Flags both missing-required and type-invalid.
+    const failures = validateFieldSet(itemFields, [0], (fieldId, setIndex) => {
+      const def = fieldsById.get(fieldId)!;
+      const r = resolved.get(keyOf(fieldId, setIndex));
+      if (r) return deserializeFieldValue(r.value, def.isArray);
+      return def.isArray ? [] : "";
+    });
+    if (failures.length > 0) {
+      return {
+        error: `Cannot complete order run: ${failures
+          .map((f) => `${f.label} — ${f.error}`)
+          .join("; ")}. Provide values via fieldValues[] using fieldSeqNo.`,
+        status: 400,
+        missingFields: failures.map((f) => f.label),
+      };
     }
 
     // Determine instance key
     let instanceKey = data.instanceKey;
     if (!instanceKey) {
       const result = await autoGenerateInstanceKey(erpTx, order.item.id);
-      if ("error" in result) return result;
+      if ("error" in result) return { error: result.error, status: 422 };
       instanceKey = result.key;
     }
 
@@ -401,6 +473,7 @@ export async function completeOrderRun(
     if (existing) {
       return {
         error: `Instance key "${instanceKey}" already exists for this item`,
+        status: 422,
       };
     }
 
@@ -416,8 +489,8 @@ export async function completeOrderRun(
       },
     });
 
-    // Create field record and field values if item has a field set
-    if (order.item.fieldSetId && (data.fieldValues?.length ?? 0) > 0) {
+    // Create field record and field values if we have any to write.
+    if (order.item.fieldSetId && resolved.size > 0) {
       const fieldRecord = await erpTx.fieldRecord.create({
         data: {
           fieldSetId: order.item.fieldSetId,
@@ -430,17 +503,15 @@ export async function completeOrderRun(
         data: { fieldRecordId: fieldRecord.id },
       });
 
-      for (const fv of data.fieldValues ?? []) {
-        await erpTx.fieldValue.create({
-          data: {
-            fieldRecordId: fieldRecord.id,
-            fieldId: fv.fieldId,
-            setIndex: fv.setIndex ?? 0,
-            value: fv.value,
-            createdById: userId,
-            updatedById: userId,
-          },
-        });
+      for (const fv of resolved.values()) {
+        await upsertFieldValue(
+          fieldRecord.id,
+          fv.fieldId,
+          fv.setIndex,
+          fv.value,
+          userId,
+          erpTx,
+        );
       }
     }
 

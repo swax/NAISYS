@@ -8,7 +8,12 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { requirePermission } from "../auth-middleware.js";
-import { conflict, notFound, unprocessable } from "../error-handler.js";
+import {
+  badRequest,
+  conflict,
+  notFound,
+  unprocessable,
+} from "../error-handler.js";
 import {
   resolveOrderRun,
   useFullSerializer,
@@ -150,12 +155,15 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
   app.post("/:runNo/complete", {
     schema: {
       description:
-        "Complete an order run — creates an item instance and closes the run",
+        "Complete an order run — creates an item instance and closes the run. " +
+        "Returns 400 if any required item field is missing, or if any supplied " +
+        "fieldSeqNo doesn't exist on the item.",
       tags: ["Order Runs"],
       params: RunNoParamsSchema,
       body: CompleteOrderRunSchema,
       response: {
         200: OrderRunTransitionSchema,
+        400: ErrorResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         422: ErrorResponseSchema,
@@ -188,6 +196,9 @@ export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
       );
 
       if (result.error) {
+        if (result.status === 400) {
+          return badRequest(reply, result.error);
+        }
         return unprocessable(reply, result.error);
       }
 

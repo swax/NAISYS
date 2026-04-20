@@ -6,7 +6,10 @@ import {
 } from "@naisys/erp-shared";
 
 import erpDb from "../erpDb.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
 import type { StepRunWithStepAndFields } from "./step-run-service.js";
+
+type PrismaTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
 // --- Lookups ---
 
@@ -133,6 +136,53 @@ export function checkFieldValueShape(
     return `Field "${label}" is not an array field — value must be a string, not an array`;
   }
   return null;
+}
+
+export interface FieldSetValidationFailure {
+  fieldId: number;
+  label: string;
+  setIndex: number;
+  error: string;
+}
+
+/**
+ * Validate a list of field definitions across one or more set indexes, given a
+ * way to look up the current value for each (fieldId, setIndex) pair. Returns
+ * one entry per invalid cell; callers format as appropriate. Iteration order
+ * is ascending setIndex, then the order of `fieldDefs` as given.
+ */
+export function validateFieldSet(
+  fieldDefs: {
+    id: number;
+    label: string;
+    type: string;
+    isArray: boolean;
+    required: boolean;
+  }[],
+  setIndexes: number[],
+  getValue: (fieldId: number, setIndex: number) => FieldValue,
+): FieldSetValidationFailure[] {
+  const failures: FieldSetValidationFailure[] = [];
+  for (const si of [...setIndexes].sort((a, b) => a - b)) {
+    for (const def of fieldDefs) {
+      const value = getValue(def.id, si);
+      const result = validateFieldValue(
+        def.type,
+        def.isArray,
+        def.required,
+        value,
+      );
+      if (!result.valid) {
+        failures.push({
+          fieldId: def.id,
+          label: def.label,
+          setIndex: si,
+          error: result.error!,
+        });
+      }
+    }
+  }
+  return failures;
 }
 
 export function validateFieldValue(
@@ -299,9 +349,10 @@ export async function upsertFieldValue(
   setIndex: number,
   value: FieldValue,
   userId: number,
+  tx: PrismaTx | typeof erpDb = erpDb,
 ) {
   const dbValue = serializeFieldValue(value);
-  await erpDb.fieldValue.upsert({
+  await tx.fieldValue.upsert({
     where: {
       fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
     },

@@ -82,7 +82,7 @@ export const CompletionDialog: React.FC<Props> = ({
       const body: {
         instanceKey?: string;
         quantity?: number | null;
-        fieldValues?: { fieldId: number; value: string }[];
+        fieldValues?: { fieldSeqNo: number; value: string }[];
       } = {};
 
       if (instanceKey.trim()) {
@@ -92,10 +92,11 @@ export const CompletionDialog: React.FC<Props> = ({
         body.quantity = quantity;
       }
 
+      const seqNoById = new Map(fields.map((f) => [f.id, f.seqNo]));
       const fvArray = Object.entries(fieldValues)
         .filter(([, value]) => value !== "")
         .map(([fieldId, value]) => ({
-          fieldId: Number(fieldId),
+          fieldSeqNo: seqNoById.get(Number(fieldId))!,
           value,
         }));
       if (fvArray.length > 0) {
