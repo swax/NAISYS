@@ -17,6 +17,7 @@ export const OrderSchema = z.object({
   description: z.string(),
   status: OrderStatusEnum,
   itemKey: z.string().nullable(),
+  latestApprovedRevNo: z.number().int().nullable().optional(),
   createdBy: z.string(),
   createdAt: z.iso.datetime(),
   updatedBy: z.string(),

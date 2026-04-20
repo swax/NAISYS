@@ -35,6 +35,7 @@ import {
   createOrder,
   deleteOrder,
   findExisting,
+  getLatestApprovedRevNo,
   listOrders,
   type OrderWithRelations,
   resolveItemKey,
@@ -123,13 +124,18 @@ const KeyParamsSchema = z.object({
   key: z.string(),
 });
 
-function formatOrder(order: OrderWithRelations, user: ErpUser | undefined) {
+function formatOrder(
+  order: OrderWithRelations,
+  user: ErpUser | undefined,
+  latestApprovedRevNo: number | null,
+) {
   return {
     id: order.id,
     key: order.key,
     description: order.description,
     status: order.status,
     itemKey: order.item?.key ?? null,
+    latestApprovedRevNo,
     ...formatAuditFields(order),
     _links: [
       ...orderLinks(RESOURCE, order.key, "Order"),
@@ -141,8 +147,8 @@ function formatOrder(order: OrderWithRelations, user: ErpUser | undefined) {
 }
 
 function formatListOrder(order: OrderWithRelations, user: ErpUser | undefined) {
-  const { _actions, ...rest } = formatOrder(order, user);
-  const { _links: _, ...withoutLinks } = rest;
+  const { _actions, ...rest } = formatOrder(order, user, null);
+  const { _links: _, latestApprovedRevNo: __, ...withoutLinks } = rest;
   return withoutLinks;
 }
 
@@ -229,7 +235,8 @@ export default function orderRoutes(fastify: FastifyInstance) {
 
       const order = await createOrder(key, description, itemId, userId);
 
-      const full = formatOrder(order, request.erpUser);
+      // Newly-created order has no revisions yet, so latestApprovedRevNo is null
+      const full = formatOrder(order, request.erpUser, null);
       reply.status(201);
       return mutationResult(request, reply, full, {
         id: full.id,
@@ -259,7 +266,8 @@ export default function orderRoutes(fastify: FastifyInstance) {
         return notFound(reply, `Order '${key}' not found`);
       }
 
-      return formatOrder(order, request.erpUser);
+      const latestApprovedRevNo = await getLatestApprovedRevNo(order.id);
+      return formatOrder(order, request.erpUser, latestApprovedRevNo);
     },
   });
 
@@ -301,7 +309,8 @@ export default function orderRoutes(fastify: FastifyInstance) {
 
       const order = await updateOrder(key, dbData, userId);
 
-      const full = formatOrder(order, request.erpUser);
+      const latestApprovedRevNo = await getLatestApprovedRevNo(order.id);
+      const full = formatOrder(order, request.erpUser, latestApprovedRevNo);
       return mutationResult(request, reply, full, {
         _actions: full._actions,
       });
