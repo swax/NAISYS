@@ -1,6 +1,8 @@
 import { HateoasActionSchema, HateoasLinkSchema } from "@naisys/common";
 import { z } from "zod";
 
+import { timestampPagingQuery } from "./pagination-types.js";
+
 // Zod schemas for the new flat message model
 export const RecipientTypeEnum = z.enum(["to", "cc", "bcc", "from"]);
 export type RecipientType = z.infer<typeof RecipientTypeEnum>;
@@ -49,9 +51,7 @@ export const SendMailResponseSchema = z.object({
 });
 
 export const MailDataRequestSchema = z.object({
-  updatedSince: z.string().optional(),
-  page: z.coerce.number().optional().default(1),
-  count: z.coerce.number().optional().default(50),
+  ...timestampPagingQuery(),
 });
 
 export const MailDataResponseSchema = z.object({

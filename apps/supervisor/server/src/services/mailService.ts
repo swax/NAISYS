@@ -7,6 +7,7 @@ import type {
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
 import { getLogger } from "../logger.js";
+import { timestampCursorWhere } from "../paging.js";
 import { uploadToHub } from "./attachmentProxyService.js";
 import { sendMailViaHub } from "./hubConnectionService.js";
 
@@ -16,6 +17,7 @@ import { sendMailViaHub } from "./hubConnectionService.js";
 export async function getMailDataByUserId(
   userId: number,
   updatedSince?: string,
+  updatedBefore?: string,
   page: number = 1,
   count: number = 50,
   kind: string = "mail",
@@ -23,10 +25,8 @@ export async function getMailDataByUserId(
   // Build the where clause
   const whereClause: any = { kind };
 
-  // If updatedSince is provided, filter by date
-  if (updatedSince) {
-    whereClause.created_at = { gte: updatedSince };
-  }
+  const cursorWhere = timestampCursorWhere(updatedSince, updatedBefore);
+  if (cursorWhere) whereClause.created_at = cursorWhere;
 
   const where = {
     ...whereClause,
@@ -42,10 +42,11 @@ export async function getMailDataByUserId(
     ],
   };
 
-  // Only get total count on initial fetch (when updatedSince is not set)
-  const total = updatedSince
-    ? undefined
-    : await hubDb.mail_messages.count({ where });
+  // Only get total count on initial fetch (no cursor filters)
+  const total =
+    updatedSince || updatedBefore
+      ? undefined
+      : await hubDb.mail_messages.count({ where });
 
   // Get paginated messages
   const dbMessages = await hubDb.mail_messages.findMany({

@@ -9,6 +9,7 @@ export * from "./error-types.js";
 export * from "./log-types.js";
 export * from "./mail-types.js";
 export * from "./models-types.js";
+export * from "./pagination-types.js";
 export * from "./runs-types.js";
 export * from "./status-types.js";
 export * from "./user-types.js";

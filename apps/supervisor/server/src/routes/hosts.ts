@@ -30,7 +30,7 @@ import type { SupervisorUser } from "../auth-middleware.js";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { hubDb } from "../database/hubDb.js";
 import { badRequest, conflict, notFound } from "../error-helpers.js";
-import { API_PREFIX, selfLink } from "../hateoas.js";
+import { API_PREFIX, selfLink, timestampCursorLinks } from "../hateoas.js";
 import { permGate, resolveActions } from "../route-helpers.js";
 import {
   emitHostsListChanged,
@@ -447,7 +447,7 @@ export default function hostsRoutes(
     },
     async (request, reply) => {
       const { hostname } = request.params;
-      const { updatedSince, page, count } = request.query;
+      const { updatedSince, updatedBefore, page, count } = request.query;
 
       const host = await getHostDetail(hostname);
       if (!host) {
@@ -457,21 +457,24 @@ export default function hostsRoutes(
       const data = await getRunsData(
         { hostName: hostname },
         updatedSince,
+        updatedBefore,
         page,
         count,
       );
+
+      const oldest = data.runs.length
+        ? data.runs[data.runs.length - 1].lastActive
+        : undefined;
 
       return {
         success: true,
         message: "Host runs retrieved successfully",
         data,
-        _links: [
-          {
-            rel: "next",
-            href: `${API_PREFIX}/hosts/${hostname}/runs?updatedSince=${encodeURIComponent(data.timestamp)}`,
-            title: "Poll for updated runs",
-          },
-        ],
+        _links: timestampCursorLinks(
+          `/hosts/${hostname}/runs`,
+          data.timestamp,
+          oldest,
+        ),
       };
     },
   );

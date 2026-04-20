@@ -21,7 +21,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";
-import { API_PREFIX } from "../hateoas.js";
+import { API_PREFIX, timestampCursorLinks } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import {
   archiveAllMailMessages,
@@ -54,7 +54,7 @@ export default function agentMailRoutes(
     },
     async (request, reply) => {
       const { username } = request.params;
-      const { updatedSince, page, count } = request.query;
+      const { updatedSince, updatedBefore, page, count } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
@@ -64,6 +64,7 @@ export default function agentMailRoutes(
       const data = await getMailDataByUserId(
         id,
         updatedSince,
+        updatedBefore,
         page,
         count,
         "mail",
@@ -74,19 +75,19 @@ export default function agentMailRoutes(
         "agent_communication",
       );
 
+      const oldest = data.mail.length
+        ? data.mail[data.mail.length - 1].createdAt
+        : undefined;
+
       return {
         success: true,
         message: "Mail data retrieved successfully",
         data,
-        _links: data
-          ? [
-              {
-                rel: "next",
-                href: `${API_PREFIX}/agents/${username}/mail?updatedSince=${encodeURIComponent(data.timestamp)}`,
-                title: "Poll for newer mail",
-              },
-            ]
-          : undefined,
+        _links: timestampCursorLinks(
+          `/agents/${username}/mail`,
+          data.timestamp,
+          oldest,
+        ),
         _actions: canSend
           ? [
               {

@@ -25,7 +25,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest, notFound } from "../error-helpers.js";
-import { API_PREFIX } from "../hateoas.js";
+import { API_PREFIX, timestampCursorLinks } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import { uploadToHub } from "../services/attachmentProxyService.js";
 import {
@@ -130,20 +130,35 @@ export default function agentChatRoutes(
     },
     async (request, _reply) => {
       const { username, participants } = request.params;
-      const { updatedSince, page, count } = request.query;
+      const { updatedSince, updatedBefore, page, count } = request.query;
 
-      const data = await getMessages(participants, updatedSince, page, count);
+      const data = await getMessages(
+        participants,
+        updatedSince,
+        updatedBefore,
+        page,
+        count,
+      );
 
       const canSend = hasPermission(
         request.supervisorUser,
         "agent_communication",
       );
 
+      const oldest = data.messages.length
+        ? data.messages[data.messages.length - 1].createdAt
+        : undefined;
+
       return {
         success: true,
         messages: data.messages,
         total: data.total,
         timestamp: data.timestamp,
+        _links: timestampCursorLinks(
+          `/agents/${username}/chat/${encodeURIComponent(participants)}`,
+          data.timestamp,
+          oldest,
+        ),
         _actions: canSend ? [sendChatAction(username)] : undefined,
       };
     },

@@ -41,6 +41,71 @@ function buildQuery(
   return params.toString();
 }
 
+/**
+ * Build next/prev HATEOAS links for a timestamp-cursor list endpoint.
+ *
+ * `next` polls forward using the response timestamp (newest-first filter).
+ * `prev` is emitted only when `oldestTimestamp` is given, and fetches older
+ * items via `updatedBefore`.
+ */
+export function timestampCursorLinks(
+  basePath: string,
+  newTimestamp: string,
+  oldestTimestamp?: string,
+): HateoasLink[] {
+  const fullPath = `${API_PREFIX}${basePath}`;
+  const links: HateoasLink[] = [
+    {
+      rel: "next",
+      href: `${fullPath}?updatedSince=${encodeURIComponent(newTimestamp)}`,
+      title: "Poll for newer items",
+    },
+  ];
+  if (oldestTimestamp) {
+    links.push({
+      rel: "prev",
+      href: `${fullPath}?updatedBefore=${encodeURIComponent(oldestTimestamp)}`,
+      title: "Fetch older items",
+    });
+  }
+  return links;
+}
+
+/**
+ * Build next/prev HATEOAS links for an id-cursor list endpoint (e.g. log streams).
+ *
+ * `next` polls forward via `logsAfter` / equivalent key. `prev` is emitted only
+ * when `minId` is given, and fetches older items via the "before" key.
+ *
+ * `extraQuery` is appended to both links (e.g. `limit=200`).
+ */
+export function idCursorLinks(
+  basePath: string,
+  afterKey: string,
+  beforeKey: string,
+  maxId: number,
+  minId?: number,
+  extraQuery?: string,
+): HateoasLink[] {
+  const fullPath = `${API_PREFIX}${basePath}`;
+  const suffix = extraQuery ? `&${extraQuery}` : "";
+  const links: HateoasLink[] = [
+    {
+      rel: "next",
+      href: `${fullPath}?${afterKey}=${maxId}${suffix}`,
+      title: "Poll for newer items",
+    },
+  ];
+  if (minId !== undefined) {
+    links.push({
+      rel: "prev",
+      href: `${fullPath}?${beforeKey}=${minId}${suffix}`,
+      title: "Fetch older items",
+    });
+  }
+  return links;
+}
+
 export function paginationLinks(
   basePath: string,
   page: number,

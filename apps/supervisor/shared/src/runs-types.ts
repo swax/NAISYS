@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { HostEnvironmentSchema } from "./agents-types.js";
 import { LogEntrySchema } from "./log-types.js";
+import { timestampPagingQuery } from "./pagination-types.js";
 
 // Zod schemas
 export const RunSessionSchema = z.object({
@@ -21,9 +22,7 @@ export const RunSessionSchema = z.object({
 });
 
 export const RunsDataRequestSchema = z.object({
-  updatedSince: z.string().optional(),
-  page: z.coerce.number().optional().default(1),
-  count: z.coerce.number().optional().default(50),
+  ...timestampPagingQuery(),
 });
 
 export const RunsDataResponseSchema = z.object({
@@ -46,9 +45,17 @@ export const ContextLogParamsSchema = z.object({
   sessionId: z.coerce.number(),
 });
 
+export const CONTEXT_LOG_MAX_LIMIT = 1000;
+
 export const ContextLogRequestSchema = z.object({
   logsAfter: z.coerce.number().optional(),
   logsBefore: z.coerce.number().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .transform((n) => Math.min(n, CONTEXT_LOG_MAX_LIMIT))
+    .optional(),
 });
 
 export const ContextLogResponseSchema = z.object({
