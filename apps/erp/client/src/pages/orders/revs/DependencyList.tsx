@@ -8,6 +8,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { hasAction, hasActionTemplate } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import type {
   CreateOperationDependency,
@@ -18,7 +19,6 @@ import { CreateOperationDependencySchema } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
 
 interface DependencyListProps {
   orderKey: string;

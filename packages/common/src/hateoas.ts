@@ -23,8 +23,12 @@ export function hasAction(
 export function hasActionTemplate(
   templates: HateoasActionTemplate[] | undefined,
   rel: string,
+  opts?: { includeDisabled: boolean },
 ): HateoasActionTemplate | undefined {
-  return templates?.find((t) => t.rel === rel);
+  const t = templates?.find((t) => t.rel === rel);
+  if (!t) return undefined;
+  if (t.disabled && !opts?.includeDisabled) return undefined;
+  return t;
 }
 
 export function hasLinkTemplate(

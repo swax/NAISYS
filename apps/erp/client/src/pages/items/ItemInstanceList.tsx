@@ -11,6 +11,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type {
   CreateItemInstance,
   ItemInstanceListResponse,
@@ -19,7 +20,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 import { cellLinkStyle } from "../../lib/tableStyles";
 
 export const ItemInstanceList: React.FC = () => {

@@ -13,6 +13,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import { zodResolver } from "@naisys/common-browser";
 import type {
@@ -27,7 +28,6 @@ import { useCallback, useEffect, useState } from "react";
 import { FieldDefList } from "../../../components/FieldDefList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 interface StepListProps {
   orderKey: string;

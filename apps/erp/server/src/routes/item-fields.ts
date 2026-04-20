@@ -21,6 +21,7 @@ import {
   childItemLinks,
   formatAuditFields,
   mutationResult,
+  permGate,
 } from "../route-helpers.js";
 import {
   createField,
@@ -67,23 +68,26 @@ function formatField(
       "Item",
       "Field",
     ),
-    _actions: hasPermission(user, "item_manager")
-      ? [
-          {
-            rel: "update",
-            href: `${API_PREFIX}${base}/${field.seqNo}`,
-            method: "PUT" as const,
-            title: "Update",
-            schema: `${API_PREFIX}/schemas/UpdateField`,
-          },
-          {
-            rel: "delete",
-            href: `${API_PREFIX}${base}/${field.seqNo}`,
-            method: "DELETE" as const,
-            title: "Delete",
-          },
-        ]
-      : [],
+    _actions: (() => {
+      const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
+      return [
+        {
+          rel: "update",
+          href: `${API_PREFIX}${base}/${field.seqNo}`,
+          method: "PUT" as const,
+          title: "Update",
+          schema: `${API_PREFIX}/schemas/UpdateField`,
+          ...gate,
+        },
+        {
+          rel: "delete",
+          href: `${API_PREFIX}${base}/${field.seqNo}`,
+          method: "DELETE" as const,
+          title: "Delete",
+          ...gate,
+        },
+      ];
+    })(),
   };
 }
 
@@ -123,17 +127,19 @@ export default function itemFieldRoutes(fastify: FastifyInstance) {
             hrefTemplate: `${API_PREFIX}${base}/{seqNo}`,
           },
         ],
-        _actions: hasPermission(request.erpUser, "item_manager")
-          ? [
-              {
-                rel: "create",
-                href: `${API_PREFIX}${base}`,
-                method: "POST" as const,
-                title: "Add Field",
-                schema: `${API_PREFIX}/schemas/CreateField`,
-              },
-            ]
-          : [],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}${base}`,
+            method: "POST" as const,
+            title: "Add Field",
+            schema: `${API_PREFIX}/schemas/CreateField`,
+            ...permGate(
+              hasPermission(request.erpUser, "item_manager"),
+              "item_manager",
+            ),
+          },
+        ],
       };
     },
   });

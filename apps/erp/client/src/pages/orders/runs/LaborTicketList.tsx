@@ -8,12 +8,12 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { hasAction, hasActionTemplate } from "@naisys/common";
 import type { LaborTicketListResponse } from "@naisys/erp-shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction, hasActionTemplate } from "../../../lib/hateoas";
 
 export interface LaborActions {
   canClockIn: boolean;

@@ -19,6 +19,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
+import { formatDisabledReason, hasAction } from "@naisys/common";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import type {
   FieldRefValueSummary,
@@ -39,7 +40,6 @@ import { FieldValueRunList } from "../../../components/FieldValueList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { formatDisabledReason, hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "../revs/DependencyList";
 import { CommentList } from "./CommentList";
 import type { LaborActions } from "./LaborTicketList";

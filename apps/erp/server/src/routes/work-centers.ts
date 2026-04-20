@@ -24,7 +24,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields, mutationResult } from "../route-helpers.js";
+import { formatAuditFields, mutationResult, permGate } from "../route-helpers.js";
 import {
   assignUser,
   createWorkCenter,
@@ -56,8 +56,8 @@ function wcLinks(key: string): HateoasLink[] {
 }
 
 function wcActions(key: string, user: ErpUser | undefined): HateoasAction[] {
-  if (!hasPermission(user, "erp_admin")) return [];
   const href = `${API_PREFIX}/${RESOURCE}/${key}`;
+  const gate = permGate(hasPermission(user, "erp_admin"), "erp_admin");
   return [
     {
       rel: "update",
@@ -65,12 +65,14 @@ function wcActions(key: string, user: ErpUser | undefined): HateoasAction[] {
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateWorkCenter`,
+      ...gate,
     },
     {
       rel: "delete",
       href,
       method: "DELETE",
       title: "Delete",
+      ...gate,
     },
     {
       rel: "assignUser",
@@ -78,12 +80,13 @@ function wcActions(key: string, user: ErpUser | undefined): HateoasAction[] {
       method: "POST",
       title: "Assign User",
       schema: `${API_PREFIX}/schemas/AssignWorkCenterUser`,
+      ...gate,
     },
   ];
 }
 
 function formatWorkCenter(wc: WorkCenterWithDetail, user: ErpUser | undefined) {
-  const isAdmin = hasPermission(user, "erp_admin");
+  const adminGate = permGate(hasPermission(user, "erp_admin"), "erp_admin");
   return {
     id: wc.id,
     key: wc.key,
@@ -93,16 +96,15 @@ function formatWorkCenter(wc: WorkCenterWithDetail, user: ErpUser | undefined) {
       username: a.user.username,
       createdAt: a.createdAt.toISOString(),
       createdBy: a.createdBy?.username ?? null,
-      _actions: isAdmin
-        ? [
-            {
-              rel: "remove",
-              href: `${API_PREFIX}/${RESOURCE}/${wc.key}/users/${a.user.username}`,
-              method: "DELETE" as const,
-              title: "Remove",
-            },
-          ]
-        : [],
+      _actions: [
+        {
+          rel: "remove",
+          href: `${API_PREFIX}/${RESOURCE}/${wc.key}/users/${a.user.username}`,
+          method: "DELETE" as const,
+          title: "Remove",
+          ...adminGate,
+        },
+      ],
     })),
     ...formatAuditFields(wc),
     _links: wcLinks(wc.key),
@@ -158,17 +160,19 @@ export default function workCenterRoutes(fastify: FastifyInstance) {
             hrefTemplate: `${API_PREFIX}/work-centers/{key}`,
           },
         ],
-        _actions: hasPermission(request.erpUser, "erp_admin")
-          ? [
-              {
-                rel: "create",
-                href: `${API_PREFIX}/${RESOURCE}`,
-                method: "POST" as const,
-                title: "Create Work Center",
-                schema: `${API_PREFIX}/schemas/CreateWorkCenter`,
-              },
-            ]
-          : [],
+        _actions: [
+          {
+            rel: "create",
+            href: `${API_PREFIX}/${RESOURCE}`,
+            method: "POST" as const,
+            title: "Create Work Center",
+            schema: `${API_PREFIX}/schemas/CreateWorkCenter`,
+            ...permGate(
+              hasPermission(request.erpUser, "erp_admin"),
+              "erp_admin",
+            ),
+          },
+        ],
       };
     },
   });

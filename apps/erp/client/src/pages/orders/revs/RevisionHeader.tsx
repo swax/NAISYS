@@ -1,4 +1,5 @@
 import { ActionIcon, Anchor, Badge, Button, Group, Text } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import { ActionButton } from "@naisys/common-browser";
 import type { OrderRevision } from "@naisys/erp-shared";
 import { RevisionStatus } from "@naisys/erp-shared";
@@ -6,7 +7,6 @@ import { IconListDetails } from "@tabler/icons-react";
 import { useNavigate } from "react-router";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 
 const STATUS_COLORS: Record<string, string> = {
   [RevisionStatus.draft]: "blue",

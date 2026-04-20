@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import { zodResolver } from "@naisys/common-browser";
 import type { Operation, UpdateOperation } from "@naisys/erp-shared";
@@ -21,7 +22,6 @@ import { useNavigate, useOutletContext, useParams } from "react-router";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { WorkCenterAutocomplete } from "../../../components/WorkCenterAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { hasAction } from "../../../lib/hateoas";
 import { DependencyList } from "./DependencyList";
 import { FieldRefList } from "./FieldRefList";
 import type { RevisionOutletContext } from "./RevisionLayout";

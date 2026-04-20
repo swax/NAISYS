@@ -19,6 +19,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
+import { permGate } from "../route-helpers.js";
 import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
   deleteVariable,
@@ -27,26 +28,25 @@ import {
 } from "../services/variableService.js";
 
 function variableActions(hasManagePermission: boolean): HateoasAction[] {
-  const actions: HateoasAction[] = [];
-  if (hasManagePermission) {
-    actions.push(
-      {
-        rel: "save",
-        href: `${API_PREFIX}/variables/:key`,
-        method: "PUT",
-        title: "Save Variable",
-        schema: `${API_PREFIX}/schemas/SaveVariable`,
-        body: { value: "", exportToShell: false, sensitive: false },
-      },
-      {
-        rel: "delete",
-        href: `${API_PREFIX}/variables/:key`,
-        method: "DELETE",
-        title: "Delete Variable",
-      },
-    );
-  }
-  return actions;
+  const gate = permGate(hasManagePermission, "manage_variables");
+  return [
+    {
+      rel: "save",
+      href: `${API_PREFIX}/variables/:key`,
+      method: "PUT",
+      title: "Save Variable",
+      schema: `${API_PREFIX}/schemas/SaveVariable`,
+      body: { value: "", exportToShell: false, sensitive: false },
+      ...gate,
+    },
+    {
+      rel: "delete",
+      href: `${API_PREFIX}/variables/:key`,
+      method: "DELETE",
+      title: "Delete Variable",
+      ...gate,
+    },
+  ];
 }
 
 export default function variablesRoutes(
@@ -80,7 +80,7 @@ export default function variablesRoutes(
           exportToShell: v.export_to_shell,
           sensitive: v.sensitive,
         })),
-        _actions: actions.length > 0 ? actions : undefined,
+        _actions: actions,
       };
     },
   );

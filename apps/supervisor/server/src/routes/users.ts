@@ -26,6 +26,7 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
+import { permGate } from "../route-helpers.js";
 import {
   getHubAgentById,
   getHubAgentByUuid,
@@ -57,19 +58,19 @@ function userActions(
   isAdmin: boolean,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/users/${username}`;
+  const adminGate = permGate(isAdmin, "supervisor_admin");
   const actions: HateoasAction[] = [];
 
   // Admins can edit any user (username + password)
-  if (isAdmin) {
-    actions.push({
-      rel: "update",
-      href,
-      method: "PUT",
-      title: "Update",
-      schema: `${API_PREFIX}/schemas/UpdateUser`,
-      body: { username: "" },
-    });
-  }
+  actions.push({
+    rel: "update",
+    href,
+    method: "PUT",
+    title: "Update",
+    schema: `${API_PREFIX}/schemas/UpdateUser`,
+    body: { username: "" },
+    ...adminGate,
+  });
 
   // Any authenticated user can change their own password
   if (isSelf) {
@@ -83,31 +84,33 @@ function userActions(
     });
   }
 
-  if (isAdmin) {
-    actions.push({
-      rel: "grant-permission",
-      href: `${href}/permissions`,
-      method: "POST",
-      title: "Grant Permission",
-      schema: `${API_PREFIX}/schemas/GrantPermission`,
-      body: { permission: "" },
-    });
+  actions.push({
+    rel: "grant-permission",
+    href: `${href}/permissions`,
+    method: "POST",
+    title: "Grant Permission",
+    schema: `${API_PREFIX}/schemas/GrantPermission`,
+    body: { permission: "" },
+    ...adminGate,
+  });
 
-    actions.push({
-      rel: "rotate-key",
-      href: `${href}/rotate-key`,
-      method: "POST",
-      title: "Rotate API Key",
-    });
+  actions.push({
+    rel: "rotate-key",
+    href: `${href}/rotate-key`,
+    method: "POST",
+    title: "Rotate API Key",
+    ...adminGate,
+  });
 
-    if (!isSelf) {
-      actions.push({
-        rel: "delete",
-        href,
-        method: "DELETE",
-        title: "Delete",
-      });
-    }
+  // Delete: admin-only AND not self (can't delete yourself)
+  if (!isSelf) {
+    actions.push({
+      rel: "delete",
+      href,
+      method: "DELETE",
+      title: "Delete",
+      ...adminGate,
+    });
   }
 
   return actions;
@@ -119,19 +122,18 @@ function permissionActions(
   isSelf: boolean,
   isAdmin: boolean,
 ): HateoasAction[] {
-  if (!isAdmin) return [];
-
   const actions: HateoasAction[] = [];
 
-  // Cannot revoke own supervisor_admin
-  if (!(isSelf && permission === "supervisor_admin")) {
-    actions.push({
-      rel: "revoke",
-      href: `${API_PREFIX}/users/${username}/permissions/${permission}`,
-      method: "DELETE",
-      title: "Revoke",
-    });
-  }
+  // Cannot revoke own supervisor_admin (state guard — keep hidden when it applies)
+  if (isSelf && permission === "supervisor_admin") return actions;
+
+  actions.push({
+    rel: "revoke",
+    href: `${API_PREFIX}/users/${username}/permissions/${permission}`,
+    method: "DELETE",
+    title: "Revoke",
+    ...permGate(isAdmin, "supervisor_admin"),
+  });
 
   return actions;
 }
@@ -232,27 +234,27 @@ export default function userRoutes(
       const isAdmin =
         request.supervisorUser?.permissions.includes("supervisor_admin") ??
         false;
-      const actions: HateoasAction[] = [];
-      if (isAdmin) {
-        actions.push(
-          {
-            rel: "create",
-            href: `${API_PREFIX}/users`,
-            method: "POST",
-            title: "Create User",
-            schema: `${API_PREFIX}/schemas/CreateUser`,
-            body: { username: "", password: "" },
-          },
-          {
-            rel: "create-from-agent",
-            href: `${API_PREFIX}/users/from-agent`,
-            method: "POST",
-            title: "Import User from Agent",
-            schema: `${API_PREFIX}/schemas/CreateAgentUser`,
-            body: { agentId: 0 },
-          },
-        );
-      }
+      const adminGate = permGate(isAdmin, "supervisor_admin");
+      const actions: HateoasAction[] = [
+        {
+          rel: "create",
+          href: `${API_PREFIX}/users`,
+          method: "POST",
+          title: "Create User",
+          schema: `${API_PREFIX}/schemas/CreateUser`,
+          body: { username: "", password: "" },
+          ...adminGate,
+        },
+        {
+          rel: "create-from-agent",
+          href: `${API_PREFIX}/users/from-agent`,
+          method: "POST",
+          title: "Import User from Agent",
+          schema: `${API_PREFIX}/schemas/CreateAgentUser`,
+          body: { agentId: 0 },
+          ...adminGate,
+        },
+      ];
 
       return {
         items: result.items.map(formatListUser),

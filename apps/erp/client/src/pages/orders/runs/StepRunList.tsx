@@ -11,6 +11,7 @@ import {
   Textarea,
   Tooltip,
 } from "@mantine/core";
+import { formatDisabledReason, hasAction } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import type {
   HateoasAction,
@@ -28,7 +29,6 @@ import { useCallback, useEffect, useState } from "react";
 
 import { FieldValueRunList } from "../../../components/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { formatDisabledReason, hasAction } from "../../../lib/hateoas";
 
 interface Props {
   orderKey: string;

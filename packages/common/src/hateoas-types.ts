@@ -40,6 +40,8 @@ export const HateoasActionTemplateSchema = z.object({
   schema: z.string().optional(),
   body: z.record(z.string(), z.unknown()).optional(),
   alternateEncoding: AlternateEncodingSchema.optional(),
+  disabled: z.boolean().optional(),
+  disabledReason: z.union([z.string(), z.array(z.string())]).optional(),
 });
 
 export type HateoasActionTemplate = z.infer<typeof HateoasActionTemplateSchema>;

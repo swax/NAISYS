@@ -29,6 +29,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { badRequest } from "../error-helpers.js";
 import { API_PREFIX } from "../hateoas.js";
+import { permGate } from "../route-helpers.js";
 import { sendModelsChanged } from "../services/hubConnectionService.js";
 import {
   deleteImageModel,
@@ -39,32 +40,32 @@ import {
 } from "../services/modelService.js";
 
 function modelActions(hasManagePermission: boolean): HateoasAction[] {
-  const actions: HateoasAction[] = [];
-  if (hasManagePermission) {
-    actions.push(
-      {
-        rel: "save-llm",
-        href: `${API_PREFIX}/models/llm`,
-        method: "PUT",
-        title: "Save LLM Model",
-        schema: `${API_PREFIX}/schemas/SaveLlmModel`,
-      },
-      {
-        rel: "save-image",
-        href: `${API_PREFIX}/models/image`,
-        method: "PUT",
-        title: "Save Image Model",
-        schema: `${API_PREFIX}/schemas/SaveImageModel`,
-      },
-      {
-        rel: "delete",
-        href: `${API_PREFIX}/models/:type/:key`,
-        method: "DELETE",
-        title: "Delete Model",
-      },
-    );
-  }
-  return actions;
+  const gate = permGate(hasManagePermission, "manage_models");
+  return [
+    {
+      rel: "save-llm",
+      href: `${API_PREFIX}/models/llm`,
+      method: "PUT",
+      title: "Save LLM Model",
+      schema: `${API_PREFIX}/schemas/SaveLlmModel`,
+      ...gate,
+    },
+    {
+      rel: "save-image",
+      href: `${API_PREFIX}/models/image`,
+      method: "PUT",
+      title: "Save Image Model",
+      schema: `${API_PREFIX}/schemas/SaveImageModel`,
+      ...gate,
+    },
+    {
+      rel: "delete",
+      href: `${API_PREFIX}/models/:type/:key`,
+      method: "DELETE",
+      title: "Delete Model",
+      ...gate,
+    },
+  ];
 }
 
 export default function modelsRoutes(
@@ -111,7 +112,7 @@ export default function modelsRoutes(
           ...dbFieldsToImageModel(r),
           isCustom: r.is_custom,
         })),
-        _actions: actions.length > 0 ? actions : undefined,
+        _actions: actions,
       };
     },
   );

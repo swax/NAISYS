@@ -9,6 +9,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { hasAction } from "@naisys/common";
 import type { Order, UpdateOrder } from "@naisys/erp-shared";
 import { OrderStatus } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
@@ -18,7 +19,6 @@ import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { OrderForm } from "../../components/OrderForm";
 import { OrderRevisions } from "../../components/OrderRevisions";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
-import { hasAction } from "../../lib/hateoas";
 
 export const OrderDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
