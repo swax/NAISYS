@@ -16,12 +16,15 @@ If the curl fails because .env.ns-api is missing or the key is empty, tell the u
 
 The API has two HATEOAS entry points:
 
-- $NS_API_URL/supervisor/ — agent management, hosts, models, variables, permissions
-- $NS_API_URL/erp/ — ERP system
+- $NS_API_URL/supervisor/api/ — agent management, hosts, models, variables, permissions
+- $NS_API_URL/erp/api/ — ERP system
+
+Note: the bare `/supervisor/` and `/erp/` paths serve the SPA HTML, not the API.
+You must include `/api/` in the path.
 
 Start at the appropriate entry point and follow \_links and \_actions to discover
 endpoints. Do NOT fetch the entry point first if you can infer the path from
-the \_links structure (e.g. agents are at $NS_API_URL/supervisor/agents).
+the \_links structure (e.g. agents are at $NS_API_URL/supervisor/api/agents).
 Use GET to explore, POST/PUT/DELETE for mutations.
 
 User's request: $ARGUMENTS

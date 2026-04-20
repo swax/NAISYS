@@ -262,10 +262,16 @@ function runSpawn(
   cwd?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    // Avoid shell:true — args containing shell metacharacters (e.g. ">=1.2.3")
+    // would otherwise be interpreted by the shell as redirects. On Windows,
+    // npm/npx ship as .cmd wrappers that aren't directly executable.
+    const isWindows = process.platform === "win32";
+    const needsCmdSuffix =
+      isWindows && (command === "npm" || command === "npx");
+    const resolvedCommand = needsCmdSuffix ? `${command}.cmd` : command;
+    const child = spawn(resolvedCommand, args, {
       cwd: cwd ?? process.cwd(),
       stdio: "inherit",
-      shell: true,
       env: { ...process.env, npm_config_yes: "true", NODE_ENV: "" },
     });
     child.on("close", (code) => {
