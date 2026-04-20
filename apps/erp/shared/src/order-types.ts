@@ -5,6 +5,7 @@ import {
   HateoasLinkSchema,
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 export const OrderStatusEnum = z.enum(["active", "archived"]);
 export type OrderStatus = z.infer<typeof OrderStatusEnum>;
@@ -68,8 +69,7 @@ export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
 
 // Query params for listing orders
 export const OrderListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   status: z.enum(["active", "archived"]).optional(),
   search: z.string().optional(),
 });

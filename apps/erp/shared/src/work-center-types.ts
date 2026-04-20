@@ -5,6 +5,7 @@ import {
   HateoasLinkSchema,
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 // Work center user assignment (embedded in detail response)
 export const WorkCenterUserSchema = z.object({
@@ -79,8 +80,7 @@ export type AssignWorkCenterUser = z.infer<typeof AssignWorkCenterUserSchema>;
 
 // Query params for listing work centers
 export const WorkCenterListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   search: z.string().optional(),
 });
 

@@ -4,11 +4,11 @@ import {
   HateoasActionTemplateSchema,
   HateoasLinkSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 
 // Query params for inventory list (all item instances across all items)
 export const InventoryListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   search: z.string().optional(),
 });
 

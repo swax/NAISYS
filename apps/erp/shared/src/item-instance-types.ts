@@ -6,6 +6,7 @@ import {
   HateoasLinkSchema,
   HateoasLinkTemplateSchema,
 } from "./hateoas-types.js";
+import { paginationQuery } from "./pagination-types.js";
 import { FieldValueEntrySchema } from "./step-run-types.js";
 
 // Full item instance response shape
@@ -52,8 +53,7 @@ export type UpdateItemInstance = z.infer<typeof UpdateItemInstanceSchema>;
 
 // Query params for listing item instances
 export const ItemInstanceListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  ...paginationQuery(),
   search: z.string().optional(),
 });
 
