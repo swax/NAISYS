@@ -43,6 +43,7 @@ export const OrderRunSchema = z.object({
   orderId: z.number(),
   orderKey: z.string(),
   revNo: z.number(),
+  description: z.string(),
   itemKey: z.string().nullable(),
   instanceId: z.number().nullable(),
   instanceKey: z.string().nullable(),

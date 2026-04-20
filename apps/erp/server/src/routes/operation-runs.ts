@@ -185,10 +185,13 @@ export async function formatOpRun(
       runNo,
     ),
   ]);
+  const revNo = opRun.orderRun.orderRev.revNo;
   return {
     id: opRun.id,
     orderRunId: opRun.orderRunId,
     operationId: opRun.operationId,
+    revNo,
+    orderDescription: opRun.orderRun.orderRev.description,
     seqNo,
     title: opRun.operation.title,
     description: opRun.operation.description,
@@ -219,6 +222,11 @@ export async function formatOpRun(
         "OperationRun",
         "run",
       ),
+      {
+        rel: "order-revision",
+        href: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}`,
+        title: "Order Revision",
+      } as HateoasLink,
       {
         rel: "steps",
         href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/steps`,
@@ -280,6 +288,8 @@ function formatListOpRun(opRun: OpRunWithSummary) {
     id: opRun.id,
     orderRunId: opRun.orderRunId,
     operationId: opRun.operationId,
+    revNo: opRun.orderRun.orderRev.revNo,
+    orderDescription: opRun.orderRun.orderRev.description,
     seqNo,
     title: opRun.operation.title,
     description: opRun.operation.description,

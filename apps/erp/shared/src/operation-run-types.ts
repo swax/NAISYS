@@ -33,6 +33,8 @@ export const OperationRunSchema = z.object({
   id: z.number(),
   orderRunId: z.number(),
   operationId: z.number(),
+  revNo: z.number(),
+  orderDescription: z.string(),
   seqNo: z.number(),
   title: z.string(),
   description: z.string(),

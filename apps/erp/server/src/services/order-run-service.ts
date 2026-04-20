@@ -17,7 +17,7 @@ import {
 // --- Prisma include & result type ---
 
 export const includeRev = {
-  orderRev: { select: { revNo: true } },
+  orderRev: { select: { revNo: true, description: true } },
   order: { select: { item: { select: { key: true } } } },
   itemInstances: { select: { id: true, key: true }, take: 1 },
   createdBy: { select: { username: true } },
@@ -25,7 +25,7 @@ export const includeRev = {
 } as const;
 
 export type OrderRunWithRev = OrderRunModel & {
-  orderRev: { revNo: number };
+  orderRev: { revNo: number; description: string };
   order: { item: { key: string } | null };
   itemInstances: { id: number; key: string }[];
   createdBy: { username: string };
