@@ -88,7 +88,11 @@ export const UpdateOrderRunSchema = z
 
 export type UpdateOrderRun = z.infer<typeof UpdateOrderRunSchema>;
 
-// Input for completing an order run (creates item instance + closes run)
+// Input for completing an order run (creates item instance + closes run).
+// `fieldValues[].fieldSeqNo` is the per-item field sequence number — matches
+// the field-update endpoint at /items/{key}/instances/{instanceId}/fields/{fieldSeqNo}.
+// If any required item field is empty, the endpoint returns 400 with the
+// missing field labels rather than creating an invalid instance.
 export const CompleteOrderRunSchema = z
   .object({
     instanceKey: z.string().max(200).optional(),
@@ -96,7 +100,7 @@ export const CompleteOrderRunSchema = z
     fieldValues: z
       .array(
         z.object({
-          fieldId: z.number().int(),
+          fieldSeqNo: z.number().int(),
           value: z.string().max(2000),
           setIndex: z.number().int().min(0).optional(),
         }),
