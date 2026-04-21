@@ -11,7 +11,6 @@ Self-hosted, cross-machine, AI agent runner and manager that runs on Node.js
 - **All vendors supported** — OpenAI, Google, Anthropic, OpenRouter and local LLMs
 - **Remote management** — Manage agents, hosts, costs, and messaging through your self-hosted server
 
-
 ## Packages
 
 NAISYS is split into four packages: `naisys` (the agent runner), `@naisys/hub` (central server for persistence and cross-machine communication), `@naisys/supervisor` (web UI for monitoring and managing agents), and `@naisys/erp` (AI optmized task management system).
@@ -38,7 +37,7 @@ npm install naisys @naisys/hub @naisys/supervisor @naisys/erp
 npx naisys --integrated-hub --supervisor --erp
 ```
 
-When the process starts up it gives you a link to the supervisor UI and a command to change the superadmin password. 
+When the process starts up it gives you a link to the supervisor UI and a command to change the superadmin password.
 
 ### Simple Client/Server with ngrok
 
@@ -65,7 +64,7 @@ PM2 keeps NAISYS running through system restarts, NAISYS upgrades, and unexpecte
 
 Create a dedicated user on server/clients for NAISYS
 
-```bash 
+```bash
 npm install -g pm2
 sudo useradd -m -s /bin/bash naisys
 sudo su - naisys

@@ -238,10 +238,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         operationRuns: {
           none: {
             status: {
-              notIn: [
-                OperationRunStatus.completed,
-                OperationRunStatus.skipped,
-              ],
+              notIn: [OperationRunStatus.completed, OperationRunStatus.skipped],
             },
           },
         },
@@ -287,13 +284,10 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         _links: [
-          ...paginationLinks(
-            "dispatch/ready-to-close",
-            page,
-            pageSize,
-            total,
-            { priority, search },
-          ),
+          ...paginationLinks("dispatch/ready-to-close", page, pageSize, total, {
+            priority,
+            search,
+          }),
           {
             rel: "dispatch",
             href: `${API_PREFIX}/dispatch`,

@@ -24,7 +24,11 @@ import {
   schemaLink,
   selfLink,
 } from "../hateoas.js";
-import { formatAuditFields, mutationResult, permGate } from "../route-helpers.js";
+import {
+  formatAuditFields,
+  mutationResult,
+  permGate,
+} from "../route-helpers.js";
 import {
   assignUser,
   createWorkCenter,

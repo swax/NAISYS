@@ -443,7 +443,9 @@ export const HostPage: React.FC = () => {
         <>
           {activeAgents.length > 0 && (
             <>
-              <Title order={4} pl="xs">Active Agents</Title>
+              <Title order={4} pl="xs">
+                Active Agents
+              </Title>
               <Stack gap={4} pl="md">
                 {activeAgents.map((agent) => (
                   <Group key={agent.id} gap="xs" wrap="nowrap">
@@ -504,37 +506,37 @@ export const HostPage: React.FC = () => {
                 {hostDetail.assignedAgents.map((agent) => {
                   const fullAgent = agents.find((a) => a.id === agent.id);
                   return (
-                  <Group key={agent.id} gap="xs" wrap="nowrap">
-                    <AgentModelIcon
-                      shellModel={fullAgent?.shellModel}
-                      size={14}
-                      style={{ flexShrink: 0 }}
-                    />
-                    <Anchor
-                      size="sm"
-                      onClick={() => navigate(`/agents/${agent.name}`)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      {agent.name}
-                    </Anchor>
-                    <Text size="sm" c="dimmed">
-                      ({agent.title})
-                    </Text>
-                    {hasActionTemplate(
-                      hostDetail?._actionTemplates,
-                      "unassignAgent",
-                    ) && (
-                      <ActionIcon
+                    <Group key={agent.id} gap="xs" wrap="nowrap">
+                      <AgentModelIcon
+                        shellModel={fullAgent?.shellModel}
+                        size={14}
+                        style={{ flexShrink: 0 }}
+                      />
+                      <Anchor
                         size="sm"
-                        variant="subtle"
-                        color="red"
-                        onClick={() => void handleUnassign(agent.name)}
-                        title="Unassign"
+                        onClick={() => navigate(`/agents/${agent.name}`)}
+                        style={{ cursor: "pointer" }}
                       >
-                        <IconX size={14} />
-                      </ActionIcon>
-                    )}
-                  </Group>
+                        {agent.name}
+                      </Anchor>
+                      <Text size="sm" c="dimmed">
+                        ({agent.title})
+                      </Text>
+                      {hasActionTemplate(
+                        hostDetail?._actionTemplates,
+                        "unassignAgent",
+                      ) && (
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="red"
+                          onClick={() => void handleUnassign(agent.name)}
+                          title="Unassign"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      )}
+                    </Group>
                   );
                 })}
               </Stack>
@@ -567,7 +569,9 @@ export const HostPage: React.FC = () => {
       )}
 
       {/* Latest Runs */}
-      <Title order={4} pl="xs">Latest Runs</Title>
+      <Title order={4} pl="xs">
+        Latest Runs
+      </Title>
       <Stack gap="md" pl="md">
         {hostRunsLoading && hostRuns.length === 0 ? (
           <Group justify="center" p="md">
@@ -580,94 +584,94 @@ export const HostPage: React.FC = () => {
           </Text>
         ) : (
           <>
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Time</Table.Th>
-                <Table.Th>Run</Table.Th>
-                <Table.Th>Username</Table.Th>
-                <Table.Th>Model</Table.Th>
-                <Table.Th style={{ textAlign: "right" }}>Cost</Table.Th>
-                <Table.Th style={{ textAlign: "right" }}>Lines</Table.Th>
-                <Table.Th>Status</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {hostRuns.map((run) => {
-                const runKey = getRunKey(run);
-                const canNavigate = Boolean(run.username);
-                const runAgent = run.username
-                  ? agents.find((a) => a.name === run.username)
-                  : undefined;
-                return (
-                  <Table.Tr
-                    key={`${run.userId}-${runKey}`}
-                    style={{ cursor: canNavigate ? "pointer" : "default" }}
-                    onClick={() => {
-                      if (canNavigate) {
-                        void navigate(
-                          `/agents/${run.username}/runs/${runKey}`,
-                        );
-                      }
-                    }}
-                  >
-                    <Table.Td>{formatPrimaryTime(run.createdAt)}</Table.Td>
-                    <Table.Td>{getRunIdLabel(run)}</Table.Td>
-                    <Table.Td>
-                      {run.username ? (
-                        <Group gap={6} wrap="nowrap">
-                          <AgentModelIcon
-                            shellModel={runAgent?.shellModel}
-                            size={14}
-                            style={{ flexShrink: 0 }}
-                          />
-                          {run.username}
-                        </Group>
-                      ) : (
-                        "—"
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge size="xs" variant="light" color="blue">
-                        {run.modelName}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: "right" }}>
-                      <Text size="sm" c="green" fw={500}>
-                        {formatCost(run.totalCost)}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td style={{ textAlign: "right" }}>
-                      {run.totalLines.toLocaleString()}
-                    </Table.Td>
-                    <Table.Td>
-                      {run.isOnline && (
-                        <Badge size="xs" variant="dot" color="green">
-                          Online
+            <Table striped highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Time</Table.Th>
+                  <Table.Th>Run</Table.Th>
+                  <Table.Th>Username</Table.Th>
+                  <Table.Th>Model</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Cost</Table.Th>
+                  <Table.Th style={{ textAlign: "right" }}>Lines</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {hostRuns.map((run) => {
+                  const runKey = getRunKey(run);
+                  const canNavigate = Boolean(run.username);
+                  const runAgent = run.username
+                    ? agents.find((a) => a.name === run.username)
+                    : undefined;
+                  return (
+                    <Table.Tr
+                      key={`${run.userId}-${runKey}`}
+                      style={{ cursor: canNavigate ? "pointer" : "default" }}
+                      onClick={() => {
+                        if (canNavigate) {
+                          void navigate(
+                            `/agents/${run.username}/runs/${runKey}`,
+                          );
+                        }
+                      }}
+                    >
+                      <Table.Td>{formatPrimaryTime(run.createdAt)}</Table.Td>
+                      <Table.Td>{getRunIdLabel(run)}</Table.Td>
+                      <Table.Td>
+                        {run.username ? (
+                          <Group gap={6} wrap="nowrap">
+                            <AgentModelIcon
+                              shellModel={runAgent?.shellModel}
+                              size={14}
+                              style={{ flexShrink: 0 }}
+                            />
+                            {run.username}
+                          </Group>
+                        ) : (
+                          "—"
+                        )}
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge size="xs" variant="light" color="blue">
+                          {run.modelName}
                         </Badge>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
-          <Group justify="center" gap="sm">
-            <Text c="dimmed" size="xs">
-              Showing {hostRuns.length} / {hostRunsTotal} runs
-            </Text>
-            {hostRunsHasMore && (
-              <Button
-                variant="subtle"
-                size="compact-xs"
-                loading={hostRunsLoadingMore}
-                onClick={loadMoreHostRuns}
-              >
-                Load More
-              </Button>
-            )}
-          </Group>
-        </>
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "right" }}>
+                        <Text size="sm" c="green" fw={500}>
+                          {formatCost(run.totalCost)}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td style={{ textAlign: "right" }}>
+                        {run.totalLines.toLocaleString()}
+                      </Table.Td>
+                      <Table.Td>
+                        {run.isOnline && (
+                          <Badge size="xs" variant="dot" color="green">
+                            Online
+                          </Badge>
+                        )}
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+            <Group justify="center" gap="sm">
+              <Text c="dimmed" size="xs">
+                Showing {hostRuns.length} / {hostRunsTotal} runs
+              </Text>
+              {hostRunsHasMore && (
+                <Button
+                  variant="subtle"
+                  size="compact-xs"
+                  loading={hostRunsLoadingMore}
+                  onClick={loadMoreHostRuns}
+                >
+                  Load More
+                </Button>
+              )}
+            </Group>
+          </>
         )}
       </Stack>
     </Stack>

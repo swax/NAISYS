@@ -4,11 +4,11 @@
 
 Ports are grouped by doubled thousands digits to avoid collisions with common services:
 
-| Range  | Purpose          |
-| ------ | ---------------- |
-| `22xx` | Dev clients      |
-| `33xx` | Servers          |
-| `44xx` | E2E tests        |
+| Range  | Purpose     |
+| ------ | ----------- |
+| `22xx` | Dev clients |
+| `33xx` | Servers     |
+| `44xx` | E2E tests   |
 
 Within each range, ports are assigned sequentially.
 

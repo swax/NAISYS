@@ -47,10 +47,7 @@ export async function createHostRegistrar({ hubDb }: HubDatabaseService) {
   }
 
   /** Helper to update last_active and connection metadata for an existing host */
-  function updateCache(
-    hostId: number,
-    entry: HostCacheEntry,
-  ) {
+  function updateCache(hostId: number, entry: HostCacheEntry) {
     hostsById.set(hostId, entry);
   }
 

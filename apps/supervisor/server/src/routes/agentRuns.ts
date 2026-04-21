@@ -18,11 +18,7 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { hasPermission } from "../auth-middleware.js";
 import { notFound } from "../error-helpers.js";
-import {
-  API_PREFIX,
-  idCursorLinks,
-  timestampCursorLinks,
-} from "../hateoas.js";
+import { API_PREFIX, idCursorLinks, timestampCursorLinks } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import {
   getContextLog,

@@ -334,10 +334,7 @@ export async function resetAgentSpend(id: number): Promise<void> {
 async function resolveEnvVarsForConfig(
   config: AgentConfigFile,
 ): Promise<Record<string, string> | undefined> {
-  const templates = [
-    config.agentPrompt,
-    ...(config.initialCommands ?? []),
-  ];
+  const templates = [config.agentPrompt, ...(config.initialCommands ?? [])];
 
   const keys = extractTemplateKeys(templates, "env");
   if (keys.length === 0) return undefined;
@@ -349,7 +346,9 @@ async function resolveEnvVarsForConfig(
 
   const map: Record<string, string> = {};
   for (const row of rows) {
-    map[row.key] = row.sensitive ? "\u2022\u2022\u2022\u2022\u2022\u2022" : row.value;
+    map[row.key] = row.sensitive
+      ? "\u2022\u2022\u2022\u2022\u2022\u2022"
+      : row.value;
   }
   return map;
 }

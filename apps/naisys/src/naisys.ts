@@ -41,7 +41,11 @@ const exampleUrl = new URL(
 
 let wizardRan = false;
 if (process.argv.includes("--setup")) {
-  wizardRan = await runSetupWizard(path.resolve(".env"), exampleUrl, wizardConfig);
+  wizardRan = await runSetupWizard(
+    path.resolve(".env"),
+    exampleUrl,
+    wizardConfig,
+  );
   expandNaisysFolder();
 }
 

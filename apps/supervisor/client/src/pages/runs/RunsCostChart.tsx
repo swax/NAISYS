@@ -77,7 +77,9 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
         if (elements.length === 0) return;
         const run = sortedRuns[elements[0].index];
         if (!run) return;
-        void navigate(`/agents/${agentName}/runs/${run.runId}-${run.sessionId}`);
+        void navigate(
+          `/agents/${agentName}/runs/${run.runId}-${run.sessionId}`,
+        );
       },
       scales: {
         x: { display: false },
