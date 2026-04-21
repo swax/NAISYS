@@ -91,7 +91,7 @@ export const DispatchReadyToClose: React.FC = () => {
       <Tabs
         value="ready-to-close"
         onChange={(v) => {
-          if (v === "open") navigate("/dispatch");
+          if (v === "open") void navigate("/dispatch");
         }}
         mb="md"
       >

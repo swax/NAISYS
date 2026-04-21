@@ -1,8 +1,6 @@
 import chalk from "chalk";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { WaitBehavior } from "./commandRegistry.js";
-import { isTimedWait } from "./commandRegistry.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { CostTracker } from "../llm/costTracker.js";
@@ -12,6 +10,8 @@ import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { getSharedReadline } from "../utils/sharedReadline.js";
+import type { WaitBehavior } from "./commandRegistry.js";
+import { isTimedWait } from "./commandRegistry.js";
 import type { ShellWrapper } from "./shellWrapper.js";
 
 export function createPromptBuilder(

@@ -28,12 +28,12 @@ import stepRunFieldRoutes from "./routes/step-run-fields.js";
 import stepRunTransitionRoutes from "./routes/step-run-transitions.js";
 import stepRunRoutes from "./routes/step-runs.js";
 import stepRoutes from "./routes/steps.js";
-import { isSupervisorAuth } from "./supervisorAuth.js";
 import userPermissionRoutes from "./routes/user-permissions.js";
 import userRoutes from "./routes/users.js";
 import workCenterRoutes from "./routes/work-centers.js";
+import { isSupervisorAuth } from "./supervisorAuth.js";
 
-export const erpRoutes: FastifyPluginAsync = async (fastify) => {
+export const erpRoutes: FastifyPluginAsync = (fastify) => {
   fastify.register(adminRoutes, { prefix: "/erp/api/admin" });
   fastify.register(auditRoutes, { prefix: "/erp/api/audit" });
   fastify.register(authRoutes, { prefix: "/erp/api/auth" });
@@ -117,4 +117,6 @@ export const erpRoutes: FastifyPluginAsync = async (fastify) => {
     publicRead: process.env.PUBLIC_READ === "true",
     supervisorAuth: isSupervisorAuth(),
   }));
+
+  return Promise.resolve();
 };

@@ -1,7 +1,8 @@
+import crypto from "node:crypto";
+
 import { toUrlSafeKey } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { HostType } from "@naisys/hub-database";
-import crypto from "node:crypto";
 
 interface HostCacheEntry {
   hostName: string;
