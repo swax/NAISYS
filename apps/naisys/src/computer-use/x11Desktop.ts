@@ -44,7 +44,20 @@ function xdotool(args: string[]) {
         "xdotool is not installed. Install it with: sudo apt install xdotool",
       );
     }
-    throw e;
+    const stderr = e?.stderr?.toString?.()?.trim();
+    throw new Error(`xdotool failed: ${stderr || e?.message || e}`);
+  }
+}
+
+export function checkDependencies(): void {
+  try {
+    execFileSync("xdotool", ["version"], { stdio: "pipe", timeout: 3000 });
+  } catch (e: any) {
+    if (e?.code === "ENOENT") {
+      throw new Error(
+        "xdotool is not installed. Install it with: sudo apt install xdotool",
+      );
+    }
   }
 }
 
@@ -71,26 +84,35 @@ export function mouseDrag(
   endX: number,
   endY: number,
 ) {
+  // Apps often need a short settle time after mousedown before they start
+  // tracking drag motion — and a short pause before mouseup so the final
+  // position is registered. Without these, drags can be ignored.
   xdotool([
     "mousemove",
     String(startX),
     String(startY),
     "mousedown",
     "1",
+    "sleep",
+    "0.1",
     "mousemove",
     String(endX),
     String(endY),
+    "sleep",
+    "0.05",
     "mouseup",
     "1",
   ]);
 }
 
 export function typeText(text: string) {
-  xdotool(["type", "--clearmodifiers", text]);
+  // xdotool's default 12ms inter-char delay drops keys in browsers, VMs, and
+  // Xvfb. 30ms is slow enough to be reliable and still feels instant.
+  xdotool(["type", "--clearmodifiers", "--delay", "30", text]);
 }
 
 export function pressKey(keyCombo: string) {
-  xdotool(["key", keyCombo]);
+  xdotool(["key", "--clearmodifiers", "--delay", "30", keyCombo]);
 }
 
 export function mouseScroll(
