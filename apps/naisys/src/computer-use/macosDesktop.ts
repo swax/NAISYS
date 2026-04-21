@@ -256,14 +256,21 @@ function mapKey(key: string): string {
 }
 
 export function pressKey(keyCombo: string) {
-  const parts = keyCombo.split("+").map((k) => k.trim());
-  const mods = parts.filter((k) => MODIFIERS.has(k.toLowerCase()));
-  const keys = parts.filter((k) => !MODIFIERS.has(k.toLowerCase()));
-
+  // Whitespace separates sequential chords ("Down Down Right"); `+` separates
+  // modifiers within a single chord ("ctrl+shift+t"). Accumulate all kd/kp/ku
+  // args into one cliclick invocation so sequences run without process overhead.
+  const chords = keyCombo.trim().split(/\s+/);
   const args: string[] = [];
-  for (const mod of mods) args.push(`kd:${mapModifier(mod)}`);
-  for (const key of keys) args.push(`kp:${mapKey(key)}`);
-  for (const mod of [...mods].reverse()) args.push(`ku:${mapModifier(mod)}`);
+
+  for (const chord of chords) {
+    const parts = chord.split("+").map((k) => k.trim());
+    const mods = parts.filter((k) => MODIFIERS.has(k.toLowerCase()));
+    const keys = parts.filter((k) => !MODIFIERS.has(k.toLowerCase()));
+
+    for (const mod of mods) args.push(`kd:${mapModifier(mod)}`);
+    for (const key of keys) args.push(`kp:${mapKey(key)}`);
+    for (const mod of [...mods].reverse()) args.push(`ku:${mapModifier(mod)}`);
+  }
 
   cliclick(args);
 }

@@ -112,7 +112,11 @@ export function typeText(text: string) {
 }
 
 export function pressKey(keyCombo: string) {
-  xdotool(["key", "--clearmodifiers", "--delay", "30", keyCombo]);
+  // xdotool's `key` accepts multiple key-sequence args and presses them in
+  // order, so splitting on whitespace lets callers pass either a single chord
+  // ("ctrl+c") or a sequence ("Down Down Right Right").
+  const keys = keyCombo.trim().split(/\s+/);
+  xdotool(["key", "--clearmodifiers", "--delay", "30", ...keys]);
 }
 
 export function mouseScroll(

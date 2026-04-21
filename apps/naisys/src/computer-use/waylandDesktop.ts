@@ -176,7 +176,10 @@ export function typeText(text: string) {
 }
 
 export function pressKey(keyCombo: string) {
-  ydotool(["key", keyCombo]);
+  // Whitespace-separated tokens are pressed in sequence (e.g. "Down Down Right")
+  // while a single token may still be a chord like "ctrl+c".
+  const keys = keyCombo.trim().split(/\s+/);
+  ydotool(["key", ...keys]);
 }
 
 export function mouseScroll(
