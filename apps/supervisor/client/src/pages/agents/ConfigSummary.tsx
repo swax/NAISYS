@@ -238,7 +238,11 @@ export const ConfigSummary: React.FC<{
           Agent Prompt
         </Text>
         <Code block style={{ whiteSpace: "pre-wrap" }}>
-          <TemplatedText template={config.agentPrompt} config={config} envVars={resolvedEnvVars} />
+          <TemplatedText
+            template={config.agentPrompt}
+            config={config}
+            envVars={resolvedEnvVars}
+          />
         </Code>
       </div>
 
@@ -251,7 +255,11 @@ export const ConfigSummary: React.FC<{
             {config.initialCommands.map((cmd, i) => (
               <React.Fragment key={i}>
                 {i > 0 && "\n\n"}
-                <TemplatedText template={cmd} config={config} envVars={resolvedEnvVars} />
+                <TemplatedText
+                  template={cmd}
+                  config={config}
+                  envVars={resolvedEnvVars}
+                />
               </React.Fragment>
             ))}
           </Code>

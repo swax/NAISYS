@@ -268,7 +268,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         type: "fields",
         comment: "ERP configuration",
         fields: [
-          { key: "NAISYS_FOLDER", label: "NAISYS Data Folder", defaultValue: cwdWithTilde() },
+          {
+            key: "NAISYS_FOLDER",
+            label: "NAISYS Data Folder",
+            defaultValue: cwdWithTilde(),
+          },
           { key: "SERVER_PORT", label: "Server Port" },
           { key: "SUPERVISOR_AUTH", label: "Use Supervisor for Auth" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
@@ -288,7 +292,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     expandNaisysFolder();
   }
-  wizardRan =
-    (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
+  wizardRan = (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
   void startServer(wizardRan);
 }

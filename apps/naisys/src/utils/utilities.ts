@@ -1,6 +1,5 @@
 import { get_encoding } from "tiktoken";
 
-
 const _gpt2encoding = get_encoding("gpt2");
 
 export function getTokenCount(text: string) {

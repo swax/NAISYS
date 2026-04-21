@@ -125,7 +125,10 @@ function formatItemField(
       "Field",
     ),
     _actions: (() => {
-      const gate = permGate(hasPermission(user, "item_manager"), "item_manager");
+      const gate = permGate(
+        hasPermission(user, "item_manager"),
+        "item_manager",
+      );
       return [
         {
           rel: "update",

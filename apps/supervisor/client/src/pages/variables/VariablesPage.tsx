@@ -265,9 +265,11 @@ export const VariablesPage: React.FC = () => {
                       size="sm"
                       variant="transparent"
                       color={
-                        (editingKey === item.key
-                          ? editExportToShell
-                          : item.exportToShell)
+                        (
+                          editingKey === item.key
+                            ? editExportToShell
+                            : item.exportToShell
+                        )
                           ? "blue"
                           : "gray"
                       }
@@ -277,11 +279,12 @@ export const VariablesPage: React.FC = () => {
                           : undefined
                       }
                       style={{
-                        cursor:
-                          editingKey === item.key ? "pointer" : "default",
-                        opacity: (editingKey === item.key
-                          ? editExportToShell
-                          : item.exportToShell)
+                        cursor: editingKey === item.key ? "pointer" : "default",
+                        opacity: (
+                          editingKey === item.key
+                            ? editExportToShell
+                            : item.exportToShell
+                        )
                           ? 1
                           : 0.35,
                       }}
@@ -296,9 +299,11 @@ export const VariablesPage: React.FC = () => {
                       size="sm"
                       variant="transparent"
                       color={
-                        (editingKey === item.key
-                          ? editSensitive
-                          : item.sensitive)
+                        (
+                          editingKey === item.key
+                            ? editSensitive
+                            : item.sensitive
+                        )
                           ? "orange"
                           : "gray"
                       }
@@ -308,11 +313,12 @@ export const VariablesPage: React.FC = () => {
                           : undefined
                       }
                       style={{
-                        cursor:
-                          editingKey === item.key ? "pointer" : "default",
-                        opacity: (editingKey === item.key
-                          ? editSensitive
-                          : item.sensitive)
+                        cursor: editingKey === item.key ? "pointer" : "default",
+                        opacity: (
+                          editingKey === item.key
+                            ? editSensitive
+                            : item.sensitive
+                        )
                           ? 1
                           : 0.35,
                       }}

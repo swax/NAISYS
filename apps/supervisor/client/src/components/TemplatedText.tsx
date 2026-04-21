@@ -27,7 +27,9 @@ export const TemplatedText: React.FC<{
         if (seg.value !== undefined) {
           return (
             <Tooltip key={i} label={seg.variable} withArrow>
-              <span style={{ color: "var(--mantine-color-blue-4)", cursor: "help" }}>
+              <span
+                style={{ color: "var(--mantine-color-blue-4)", cursor: "help" }}
+              >
                 {seg.value}
               </span>
             </Tooltip>
@@ -37,7 +39,13 @@ export const TemplatedText: React.FC<{
         // Unresolved variable (e.g. env vars) — show raw
         return (
           <Tooltip key={i} label="Resolved at runtime" withArrow>
-            <span style={{ color: "var(--mantine-color-dimmed)", fontStyle: "italic", cursor: "help" }}>
+            <span
+              style={{
+                color: "var(--mantine-color-dimmed)",
+                fontStyle: "italic",
+                cursor: "help",
+              }}
+            >
               {seg.variable}
             </span>
           </Tooltip>

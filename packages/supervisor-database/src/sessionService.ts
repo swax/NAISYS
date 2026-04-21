@@ -233,4 +233,3 @@ export async function ensureSuperAdmin(
     user: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
   };
 }
-

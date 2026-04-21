@@ -12,7 +12,12 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { IconList, IconSend } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { getPlatformBadge } from "../../components/PlatformBadge";

@@ -146,9 +146,8 @@ export const AgentChat: React.FC = () => {
 
   const otherParticipantNames = useMemo(
     () =>
-      selectedParticipants
-        ?.split(",")
-        .filter((name) => name !== username) ?? [],
+      selectedParticipants?.split(",").filter((name) => name !== username) ??
+      [],
     [selectedParticipants, username],
   );
 

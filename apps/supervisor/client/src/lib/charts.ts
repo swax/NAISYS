@@ -82,4 +82,3 @@ export function useChartThemeSync(): void {
     }
   }, [colorScheme]);
 }
-

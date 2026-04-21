@@ -120,17 +120,17 @@ This is sufficient for local dev/test where agents coordinate through direct mes
 
 In local mode, services that depend on the database either don't exist or are replaced with no-op / in-memory equivalents:
 
-| Service              | Local Mode Behavior                            |
-| -------------------- | ---------------------------------------------- |
-| `logService`         | No-op (or write to console/file)               |
-| `costTracker`        | In-memory running total, no persistence        |
-| `runService`         | In-memory run/session counters                 |
-| `hostService`        | Not needed (no host concept)                   |
-| `mail`               | Send-only, direct in-process delivery          |
-| `mailQueryService`   | Not available (no data to query)               |
-| `subagent`           | In-memory agent list from yaml configs         |
-| `agentConfig`        | Loaded from yaml file, kept in memory          |
-| `agentRegistrar`     | Scans yaml folder, builds in-memory agent list |
+| Service            | Local Mode Behavior                            |
+| ------------------ | ---------------------------------------------- |
+| `logService`       | No-op (or write to console/file)               |
+| `costTracker`      | In-memory running total, no persistence        |
+| `runService`       | In-memory run/session counters                 |
+| `hostService`      | Not needed (no host concept)                   |
+| `mail`             | Send-only, direct in-process delivery          |
+| `mailQueryService` | Not available (no data to query)               |
+| `subagent`         | In-memory agent list from yaml configs         |
+| `agentConfig`      | Loaded from yaml file, kept in memory          |
+| `agentRegistrar`   | Scans yaml folder, builds in-memory agent list |
 
 ---
 

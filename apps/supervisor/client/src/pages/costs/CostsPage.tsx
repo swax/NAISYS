@@ -297,8 +297,7 @@ export const CostsPage: React.FC = () => {
         legend: { position: "right", labels: { boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: (ctx) =>
-              `${ctx.label}: $${Number(ctx.parsed).toFixed(2)}`,
+            label: (ctx) => `${ctx.label}: $${Number(ctx.parsed).toFixed(2)}`,
           },
         },
       },

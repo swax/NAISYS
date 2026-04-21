@@ -63,7 +63,10 @@ export function parseTemplateSegments(
 
     // Push preceding text
     if (matchStart > lastIndex) {
-      segments.push({ type: "text", text: template.slice(lastIndex, matchStart) });
+      segments.push({
+        type: "text",
+        text: template.slice(lastIndex, matchStart),
+      });
     }
 
     // Resolve the variable
