@@ -72,6 +72,11 @@ export function createOutputService(logService: LogService) {
     writeDbLog(msg, "comment");
   }
 
+  /** Log without echoing to stdout — for input already shown via readline */
+  function logOnly(msg: string) {
+    writeDbLog(msg, "comment");
+  }
+
   function error(msg: string) {
     write(msg, OutputColor.error);
   }
@@ -95,6 +100,7 @@ export function createOutputService(logService: LogService) {
     write,
     comment,
     commentAndLog,
+    logOnly,
     error,
     errorAndLog,
     consoleBuffer,

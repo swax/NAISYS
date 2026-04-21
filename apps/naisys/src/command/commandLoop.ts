@@ -336,6 +336,12 @@ export function createCommandLoop(
 
       currentWait = undefined;
       blankDebugInput = commandList[0].trim().length == 0;
+
+      // readline echoed the prompt+input to stdout; mirror it to the log
+      // so supervisor UI viewers see debug-mode activity
+      if (!blankDebugInput) {
+        output.logOnly(prompt + commandList[0]);
+      }
     }
     // LLM command prompt
     else if (inputMode.isLLM()) {

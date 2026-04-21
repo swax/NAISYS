@@ -228,6 +228,7 @@ export function createMockOutputService() {
     write: vi.fn(),
     comment: vi.fn(),
     commentAndLog: vi.fn(() => Promise.resolve()),
+    logOnly: vi.fn(),
     error: vi.fn(),
     errorAndLog: vi.fn(() => Promise.resolve()),
     consoleBuffer: [],
