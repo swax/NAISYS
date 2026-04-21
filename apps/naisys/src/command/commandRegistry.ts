@@ -14,10 +14,33 @@ export enum NextCommandAction {
   SessionComplete,
 }
 
+export type WaitBehavior =
+  | { kind: "none" }
+  | { kind: "timed"; seconds: number }
+  | { kind: "indefinite" };
+
+export function noWait(): WaitBehavior {
+  return { kind: "none" };
+}
+
+export function timedWait(seconds: number): WaitBehavior {
+  return seconds > 0 ? { kind: "timed", seconds } : noWait();
+}
+
+export function indefiniteWait(): WaitBehavior {
+  return { kind: "indefinite" };
+}
+
+export function isTimedWait(
+  wait: WaitBehavior | undefined,
+): wait is Extract<WaitBehavior, { kind: "timed" }> {
+  return wait?.kind === "timed";
+}
+
 export interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
-  /** 0 means no wait, and -1 means wait indefinitely until a wake event occurs */
-  pauseSeconds?: number;
+  /** Explicit wait behavior before the next iteration. Omit to use the mode default. */
+  wait?: WaitBehavior;
   /** If true, immediately switch to LLM mode for a follow-up response */
   switchToLLM?: boolean;
 }

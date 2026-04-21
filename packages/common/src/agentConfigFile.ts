@@ -96,7 +96,7 @@ export const AgentConfigFileSchema = z.object({
     .min(0, "Must be non-negative")
     .optional()
     .describe(
-      "Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's console is in focus. Unset waits indefinitely for manual input",
+      "Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's console is in focus. Set to 0 to continue immediately. Unset waits indefinitely for manual input",
     ),
 
   wakeOnMessage: z

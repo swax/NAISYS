@@ -8,7 +8,11 @@ import type {
   CommandResponse,
   RegistrableCommand,
 } from "../command/commandRegistry.js";
-import { NextCommandAction } from "../command/commandRegistry.js";
+import {
+  NextCommandAction,
+  noWait,
+  timedWait,
+} from "../command/commandRegistry.js";
 import type { ShellCommand } from "../command/shellCommand.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
@@ -90,11 +94,10 @@ export function createSessionService(
   function handleWait(
     secondsArg: string | undefined,
   ): string | CommandResponse {
-    let waitSeconds = secondsArg ? parseInt(secondsArg) : 0;
+    const waitSeconds = secondsArg ? parseInt(secondsArg) : NaN;
 
-    // We did support indefinite waiting, which you can do by returning a pauseSeconds value of -1
-    // The problem was all the agents waiting indefinitely would end up hanging the entire system
-    if (!waitSeconds) {
+    // Indefinite waits are kept internal so unattended agents do not hang the system.
+    if (isNaN(waitSeconds) || waitSeconds <= 0) {
       return `Please specify the number of seconds to wait, for example: ns-session wait 60`;
     }
 
@@ -102,7 +105,7 @@ export function createSessionService(
       content: "",
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.Continue,
-        pauseSeconds: waitSeconds,
+        wait: timedWait(waitSeconds),
       },
     };
   }
@@ -148,7 +151,7 @@ export function createSessionService(
       content: "",
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.CompactSession,
-        pauseSeconds: 0,
+        wait: noWait(),
       },
     };
   }
@@ -228,7 +231,7 @@ export function createSessionService(
       content: "",
       nextCommandResponse: {
         nextCommandAction: NextCommandAction.SessionComplete,
-        pauseSeconds: 0,
+        wait: noWait(),
       },
     };
   }
