@@ -6,6 +6,7 @@ export interface ClientConfig {
     timeoutSeconds: number;
     maxTimeoutSeconds: number;
   };
+  retrySecondsBase: number;
   retrySecondsMax: number;
   webTokenMax: number;
   compactSessionEnabled: boolean;
@@ -45,6 +46,7 @@ export function buildClientConfig(
     maxTimeoutSeconds: 60 * 5,
   };
 
+  const retrySecondsBase = 5;
   const retrySecondsMax = 30 * 60;
   const webTokenMax = 5000;
   const compactSessionEnabled = true;
@@ -73,6 +75,7 @@ export function buildClientConfig(
 
   return {
     shellCommand,
+    retrySecondsBase,
     retrySecondsMax,
     webTokenMax,
     compactSessionEnabled,

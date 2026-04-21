@@ -629,11 +629,8 @@ export function createCommandLoop(
   }
 
   function getErrorBackoffWait(llmErrorCount: number) {
-    const backoffBaseSeconds = Math.max(
-      agentConfig().debugPauseSeconds ?? 0,
-      1,
-    );
-    let backoffSeconds = backoffBaseSeconds * 2 ** (llmErrorCount - 1);
+    let backoffSeconds =
+      globalConfig().retrySecondsBase * 2 ** (llmErrorCount - 1);
 
     if (backoffSeconds > globalConfig().retrySecondsMax) {
       backoffSeconds = globalConfig().retrySecondsMax;
