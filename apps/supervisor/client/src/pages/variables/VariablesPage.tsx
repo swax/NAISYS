@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Button,
-  Checkbox,
   Container,
   Group,
   Loader,
@@ -19,7 +18,9 @@ import {
   IconEye,
   IconEyeOff,
   IconInfoCircle,
+  IconLock,
   IconPencil,
+  IconTerminal2,
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
@@ -171,7 +172,7 @@ export const VariablesPage: React.FC = () => {
             <Table.Tr>
               <Table.Th>Key</Table.Th>
               <Table.Th>Value</Table.Th>
-              <Table.Th w={60}>
+              <Table.Th w={70}>
                 <Group gap={4} wrap="nowrap">
                   Shell
                   <Tooltip
@@ -183,7 +184,7 @@ export const VariablesPage: React.FC = () => {
                   </Tooltip>
                 </Group>
               </Table.Th>
-              <Table.Th w={60}>
+              <Table.Th w={90}>
                 <Group gap={4} wrap="nowrap">
                   Sensitive
                   <Tooltip
@@ -259,30 +260,66 @@ export const VariablesPage: React.FC = () => {
                   )}
                 </Table.Td>
                 <Table.Td>
-                  {editingKey === item.key ? (
-                    <Checkbox
-                      checked={editExportToShell}
-                      onChange={(e) =>
-                        setEditExportToShell(e.currentTarget.checked)
+                  <Tooltip label="Exported to the agent's shell environment">
+                    <ActionIcon
+                      size="sm"
+                      variant="transparent"
+                      color={
+                        (editingKey === item.key
+                          ? editExportToShell
+                          : item.exportToShell)
+                          ? "blue"
+                          : "gray"
                       }
-                      size="xs"
-                    />
-                  ) : (
-                    <Checkbox checked={item.exportToShell} readOnly size="xs" />
-                  )}
+                      onClick={
+                        editingKey === item.key
+                          ? () => setEditExportToShell((v) => !v)
+                          : undefined
+                      }
+                      style={{
+                        cursor:
+                          editingKey === item.key ? "pointer" : "default",
+                        opacity: (editingKey === item.key
+                          ? editExportToShell
+                          : item.exportToShell)
+                          ? 1
+                          : 0.35,
+                      }}
+                    >
+                      <IconTerminal2 size={18} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Table.Td>
                 <Table.Td>
-                  {editingKey === item.key ? (
-                    <Checkbox
-                      checked={editSensitive}
-                      onChange={(e) =>
-                        setEditSensitive(e.currentTarget.checked)
+                  <Tooltip label="Value is masked in the UI">
+                    <ActionIcon
+                      size="sm"
+                      variant="transparent"
+                      color={
+                        (editingKey === item.key
+                          ? editSensitive
+                          : item.sensitive)
+                          ? "orange"
+                          : "gray"
                       }
-                      size="xs"
-                    />
-                  ) : (
-                    <Checkbox checked={item.sensitive} readOnly size="xs" />
-                  )}
+                      onClick={
+                        editingKey === item.key
+                          ? () => setEditSensitive((v) => !v)
+                          : undefined
+                      }
+                      style={{
+                        cursor:
+                          editingKey === item.key ? "pointer" : "default",
+                        opacity: (editingKey === item.key
+                          ? editSensitive
+                          : item.sensitive)
+                          ? 1
+                          : 0.35,
+                      }}
+                    >
+                      <IconLock size={18} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Table.Td>
                 {canManage && (
                   <Table.Td>
@@ -353,20 +390,36 @@ export const VariablesPage: React.FC = () => {
                   />
                 </Table.Td>
                 <Table.Td>
-                  <Checkbox
-                    checked={newExportToShell}
-                    onChange={(e) =>
-                      setNewExportToShell(e.currentTarget.checked)
-                    }
-                    size="xs"
-                  />
+                  <Tooltip label="Exported to the agent's shell environment">
+                    <ActionIcon
+                      size="sm"
+                      variant="transparent"
+                      color={newExportToShell ? "blue" : "gray"}
+                      onClick={() => setNewExportToShell((v) => !v)}
+                      style={{
+                        cursor: "pointer",
+                        opacity: newExportToShell ? 1 : 0.35,
+                      }}
+                    >
+                      <IconTerminal2 size={18} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Table.Td>
                 <Table.Td>
-                  <Checkbox
-                    checked={newSensitive}
-                    onChange={(e) => setNewSensitive(e.currentTarget.checked)}
-                    size="xs"
-                  />
+                  <Tooltip label="Value is masked in the UI">
+                    <ActionIcon
+                      size="sm"
+                      variant="transparent"
+                      color={newSensitive ? "orange" : "gray"}
+                      onClick={() => setNewSensitive((v) => !v)}
+                      style={{
+                        cursor: "pointer",
+                        opacity: newSensitive ? 1 : 0.35,
+                      }}
+                    >
+                      <IconLock size={18} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Table.Td>
                 <Table.Td>
                   <Button
