@@ -100,11 +100,15 @@ export const mailCmd: CommandDef = {
   subcommands: {
     send: {
       usage: 'send "<users>" "<subject>" "<msg>" [file1 file2 ...]',
-      description: "Send a message, optionally attach files",
+      description: "Send a message (subject and msg are separate quoted args)",
     },
-    list: {
-      usage: "list [received|sent]",
-      description: "List recent messages (non-archived, * = unread)",
+    inbox: {
+      usage: "inbox",
+      description: "List received messages (non-archived, * = unread)",
+    },
+    outbox: {
+      usage: "outbox",
+      description: "List sent messages (non-archived)",
     },
     read: {
       usage: "read <id>",

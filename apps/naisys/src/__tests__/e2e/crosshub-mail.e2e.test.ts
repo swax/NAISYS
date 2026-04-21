@@ -166,7 +166,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
 
     // --- Verify bob received mail ---
     hostB.flushOutput();
-    hostB.sendCommand("ns-mail list");
+    hostB.sendCommand("ns-mail inbox");
     await hostB.waitForOutput("alex", 15000);
     await hostB.waitForPrompt();
 
