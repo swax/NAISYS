@@ -1,2 +1,2 @@
-# Even on Windows, these bin commands are run by WSL so the line endings need to be LF, or bash will error out
+# Shebang scripts need LF line endings, or Unix kernels fail to exec them after a Windows checkout
 * text eol=lf
