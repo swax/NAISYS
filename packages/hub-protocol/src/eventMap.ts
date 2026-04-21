@@ -51,6 +51,7 @@ import type { ModelsResponse } from "./schemas/models.js";
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
+  SessionHeartbeat,
   SessionIncrementRequest,
   SessionIncrementResponse,
   SessionPush,
@@ -158,6 +159,7 @@ export interface HubSupervisorPushEvents {
   [HubEvents.MAIL_READ_PUSH]: MailReadPush;
   [HubEvents.COST_PUSH]: CostPush;
   [HubEvents.SESSION_PUSH]: SessionPush;
+  [HubEvents.SESSION_HEARTBEAT]: SessionHeartbeat;
 }
 
 // ---------------------------------------------------------------------------

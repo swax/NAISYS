@@ -46,6 +46,8 @@ export const HubEvents = {
   COST_PUSH: "cost_push",
   /** New session push with full RunSession data */
   SESSION_PUSH: "session_push",
+  /** Per-heartbeat lastActive bumps for active run sessions */
+  SESSION_HEARTBEAT: "session_heartbeat",
 
   // ---------------------------------------------------------------------------
   // Hub -> NAISYS push (targeted to specific host)

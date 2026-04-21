@@ -10,6 +10,8 @@ export interface IAgentManager {
     agentUserId: number;
     agentUsername: string;
     agentTitle: string;
+    getRunId: () => number;
+    getSessionId: () => number;
   }>;
   getBufferLines: (agentUserId: number) => string[];
   setActiveConsoleAgent: (agentUserId: number) => void;

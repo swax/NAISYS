@@ -15,6 +15,7 @@ import {
   LogPushSchema,
   MailPushSchema,
   MailReadPushSchema,
+  SessionHeartbeatSchema,
   SessionPushSchema,
 } from "@naisys/hub-protocol";
 import type { Socket } from "socket.io-client";
@@ -229,6 +230,25 @@ export function initHubConnection(hubUrl: string) {
     const browserIO = getIO();
     const room = `runs:${username}`;
     browserIO.to(room).emit(room, { type: "new-session", ...session });
+  });
+
+  socket.on(HubEvents.SESSION_HEARTBEAT, (data) => {
+    const parsed = SessionHeartbeatSchema.safeParse(data);
+    if (!parsed.success) {
+      getLogger().warn(
+        "[Supervisor:HubClient] Invalid session heartbeat: %o",
+        parsed.error,
+      );
+      return;
+    }
+
+    const browserIO = getIO();
+    for (const update of parsed.data.updates) {
+      const username = resolveUsername(update.userId);
+      if (!username) continue;
+      const room = `runs:${username}`;
+      browserIO.to(room).emit(room, { type: "heartbeat-update", ...update });
+    }
   });
 
   // Track last pushed message ID per room for gap detection
