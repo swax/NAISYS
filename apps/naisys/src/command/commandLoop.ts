@@ -241,10 +241,15 @@ export function createCommandLoop(
 
     // Even if mail/chat not enabled, we may be sent mail/chat from agents that do have it enabled, and we
     // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
-    await mailService.checkAndNotify();
-    await chatService.checkAndNotify();
-    // Discard commands from startup notifications — they'll be picked up in the main loop
-    await processNotifications();
+    try {
+      await mailService.checkAndNotify();
+      await chatService.checkAndNotify();
+      // Discard commands from startup notifications — they'll be picked up in the main loop
+      await processNotifications();
+    } catch (e) {
+      // Hub can flap during startup; don't crash the agent — let the main loop recover
+      handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+    }
 
     inputMode.setDebug();
 

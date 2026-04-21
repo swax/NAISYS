@@ -22,6 +22,11 @@ export interface HubConnectionInfo {
 
 type EventHandler = (...args: any[]) => void;
 
+/** Upper bound on any request/response round-trip. Without this, a socket
+ *  drop mid-request leaves the ack callback dangling and the promise hangs
+ *  forever — the agent stalls instead of erroring out and retrying. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export function createHubClient(
   hubClientConfig: HubClientConfig,
   hubClientLog: DualLogger,
@@ -155,13 +160,32 @@ export function createHubClient(
     }
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(
+          new Error(
+            `Hub request '${event}' timed out after ${REQUEST_TIMEOUT_MS}ms`,
+          ),
+        );
+      }, REQUEST_TIMEOUT_MS);
+
       const sent = activeConnection!.sendMessage(
         event,
         payload,
-        (response: unknown) => resolve(response),
+        (response: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve(response);
+        },
       );
 
-      if (!sent) {
+      if (!sent && !settled) {
+        settled = true;
+        clearTimeout(timeout);
         reject(new Error("Failed to send request - not connected"));
       }
     });
