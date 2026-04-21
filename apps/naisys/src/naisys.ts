@@ -70,7 +70,7 @@ program
   .option("--setup", "Run interactive setup wizard")
   .parse();
 
-if (wizardRan) {
+if (!isHubClient) {
   await ensureAgentConfig(program.args[0]);
 }
 
