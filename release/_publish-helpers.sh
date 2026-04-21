@@ -3,6 +3,8 @@
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPTS="$ROOT/release"
+NPM_VISIBILITY_MAX_ATTEMPTS="${NPM_VISIBILITY_MAX_ATTEMPTS:-12}"
+NPM_VISIBILITY_RETRY_SECONDS="${NPM_VISIBILITY_RETRY_SECONDS:-3}"
 
 # Packages end-users install directly. Each gets an npm-shrinkwrap.json at
 # publish time to pin all transitive deps. Library packages installed only as
@@ -26,8 +28,10 @@ is_leaf_package() {
 # isolated temp dir (outside the workspace). --prefer-offline reuses the npm
 # cache populated by the most recent `npm install` at the workspace root, so
 # transitive deps resolve to the same versions you tested with rather than
-# whatever's latest on the registry at publish time. Workspace sibling deps
-# get fetched from npm (cache miss) — they were published earlier in the loop.
+# whatever's latest on the registry at publish time. Workspace sibling deps are
+# handled separately by waiting for published library packages to appear on npm
+# before any leaf shrinkwraps are generated. That online metadata check also
+# refreshes the shared npm cache that the later --prefer-offline install reads.
 generate_shrinkwrap() {
   local pkg_dir="$1"
   local tmp_dir
@@ -35,16 +39,36 @@ generate_shrinkwrap() {
 
   cp "$pkg_dir/package.json" "$tmp_dir/package.json"
 
-  (
-    cd "$tmp_dir"
-    npm install --package-lock-only --prefer-offline --ignore-scripts --omit=dev >/dev/null
-  ) || {
+  local install_output
+  if ! install_output=$(cd "$tmp_dir" && npm install --package-lock-only --prefer-offline --ignore-scripts --omit=dev 2>&1); then
+    echo "$install_output" >&2
     rm -rf "$tmp_dir"
     return 1
-  }
+  fi
 
   mv "$tmp_dir/package-lock.json" "$pkg_dir/npm-shrinkwrap.json"
   rm -rf "$tmp_dir"
+}
+
+# Wait until a just-published package version is visible in npm registry
+# metadata. This both synchronizes with registry propagation and refreshes the
+# local packument cache consulted by later --prefer-offline shrinkwrap installs.
+wait_for_registry_version() {
+  local name="$1"
+  local version="$2"
+  local attempt=1
+
+  while :; do
+    if npm view --prefer-online "$name@$version" version >/dev/null 2>&1; then
+      return 0
+    fi
+    if [[ $attempt -ge $NPM_VISIBILITY_MAX_ATTEMPTS ]]; then
+      return 1
+    fi
+    echo "  $name@$version not visible on npm yet ($attempt/$NPM_VISIBILITY_MAX_ATTEMPTS), retrying in ${NPM_VISIBILITY_RETRY_SECONDS}s..."
+    sleep "$NPM_VISIBILITY_RETRY_SECONDS"
+    attempt=$((attempt + 1))
+  done
 }
 
 # Remove any npm-shrinkwrap.json files in leaf packages. Safe to call multiple
@@ -125,7 +149,10 @@ build_and_format() {
 }
 
 # Publish all workspaces individually, optionally with a dist-tag.
-# Publishes in dependency order. Continues past failures and reports them at the end.
+# Publishes in dependency order. Library packages are polled on npm after
+# publish so leaf shrinkwrap generation does not race registry propagation.
+# Continues past ordinary publish failures, but aborts on propagation timeout to
+# avoid turning one stale packument into a cascade of downstream ETARGET errors.
 publish_packages() {
   local tag_args=()
   if [[ $# -gt 0 ]]; then
@@ -135,42 +162,57 @@ publish_packages() {
   echo ""
   echo "=== Publishing ==="
 
-  local failed=()
+  local issues=()
+  local aborted_due_to_propagation=0
+  local abort_reason=""
   for i in "${!PACKAGE_DIRS[@]}"; do
     local dir="${PACKAGE_DIRS[$i]}"
     local name="${PACKAGE_NAMES[$i]}"
+    local version
+    version=$(node -e "console.log(require('$dir/package.json').version)")
     echo ""
     echo "--- $name ---"
 
-    local generated_shrinkwrap=0
     if is_leaf_package "$name"; then
       echo "Generating npm-shrinkwrap.json..."
-      if generate_shrinkwrap "$dir"; then
-        generated_shrinkwrap=1
-      else
+      if ! generate_shrinkwrap "$dir"; then
         echo "ERROR: Failed to generate shrinkwrap for $name"
-        failed+=("$name")
+        issues+=("$name")
         continue
       fi
     fi
 
     if ! npm publish --access public "${tag_args[@]}" --workspace "$dir" 2>&1; then
-      failed+=("$name")
+      issues+=("$name")
+    elif ! is_leaf_package "$name"; then
+      echo "Waiting for $name@$version to appear on npm..."
+      if ! wait_for_registry_version "$name" "$version"; then
+        echo "ERROR: $name@$version did not appear on npm in time"
+        issues+=("$name")
+        aborted_due_to_propagation=1
+        abort_reason="$name@$version did not appear on npm within $((NPM_VISIBILITY_MAX_ATTEMPTS * NPM_VISIBILITY_RETRY_SECONDS))s"
+        break
+      fi
     fi
 
-    if [[ "$generated_shrinkwrap" == "1" ]]; then
+    if is_leaf_package "$name"; then
       rm -f "$dir/npm-shrinkwrap.json"
     fi
   done
 
   echo ""
-  if [[ ${#failed[@]} -gt 0 ]]; then
-    echo "=== WARNING: ${#failed[@]} package(s) failed to publish ==="
-    for name in "${failed[@]}"; do
+  if [[ ${#issues[@]} -gt 0 ]]; then
+    echo "=== WARNING: ${#issues[@]} package(s) had publish issues ==="
+    for name in "${issues[@]}"; do
       echo "  - $name"
     done
     echo ""
-    echo "Re-run the failed publishes manually or retry the script."
+    if [[ "$aborted_due_to_propagation" == "1" ]]; then
+      echo "Publish loop aborted after registry propagation timeout to avoid cascading downstream failures."
+      echo "Root cause: $abort_reason"
+      echo ""
+    fi
+    echo "Re-run the affected publishes manually or retry the script."
     return 1
   else
     echo "=== All packages published successfully ==="
