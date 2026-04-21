@@ -1,6 +1,5 @@
 import {
   Badge,
-  Checkbox,
   Container,
   Group,
   Loader,
@@ -14,23 +13,13 @@ import {
   Title,
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import type { DispatchListResponse } from "@naisys/erp-shared";
-import { OperationRunStatus, OrderRunPriorityEnum } from "@naisys/erp-shared";
+import type { ReadyToCloseListResponse } from "@naisys/erp-shared";
+import { OrderRunPriorityEnum } from "@naisys/erp-shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { UserAutocomplete } from "../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { cellLinkStyle } from "../../lib/tableStyles";
-
-const STATUS_COLORS: Record<string, string> = {
-  [OperationRunStatus.blocked]: "gray",
-  [OperationRunStatus.pending]: "blue",
-  [OperationRunStatus.in_progress]: "yellow",
-  [OperationRunStatus.completed]: "green",
-  [OperationRunStatus.skipped]: "gray",
-  [OperationRunStatus.failed]: "red",
-};
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: "gray",
@@ -39,30 +28,18 @@ const PRIORITY_COLORS: Record<string, string> = {
   critical: "red",
 };
 
-const STATUS_OPTIONS = [
-  { value: OperationRunStatus.pending, label: "Pending" },
-  { value: OperationRunStatus.in_progress, label: "In Progress" },
-  { value: OperationRunStatus.failed, label: "Failed" },
-];
-
-export const DispatchList: React.FC = () => {
+export const DispatchReadyToClose: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get("page")) || 1;
-  const status = searchParams.get("status") || undefined;
   const priority = searchParams.get("priority") || undefined;
   const search = searchParams.get("search") || "";
-  const viewAs = searchParams.get("viewAs") || "";
-  const canWork = searchParams.get("canWork") === "true";
-  const clockedIn = searchParams.get("clockedIn") === "true";
 
   const [searchInput, setSearchInput] = useState(search);
-  const [viewAsInput, setViewAsInput] = useState(viewAs);
   const [debouncedSearch] = useDebouncedValue(searchInput, 300);
   const isFirstRender = useRef(true);
 
-  // Sync debounced value to search params
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -76,7 +53,7 @@ export const DispatchList: React.FC = () => {
     });
   }, [debouncedSearch, setSearchParams]);
 
-  const [data, setData] = useState<DispatchListResponse | null>(null);
+  const [data, setData] = useState<ReadyToCloseListResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -85,15 +62,11 @@ export const DispatchList: React.FC = () => {
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("pageSize", "20");
-      if (status) params.set("status", status);
       if (priority) params.set("priority", priority);
       if (search) params.set("search", search);
-      if (viewAs) params.set("viewAs", viewAs);
-      if (canWork) params.set("canWork", "true");
-      if (clockedIn) params.set("clockedIn", "true");
 
-      const result = await api.get<DispatchListResponse>(
-        `${apiEndpoints.dispatch}?${params}`,
+      const result = await api.get<ReadyToCloseListResponse>(
+        `${apiEndpoints.dispatchReadyToClose}?${params}`,
       );
       setData(result);
     } catch (err) {
@@ -101,7 +74,7 @@ export const DispatchList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status, priority, search, viewAs, canWork, clockedIn]);
+  }, [page, priority, search]);
 
   useEffect(() => {
     void fetchData();
@@ -116,9 +89,9 @@ export const DispatchList: React.FC = () => {
       </Group>
 
       <Tabs
-        value="open"
+        value="ready-to-close"
         onChange={(v) => {
-          if (v === "ready-to-close") navigate("/dispatch/ready-to-close");
+          if (v === "open") navigate("/dispatch");
         }}
         mb="md"
       >
@@ -130,24 +103,10 @@ export const DispatchList: React.FC = () => {
 
       <Group mb="md">
         <TextInput
-          placeholder="Search..."
+          placeholder="Search order key or description..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.currentTarget.value)}
           style={{ flex: 1 }}
-        />
-        <Select
-          placeholder="All open"
-          data={STATUS_OPTIONS}
-          value={status ?? null}
-          onChange={(val) => {
-            setSearchParams((prev) => {
-              if (val) prev.set("status", val);
-              else prev.delete("status");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-          clearable
         />
         <Select
           placeholder="All priorities"
@@ -166,54 +125,6 @@ export const DispatchList: React.FC = () => {
           }}
           clearable
         />
-        <UserAutocomplete
-          placeholder="View as user..."
-          value={viewAsInput}
-          onChange={(val) => {
-            setViewAsInput(val);
-            if (!val) {
-              setSearchParams((prev) => {
-                prev.delete("viewAs");
-                prev.set("page", "1");
-                return prev;
-              });
-            }
-          }}
-          onUserSelect={(user) => {
-            setViewAsInput(user.username);
-            setSearchParams((prev) => {
-              prev.set("viewAs", user.username);
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-          w={180}
-          size="sm"
-        />
-        <Checkbox
-          label="Can Work"
-          checked={canWork}
-          onChange={(e) => {
-            setSearchParams((prev) => {
-              if (e.currentTarget.checked) prev.set("canWork", "true");
-              else prev.delete("canWork");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-        />
-        <Checkbox
-          label="Clocked In"
-          checked={clockedIn}
-          onChange={(e) => {
-            setSearchParams((prev) => {
-              if (e.currentTarget.checked) prev.set("clockedIn", "true");
-              else prev.delete("clockedIn");
-              prev.set("page", "1");
-              return prev;
-            });
-          }}
-        />
       </Group>
 
       {loading ? (
@@ -226,21 +137,20 @@ export const DispatchList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Order / Run</Table.Th>
-                <Table.Th>Operation</Table.Th>
-                <Table.Th>Can Work</Table.Th>
+                <Table.Th>Description</Table.Th>
                 <Table.Th>Status</Table.Th>
                 <Table.Th>Priority</Table.Th>
-                <Table.Th>Assigned To</Table.Th>
+                <Table.Th>Ops</Table.Th>
                 <Table.Th>Due</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {data.items.map((item) => {
-                const opRunLink = `/orders/${item.orderKey}/runs/${item.runNo}/ops/${item.seqNo}`;
+                const runLink = `/orders/${item.orderKey}/runs/${item.runNo}`;
                 return (
                   <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
+                      <Link to={runLink} style={cellLinkStyle}>
                         <Group gap="xs" wrap="nowrap">
                           <Text size="sm" ff="monospace">
                             {item.orderKey}
@@ -255,35 +165,21 @@ export const DispatchList: React.FC = () => {
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
-                        <Text size="sm">
-                          <Text span ff="monospace">
-                            {item.seqNo}
-                          </Text>
-                          {" \u2014 "}
-                          {item.title}
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Text size="sm" lineClamp={1}>
+                          {item.description}
                         </Text>
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
-                        <Text size="sm" c={item.canWork ? "green" : "red"}>
-                          {item.canWork ? "Yes" : "No"}
-                        </Text>
-                      </Link>
-                    </Table.Td>
-                    <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
-                        <Badge
-                          color={STATUS_COLORS[item.status] ?? "gray"}
-                          variant="light"
-                        >
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Badge color="blue" variant="light">
                           {item.status}
                         </Badge>
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
+                      <Link to={runLink} style={cellLinkStyle}>
                         <Badge
                           color={PRIORITY_COLORS[item.priority] ?? "gray"}
                           variant="light"
@@ -293,15 +189,15 @@ export const DispatchList: React.FC = () => {
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
-                        {item.assignedTo ?? "\u2014"}
+                      <Link to={runLink} style={cellLinkStyle}>
+                        <Text size="sm">{item.opCount}</Text>
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
-                      <Link to={opRunLink} style={cellLinkStyle}>
+                      <Link to={runLink} style={cellLinkStyle}>
                         {item.dueAt
                           ? new Date(item.dueAt).toLocaleDateString()
-                          : "\u2014"}
+                          : "—"}
                       </Link>
                     </Table.Td>
                   </Table.Tr>
@@ -326,7 +222,7 @@ export const DispatchList: React.FC = () => {
         </>
       ) : (
         <Text c="dimmed" ta="center" py="xl">
-          No open operations found.
+          No order runs ready to close.
         </Text>
       )}
     </Container>

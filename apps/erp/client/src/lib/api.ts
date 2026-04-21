@@ -118,6 +118,7 @@ export const api = {
 
 export const apiEndpoints = {
   dispatch: "dispatch",
+  dispatchReadyToClose: "dispatch/ready-to-close",
   inventory: "inventory",
   items: "items",
   item: (key: string) => `items/${key}`,

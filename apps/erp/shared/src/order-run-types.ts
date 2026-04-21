@@ -185,3 +185,41 @@ export const DispatchListResponseSchema = z.object({
 });
 
 export type DispatchListResponse = z.infer<typeof DispatchListResponseSchema>;
+
+// Query params for ready-to-close view: open order runs with no open ops
+export const ReadyToCloseListQuerySchema = z.object({
+  ...paginationQuery(),
+  priority: OrderRunPriorityEnum.optional(),
+  search: z.string().optional(),
+});
+
+export type ReadyToCloseListQuery = z.infer<typeof ReadyToCloseListQuerySchema>;
+
+// Ready-to-close item = order run whose ops are all completed/skipped
+export const ReadyToCloseItemSchema = z.object({
+  id: z.number(),
+  orderKey: z.string(),
+  revNo: z.number(),
+  runNo: z.number(),
+  description: z.string(),
+  status: OrderRunStatusEnum,
+  priority: OrderRunPriorityEnum,
+  dueAt: z.string().nullable(),
+  opCount: z.number(),
+  createdAt: z.iso.datetime(),
+});
+
+export type ReadyToCloseItem = z.infer<typeof ReadyToCloseItemSchema>;
+
+export const ReadyToCloseListResponseSchema = z.object({
+  items: z.array(ReadyToCloseItemSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
+});
+
+export type ReadyToCloseListResponse = z.infer<
+  typeof ReadyToCloseListResponseSchema
+>;
