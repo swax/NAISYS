@@ -24,7 +24,8 @@ export function createCommandProtection(
       case "manual": {
         const commandAllowed = await getConfirmation(
           output,
-          "Allow command to run? [y/N]",
+          "Allow command to run? [Y/n]",
+          { defaultAccept: true, nonInteractiveAccept: false },
         );
         return {
           commandAllowed,
@@ -99,7 +100,8 @@ Respond with exactly one of:
 
     const overridden = await getConfirmation(
       output,
-      "Allow command anyway? [y/N]",
+      "Allow command anyway? [Y/n]",
+      { defaultAccept: true },
     );
 
     return {

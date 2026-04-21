@@ -6,6 +6,8 @@ import { getSharedReadline } from "./sharedReadline.js";
 export interface ConfirmOptions {
   /** If true, empty answer and timeout resolve to true. Default: false */
   defaultAccept?: boolean;
+  /** Result when no interactive console is available. Defaults to defaultAccept */
+  nonInteractiveAccept?: boolean;
   /** Timeout in seconds. If > 0, auto-resolves to defaultAccept on expiry */
   timeoutSeconds?: number;
 }
@@ -20,6 +22,7 @@ export function getConfirmation(
   options?: ConfirmOptions,
 ): Promise<boolean> {
   const defaultAccept = options?.defaultAccept ?? false;
+  const nonInteractiveAccept = options?.nonInteractiveAccept ?? defaultAccept;
   const timeoutSeconds = options?.timeoutSeconds;
 
   return new Promise<boolean>((resolve) => {
@@ -30,9 +33,10 @@ export function getConfirmation(
         ? "console disabled"
         : "no interactive terminal";
       output.comment(
-        prompt + (defaultAccept ? "<auto-approved>" : `<denied: ${reason}>`),
+        prompt +
+          (nonInteractiveAccept ? "<auto-approved>" : `<denied: ${reason}>`),
       );
-      resolve(defaultAccept);
+      resolve(nonInteractiveAccept);
       return;
     }
     const controller = new AbortController();
