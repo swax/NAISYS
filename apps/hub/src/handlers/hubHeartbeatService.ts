@@ -1,6 +1,9 @@
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
-import type { AgentsStatus } from "@naisys/hub-protocol";
+import type {
+  AgentsStatus,
+  SessionHeartbeatUpdate,
+} from "@naisys/hub-protocol";
 import {
   HeartbeatSchema,
   HUB_HEARTBEAT_INTERVAL_MS,
@@ -17,6 +20,13 @@ export function createHubHeartbeatService(
 ) {
   // Track active agent user IDs per host from heartbeat data
   const hostActiveAgents = new Map<number, number[]>();
+
+  // Track each active agent's current run session and its last heartbeat time.
+  // Keyed by hostId so we can drop sessions when a host disconnects.
+  const hostActiveSessions = new Map<
+    number,
+    Map<number, { runId: number; sessionId: number; lastActive: string }>
+  >();
 
   // Track per-agent notification IDs (latestLogId, latestMailId)
   const agentNotifications = new Map<
@@ -42,8 +52,10 @@ export function createHubHeartbeatService(
   naisysServer.registerEvent(HubEvents.HEARTBEAT, async (hostId, data) => {
     const parsed = HeartbeatSchema.parse(data);
 
+    const activeUserIds = parsed.activeSessions.map((s) => s.userId);
+
     // Update in-memory per-host active agent IDs
-    hostActiveAgents.set(hostId, parsed.activeUserIds);
+    hostActiveAgents.set(hostId, activeUserIds);
 
     try {
       const now = new Date().toISOString();
@@ -55,12 +67,36 @@ export function createHubHeartbeatService(
       });
 
       // Update user_notifications.last_active for each active user
-      if (parsed.activeUserIds.length > 0) {
+      if (activeUserIds.length > 0) {
         await hubDb.user_notifications.updateMany({
-          where: { user_id: { in: parsed.activeUserIds } },
+          where: { user_id: { in: activeUserIds } },
           data: { last_active: now, latest_host_id: hostId },
         });
       }
+
+      // Bump run_session.last_active for each active session so the run-online
+      // badge stays lit even during quiet periods with no log writes. The
+      // aggregate SESSION_HEARTBEAT broadcast runs on its own interval below.
+      const sessionMap = new Map<
+        number,
+        { runId: number; sessionId: number; lastActive: string }
+      >();
+      for (const session of parsed.activeSessions) {
+        await hubDb.run_session.updateMany({
+          where: {
+            user_id: session.userId,
+            run_id: session.runId,
+            session_id: session.sessionId,
+          },
+          data: { last_active: now },
+        });
+        sessionMap.set(session.userId, {
+          runId: session.runId,
+          sessionId: session.sessionId,
+          lastActive: now,
+        });
+      }
+      hostActiveSessions.set(hostId, sessionMap);
     } catch (error) {
       logService.error(
         `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
@@ -71,6 +107,7 @@ export function createHubHeartbeatService(
   // Clean up tracking when a host disconnects
   naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
     hostActiveAgents.delete(hostId);
+    hostActiveSessions.delete(hostId);
     throttledPushAgentsStatus();
   });
 
@@ -101,8 +138,32 @@ export function createHubHeartbeatService(
     }, 500);
   }
 
-  // Periodically push aggregate active user status to all NAISYS instances
-  const pushInterval = setInterval(pushAgentsStatus, HUB_HEARTBEAT_INTERVAL_MS);
+  /** Push aggregate session lastActive bumps to supervisors */
+  function pushSessionHeartbeat() {
+    const updates: SessionHeartbeatUpdate[] = [];
+    for (const sessions of hostActiveSessions.values()) {
+      for (const [userId, info] of sessions) {
+        updates.push({
+          userId,
+          runId: info.runId,
+          sessionId: info.sessionId,
+          lastActive: info.lastActive,
+        });
+      }
+    }
+    if (updates.length === 0) return;
+
+    naisysServer.broadcastToSupervisors(HubEvents.SESSION_HEARTBEAT, {
+      updates,
+    });
+  }
+
+  // Periodically push aggregate active user status to all NAISYS instances,
+  // plus aggregate session heartbeats to supervisors.
+  const pushInterval = setInterval(() => {
+    pushAgentsStatus();
+    pushSessionHeartbeat();
+  }, HUB_HEARTBEAT_INTERVAL_MS);
 
   function getHostActiveAgentCount(hostId: number): number {
     return hostActiveAgents.get(hostId)?.length ?? 0;

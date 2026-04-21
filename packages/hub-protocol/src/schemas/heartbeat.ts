@@ -6,9 +6,17 @@ export const NAISYS_HEARTBEAT_INTERVAL_MS = 2000;
 /** How often the hub pushes aggregate active user status to all connections (NAISYS/Supervisors) (ms) */
 export const HUB_HEARTBEAT_INTERVAL_MS = 2000;
 
-/** Sent by NAISYS instance to hub with active user IDs */
+/** Identifies an agent's current run session, sent with each heartbeat */
+export const HeartbeatSessionSchema = z.object({
+  userId: z.number(),
+  runId: z.number(),
+  sessionId: z.number(),
+});
+export type HeartbeatSession = z.infer<typeof HeartbeatSessionSchema>;
+
+/** Sent by NAISYS instance to hub with each running agent's current session */
 export const HeartbeatSchema = z.object({
-  activeUserIds: z.array(z.number()),
+  activeSessions: z.array(HeartbeatSessionSchema),
 });
 export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 

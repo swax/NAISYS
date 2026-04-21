@@ -1,6 +1,7 @@
 import type {
   CostPushEntry,
   LogPushSessionUpdate,
+  SessionHeartbeatUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
@@ -10,7 +11,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RunsDataParams } from "../lib/apiRuns";
 import { getRunsData } from "../lib/apiRuns";
 import type { RunSession } from "../types/runSession";
+import { isRunActive } from "./runStatus";
 import { useSubscription } from "./useSubscription";
+import { useTick } from "./useTick";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
@@ -23,11 +26,22 @@ const pagesLoadedCache = new Map<string, number>();
 type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
 type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
 type RunsNewSession = SessionPush["session"] & { type: "new-session" };
-type RunsEvent = RunsLogUpdate | RunsCostUpdate | RunsNewSession;
+type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
+  type: "heartbeat-update";
+};
+type RunsEvent =
+  | RunsLogUpdate
+  | RunsCostUpdate
+  | RunsNewSession
+  | RunsHeartbeatUpdate;
 
 export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
+
+  // Force a re-render every second so isOnline recomputes off the threshold
+  // even when no socket events are arriving (e.g. dead host, dropped socket).
+  useTick(1000);
 
   const mergeRuns = useCallback(
     (updatedRuns: BaseRunSession[], total?: number) => {
@@ -113,6 +127,12 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
         const updated: BaseRunSession = {
           ...existing,
           totalCost: existing.totalCost + event.costDelta,
+        };
+        mergeRuns([updated]);
+      } else if (event.type === "heartbeat-update") {
+        const updated: BaseRunSession = {
+          ...existing,
+          lastActive: event.lastActive,
         };
         mergeRuns([updated]);
       }
@@ -207,11 +227,3 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   };
 };
 
-/** A run session is considered active if updated within the last 16 seconds */
-const RUN_ACTIVE_THRESHOLD_MS = 16_000;
-
-function isRunActive(lastActive?: string): boolean {
-  if (!lastActive) return false;
-  const diffInMs = Date.now() - new Date(lastActive).getTime();
-  return 0 < diffInMs && diffInMs < RUN_ACTIVE_THRESHOLD_MS;
-}

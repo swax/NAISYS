@@ -51,3 +51,20 @@ export const SessionIncrementResponseSchema = z.object({
 export type SessionIncrementResponse = z.infer<
   typeof SessionIncrementResponseSchema
 >;
+
+/** A lastActive bump for a single run session, derived from a heartbeat */
+export const SessionHeartbeatUpdateSchema = z.object({
+  userId: z.number(),
+  runId: z.number(),
+  sessionId: z.number(),
+  lastActive: z.string(),
+});
+export type SessionHeartbeatUpdate = z.infer<
+  typeof SessionHeartbeatUpdateSchema
+>;
+
+/** Session lastActive bumps pushed from hub to supervisor, one per active agent */
+export const SessionHeartbeatSchema = z.object({
+  updates: z.array(SessionHeartbeatUpdateSchema),
+});
+export type SessionHeartbeat = z.infer<typeof SessionHeartbeatSchema>;

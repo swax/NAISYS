@@ -321,6 +321,8 @@ export async function createAgentRuntime(
     agentUserId: localUserId,
     agentUsername: config.username,
     agentTitle: config.title,
+    getRunId: runService.getRunId,
+    getSessionId: runService.getSessionId,
     output,
     subagentService,
     runCommandLoop: async () => {

@@ -24,12 +24,16 @@ export function createHeartbeatService(
   }
 
   function sendHeartbeat() {
-    const activeUserIds = agentManager.runningAgents.map((a) => a.agentUserId);
+    const activeSessions = agentManager.runningAgents.map((a) => ({
+      userId: a.agentUserId,
+      runId: a.getRunId(),
+      sessionId: a.getSessionId(),
+    }));
 
     if (hubClient) {
-      hubClient.sendMessage(HubEvents.HEARTBEAT, { activeUserIds });
+      hubClient.sendMessage(HubEvents.HEARTBEAT, { activeSessions });
     } else {
-      userService.setActiveUsers({ "": activeUserIds });
+      userService.setActiveUsers({ "": activeSessions.map((s) => s.userId) });
     }
   }
 

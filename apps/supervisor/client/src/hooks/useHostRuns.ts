@@ -3,17 +3,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getHostRuns } from "../lib/apiRuns";
 import type { RunSession } from "../types/runSession";
+import { isRunActive } from "./runStatus";
+import { useTick } from "./useTick";
 
 const PAGE_SIZE = 15;
-const RUN_ACTIVE_THRESHOLD_MS = 16_000;
-
-function isRunActive(lastActive?: string): boolean {
-  if (!lastActive) return false;
-  const diffInMs = Date.now() - new Date(lastActive).getTime();
-  return 0 < diffInMs && diffInMs < RUN_ACTIVE_THRESHOLD_MS;
-}
 
 export const useHostRuns = (hostname: string | undefined) => {
+  useTick(1000);
+
   const [baseRuns, setBaseRuns] = useState<BaseRunSession[]>([]);
   const [total, setTotal] = useState(0);
   const [pagesLoaded, setPagesLoaded] = useState(0);
