@@ -56,9 +56,10 @@ spendLimitDollars: 5.00
 - If you hit `Enter` without typing anything, the LLM will run against the prompt
 - Afterwards NAISYS will return to the debug prompt
 - Depending on how the agents' `debugPauseSeconds` is configured NAISYS will
-  - Pause on the debug prompt for that many seconds
-  - Pause indefinitely
-  - Pause until a new message is received from another agent
+  - Continue immediately when set to `0`
+  - Pause on the debug prompt for that many seconds when set to a positive value
+  - Pause indefinitely when left unset
+  - Wake early when a new message is received and `wakeOnMessage` is enabled
 
 #### Console Colors Legend
 

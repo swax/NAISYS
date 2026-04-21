@@ -67,7 +67,7 @@ shellModel: claude4sonnet
 #completeSessionEnabled: true
 
 # Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's
-# console is in focus. Unset waits indefinitely for manual input.
+# console is in focus. Set to 0 to continue immediately. Unset waits indefinitely for manual input.
 #debugPauseSeconds: 5
 
 # When mail or chat is received, start the agent automatically, or wake it from its wait state.

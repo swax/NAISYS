@@ -101,6 +101,11 @@ export function createAgentYaml(
   filename: string,
   config: AgentYamlConfig,
 ): void {
+  const debugPauseLine =
+    config.debugPauseSeconds !== undefined
+      ? `debugPauseSeconds: ${config.debugPauseSeconds}\n`
+      : "";
+
   let yamlContent = `
 username: ${config.username}
 title: ${config.title}
@@ -108,8 +113,7 @@ shellModel: ${config.shellModel ?? "none"}
 agentPrompt: |
   ${config.agentPrompt ?? `You are \${agent.username} a \${agent.title} for testing.`}
 tokenMax: ${config.tokenMax ?? 50000}
-debugPauseSeconds: ${config.debugPauseSeconds ?? 0}
-spendLimitDollars: ${config.spendLimitDollars ?? 10.0}
+${debugPauseLine}spendLimitDollars: ${config.spendLimitDollars ?? 10.0}
 webEnabled: ${config.webEnabled ?? false}
 wakeOnMessage: ${config.wakeOnMessage ?? false}
 `.trim();

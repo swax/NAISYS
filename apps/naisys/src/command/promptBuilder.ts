@@ -1,6 +1,8 @@
 import chalk from "chalk";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
+import type { WaitBehavior } from "./commandRegistry.js";
+import { isTimedWait } from "./commandRegistry.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { CostTracker } from "../llm/costTracker.js";
@@ -24,7 +26,7 @@ export function createPromptBuilder(
   promptNotification: PromptNotificationService,
   localUserId: number,
 ) {
-  async function getPrompt(pauseSeconds: number) {
+  async function getPrompt(wait: WaitBehavior) {
     const promptSuffix = isElevated()
       ? platformConfig.adminPromptSuffix
       : platformConfig.promptSuffix;
@@ -36,8 +38,8 @@ export function createPromptBuilder(
     let pause = "";
 
     if (inputMode.isDebug()) {
-      if (pauseSeconds > 0) {
-        pause += ` [Wait: ${pauseSeconds}s]`;
+      if (isTimedWait(wait)) {
+        pause += ` [Wait: ${wait.seconds}s]`;
       }
       if (agentConfig().wakeOnMessage) {
         pause += " [WakeOnMsg]";
@@ -73,9 +75,13 @@ export function createPromptBuilder(
 
   function getInput(
     commandPrompt: string,
-    pauseSeconds: number,
+    wait: WaitBehavior,
     onTimerCancelled?: () => void,
   ) {
+    if (wait.kind === "none") {
+      return Promise.resolve("");
+    }
+
     return new Promise<string>((resolve) => {
       const questionController = new AbortController();
       let timeout: NodeJS.Timeout | undefined;
@@ -162,11 +168,10 @@ export function createPromptBuilder(
         resolve("");
       }
 
-      // This pauses the app for a specified time before the next llm call
-      // This is how `ns-session wait` is implemented
-      // It also allows the user to wake the debug prompt on incoming mail or switching the in focus agent
-      if (pauseSeconds > 0) {
-        timeout = setTimeout(abortQuestion, pauseSeconds * 1000);
+      // Timed waits auto-continue after the timeout. Indefinite waits rely on
+      // manual input and/or wake notifications.
+      if (isTimedWait(wait)) {
+        timeout = setTimeout(abortQuestion, wait.seconds * 1000);
       }
 
       // Poll for prompt notifications that should wake/interrupt.

@@ -28,7 +28,14 @@ import type { OutputService } from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { CommandHandler } from "./commandHandler.js";
-import { NextCommandAction } from "./commandRegistry.js";
+import type { WaitBehavior } from "./commandRegistry.js";
+import {
+  indefiniteWait,
+  isTimedWait,
+  NextCommandAction,
+  noWait,
+  timedWait,
+} from "./commandRegistry.js";
 import type { PromptBuilder } from "./promptBuilder.js";
 import type { ShellCommand } from "./shellCommand.js";
 
@@ -57,7 +64,7 @@ export function createCommandLoop(
   desktopService: DesktopService,
 ) {
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
-  /** Tracks the current wait so preemptive compact can calculate remaining time */
+  /** Tracks the current timed wait so preemptive compact can calculate remaining time */
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
@@ -86,17 +93,18 @@ export function createCommandLoop(
       nextCommandAction !== NextCommandAction.SessionComplete &&
       !abortSignal?.aborted
     ) {
-      let pauseSeconds: number | undefined;
+      let wait: WaitBehavior | undefined;
 
-      ({ nextCommandAction, pauseSeconds } =
-        await runSessionStartup(llmErrorCount));
+      ({ nextCommandAction, wait } = await runSessionStartup(llmErrorCount));
 
       while (
         nextCommandAction == NextCommandAction.Continue &&
         !abortSignal?.aborted
       ) {
-        ({ nextCommandAction, pauseSeconds, llmErrorCount } =
-          await processOneIteration(pauseSeconds, llmErrorCount));
+        ({ nextCommandAction, wait, llmErrorCount } = await processOneIteration(
+          wait,
+          llmErrorCount,
+        ));
       }
 
       if (nextCommandAction == NextCommandAction.CompactSession) {
@@ -192,10 +200,10 @@ export function createCommandLoop(
 
   async function runSessionStartup(llmErrorCount: number): Promise<{
     nextCommandAction: NextCommandAction;
-    pauseSeconds: number | undefined;
+    wait: WaitBehavior | undefined;
   }> {
     let nextCommandAction = NextCommandAction.Continue;
-    let pauseSeconds: number | undefined = undefined;
+    let wait: WaitBehavior | undefined = undefined;
 
     // This ensures output is appended to the llm context
     inputMode.setLLM();
@@ -207,7 +215,9 @@ export function createCommandLoop(
       );
     }
 
-    output.commentAndLog("Use ns-help to see all available commands, and @ to talk directly to agent");
+    output.commentAndLog(
+      "Use ns-help to see all available commands, and @ to talk directly to agent",
+    );
 
     desktopService.logStartup();
 
@@ -226,14 +236,14 @@ export function createCommandLoop(
 
     for (const initialCommand of initialCommands) {
       try {
-        const prompt = await promptBuilder.getPrompt(0);
+        const prompt = await promptBuilder.getPrompt(noWait());
 
         contextManager.append(prompt, ContentSource.ConsolePrompt);
 
-        ({ nextCommandAction, pauseSeconds } =
-          await commandHandler.processCommand(prompt, [
-            agentConfig().resolveConfigVars(initialCommand),
-          ]));
+        ({ nextCommandAction, wait } = await commandHandler.processCommand(
+          prompt,
+          [agentConfig().resolveConfigVars(initialCommand)],
+        ));
       } catch (e) {
         handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
       }
@@ -253,33 +263,47 @@ export function createCommandLoop(
 
     inputMode.setDebug();
 
-    return { nextCommandAction, pauseSeconds };
+    return { nextCommandAction, wait };
   }
 
   type IterationResult = {
     nextCommandAction: NextCommandAction;
-    pauseSeconds: number | undefined;
+    wait: WaitBehavior | undefined;
     llmErrorCount: number;
   };
 
   async function processOneIteration(
-    pauseSeconds: number | undefined,
+    wait: WaitBehavior | undefined,
     llmErrorCount: number,
   ): Promise<IterationResult> {
-    // If pauseSeconds was explicitly set (e.g. by a wait command or error backoff), use it;
+    // If wait was explicitly set (e.g. by a wait command or error backoff), use it;
     // otherwise fall back to the default based on current mode
-    if (pauseSeconds === undefined) {
+    if (wait === undefined) {
       // When llm model is set to none then we should hold indefinitely
       if (agentConfig().shellModel === LlmApiType.None) {
-        pauseSeconds = 0;
+        wait = indefiniteWait();
       }
-      // Unfocused agents keep processing commands without delay, unless pauseSeconds was expliclity set by a wait command or error backoff
+      // Unfocused agents keep processing commands without delay, unless wait was explicitly set by a wait command or error backoff
       else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
         inputMode.setLLM();
-        pauseSeconds = -1;
+        wait = noWait();
       } else {
-        pauseSeconds = agentConfig().debugPauseSeconds;
+        wait = getConfiguredDebugWait();
       }
+    }
+
+    // This is a fail safe that shouldn't happen, if it does we should look into it
+    if (
+      inputMode.isDebug() &&
+      !output.isConsoleEnabled() &&
+      wait.kind === "indefinite" &&
+      agentConfig().shellModel !== LlmApiType.None
+    ) {
+      output.errorAndLog(
+        "Agent is unfocused with an indefinite wait, switching to LLM mode to avoid hanging.",
+      );
+      inputMode.setLLM();
+      wait = noWait();
     }
 
     // Must be after the mode switch above so the message is added to the right context LLM/Debug
@@ -292,18 +316,18 @@ export function createCommandLoop(
       );
     }
 
-    const prompt = await promptBuilder.getPrompt(pauseSeconds);
+    const prompt = await promptBuilder.getPrompt(wait);
     let commandList: string[] = [];
     let blankDebugInput = false;
 
-    // Debug command prompt
+    // Debug command prompt, also handles llm triggered waits
     if (inputMode.isDebug()) {
-      if (pauseSeconds > 0) {
-        currentWait = { startTime: Date.now(), totalSeconds: pauseSeconds };
+      if (isTimedWait(wait)) {
+        currentWait = { startTime: Date.now(), totalSeconds: wait.seconds };
       }
 
       commandList = [
-        await promptBuilder.getInput(`${prompt}`, pauseSeconds, () => {
+        await promptBuilder.getInput(`${prompt}`, wait, () => {
           // User started typing — cancel preemptive compact since a new
           // LLM query will follow and reschedule with fresh timing
           clearTimeout(preemptiveCompactTimeout);
@@ -315,7 +339,7 @@ export function createCommandLoop(
     }
     // LLM command prompt
     else if (inputMode.isLLM()) {
-      pauseSeconds = undefined;
+      wait = undefined;
 
       const result = await getLlmCommands(prompt, llmErrorCount);
 
@@ -323,7 +347,7 @@ export function createCommandLoop(
         return {
           nextCommandAction: NextCommandAction.Continue,
           llmErrorCount: result.llmErrorCount,
-          pauseSeconds: result.pauseSeconds,
+          wait: result.wait,
         };
       }
 
@@ -334,7 +358,7 @@ export function createCommandLoop(
         );
         return {
           nextCommandAction: NextCommandAction.Continue,
-          pauseSeconds: undefined,
+          wait: undefined,
           llmErrorCount,
         };
       }
@@ -357,7 +381,10 @@ export function createCommandLoop(
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM.
       // Also switch immediately if the command requested it (e.g. ns-talk).
-      if (inputMode.isDebug() && (blankDebugInput || commandResult.switchToLLM)) {
+      if (
+        inputMode.isDebug() &&
+        (blankDebugInput || commandResult.switchToLLM)
+      ) {
         inputMode.setLLM();
       }
       // If in LLM mode, auto switch back to debug
@@ -367,7 +394,7 @@ export function createCommandLoop(
 
       return {
         nextCommandAction: commandResult.nextCommandAction,
-        pauseSeconds: commandResult.pauseSeconds,
+        wait: commandResult.wait,
         llmErrorCount,
       };
     } catch (e) {
@@ -379,7 +406,7 @@ export function createCommandLoop(
       return {
         nextCommandAction: NextCommandAction.Continue,
         llmErrorCount: errorResult.llmErrorCount,
-        pauseSeconds: errorResult.pauseSeconds,
+        wait: errorResult.wait,
       };
     }
   }
@@ -389,7 +416,7 @@ export function createCommandLoop(
     | {
         outcome: "skip";
         llmErrorCount: number;
-        pauseSeconds: number | undefined;
+        wait: WaitBehavior | undefined;
       }
     | {
         outcome: "desktop";
@@ -423,7 +450,7 @@ export function createCommandLoop(
         commands = notificationCommands;
       } else {
         inputMode.setDebug();
-        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+        return { outcome: "skip", llmErrorCount, wait: undefined };
       }
     }
 
@@ -503,7 +530,7 @@ export function createCommandLoop(
         clearPromptMessage(workingMsg);
         output.commentAndLog("LLM query cancelled by ESC");
         inputMode.setDebug();
-        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+        return { outcome: "skip", llmErrorCount, wait: undefined };
       }
     } catch (e) {
       // Clear "Working..." before printing error output
@@ -520,7 +547,7 @@ export function createCommandLoop(
         contextManager.append(
           `System: Recent media was scrubbed from the context because it caused an API error: ${errorStr.slice(0, 150)}`,
         );
-        return { outcome: "skip", llmErrorCount, pauseSeconds: undefined };
+        return { outcome: "skip", llmErrorCount, wait: undefined };
       }
 
       const errorResult = handleErrorAndSwitchToDebugMode(
@@ -531,7 +558,7 @@ export function createCommandLoop(
       return {
         outcome: "skip",
         llmErrorCount: errorResult.llmErrorCount,
-        pauseSeconds: errorResult.pauseSeconds,
+        wait: errorResult.wait,
       };
     }
 
@@ -570,23 +597,16 @@ export function createCommandLoop(
     }
 
     // If llm is in some error loop then hold in debug mode
-    let pauseSeconds = agentConfig().debugPauseSeconds;
+    let wait = getConfiguredDebugWait();
 
     if (inputMode.isLLM()) {
       if (e instanceof SpendLimitError) {
         // Spend limit errors use a constant timeout since they resolve on a schedule
-        pauseSeconds = SPEND_LIMIT_TIMEOUT_SECONDS;
+        wait = timedWait(SPEND_LIMIT_TIMEOUT_SECONDS);
       } else {
         llmErrorCount++;
 
-        // Set the pause seconds to exponential backoff, up to retrySecondsMax
-        pauseSeconds =
-          agentConfig().debugPauseSeconds * 2 ** (llmErrorCount - 1);
-
-        if (pauseSeconds > globalConfig().retrySecondsMax) {
-          pauseSeconds = globalConfig().retrySecondsMax;
-          llmErrorCount--; // Prevent overflowing the calculation above
-        }
+        ({ wait, llmErrorCount } = getErrorBackoffWait(llmErrorCount));
       }
     }
 
@@ -594,7 +614,35 @@ export function createCommandLoop(
 
     return {
       llmErrorCount,
-      pauseSeconds,
+      wait,
+    };
+  }
+
+  function getConfiguredDebugWait(): WaitBehavior {
+    const debugPauseSeconds = agentConfig().debugPauseSeconds;
+
+    if (debugPauseSeconds === undefined) {
+      return indefiniteWait();
+    }
+
+    return timedWait(debugPauseSeconds);
+  }
+
+  function getErrorBackoffWait(llmErrorCount: number) {
+    const backoffBaseSeconds = Math.max(
+      agentConfig().debugPauseSeconds ?? 0,
+      1,
+    );
+    let backoffSeconds = backoffBaseSeconds * 2 ** (llmErrorCount - 1);
+
+    if (backoffSeconds > globalConfig().retrySecondsMax) {
+      backoffSeconds = globalConfig().retrySecondsMax;
+      llmErrorCount--; // Prevent overflowing the calculation above
+    }
+
+    return {
+      wait: timedWait(backoffSeconds),
+      llmErrorCount,
     };
   }
 

@@ -66,8 +66,7 @@ export function createAgentConfig(
       wakeOnMessage: !!config.wakeOnMessage,
       initialCommands: config.initialCommands ?? [],
       commandProtection: config.commandProtection ?? "none",
-      debugPauseSeconds:
-        config.debugPauseSeconds === undefined ? 0 : config.debugPauseSeconds,
+      debugPauseSeconds: config.debugPauseSeconds,
       multipleCommandsEnabled: !!config.multipleCommandsEnabled,
       workspacesEnabled: !!config.workspacesEnabled,
     };
