@@ -214,16 +214,17 @@ export function createNaisysServer(
               environment,
             );
 
-      // Reject duplicate naisys connections (supervisors may have multiple)
-      if (hostType === "naisys" && naisysConnections.has(result.hostId)) {
-        logService.log(
-          `[Hub] Connection rejected: host '${result.hostName}' is already connected`,
-        );
-        return next(
-          new Error(
-            `Host '${result.hostName}' already has an active connection`,
-          ),
-        );
+      // Supersede any existing naisys connection for this host (supervisors may have multiple).
+      // The disconnect handler is identity-aware, so the old socket's cleanup
+      // will not wipe the new connection once it registers.
+      if (hostType === "naisys") {
+        const existing = naisysConnections.get(result.hostId);
+        if (existing) {
+          logService.log(
+            `[Hub] Superseding existing connection for host '${result.hostName}' — disconnecting old socket`,
+          );
+          existing.disconnect();
+        }
       }
 
       socket.data.hostId = result.hostId;
@@ -277,13 +278,21 @@ export function createNaisysServer(
 
     // Clean up on disconnect
     socket.on("disconnect", () => {
+      let superseded = false;
       if (hostType === "supervisor") {
         const idx = supervisorConnections.indexOf(connection);
         if (idx !== -1) supervisorConnections.splice(idx, 1);
-      } else {
+      } else if (naisysConnections.get(hostId) === connection) {
         naisysConnections.delete(hostId);
+      } else {
+        // A newer connection replaced us; skip the disconnect broadcast so
+        // downstream services don't clear state belonging to the live socket.
+        superseded = true;
       }
-      raiseEvent("client_disconnected", hostId);
+
+      if (!superseded) {
+        raiseEvent("client_disconnected", hostId);
+      }
       logService.log(
         `[Hub] Active connections: naisys=${naisysConnections.size}, supervisors=${supervisorConnections.length}`,
       );
