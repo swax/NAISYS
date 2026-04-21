@@ -15,13 +15,14 @@ import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { AttachmentService } from "../services/attachmentService.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
-import type { MailContent, MailDisplayService } from "./mailDisplayService.js";
-import { formatMessageDisplay } from "./mailDisplayService.js";
+import type { MailContent } from "./mailFormat.js";
+import { formatMessageDisplay } from "./mailFormat.js";
+import type { MailQueryService } from "./mailQueryService.js";
 
 export function createMailService(
   hubClient: HubClient | undefined,
   userService: UserService,
-  mailDisplayService: MailDisplayService | null,
+  mailQueryService: MailQueryService | null,
   localUserId: number,
   promptNotification: PromptNotificationService,
   attachmentService: AttachmentService,
@@ -37,6 +38,9 @@ export function createMailService(
     args: string,
   ): Promise<string | CommandResponse> {
     const argv = stringArgv(args);
+    const subs = mailCmd.subcommands!;
+    const usageError = (sub: keyof typeof subs) =>
+      `Invalid parameters. Usage: ${mailCmd.name} ${subs[sub].usage}`;
 
     if (!argv[0]) {
       argv[0] = "help";
@@ -44,12 +48,12 @@ export function createMailService(
 
     switch (argv[0]) {
       case "help": {
-        const subs = mailCmd.subcommands!;
         const lines = [`${mailCmd.name} <command>`];
         lines.push(`  ${subs.send.usage.padEnd(40)}${subs.send.description}`);
         if (hubClient) {
           lines.push(
-            `  ${subs.list.usage.padEnd(40)}${subs.list.description}`,
+            `  ${subs.inbox.usage.padEnd(40)}${subs.inbox.description}`,
+            `  ${subs.outbox.usage.padEnd(40)}${subs.outbox.description}`,
             `  ${subs.read.usage.padEnd(40)}${subs.read.description}`,
             `  ${subs.archive.usage.padEnd(40)}${subs.archive.description}`,
             `  ${subs.search.usage.padEnd(40)}${subs.search.description}`,
@@ -58,23 +62,24 @@ export function createMailService(
         return lines.join("\n");
       }
 
-      case "list": {
-        if (!hubClient || !mailDisplayService) {
+      case "inbox": {
+        if (!mailQueryService) {
           throw "Not available in local mode.";
         }
-        const filterArg = argv[1]?.toLowerCase();
-        if (filterArg && filterArg !== "received" && filterArg !== "sent") {
-          throw "Invalid parameter. Use 'received' or 'sent' to filter, or omit for all messages.";
+        return mailQueryService.listMessages("received");
+      }
+
+      case "outbox": {
+        if (!mailQueryService) {
+          throw "Not available in local mode.";
         }
-        return mailDisplayService.listMessages(
-          filterArg as "received" | "sent" | undefined,
-        );
+        return mailQueryService.listMessages("sent");
       }
 
       case "send": {
         // Expected: ns-mail send "user1,user2" "subject" "message" [file1 file2 ...]
         if (!argv[1] || !argv[2] || !argv[3]) {
-          throw "Invalid parameters. There should be a username, subject and message. All contained in quotes.";
+          throw usageError("send");
         }
 
         const recipients = userService.resolveUsernames(argv[1]);
@@ -108,7 +113,7 @@ export function createMailService(
         }
         const messageId = parseInt(argv[1]);
         if (isNaN(messageId)) {
-          throw "Invalid parameters. Please provide a message id.";
+          throw usageError("read");
         }
         const msg = await peekMessage(messageId);
         await markMessagesRead([msg.id]);
@@ -121,13 +126,13 @@ export function createMailService(
         }
         const messageIds = argv[1]?.split(",").map((id) => parseInt(id.trim()));
         if (!messageIds || messageIds.length === 0 || messageIds.some(isNaN)) {
-          throw "Invalid parameters. Please provide comma-separated message ids.";
+          throw usageError("archive");
         }
         return archiveMessages(messageIds);
       }
 
       case "search": {
-        if (!hubClient || !mailDisplayService) {
+        if (!mailQueryService) {
           throw "Not available in local mode.";
         }
         // Parse flags and search term
@@ -147,10 +152,10 @@ export function createMailService(
         }
 
         if (terms.length === 0) {
-          throw "Invalid parameters. Please provide search terms.";
+          throw usageError("search");
         }
 
-        return mailDisplayService.searchMessages(
+        return mailQueryService.searchMessages(
           terms.join(" "),
           includeArchived,
           subjectOnly,
@@ -163,9 +168,7 @@ export function createMailService(
           typeof helpResponse === "string"
             ? helpResponse
             : helpResponse.content;
-        return (
-          "Error, unknown command. See valid commands below:\n" + helpContent
-        );
+        return `Unknown ${mailCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${helpContent}`;
       }
     }
   }

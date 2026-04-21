@@ -127,7 +127,7 @@ In local mode, services that depend on the database either don't exist or are re
 | `runService`         | In-memory run/session counters                 |
 | `hostService`        | Not needed (no host concept)                   |
 | `mail`               | Send-only, direct in-process delivery          |
-| `mailDisplayService` | Not available (no data to query)               |
+| `mailQueryService`   | Not available (no data to query)               |
 | `subagent`           | In-memory agent list from yaml configs         |
 | `agentConfig`        | Loaded from yaml file, kept in memory          |
 | `agentRegistrar`     | Scans yaml folder, builds in-memory agent list |
@@ -375,7 +375,7 @@ All NAISYS services migrated to use hub API calls (in hub mode) or in-memory equ
 5. ✅ **costTracker** — Hub mode: `cost.write` fire-and-forget batch (flushed every 2s) + listens for `cost.control` push from hub. Local mode: in-memory spend limit enforcement from config. Cost display always uses in-memory `modelCosts` map (no hub-side cost report needed).
 6. ✅ **agentConfig** — Config received from hub via `user.list` push on connect. Cached in memory. Local mode: loaded from yaml files.
 7. ✅ **mailAddress** — Removed from NAISYS. Username resolution handled by hub as part of `mail.send`.
-8. ✅ **mailDisplayService** — Hub mode: all queries via hub API (`mail.list`, `mail.read`, `mail.search`). Hub returns raw data, client formats. Local mode: service not created (no data to query).
+8. ✅ **mailQueryService** — Hub mode: all queries via hub API (`mail.list`, `mail.read`, `mail.search`). Hub returns raw data, client formats. Local mode: service not created (no data to query).
 9. ✅ **mail** — Hub mode: `mail.send`, `mail.read`, `mail.archive`, `mail.unread` via hub API. `mail.received` push replaces polling. Local mode: send-only, direct in-process delivery via event bus.
 10. ✅ **subagent** — Hub mode: `agent.start`/`agent.stop` routed through hub (hub picks eligible host via `user_hosts`). Listing uses in-memory user list from `userService` + heartbeat status for remote agents. Local mode: starts agents directly in-process.
 

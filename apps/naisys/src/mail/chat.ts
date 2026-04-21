@@ -53,6 +53,9 @@ export function createChatService(
 ) {
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
+    const subs = chatCmd.subcommands!;
+    const usageError = (sub: keyof typeof subs) =>
+      `Invalid parameters. Usage: ${chatCmd.name} ${subs[sub].usage}`;
 
     if (!argv[0]) {
       argv[0] = "help";
@@ -60,7 +63,6 @@ export function createChatService(
 
     switch (argv[0]) {
       case "help": {
-        const subs = chatCmd.subcommands!;
         const lines = [`${chatCmd.name} <command>`];
         lines.push(`  ${subs.send.usage.padEnd(45)}${subs.send.description}`);
         if (hubClient) {
@@ -74,7 +76,7 @@ export function createChatService(
       case "send": {
         // Expected: ns-chat send "user1,user2" "message" [file1 file2 ...]
         if (!argv[1] || !argv[2]) {
-          throw 'Invalid parameters. Usage: ns-chat send "users" "message"';
+          throw usageError("send");
         }
 
         const recipients = userService.resolveUsernames(argv[1]);
@@ -109,10 +111,10 @@ export function createChatService(
         const take = argv[3] ? parseInt(argv[3]) : undefined;
 
         if (argv[2] && isNaN(skip!)) {
-          throw "Invalid skip parameter. Must be a number.";
+          throw `Invalid skip parameter. Must be a number. ${usageError("recent")}`;
         }
         if (argv[3] && isNaN(take!)) {
-          throw "Invalid take parameter. Must be a number.";
+          throw `Invalid take parameter. Must be a number. ${usageError("recent")}`;
         }
 
         return recentMessages(withUserIds, skip, take);
@@ -120,9 +122,7 @@ export function createChatService(
 
       default: {
         const helpResponse = await handleCommand("help");
-        return (
-          "Error, unknown command. See valid commands below:\n" + helpResponse
-        );
+        return `Unknown ${chatCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${helpResponse}`;
       }
     }
   }
