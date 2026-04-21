@@ -273,6 +273,7 @@ export function createMockGlobalConfig(): GlobalConfig {
         maxTimeoutSeconds: 300,
       },
       webTokenMax: 5000,
+      retrySecondsBase: 5,
       retrySecondsMax: 1800,
       compactSessionEnabled: false,
       preemptiveCompactEnabled: false,

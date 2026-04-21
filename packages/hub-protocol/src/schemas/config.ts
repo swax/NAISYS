@@ -11,6 +11,7 @@ export const ConfigResponseSchema = z.object({
         timeoutSeconds: z.number(),
         maxTimeoutSeconds: z.number(),
       }),
+      retrySecondsBase: z.number(),
       retrySecondsMax: z.number(),
       webTokenMax: z.number(),
       compactSessionEnabled: z.boolean(),

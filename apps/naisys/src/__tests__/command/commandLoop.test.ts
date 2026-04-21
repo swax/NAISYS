@@ -25,7 +25,7 @@ import {
 } from "../mocks.js";
 
 describe("commandLoop wait behavior", () => {
-  test("uses a timed retry backoff when debugPauseSeconds is zero", async () => {
+  test("applies retrySecondsBase as the backoff after an llm error", async () => {
     const promptBuilder = createMockPromptBuilder(
       "test@test",
       "test@test:/workspace",
@@ -82,11 +82,11 @@ describe("commandLoop wait behavior", () => {
     });
     expect(promptBuilder.getPrompt).toHaveBeenNthCalledWith(2, {
       kind: "timed",
-      seconds: 1,
+      seconds: 5,
     });
     expect(promptBuilder.getInput).toHaveBeenCalledWith(
       expect.any(String),
-      { kind: "timed", seconds: 1 },
+      { kind: "timed", seconds: 5 },
       expect.any(Function),
     );
   });
