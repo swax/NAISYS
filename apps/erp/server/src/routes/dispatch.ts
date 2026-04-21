@@ -100,9 +100,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         const filteredStatuses = currentStatuses.filter((s) =>
           workableStatuses.includes(s),
         );
-        where.status = {
-          in: filteredStatuses.length > 0 ? filteredStatuses : ["__none__"],
-        };
+        where.status = { in: filteredStatuses };
 
         // Work center access
         if (userWcIds.length > 0) {

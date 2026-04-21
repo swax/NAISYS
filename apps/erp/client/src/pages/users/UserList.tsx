@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import type { UserListResponse } from "@naisys/erp-shared";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconRobot, IconUser } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   Link,
@@ -200,9 +200,16 @@ export const UserList: React.FC = () => {
                 <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                   <Table.Td style={{ padding: 0 }}>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>
-                      <Text size="sm" ff="monospace">
-                        {item.username}
-                      </Text>
+                      <Group gap={6} wrap="nowrap">
+                        {item.isAgent ? (
+                          <IconRobot size={16} />
+                        ) : (
+                          <IconUser size={16} />
+                        )}
+                        <Text size="sm" ff="monospace">
+                          {item.username}
+                        </Text>
+                      </Group>
                     </Link>
                   </Table.Td>
                   <Table.Td style={{ padding: 0 }}>
