@@ -194,6 +194,16 @@ function winVirtualKey(key: string): string {
 }
 
 export function pressKey(keyCombo: string) {
+  // Whitespace separates sequential chords ("Down Down Right"); `+` separates
+  // modifiers within one chord ("ctrl+c"). Dispatch each chord individually so
+  // the existing single-chord paths (SendKeys vs. win-key keybd_event) keep
+  // working unchanged.
+  const chords = keyCombo.trim().split(/\s+/);
+  if (chords.length > 1) {
+    for (const chord of chords) pressKey(chord);
+    return;
+  }
+
   const keys = keyCombo.split("+").map((k) => k.trim().toLowerCase());
   const hasWin = keys.some((k) => k === "win" || k === "super");
 
