@@ -1,6 +1,5 @@
-import { describe, expect, test } from "vitest";
-
 import { valueFromString } from "@naisys/common";
+import { describe, expect, test } from "vitest";
 
 import { trimChars } from "../../utils/utilities.js";
 

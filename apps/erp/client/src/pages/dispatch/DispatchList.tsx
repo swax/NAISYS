@@ -118,7 +118,7 @@ export const DispatchList: React.FC = () => {
       <Tabs
         value="open"
         onChange={(v) => {
-          if (v === "ready-to-close") navigate("/dispatch/ready-to-close");
+          if (v === "ready-to-close") void navigate("/dispatch/ready-to-close");
         }}
         mb="md"
       >

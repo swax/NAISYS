@@ -1,4 +1,4 @@
-import { IconRobot, IconUser, type IconProps } from "@tabler/icons-react";
+import { type IconProps,IconRobot, IconUser } from "@tabler/icons-react";
 import React from "react";
 
 interface AgentModelIconProps extends IconProps {

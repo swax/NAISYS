@@ -20,11 +20,11 @@ import type { HubCostBuffer } from "./hub/hubCostBuffer.js";
 import { createHubCostBuffer } from "./hub/hubCostBuffer.js";
 import type { HubLogBuffer } from "./hub/hubLogBuffer.js";
 import { createHubLogBuffer } from "./hub/hubLogBuffer.js";
+import { ensureAgentConfig, getNaisysWizardConfig } from "./naisysSetup.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
 import { createUpdateService } from "./services/updateService.js";
-import { ensureAgentConfig, getNaisysWizardConfig } from "./naisysSetup.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });

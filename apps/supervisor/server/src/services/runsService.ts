@@ -132,7 +132,7 @@ export async function getRunsData(
   const runSessions = await hubDb.run_session.findMany({
     where,
     orderBy: {
-      last_active: "desc",
+      created_at: "desc",
     },
     skip: (page - 1) * count,
     take: count,

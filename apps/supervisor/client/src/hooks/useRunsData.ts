@@ -65,10 +65,11 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       const mergedRuns = Array.from(mergeMap.values());
       const newCount = mergedRuns.length - existingCount;
 
-      // Sort by last active (most recent first)
+      // Sort by created date (most recent first) so rows don't shift as
+      // lastActive updates stream in.
       mergedRuns.sort(
         (a, b) =>
-          new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
       runsCache.set(agentUsername, mergedRuns);

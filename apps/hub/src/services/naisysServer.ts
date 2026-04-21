@@ -11,8 +11,8 @@ import type {
   HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
-import { HubEvents } from "@naisys/hub-protocol";
 import type { HostRegistered } from "@naisys/hub-protocol";
+import { HubEvents } from "@naisys/hub-protocol";
 import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
