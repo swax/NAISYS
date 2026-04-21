@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { useBoomGuard } from "./lib/useBoomGuard";
 import { AdminPage } from "./pages/admin/AdminPage";
 import { DispatchList } from "./pages/dispatch/DispatchList";
+import { DispatchReadyToClose } from "./pages/dispatch/DispatchReadyToClose";
 import { InventoryList } from "./pages/inventory/InventoryList";
 import { ItemCreate } from "./pages/items/ItemCreate";
 import { ItemDetail } from "./pages/items/ItemDetail";
@@ -107,6 +108,10 @@ const AppContent: React.FC = () => {
         <Route path="/work-centers/new" element={<WorkCenterCreate />} />
         <Route path="/work-centers/:key" element={<WorkCenterDetail />} />
         <Route path="/dispatch" element={<DispatchList />} />
+        <Route
+          path="/dispatch/ready-to-close"
+          element={<DispatchReadyToClose />}
+        />
         <Route path="/inventory" element={<InventoryList />} />
         <Route path="/users" element={<UserList />} />
         <Route path="/users/:username" element={<UserDetail />} />

@@ -4,6 +4,8 @@ import {
   type ErpPermission,
   OperationRunStatus,
   OrderRunStatus,
+  ReadyToCloseListQuerySchema,
+  ReadyToCloseListResponseSchema,
 } from "@naisys/erp-shared";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
@@ -190,6 +192,11 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             clockedIn: clockedIn ? "true" : undefined,
           }),
           {
+            rel: "ready-to-close",
+            href: `${API_PREFIX}/dispatch/ready-to-close`,
+            title: "Ready to Close",
+          },
+          {
             rel: "work-centers",
             href: `${API_PREFIX}/work-centers`,
             title: "Work Centers",
@@ -207,6 +214,96 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             hrefTemplate: `${API_PREFIX}/orders/{orderKey}/runs/{runNo}/ops/{seqNo}`,
             method: "GET",
             title: "View Operation Run",
+          },
+        ],
+      };
+    },
+  });
+
+  app.get("/ready-to-close", {
+    schema: {
+      description:
+        "List open order runs whose operations are all completed or skipped (ready to close)",
+      tags: ["Dispatch"],
+      querystring: ReadyToCloseListQuerySchema,
+      response: {
+        200: ReadyToCloseListResponseSchema,
+      },
+    },
+    handler: async (request) => {
+      const { page, pageSize, priority, search } = request.query;
+
+      const where: Record<string, unknown> = {
+        status: { in: OPEN_ORDER_STATUSES },
+        operationRuns: {
+          none: {
+            status: {
+              notIn: [
+                OperationRunStatus.completed,
+                OperationRunStatus.skipped,
+              ],
+            },
+          },
+        },
+        ...(priority ? { priority } : {}),
+      };
+
+      if (search) {
+        where.OR = [
+          { order: { key: { contains: search } } },
+          { orderRev: { description: { contains: search } } },
+        ];
+      }
+
+      const [items, total] = await Promise.all([
+        erpDb.orderRun.findMany({
+          where,
+          include: {
+            order: { select: { key: true } },
+            orderRev: { select: { revNo: true, description: true } },
+            _count: { select: { operationRuns: true } },
+          },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          orderBy: { dueAt: "asc" },
+        }),
+        erpDb.orderRun.count({ where }),
+      ]);
+
+      return {
+        items: items.map((run) => ({
+          id: run.id,
+          orderKey: run.order.key,
+          revNo: run.orderRev.revNo,
+          runNo: run.runNo,
+          description: run.orderRev.description,
+          status: run.status,
+          priority: run.priority,
+          dueAt: run.dueAt,
+          opCount: run._count.operationRuns,
+          createdAt: run.createdAt.toISOString(),
+        })),
+        total,
+        page,
+        pageSize,
+        _links: [
+          ...paginationLinks(
+            "dispatch/ready-to-close",
+            page,
+            pageSize,
+            total,
+            { priority, search },
+          ),
+          {
+            rel: "dispatch",
+            href: `${API_PREFIX}/dispatch`,
+            title: "Open Operations",
+          },
+        ],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/{orderKey}/runs/{runNo}`,
           },
         ],
       };
