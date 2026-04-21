@@ -107,7 +107,7 @@ Environment=XDG_RUNTIME_DIR=/run/user/1001
 Environment=XAUTHORITY=/home/naisys/.Xauthority
 
 ExecStartPre=+/bin/bash -c 'mkdir -p /run/user/1001 && chown naisys:naisys /run/user/1001'
-ExecStart=/usr/bin/vncserver :2 -geometry 1920x1080 -localhost yes
+ExecStart=/usr/bin/vncserver :2 -geometry 1600x900 -localhost yes -AcceptSetDesktopSize=0
 ExecStop=/usr/bin/vncserver -kill :2
 
 Restart=on-failure
@@ -120,6 +120,25 @@ WantedBy=multi-user.target
 **Note:** The `+` prefix on `ExecStartPre` runs that command as root, which is needed
 to create the runtime directory. Adjust the UID (`1001`) to match the naisys user's
 actual UID (`id -u naisys`).
+
+### Fixed resolution
+
+- `-geometry 1600x900` sets the framebuffer size. Change it to whatever you want the
+  agent's screen to be (e.g. `1920x1080`). All modes xrandr advertises are available;
+  this flag just picks the startup/default one.
+- `-AcceptSetDesktopSize=0` tells `Xtigervnc` to reject `SetDesktopSize` requests from
+  connecting viewers. Without it, TigerVNC auto-resizes the framebuffer to match the
+  client window, which means `scrot` / `import -window root` screenshots will change
+  size whenever someone connects, disconnects, or resizes their viewer — and won't
+  match what a headless run captures. With it, the framebuffer stays pinned at the
+  geometry above regardless of viewer state (the viewer letterboxes/scales instead).
+
+Verify from the naisys session:
+
+```bash
+sudo -u naisys DISPLAY=:2 XAUTHORITY=/home/naisys/.Xauthority xrandr | head -3
+# Screen 0: ... current 1600 x 900 ...
+```
 
 ## 7. Enable and start the desktop
 
