@@ -4,6 +4,7 @@ import { z } from "zod";
 export const PermissionEnum = z.enum([
   "supervisor_admin",
   "manage_agents",
+  "remote_execution",
   "manage_hosts",
   "agent_communication",
   "manage_models",
@@ -11,6 +12,19 @@ export const PermissionEnum = z.enum([
   "view_run_logs",
 ]);
 export type Permission = z.infer<typeof PermissionEnum>;
+
+export const PermissionDescriptions: Record<Permission, string> = {
+  supervisor_admin: "Full access, including user management",
+  manage_agents:
+    "Create, configure, start/stop, pause/resume, archive, and delete agents",
+  remote_execution:
+    "Send arbitrary commands to an agent's active run (remote shell access)",
+  manage_hosts: "Register and manage agent hosts",
+  agent_communication: "Send messages to agents via mail and chat",
+  manage_models: "Add, edit, and remove LLM model configurations",
+  manage_variables: "Manage global variables used by agents",
+  view_run_logs: "View unobfuscated run logs",
+};
 
 const urlSafeUsername = z
   .string()

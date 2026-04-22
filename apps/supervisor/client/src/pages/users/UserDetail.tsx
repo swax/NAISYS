@@ -19,7 +19,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
-import type { Permission } from "@naisys/supervisor-shared";
+import { type Permission, PermissionDescriptions } from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -359,13 +359,24 @@ export const UserDetail: React.FC = () => {
 
       {hasAction(user._actions, "grant-permission") &&
         grantablePermissions.length > 0 && (
-          <Group>
+          <Group align="flex-start">
             <Select
               placeholder="Select permission"
+              w={320}
               data={grantablePermissions.map((p) => ({
                 value: p,
                 label: p,
               }))}
+              renderOption={({ option }) => (
+                <Stack gap={2}>
+                  <Text ff="monospace" size="sm">
+                    {option.label}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {PermissionDescriptions[option.value as Permission]}
+                  </Text>
+                </Stack>
+              )}
               value={grantPerm}
               onChange={(v) => setGrantPerm(v as Permission | null)}
             />

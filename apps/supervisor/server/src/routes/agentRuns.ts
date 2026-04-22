@@ -180,7 +180,7 @@ export default function agentRunsRoutes(
   }>(
     "/:username/runs/:runId/sessions/:sessionId/command",
     {
-      preHandler: [requirePermission("manage_agents")],
+      preHandler: [requirePermission("remote_execution")],
       schema: {
         description: "Send a command to a run's active session via the hub",
         tags: ["Runs"],
