@@ -58,11 +58,6 @@ export function createDesktopService(
 
   /** Handle the screenshot subcommand */
   async function handleScreenshot(): Promise<string> {
-    const config = computerService.getConfig();
-    if (!config) {
-      return "Desktop mode is not enabled or failed to initialize.";
-    }
-
     const cwd = await shellWrapper.getCurrentPath();
     const outDir = path.join(cwd || process.cwd(), "screenshots");
     fs.mkdirSync(outDir, { recursive: true });
@@ -85,13 +80,83 @@ export function createDesktopService(
   /** Handle ns-desktop commands */
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
-    const firstArg = (argv[0] || "").toLowerCase();
+    const subs = desktopCmd.subcommands!;
+    const usageError = (sub: keyof typeof subs) =>
+      `Invalid parameters. Usage: ${desktopCmd.name} ${subs[sub].usage}`;
 
-    if (firstArg === "screenshot") {
-      return handleScreenshot();
+    if (!argv[0]) {
+      argv[0] = "help";
     }
 
-    return `Usage: ${desktopCmd.name} screenshot`;
+    const sub = argv[0].toLowerCase();
+
+    if (sub === "help") {
+      const lines = [`${desktopCmd.name} <command>`];
+      for (const s of Object.values(subs)) {
+        lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
+      }
+      return lines.join("\n");
+    }
+
+    if (!computerService.getConfig()) {
+      throw "Desktop mode is not enabled or failed to initialize.";
+    }
+
+    switch (sub) {
+      case "screenshot": {
+        return handleScreenshot();
+      }
+
+      case "key": {
+        const key = argv.slice(1).join(" ");
+        if (!key) {
+          throw usageError("key");
+        }
+        await computerService.executeAction({
+          actions: [{ action: "key", text: key }],
+        });
+        return `Pressed key: ${key}`;
+      }
+
+      case "click": {
+        const x = Number(argv[1]);
+        const y = Number(argv[2]);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          throw usageError("click");
+        }
+        const button = (argv[3] || "left").toLowerCase();
+        const actionByButton: Record<string, string> = {
+          left: "left_click",
+          right: "right_click",
+          middle: "middle_click",
+          double: "double_click",
+        };
+        const action = actionByButton[button];
+        if (!action) {
+          throw `Unknown button "${button}". Use left, right, middle, or double.`;
+        }
+        await computerService.executeAction({
+          actions: [{ action, coordinate: [x, y] }],
+        });
+        return `Clicked (${button}) at (${x}, ${y})`;
+      }
+
+      case "type": {
+        const text = argv.slice(1).join(" ");
+        if (!text) {
+          throw usageError("type");
+        }
+        await computerService.executeAction({
+          actions: [{ action: "type", text }],
+        });
+        return `Typed: ${text}`;
+      }
+
+      default: {
+        const helpResponse = await handleCommand("help");
+        return `Unknown ${desktopCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${helpResponse}`;
+      }
+    }
   }
 
   /**
