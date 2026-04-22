@@ -6,6 +6,17 @@ export const NAISYS_HEARTBEAT_INTERVAL_MS = 2000;
 /** How often the hub pushes aggregate active user status to all connections (NAISYS/Supervisors) (ms) */
 export const HUB_HEARTBEAT_INTERVAL_MS = 2000;
 
+/** What the command loop is currently blocking on. */
+export const CommandLoopStateSchema = z.enum([
+  "Initializing",
+  "Waiting",
+  "LlmQuerying",
+  "Executing",
+  "Confirming",
+  "Ending",
+]);
+export type CommandLoopState = z.infer<typeof CommandLoopStateSchema>;
+
 /** Identifies an agent's current run session, sent with each heartbeat */
 export const HeartbeatSessionSchema = z.object({
   userId: z.number(),
@@ -13,6 +24,8 @@ export const HeartbeatSessionSchema = z.object({
   sessionId: z.number(),
   /** True when the agent's command loop is pause-locked on indefinite wait. */
   paused: z.boolean().optional(),
+  /** What the command loop is currently blocking on. */
+  state: CommandLoopStateSchema.optional(),
 });
 export type HeartbeatSession = z.infer<typeof HeartbeatSessionSchema>;
 

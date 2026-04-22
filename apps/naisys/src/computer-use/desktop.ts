@@ -11,6 +11,7 @@ import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
+import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
 import type { ComputerService, CoordScale } from "./computerService.js";
@@ -28,6 +29,7 @@ export function createDesktopService(
   agentConfig: AgentConfig,
   modelService: ModelService,
   shellWrapper: ShellWrapper,
+  commandLoopState: CommandLoopStateService,
 ) {
   // Pre-compute desktop scaling info at init time
   const shellModel = modelService.getLlmModel(
@@ -105,6 +107,11 @@ export function createDesktopService(
       output.commentAndLog(`Desktop Action: ${desc}`);
     }
 
+    // getConfirmation auto-approves when unfocused, so only surface the
+    // Confirming state if the operator can actually respond
+    if (output.isConsoleEnabled()) {
+      commandLoopState.setState("Confirming");
+    }
     const approved = await getConfirmation(
       output,
       "Execute desktop actions? [Y/n]",
@@ -113,6 +120,7 @@ export function createDesktopService(
         timeoutSeconds: agentConfig.agentConfig().debugPauseSeconds,
       },
     );
+    commandLoopState.setState("Executing");
 
     // Add the deferred assistant response (text + tool_use blocks) to context
     contextManager.appendDesktopRequest(

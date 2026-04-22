@@ -35,6 +35,7 @@ import { createLogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
+import { createCommandLoopState } from "../utils/commandLoopState.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -94,6 +95,11 @@ export async function createAgentRuntime(
 
   // LLM
   const inputMode = createInputMode();
+  const commandLoopState = createCommandLoopState(() => {
+    // Immediate heartbeat so supervisors see state transitions within
+    // roundtrip latency instead of waiting for the next interval tick
+    agentManager.onHeartbeatNeeded?.();
+  });
   const systemMessage = createSystemMessage(
     globalConfig,
     agentConfig,
@@ -157,6 +163,7 @@ export async function createAgentRuntime(
     agentConfig,
     modelService,
     shellWrapper,
+    commandLoopState,
   );
   const genimg = createGenImg(
     globalConfig,
@@ -239,6 +246,7 @@ export async function createAgentRuntime(
     agentConfig,
     llmService,
     output,
+    commandLoopState,
   );
 
   const debugCommands = createDebugCommands(
@@ -287,6 +295,7 @@ export async function createAgentRuntime(
     contextManager,
     output,
     inputMode,
+    commandLoopState,
   );
   const commandLoop = createCommandLoop(
     globalConfig,
@@ -311,6 +320,7 @@ export async function createAgentRuntime(
     sessionService,
     modelService,
     desktopService,
+    commandLoopState,
   );
 
   const abortController = new AbortController();
@@ -325,6 +335,7 @@ export async function createAgentRuntime(
     getSessionId: runService.getSessionId,
     isPaused: commandLoop.isPaused,
     setPaused: commandLoop.setPaused,
+    getState: commandLoopState.getState,
     output,
     subagentService,
     runCommandLoop: async () => {

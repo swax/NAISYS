@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CommandLoopStateSchema } from "./heartbeat.js";
+
 /** Full session data pushed from hub to supervisor after creation */
 export const SessionPushSchema = z.object({
   session: z.object({
@@ -59,6 +61,7 @@ export const SessionHeartbeatUpdateSchema = z.object({
   sessionId: z.number(),
   lastActive: z.string(),
   paused: z.boolean().optional(),
+  state: CommandLoopStateSchema.optional(),
 });
 export type SessionHeartbeatUpdate = z.infer<
   typeof SessionHeartbeatUpdateSchema

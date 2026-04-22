@@ -2,6 +2,7 @@ import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type {
   AgentsStatus,
+  CommandLoopState,
   SessionHeartbeatUpdate,
 } from "@naisys/hub-protocol";
 import {
@@ -32,6 +33,7 @@ export function createHubHeartbeatService(
         sessionId: number;
         lastActive: string;
         paused?: boolean;
+        state?: CommandLoopState;
       }
     >
   >();
@@ -92,6 +94,7 @@ export function createHubHeartbeatService(
           sessionId: number;
           lastActive: string;
           paused?: boolean;
+          state?: CommandLoopState;
         }
       >();
       for (const session of parsed.activeSessions) {
@@ -108,6 +111,7 @@ export function createHubHeartbeatService(
           sessionId: session.sessionId,
           lastActive: now,
           paused: session.paused,
+          state: session.state,
         });
       }
       hostActiveSessions.set(hostId, sessionMap);
@@ -163,6 +167,7 @@ export function createHubHeartbeatService(
           sessionId: info.sessionId,
           lastActive: info.lastActive,
           paused: info.paused,
+          state: info.state,
         });
       }
     }

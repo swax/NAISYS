@@ -29,6 +29,7 @@ export function createHeartbeatService(
       runId: a.getRunId(),
       sessionId: a.getSessionId(),
       paused: a.isPaused(),
+      state: a.getState(),
     }));
 
     if (hubClient) {

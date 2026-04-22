@@ -1,3 +1,4 @@
+import type { CommandLoopState } from "@naisys/hub-protocol";
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 
 /**
@@ -6,4 +7,5 @@ import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 export type RunSession = BaseRunSession & {
   isOnline: boolean;
   paused?: boolean;
+  state?: CommandLoopState;
 };
