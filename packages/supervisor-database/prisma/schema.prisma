@@ -10,6 +10,7 @@ generator client {
 enum Permission {
   supervisor_admin
   manage_agents
+  remote_execution
   manage_hosts
   agent_communication
   manage_models
