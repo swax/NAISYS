@@ -58,7 +58,12 @@ export const desktopCmd: CommandDef = {
     screenshot: {
       usage: "screenshot",
       description:
-        "Save a full-size and LLM-scaled screenshot with cursor to the screenshots folder",
+        "Save the current viewport at native size and LLM-scaled size to the screenshots folder",
+    },
+    focus: {
+      usage: "focus [clear|<x> <y> <width> <height>]",
+      description:
+        "Set or clear the desktop focus rectangle in native screen pixels. Screenshots and coordinates become relative to that viewport",
     },
     key: {
       usage: "key <key>",
@@ -68,7 +73,7 @@ export const desktopCmd: CommandDef = {
     click: {
       usage: "click <x> <y> [left|right|middle|double]",
       description:
-        "Click at native screen coordinates (defaults to left). Use 'double' for double-click",
+        "Click at current viewport coordinates (defaults to left). Use 'double' for double-click",
     },
     type: {
       usage: 'type "<text>"',

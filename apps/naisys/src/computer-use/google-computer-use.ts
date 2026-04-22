@@ -10,6 +10,7 @@ import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
 import type {
   DesktopAction,
   DesktopConfig,
+  DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
@@ -236,6 +237,27 @@ function reconstructGoogleArgs(
   }
 }
 
+function getReplayViewport(
+  input: Record<string, unknown>,
+  desktopConfig: DesktopConfig,
+): Pick<DesktopViewport, "width" | "height"> {
+  const viewport = input.viewport as Partial<DesktopViewport> | undefined;
+  if (
+    viewport &&
+    typeof viewport.width === "number" &&
+    typeof viewport.height === "number" &&
+    viewport.width > 0 &&
+    viewport.height > 0
+  ) {
+    return { width: viewport.width, height: viewport.height };
+  }
+
+  return {
+    width: desktopConfig.displayWidth,
+    height: desktopConfig.displayHeight,
+  };
+}
+
 // --- Public API ---
 
 /**
@@ -297,7 +319,6 @@ export function formatContextWithComputerUse(
   desktopConfig: DesktopConfig,
   formatPartsForGoogle: (content: string | ContentBlock[]) => any[],
 ): any[] {
-  const { displayWidth, displayHeight } = desktopConfig;
   // Map tool_use IDs to their Google function names for function_response reconstruction
   const toolUseIdToName = new Map<string, string>();
   const formattedMessages: any[] = [];
@@ -323,11 +344,15 @@ export function formatContextWithComputerUse(
           parts.push({ text: block.text });
         } else if (block.type === "tool_use") {
           toolUseIdToName.set(block.id, block.name);
+          const replayViewport = getReplayViewport(
+            block.input,
+            desktopConfig,
+          );
           const googleArgs = reconstructGoogleArgs(
             block.name,
             (block.input as { actions: Record<string, unknown>[] }).actions,
-            displayWidth,
-            displayHeight,
+            replayViewport.width,
+            replayViewport.height,
           );
           const inputObj = block.input as Record<string, unknown>;
           parts.push({

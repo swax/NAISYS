@@ -13,6 +13,7 @@ import type { AgentConfig } from "../agent/agentConfig.js";
 import type {
   DesktopAction,
   DesktopConfig,
+  DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
 import * as macosDesktop from "./macosDesktop.js";
 import * as waylandDesktop from "./waylandDesktop.js";
@@ -101,6 +102,92 @@ async function captureScreenshot(
   };
 }
 
+function isViewportWithinBounds(
+  viewport: DesktopViewport,
+  screenWidth: number,
+  screenHeight: number,
+): boolean {
+  return (
+    Number.isInteger(viewport.x) &&
+    Number.isInteger(viewport.y) &&
+    Number.isInteger(viewport.width) &&
+    Number.isInteger(viewport.height) &&
+    viewport.width > 0 &&
+    viewport.height > 0 &&
+    viewport.x >= 0 &&
+    viewport.y >= 0 &&
+    viewport.x + viewport.width <= screenWidth &&
+    viewport.y + viewport.height <= screenHeight
+  );
+}
+
+async function cropScreenshotToViewport(
+  screenshot: {
+    base64: string;
+    width: number;
+    height: number;
+    filepath: string;
+  },
+  viewport: DesktopViewport,
+): Promise<{
+  base64: string;
+  width: number;
+  height: number;
+  filepath: string;
+}> {
+  const croppedBuffer = await sharp(Buffer.from(screenshot.base64, "base64"))
+    .extract({
+      left: viewport.x,
+      top: viewport.y,
+      width: viewport.width,
+      height: viewport.height,
+    })
+    .png()
+    .toBuffer();
+
+  const filepath = screenshot.filepath.replace(
+    ".png",
+    `-focus-${viewport.x}-${viewport.y}-${viewport.width}x${viewport.height}.png`,
+  );
+  fs.writeFileSync(filepath, croppedBuffer);
+
+  return {
+    base64: croppedBuffer.toString("base64"),
+    width: viewport.width,
+    height: viewport.height,
+    filepath,
+  };
+}
+
+function translateCoordinate(
+  coord: unknown,
+  viewport?: DesktopViewport,
+): unknown {
+  if (!viewport || !Array.isArray(coord)) return coord;
+  return [coord[0] + viewport.x, coord[1] + viewport.y];
+}
+
+function translateActionToScreen(
+  action: Record<string, unknown>,
+  viewport?: DesktopViewport,
+): Record<string, unknown> {
+  if (!viewport) return action;
+
+  const translated = { ...action };
+
+  if ("coordinate" in action) {
+    translated.coordinate = translateCoordinate(action.coordinate, viewport);
+  }
+  if ("start_coordinate" in action) {
+    translated.start_coordinate = translateCoordinate(
+      action.start_coordinate,
+      viewport,
+    );
+  }
+
+  return translated;
+}
+
 // --- Action execution ---
 
 async function executeSingleAction(
@@ -166,9 +253,13 @@ async function executeSingleAction(
 async function executeAction(
   action: DesktopAction["input"],
   platform: Platform,
+  viewport?: DesktopViewport,
 ): Promise<void> {
   for (const subAction of action.actions) {
-    await executeSingleAction(subAction, platform);
+    await executeSingleAction(
+      translateActionToScreen(subAction, viewport),
+      platform,
+    );
   }
 }
 
@@ -360,15 +451,54 @@ export function formatDesktopActions(
     .join(", then ");
 }
 
+export function isDesktopFocused(desktopConfig: DesktopConfig): boolean {
+  return (
+    desktopConfig.viewport.x !== 0 ||
+    desktopConfig.viewport.y !== 0 ||
+    desktopConfig.displayWidth !== desktopConfig.nativeDisplayWidth ||
+    desktopConfig.displayHeight !== desktopConfig.nativeDisplayHeight
+  );
+}
+
+export function describeDesktopViewport(
+  desktopConfig: DesktopConfig,
+): string {
+  if (!isDesktopFocused(desktopConfig)) {
+    return `full desktop ${desktopConfig.displayWidth}x${desktopConfig.displayHeight}`;
+  }
+
+  return `focus (${desktopConfig.viewport.x}, ${desktopConfig.viewport.y}, ${desktopConfig.displayWidth}x${desktopConfig.displayHeight}) within ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`;
+}
+
 // --- Service factory ---
 
 export async function createComputerService({ agentConfig }: AgentConfig) {
   startScreenshotCleanup();
   const platform = agentConfig().controlDesktop ? detectPlatform() : null;
   let nativeDimensions: { width: number; height: number } | null = null;
+  let focusViewport: DesktopViewport | undefined;
 
-  /** Capture screenshot at native resolution (used by ns-desktop screenshot) */
-  async function captureNativeScreenshot(): Promise<{
+  function syncFocusViewport(): void {
+    if (
+      focusViewport &&
+      nativeDimensions &&
+      !isViewportWithinBounds(
+        focusViewport,
+        nativeDimensions.width,
+        nativeDimensions.height,
+      )
+    ) {
+      focusViewport = undefined;
+    }
+  }
+
+  function getViewport(): DesktopViewport | undefined {
+    syncFocusViewport();
+    return focusViewport ? { ...focusViewport } : undefined;
+  }
+
+  /** Capture the full native desktop before optional viewport cropping */
+  async function captureFullNativeScreenshot(): Promise<{
     base64: string;
     width: number;
     height: number;
@@ -381,7 +511,30 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     }
     const result = await captureScreenshot(agentConfig().username, platform);
     nativeDimensions = { width: result.width, height: result.height };
+    syncFocusViewport();
     return result;
+  }
+
+  /** Capture the current viewport at native resolution */
+  async function captureNativeScreenshot(): Promise<{
+    base64: string;
+    width: number;
+    height: number;
+    filepath: string;
+  }> {
+    const screenshot = await captureFullNativeScreenshot();
+    const viewport = getViewport();
+    if (!viewport) {
+      return screenshot;
+    }
+
+    const cropped = await cropScreenshotToViewport(screenshot, viewport);
+    try {
+      fs.unlinkSync(screenshot.filepath);
+    } catch {
+      /* ignore */
+    }
+    return cropped;
   }
 
   /** Capture screenshot scaled to TARGET_MEGAPIXELS and saved to disk */
@@ -421,38 +574,76 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     } else {
       try {
         platform.backend.checkDependencies?.();
-        await captureNativeScreenshot();
+        await captureFullNativeScreenshot();
       } catch (e) {
         initError = e instanceof Error ? e.message : String(e);
       }
     }
   }
 
-  /** Execute an action using native screen coordinates */
+  /** Execute an action using viewport-relative coordinates */
   async function execute(action: DesktopAction["input"]) {
     if (!platform) {
       throw new Error(
         "Desktop mode is not enabled or no display server detected.",
       );
     }
-    await executeAction(action, platform);
+    await executeAction(action, platform, getViewport());
   }
 
   /** Build the DesktopConfig with native display dimensions. Returns undefined if no platform or init failed. */
   function getConfig(): DesktopConfig | undefined {
     if (!platform || !nativeDimensions) return undefined;
+    const viewport =
+      getViewport() || {
+        x: 0,
+        y: 0,
+        width: nativeDimensions.width,
+        height: nativeDimensions.height,
+      };
     return {
-      displayWidth: nativeDimensions.width,
-      displayHeight: nativeDimensions.height,
+      displayWidth: viewport.width,
+      displayHeight: viewport.height,
+      nativeDisplayWidth: nativeDimensions.width,
+      nativeDisplayHeight: nativeDimensions.height,
+      viewport,
       desktopPlatform: platform.name,
     };
+  }
+
+  function setFocus(
+    viewport: DesktopViewport | undefined,
+  ): DesktopViewport | undefined {
+    if (!viewport) {
+      focusViewport = undefined;
+      return undefined;
+    }
+    if (!nativeDimensions) {
+      throw new Error("Desktop dimensions are not initialized yet.");
+    }
+    if (
+      !isViewportWithinBounds(
+        viewport,
+        nativeDimensions.width,
+        nativeDimensions.height,
+      )
+    ) {
+      throw new Error(
+        `Focus rectangle (${viewport.x}, ${viewport.y}, ${viewport.width}, ${viewport.height}) is outside the native screen ${nativeDimensions.width}x${nativeDimensions.height}.`,
+      );
+    }
+    focusViewport = { ...viewport };
+    return getViewport();
   }
 
   return {
     captureScaledScreenshot,
     captureNativeScreenshot,
+    captureFullNativeScreenshot,
     executeAction: execute,
     getConfig,
+    getFocus: getViewport,
+    setFocus,
     platformName: platform?.name,
     initError,
   };

@@ -10,15 +10,32 @@ export type QuerySources =
   | "look"
   | "listen";
 
+export type DesktopActionInput = Record<string, unknown> & {
+  actions: Record<string, unknown>[];
+};
+
 export interface DesktopAction {
   id: string;
   name: string;
-  input: { actions: Record<string, unknown>[] };
+  input: DesktopActionInput;
+}
+
+export interface DesktopViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface DesktopConfig {
+  /** Current viewport dimensions exposed to the model */
   displayWidth: number;
   displayHeight: number;
+  /** Native full-screen dimensions */
+  nativeDisplayWidth: number;
+  nativeDisplayHeight: number;
+  /** Viewport origin within the native desktop */
+  viewport: DesktopViewport;
   desktopPlatform: string;
 }
 

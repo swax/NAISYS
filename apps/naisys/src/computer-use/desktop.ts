@@ -17,9 +17,11 @@ import type { OutputService } from "../utils/output.js";
 import type { ComputerService, CoordScale } from "./computerService.js";
 import {
   checkActionBounds,
+  describeDesktopViewport,
   formatDesktopAction,
   formatDesktopActions,
   getTargetScaleFactor,
+  isDesktopFocused,
 } from "./computerService.js";
 
 export function createDesktopService(
@@ -31,29 +33,61 @@ export function createDesktopService(
   shellWrapper: ShellWrapper,
   commandLoopState: CommandLoopStateService,
 ) {
-  // Pre-compute desktop scaling info at init time
   const shellModel = modelService.getLlmModel(
     agentConfig.agentConfig().shellModel,
   );
-  const desktopConfig =
-    agentConfig.agentConfig().controlDesktop && shellModel.supportsComputerUse
-      ? computerService.getConfig()
-      : undefined;
 
-  let coordScale: CoordScale | undefined;
-  let scaledWidth: number | undefined;
-  let scaledHeight: number | undefined;
+  function getFocusChangeCostNote(): string {
+    if (shellModel.apiType === LlmApiType.Anthropic) {
+      return "Focus changes can increase next-turn cost by invalidating computer-use prompt caching, especially on Anthropic.";
+    }
+    return "Focus changes can increase next-turn cost because computer-use context has to be refreshed.";
+  }
 
-  if (desktopConfig) {
+  function getDesktopRuntimeState(): {
+    desktopConfig: ReturnType<ComputerService["getConfig"]>;
+    coordScale?: CoordScale;
+    scaledWidth?: number;
+    scaledHeight?: number;
+  } {
+    const desktopConfig =
+      agentConfig.agentConfig().controlDesktop && shellModel.supportsComputerUse
+        ? computerService.getConfig()
+        : undefined;
+
+    if (!desktopConfig) {
+      return { desktopConfig };
+    }
+
     const { displayWidth: w, displayHeight: h } = desktopConfig;
     const scaleFactor = getTargetScaleFactor(w, h);
-    scaledWidth = Math.floor(w * scaleFactor);
-    scaledHeight = Math.floor(h * scaleFactor);
 
-    coordScale =
-      shellModel.apiType === LlmApiType.Google
-        ? { x: 1000 / w, y: 1000 / h }
-        : { x: scaleFactor, y: scaleFactor };
+    return {
+      desktopConfig,
+      scaledWidth: Math.floor(w * scaleFactor),
+      scaledHeight: Math.floor(h * scaleFactor),
+      coordScale:
+        shellModel.apiType === LlmApiType.Google
+          ? { x: 1000 / w, y: 1000 / h }
+          : { x: scaleFactor, y: scaleFactor },
+    };
+  }
+
+  function attachViewportToActions(
+    actions: DesktopAction[],
+    desktopConfig?: NonNullable<ReturnType<ComputerService["getConfig"]>>,
+  ): DesktopAction[] {
+    if (!desktopConfig || !isDesktopFocused(desktopConfig)) {
+      return actions;
+    }
+
+    return actions.map((action) => ({
+      ...action,
+      input: {
+        ...action.input,
+        viewport: { ...desktopConfig.viewport },
+      },
+    }));
   }
 
   /** Handle the screenshot subcommand */
@@ -64,17 +98,22 @@ export function createDesktopService(
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
-    // Save full-size native screenshot
-    const native = await computerService.captureNativeScreenshot();
+    // Save full native desktop screenshot
+    const full = await computerService.captureFullNativeScreenshot();
     const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
-    fs.writeFileSync(fullPath, Buffer.from(native.base64, "base64"));
+    fs.copyFileSync(full.filepath, fullPath);
 
-    // Save scaled screenshot (same resolution the LLM sees)
+    // Save scaled viewport screenshot (same resolution the LLM sees)
     const scaled = await computerService.captureScaledScreenshot();
     const scaledPath = path.join(outDir, `screenshot-${timestamp}-scaled.png`);
     fs.copyFileSync(scaled.filepath, scaledPath);
 
-    return `Full: ${fullPath}\nScaled: ${scaledPath}`;
+    const desktopConfig = computerService.getConfig();
+    const viewportLine = desktopConfig
+      ? `\nViewport: ${describeDesktopViewport(desktopConfig)}`
+      : "";
+
+    return `Full: ${fullPath}\nScaled: ${scaledPath}${viewportLine}`;
   }
 
   /** Handle ns-desktop commands */
@@ -105,6 +144,33 @@ export function createDesktopService(
     switch (sub) {
       case "screenshot": {
         return handleScreenshot();
+      }
+
+      case "focus": {
+        if (!argv[1]) {
+          return `Desktop focus: ${describeDesktopViewport(computerService.getConfig()!)}`;
+        }
+
+        if (argv[1].toLowerCase() === "clear") {
+          computerService.setFocus(undefined);
+          return `Desktop focus cleared. Using ${describeDesktopViewport(computerService.getConfig()!)}\n${getFocusChangeCostNote()}`;
+        }
+
+        const x = Number(argv[1]);
+        const y = Number(argv[2]);
+        const width = Number(argv[3]);
+        const height = Number(argv[4]);
+        if (
+          !Number.isInteger(x) ||
+          !Number.isInteger(y) ||
+          !Number.isInteger(width) ||
+          !Number.isInteger(height)
+        ) {
+          throw usageError("focus");
+        }
+
+        const viewport = computerService.setFocus({ x, y, width, height });
+        return `Desktop focus set to (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}) in native screen pixels.\n${getFocusChangeCostNote()}`;
       }
 
       case "key": {
@@ -138,7 +204,7 @@ export function createDesktopService(
         await computerService.executeAction({
           actions: [{ action, coordinate: [x, y] }],
         });
-        return `Clicked (${button}) at (${x}, ${y})`;
+        return `Clicked (${button}) at (${x}, ${y}) relative to the current viewport`;
       }
 
       case "type": {
@@ -167,7 +233,10 @@ export function createDesktopService(
     textContent: string,
     actions: DesktopAction[],
   ): Promise<void> {
-    for (const action of actions) {
+    const { desktopConfig, coordScale } = getDesktopRuntimeState();
+    const actionsWithViewport = attachViewportToActions(actions, desktopConfig);
+
+    for (const action of actionsWithViewport) {
       const desc = formatDesktopAction(action.input, coordScale) || action.name;
       output.commentAndLog(`Desktop Action: ${desc}`);
     }
@@ -190,14 +259,12 @@ export function createDesktopService(
     // Add the deferred assistant response (text + tool_use blocks) to context
     contextManager.appendDesktopRequest(
       textContent,
-      actions,
-      formatDesktopActions(actions, coordScale),
+      actionsWithViewport,
+      formatDesktopActions(actionsWithViewport, coordScale),
     );
 
     if (approved) {
-      const desktopConfig = computerService.getConfig();
-
-      for (const action of actions) {
+      for (const action of actionsWithViewport) {
         if (desktopConfig && coordScale) {
           const boundsError = checkActionBounds(
             action.input,
@@ -239,7 +306,7 @@ export function createDesktopService(
         }
       }
     } else {
-      for (const action of actions) {
+      for (const action of actionsWithViewport) {
         contextManager.appendDesktopError(
           action.id,
           "Action rejected by operator",
@@ -260,11 +327,12 @@ export function createDesktopService(
       return;
     }
 
-    if (!desktopConfig) return;
+    const { desktopConfig, scaledWidth, scaledHeight } = getDesktopRuntimeState();
+    if (!desktopConfig || !scaledWidth || !scaledHeight) return;
 
     const {
-      displayWidth: nativeWidth,
-      displayHeight: nativeHeight,
+      nativeDisplayWidth: nativeWidth,
+      nativeDisplayHeight: nativeHeight,
       desktopPlatform,
     } = desktopConfig;
     const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
