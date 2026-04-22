@@ -2,6 +2,7 @@ import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentPeekRequestSchema,
+  AgentRunCommandRequestSchema,
   AgentRunPauseRequestSchema,
   AgentStartRequestSchema,
   AgentStopRequestSchema,
@@ -342,6 +343,64 @@ export function createHubAgentService(
 
   registerRunPauseHandler(HubEvents.AGENT_RUN_PAUSE);
   registerRunPauseHandler(HubEvents.AGENT_RUN_RESUME);
+
+  naisysServer.registerEvent(
+    HubEvents.AGENT_RUN_COMMAND,
+    (hostId, data, ack) => {
+      try {
+        const parsed = AgentRunCommandRequestSchema.parse(data);
+
+        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+
+        if (targetHostIds.length === 0) {
+          ack({
+            success: false,
+            error: `Agent ${parsed.userId} is not running on any known host`,
+          });
+          return;
+        }
+
+        let acked = false;
+        let sendFailures = 0;
+
+        for (const targetHostId of targetHostIds) {
+          const sent = naisysServer.sendMessage(
+            targetHostId,
+            HubEvents.AGENT_RUN_COMMAND,
+            {
+              userId: parsed.userId,
+              runId: parsed.runId,
+              sessionId: parsed.sessionId,
+              command: parsed.command,
+              sourceHostId: hostId,
+            },
+            (response) => {
+              if (!acked) {
+                acked = true;
+                ack(response);
+              }
+            },
+          );
+
+          if (!sent) {
+            sendFailures++;
+          }
+        }
+
+        if (sendFailures === targetHostIds.length && !acked) {
+          ack({
+            success: false,
+            error: `No target hosts are connected`,
+          });
+        }
+      } catch (error) {
+        logService.error(
+          `[Hub:Agents] ${HubEvents.AGENT_RUN_COMMAND} error from host ${hostId}: ${error}`,
+        );
+        ack({ success: false, error: String(error) });
+      }
+    },
+  );
 
   naisysServer.registerEvent(HubEvents.AGENT_PEEK, (hostId, data, ack) => {
     try {

@@ -6,6 +6,7 @@ import type {
   AgentActionResult,
   AgentDetailResponse,
   AgentListResponse,
+  AgentRunCommandResult,
   AgentRunPauseResult,
   AgentStartResult,
   AgentStopResult,
@@ -62,6 +63,7 @@ export type {
   AgentConfigFile,
   AgentDetailResponse,
   AgentListResponse,
+  AgentRunCommandResult,
   AgentRunPauseResult,
   AgentStartResult,
   AgentStopResult,
@@ -187,6 +189,8 @@ export const apiEndpoints = {
     `/agents/${username}/runs/${runId}/sessions/${sessionId}/pause`,
   agentRunResume: (username: string, runId: number, sessionId: number) =>
     `/agents/${username}/runs/${runId}/sessions/${sessionId}/resume`,
+  agentRunCommand: (username: string, runId: number, sessionId: number) =>
+    `/agents/${username}/runs/${runId}/sessions/${sessionId}/command`,
   agentEnable: (username: string) => `/agents/${username}/enable`,
   agentDisable: (username: string) => `/agents/${username}/disable`,
   agentArchive: (username: string) => `/agents/${username}/archive`,

@@ -54,6 +54,27 @@ export type AgentRunPauseResponse = z.infer<
   typeof AgentRunPauseResponseSchema
 >;
 
+/** Request to send a command to a run's active session */
+export const AgentRunCommandRequestSchema = z.object({
+  userId: z.number(),
+  runId: z.number(),
+  sessionId: z.number(),
+  command: z.string(),
+  sourceHostId: z.number().optional(),
+});
+export type AgentRunCommandRequest = z.infer<
+  typeof AgentRunCommandRequestSchema
+>;
+
+/** Response to a run command request */
+export const AgentRunCommandResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type AgentRunCommandResponse = z.infer<
+  typeof AgentRunCommandResponseSchema
+>;
+
 /** Request to peek at an agent's output buffer */
 export const AgentPeekRequestSchema = z.object({
   userId: z.number(),

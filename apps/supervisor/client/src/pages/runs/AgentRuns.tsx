@@ -4,8 +4,10 @@ import {
   Badge,
   Box,
   Button,
+  Code,
   Drawer,
   Group,
+  HoverCard,
   Stack,
   Text,
   Textarea,
@@ -18,8 +20,9 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconSend,
+  IconTerminal2,
 } from "@tabler/icons-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -32,7 +35,7 @@ import { getPlatformBadge } from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
-import { pauseRun, resumeRun } from "../../lib/apiRuns";
+import { pauseRun, resumeRun, sendRunCommand } from "../../lib/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 import {
@@ -69,6 +72,7 @@ export const AgentRuns: React.FC = () => {
     loadMore,
     loadingMore,
     hasMore,
+    patchRun,
   } = useRunsData(username ?? "", Boolean(username));
 
   // There's a bug where even through isFetchedAfterMount is true, the latest log id of all runs is still old.
@@ -162,7 +166,11 @@ export const AgentRuns: React.FC = () => {
       const result = target
         ? await pauseRun(username, run.runId, run.sessionId)
         : await resumeRun(username, run.runId, run.sessionId);
-      if (!result.success) {
+      if (result.success) {
+        // Flip locally on ack so the button label doesn't lag the
+        // heartbeat round-trip; the next heartbeat will confirm.
+        patchRun(run.userId, run.runId, run.sessionId, { paused: target });
+      } else {
         notifications.show({
           title: target ? "Pause Failed" : "Resume Failed",
           message: result.message,
@@ -177,6 +185,46 @@ export const AgentRuns: React.FC = () => {
       });
     } finally {
       setPauseLoading(false);
+    }
+  };
+
+  const [commandInput, setCommandInput] = useState("");
+  const [commandSending, setCommandSending] = useState(false);
+  const commandInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSendCommand = async (run: RunSession) => {
+    if (!username) return;
+    const command = commandInput.trim();
+    if (!command) return;
+    setCommandSending(true);
+    try {
+      const result = await sendRunCommand(
+        username,
+        run.runId,
+        run.sessionId,
+        command,
+      );
+      if (result.success) {
+        setCommandInput("");
+      } else {
+        notifications.show({
+          title: "Send Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Send Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setCommandSending(false);
+      // Defer focus to the next tick so React re-enables the (previously
+      // disabled) textarea before we try to focus it — a disabled element
+      // won't accept focus.
+      setTimeout(() => commandInputRef.current?.focus(), 0);
     }
   };
 
@@ -400,21 +448,73 @@ export const AgentRuns: React.FC = () => {
             {/* Log content */}
             <RunSessionLog run={selectedRun} />
 
-            {/* Placeholder input */}
+            {/* Command input — only usable while run is online. */}
             <Group
               gap="xs"
               p="xs"
               style={{ borderTop: "1px solid var(--mantine-color-dark-4)" }}
             >
+              <HoverCard width={340} shadow="md" withArrow position="top-start">
+                <HoverCard.Target>
+                  <ActionIcon variant="subtle" color="gray" size="lg">
+                    <IconTerminal2 size={18} />
+                  </ActionIcon>
+                </HoverCard.Target>
+                <HoverCard.Dropdown>
+                  <Stack gap={6}>
+                    <Text size="sm" fw={600}>
+                      Remote command input
+                    </Text>
+                    <Text size="xs">
+                      Send <Code>ns-help</Code> to see available commands.
+                    </Text>
+                    <Text size="xs">
+                      Prefix with <Code>@</Code> to talk to the LLM directly.
+                    </Text>
+                    <Text size="xs">
+                      Prefix with <Code>!</Code> to run a shell command the LLM
+                      can see — added to its context (coming soon).
+                    </Text>
+                    <Text size="xs">
+                      Otherwise, commands run on the shell without being added
+                      to the LLM&apos;s context.
+                    </Text>
+                  </Stack>
+                </HoverCard.Dropdown>
+              </HoverCard>
               <Textarea
-                placeholder="Send a message to the agent..."
-                disabled
+                ref={commandInputRef}
+                placeholder={
+                  selectedRun.isOnline
+                    ? "Send a command to the agent..."
+                    : "Run is offline"
+                }
+                disabled={!selectedRun.isOnline || commandSending}
+                value={commandInput}
+                onChange={(e) => setCommandInput(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSendCommand(selectedRun);
+                  }
+                }}
                 autosize
                 minRows={1}
-                maxRows={1}
+                maxRows={4}
                 style={{ flex: 1 }}
               />
-              <ActionIcon variant="filled" color="blue" size="lg" disabled>
+              <ActionIcon
+                variant="filled"
+                color="blue"
+                size="lg"
+                disabled={
+                  !selectedRun.isOnline ||
+                  !commandInput.trim() ||
+                  commandSending
+                }
+                loading={commandSending}
+                onClick={() => void handleSendCommand(selectedRun)}
+              >
                 <IconSend size={18} />
               </ActionIcon>
             </Group>

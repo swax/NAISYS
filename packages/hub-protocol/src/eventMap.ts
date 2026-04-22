@@ -13,6 +13,8 @@ import type {
 import type {
   AgentPeekRequest,
   AgentPeekResponse,
+  AgentRunCommandRequest,
+  AgentRunCommandResponse,
   AgentRunPauseRequest,
   AgentRunPauseResponse,
   AgentStartRequest,
@@ -81,6 +83,10 @@ export interface HubRequestEvents {
   [HubEvents.AGENT_RUN_RESUME]: {
     request: AgentRunPauseRequest;
     response: AgentRunPauseResponse;
+  };
+  [HubEvents.AGENT_RUN_COMMAND]: {
+    request: AgentRunCommandRequest;
+    response: AgentRunCommandResponse;
   };
   [HubEvents.AGENT_PEEK]: {
     request: AgentPeekRequest;

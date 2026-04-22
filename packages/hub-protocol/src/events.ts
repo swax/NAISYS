@@ -92,6 +92,8 @@ export const HubEvents = {
   AGENT_RUN_PAUSE: "agent_run_pause",
   /** Resume a paused run */
   AGENT_RUN_RESUME: "agent_run_resume",
+  /** Send a command to a run's active session */
+  AGENT_RUN_COMMAND: "agent_run_command",
   /** Peek at an agent's output buffer */
   AGENT_PEEK: "agent_peek",
 
