@@ -1,4 +1,6 @@
 import type {
+  AgentRunCommandRequestBody,
+  AgentRunCommandResult,
   AgentRunPauseResult,
   AgentUsernameParams,
   ContextLogParams,
@@ -9,6 +11,8 @@ import type {
   RunsDataResponse,
 } from "@naisys/supervisor-shared";
 import {
+  AgentRunCommandRequestSchema,
+  AgentRunCommandResultSchema,
   AgentRunPauseResultSchema,
   AgentUsernameParamsSchema,
   ContextLogParamsSchema,
@@ -26,6 +30,7 @@ import { API_PREFIX, idCursorLinks, timestampCursorLinks } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
 import {
   isHubConnected,
+  sendAgentRunCommand,
   sendAgentRunPauseState,
 } from "../services/hubConnectionService.js";
 import {
@@ -167,6 +172,59 @@ export default function agentRunsRoutes(
   // affordances that toggle on/off based on current run state.
   registerRunPauseRoute(fastify, "pause", true);
   registerRunPauseRoute(fastify, "resume", false);
+
+  fastify.post<{
+    Params: ContextLogParams;
+    Body: AgentRunCommandRequestBody;
+    Reply: AgentRunCommandResult | ErrorResponse;
+  }>(
+    "/:username/runs/:runId/sessions/:sessionId/command",
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: "Send a command to a run's active session via the hub",
+        tags: ["Runs"],
+        params: ContextLogParamsSchema,
+        body: AgentRunCommandRequestSchema,
+        response: {
+          200: AgentRunCommandResultSchema,
+          503: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username, runId, sessionId } = request.params;
+      const { command } = request.body;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      if (!isHubConnected()) {
+        return reply.status(503).send({
+          success: false,
+          message: "Hub is not connected",
+        });
+      }
+
+      const response = await sendAgentRunCommand(id, runId, sessionId, command);
+
+      if (response.success) {
+        return {
+          success: true,
+          message: "Command sent",
+        };
+      } else {
+        return reply.status(500).send({
+          success: false,
+          message: response.error || "Failed to send command",
+        });
+      }
+    },
+  );
 }
 
 function registerRunPauseRoute(

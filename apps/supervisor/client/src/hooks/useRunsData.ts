@@ -92,6 +92,25 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     [agentUsername],
   );
 
+  const patchRun = useCallback(
+    (
+      userId: number,
+      runId: number,
+      sessionId: number,
+      patch: Partial<CachedRunSession>,
+    ) => {
+      const existing = (runsCache.get(agentUsername) || []).find(
+        (r) =>
+          r.userId === userId &&
+          r.runId === runId &&
+          r.sessionId === sessionId,
+      );
+      if (!existing) return;
+      mergeRuns([{ ...existing, ...patch }]);
+    },
+    [agentUsername, mergeRuns],
+  );
+
   const handleRunsEvent = useCallback(
     (event: RunsEvent) => {
       const existingRuns = runsCache.get(agentUsername) || [];
@@ -230,5 +249,6 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     loadMore,
     loadingMore,
     hasMore,
+    patchRun,
   };
 };

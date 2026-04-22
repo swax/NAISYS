@@ -1,4 +1,5 @@
 import type {
+  AgentRunCommandResult,
   AgentRunPauseResult,
   ContextLogResponse,
   RunsDataResponse,
@@ -96,5 +97,17 @@ export const resumeRun = async (
   return await api.post<Record<string, never>, AgentRunPauseResult>(
     apiEndpoints.agentRunResume(username, runId, sessionId),
     {},
+  );
+};
+
+export const sendRunCommand = async (
+  username: string,
+  runId: number,
+  sessionId: number,
+  command: string,
+): Promise<AgentRunCommandResult> => {
+  return await api.post<{ command: string }, AgentRunCommandResult>(
+    apiEndpoints.agentRunCommand(username, runId, sessionId),
+    { command },
   );
 };

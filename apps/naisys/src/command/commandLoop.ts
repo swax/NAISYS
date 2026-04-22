@@ -329,7 +329,19 @@ export function createCommandLoop(
       ];
 
       currentWait = undefined;
-      blankDebugInput = commandList[0].trim().length == 0;
+
+      // If getInput was woken by a queued remote command, use it instead
+      // of letting the empty input trigger a mode switch.
+      if (
+        commandList[0].trim().length === 0 &&
+        promptNotification.hasPending(localUserId, true, "debugCommand")
+      ) {
+        const drained = await processNotifications("debugCommand");
+        commandList = drained.debugCommands;
+      }
+
+      blankDebugInput =
+        commandList.length === 0 || commandList[0].trim().length === 0;
 
       // readline echoed the prompt+input to stdout; mirror it to the log
       // so supervisor UI viewers see debug-mode activity
@@ -626,12 +638,25 @@ export function createCommandLoop(
   /** Picks this iteration's wait and any implied mode switch (pause→debug,
    *  unfocused→LLM). Preserves an already-set wait. */
   function resolveWait(wait: WaitBehavior | undefined): WaitBehavior {
+    const hasPendingDebugCommand = promptNotification.hasPending(
+      localUserId,
+      true,
+      "debugCommand",
+    );
+
     if (wait === undefined) {
       // Remote pause — force indefinite debug-mode wait, interruptible via
       // resume + prompt notifications (the same mechanism that wakes on mail)
       if (paused) {
         inputMode.setDebug();
         wait = indefiniteWait();
+      }
+      // Remote debug command queued — force debug mode so the drain logic
+      // below can consume it even on unfocused agents that would otherwise
+      // skip debug mode entirely.
+      else if (hasPendingDebugCommand) {
+        inputMode.setDebug();
+        wait = noWait();
       }
       // When llm model is set to none then we should hold indefinitely
       else if (agentConfig().shellModel === LlmApiType.None) {
@@ -649,6 +674,7 @@ export function createCommandLoop(
     // Fail safe — an unfocused agent on indefinite debug wait would hang
     if (
       !paused &&
+      !hasPendingDebugCommand &&
       inputMode.isDebug() &&
       !output.isConsoleEnabled() &&
       wait.kind === "indefinite" &&

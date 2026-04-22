@@ -164,6 +164,23 @@ export const AgentRunPauseResultSchema = z.object({
 });
 export type AgentRunPauseResult = z.infer<typeof AgentRunPauseResultSchema>;
 
+export const AgentRunCommandRequestSchema = z
+  .object({
+    command: z.string().min(1).max(4000),
+  })
+  .strict();
+export type AgentRunCommandRequestBody = z.infer<
+  typeof AgentRunCommandRequestSchema
+>;
+
+export const AgentRunCommandResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type AgentRunCommandResult = z.infer<
+  typeof AgentRunCommandResultSchema
+>;
+
 // --- Host CRUD schemas ---
 
 const AssignedAgentSchema = z.object({
