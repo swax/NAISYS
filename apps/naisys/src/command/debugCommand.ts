@@ -68,7 +68,7 @@ export function createDebugCommands(
         contextManager.append(`Message from ${ADMIN_USERNAME}: ${cmdArgs}`);
         if (firstTalkMessage) {
           contextManager.append(
-            `Reply with: ns-chat send ${ADMIN_USERNAME} <message>`,
+            `Reply with: ns-chat send ${ADMIN_USERNAME} "<message>"`,
           );
           firstTalkMessage = false;
         }

@@ -26,7 +26,10 @@ import { createEscKeyListener } from "../utils/escKeyListener.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type {
+  NotificationKind,
+  PromptNotificationService,
+} from "../utils/promptNotificationService.js";
 import type { CommandHandler } from "./commandHandler.js";
 import type { WaitBehavior } from "./commandRegistry.js";
 import {
@@ -66,6 +69,8 @@ export function createCommandLoop(
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current timed wait so preemptive compact can calculate remaining time */
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
+  /** Remote pause — when true, the loop forces indefinite wait between iterations. */
+  let paused = false;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
     output.commentAndLog(`AGENT STARTED`);
@@ -179,13 +184,16 @@ export function createCommandLoop(
       promptNotification.notify({
         wake: "always",
         userId: localUserId,
-        commands: [`ns-session preemptive-compact ${remainingSeconds}`],
+        contextCommands: [`ns-session preemptive-compact ${remainingSeconds}`],
       });
     }, compactAfterMs);
   }
 
-  async function processNotifications(): Promise<string[]> {
-    const result = await promptNotification.processPending(localUserId);
+  async function processNotifications(kind?: NotificationKind): Promise<{
+    contextCommands: string[];
+    debugCommands: string[];
+  }> {
+    const result = await promptNotification.processPending(localUserId, kind);
     for (const item of result.output) {
       if (item.type === "context") {
         contextManager.append(item.text, ContentSource.Console);
@@ -195,7 +203,14 @@ export function createCommandLoop(
         output.commentAndLog(item.text);
       }
     }
-    return result.commands;
+    // nonCommand drain = operator-reviewable event → bounce to debug for review
+    if (kind === "nonCommand" && result.drained) {
+      inputMode.setDebug();
+    }
+    return {
+      contextCommands: result.contextCommands,
+      debugCommands: result.debugCommands,
+    };
   }
 
   async function runSessionStartup(llmErrorCount: number): Promise<{
@@ -254,8 +269,8 @@ export function createCommandLoop(
     try {
       await mailService.checkAndNotify();
       await chatService.checkAndNotify();
-      // Discard commands from startup notifications — they'll be picked up in the main loop
-      await processNotifications();
+      // Reviewable events only; commands (rare here) wait for the main loop
+      await processNotifications("nonCommand");
     } catch (e) {
       // Hub can flap during startup; don't crash the agent — let the main loop recover
       handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
@@ -276,37 +291,10 @@ export function createCommandLoop(
     wait: WaitBehavior | undefined,
     llmErrorCount: number,
   ): Promise<IterationResult> {
-    // If wait was explicitly set (e.g. by a wait command or error backoff), use it;
-    // otherwise fall back to the default based on current mode
-    if (wait === undefined) {
-      // When llm model is set to none then we should hold indefinitely
-      if (agentConfig().shellModel === LlmApiType.None) {
-        wait = indefiniteWait();
-      }
-      // Unfocused agents keep processing commands without delay, unless wait was explicitly set by a wait command or error backoff
-      else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
-        inputMode.setLLM();
-        wait = noWait();
-      } else {
-        wait = getConfiguredDebugWait();
-      }
-    }
+    wait = resolveWait(wait);
 
-    // This is a fail safe that shouldn't happen, if it does we should look into it
-    if (
-      inputMode.isDebug() &&
-      !output.isConsoleEnabled() &&
-      wait.kind === "indefinite" &&
-      agentConfig().shellModel !== LlmApiType.None
-    ) {
-      output.errorAndLog(
-        "Agent is unfocused with an indefinite wait, switching to LLM mode to avoid hanging.",
-      );
-      inputMode.setLLM();
-      wait = noWait();
-    }
-
-    // Must be after the mode switch above so the message is added to the right context LLM/Debug
+    // Must be after the mode switch in resolveWait so the message lands in
+    // the right context (LLM/Debug)
     if (shellCommand.isShellSuspended()) {
       const elapsedTime = shellCommand.getCommandElapsedTimeString();
       const commandName = shellCommand.getCurrentCommandName();
@@ -315,6 +303,12 @@ export function createCommandLoop(
         ContentSource.Console,
       );
     }
+
+    // Drain nonCommand up front so log messages render regardless of mode
+    // and contextOutput lands before getPrompt reads the token count. Without
+    // this, a wake stuck in a paused-debug iteration would re-fire the
+    // readline poll forever.
+    await processNotifications("nonCommand");
 
     const prompt = await promptBuilder.getPrompt(wait);
     let commandList: string[] = [];
@@ -444,20 +438,17 @@ export function createCommandLoop(
 
     let commands: string[] = [];
 
-    // Check for pending notifications that should interrupt
-    if (
-      promptNotification.hasPending(localUserId, true) ||
-      shellModel === LlmApiType.None // Check this last so notifications get processed/cleared
-    ) {
-      const notificationCommands = await processNotifications();
+    // contextCommands replace the LLM query (e.g. preemptive compact)
+    if (promptNotification.hasPending(localUserId, true, "contextCommand")) {
+      const drained = await processNotifications("contextCommand");
+      commands = drained.contextCommands;
+    }
 
-      // If notifications carry commands (e.g. preemptive compact), run them directly
-      if (notificationCommands.length > 0) {
-        commands = notificationCommands;
-      } else {
-        inputMode.setDebug();
-        return { outcome: "skip", llmErrorCount, wait: undefined };
-      }
+    // No-LLM agents have nothing to query — bounce back to debug unless
+    // we picked up commands from notifications above.
+    if (shellModel === LlmApiType.None && commands.length === 0) {
+      inputMode.setDebug();
+      return { outcome: "skip", llmErrorCount, wait: undefined };
     }
 
     checkContextLimitWarning();
@@ -468,8 +459,6 @@ export function createCommandLoop(
 
     contextManager.append(prompt, ContentSource.ConsolePrompt);
 
-    // If commands were generated from notifications, skip the LLM query and run them directly,
-    // most often ns-session preemptive-compact commands from the preemptive compact notification
     if (commands.length > 0) {
       return { outcome: "commands", commands };
     }
@@ -536,7 +525,7 @@ export function createCommandLoop(
         clearPromptMessage(workingMsg);
         output.commentAndLog("LLM query cancelled by ESC");
         inputMode.setDebug();
-        return { outcome: "skip", llmErrorCount, wait: undefined };
+        return { outcome: "skip", llmErrorCount, wait: indefiniteWait() };
       }
     } catch (e) {
       // Clear "Working..." before printing error output
@@ -634,6 +623,47 @@ export function createCommandLoop(
     return timedWait(debugPauseSeconds);
   }
 
+  /** Picks this iteration's wait and any implied mode switch (pause→debug,
+   *  unfocused→LLM). Preserves an already-set wait. */
+  function resolveWait(wait: WaitBehavior | undefined): WaitBehavior {
+    if (wait === undefined) {
+      // Remote pause — force indefinite debug-mode wait, interruptible via
+      // resume + prompt notifications (the same mechanism that wakes on mail)
+      if (paused) {
+        inputMode.setDebug();
+        wait = indefiniteWait();
+      }
+      // When llm model is set to none then we should hold indefinitely
+      else if (agentConfig().shellModel === LlmApiType.None) {
+        wait = indefiniteWait();
+      }
+      // Unfocused agents keep processing commands without delay
+      else if (!output.isConsoleEnabled() && inputMode.isDebug()) {
+        inputMode.setLLM();
+        wait = noWait();
+      } else {
+        wait = getConfiguredDebugWait();
+      }
+    }
+
+    // Fail safe — an unfocused agent on indefinite debug wait would hang
+    if (
+      !paused &&
+      inputMode.isDebug() &&
+      !output.isConsoleEnabled() &&
+      wait.kind === "indefinite" &&
+      agentConfig().shellModel !== LlmApiType.None
+    ) {
+      output.errorAndLog(
+        "Agent is unfocused with an indefinite wait, switching to LLM mode to avoid hanging.",
+      );
+      inputMode.setLLM();
+      wait = noWait();
+    }
+
+    return wait;
+  }
+
   function getErrorBackoffWait(llmErrorCount: number) {
     let backoffSeconds =
       globalConfig().retrySecondsBase * 2 ** (llmErrorCount - 1);
@@ -667,8 +697,25 @@ export function createCommandLoop(
     }
   }
 
+  function setPaused(next: boolean): boolean {
+    if (paused === next) {
+      return false;
+    }
+    paused = next;
+    // Wakes the indefinite wait, renders the comment, and bounces to debug
+    // for operator review (via the nonCommand drain rule).
+    promptNotification.notify({
+      userId: localUserId,
+      wake: "always",
+      commentOutput: [`Session ${next ? "Paused" : "Resumed"}`],
+    });
+    return true;
+  }
+
   return {
     run,
+    isPaused: () => paused,
+    setPaused,
     cleanup: () => clearTimeout(preemptiveCompactTimeout),
   };
 }

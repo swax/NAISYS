@@ -3,14 +3,22 @@ import {
   Alert,
   Badge,
   Box,
+  Button,
   Drawer,
   Group,
   Stack,
   Text,
   Textarea,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconList, IconSend } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import {
+  IconList,
+  IconPlayerPause,
+  IconPlayerPlay,
+  IconSend,
+} from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Link,
@@ -24,6 +32,7 @@ import { getPlatformBadge } from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
+import { pauseRun, resumeRun } from "../../lib/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 import {
@@ -140,6 +149,36 @@ export const AgentRuns: React.FC = () => {
     },
     [agentName, readStatus],
   );
+
+  // The pause/resume POST doesn't return until the agent has acked, so a
+  // plain in-flight flag is enough — no need to race the heartbeat.
+  const [pauseLoading, setPauseLoading] = useState(false);
+
+  const handlePauseToggle = async (run: RunSession) => {
+    if (!username) return;
+    const target = !(run.paused ?? false);
+    setPauseLoading(true);
+    try {
+      const result = target
+        ? await pauseRun(username, run.runId, run.sessionId)
+        : await resumeRun(username, run.runId, run.sessionId);
+      if (!result.success) {
+        notifications.show({
+          title: target ? "Pause Failed" : "Resume Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: target ? "Pause Failed" : "Resume Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setPauseLoading(false);
+    }
+  };
 
   if (!username) {
     return (
@@ -296,14 +335,11 @@ export const AgentRuns: React.FC = () => {
                       selectedRun.hostEnvironment.platform,
                     );
                     return (
-                      <>
+                      <Tooltip label={selectedRun.hostEnvironment.osVersion}>
                         <Badge size="sm" variant="light" color={meta.color}>
                           {meta.label}
                         </Badge>
-                        <Text size="xs" c="dimmed" visibleFrom="sm">
-                          {selectedRun.hostEnvironment.osVersion}
-                        </Text>
-                      </>
+                      </Tooltip>
                     );
                   })()}
                 <Badge
@@ -320,6 +356,29 @@ export const AgentRuns: React.FC = () => {
                   <Badge size="sm" variant="dot" color="green">
                     Online
                   </Badge>
+                )}
+                {selectedRun.isOnline && selectedRun.paused && (
+                  <Badge size="sm" variant="light" color="orange">
+                    Paused
+                  </Badge>
+                )}
+                {selectedRun.isOnline && (
+                  <Button
+                    size="compact-xs"
+                    variant={selectedRun.paused ? "filled" : "light"}
+                    color="orange"
+                    loading={pauseLoading}
+                    leftSection={
+                      selectedRun.paused ? (
+                        <IconPlayerPlay size={12} />
+                      ) : (
+                        <IconPlayerPause size={12} />
+                      )
+                    }
+                    onClick={() => handlePauseToggle(selectedRun)}
+                  >
+                    {selectedRun.paused ? "Resume" : "Pause"}
+                  </Button>
                 )}
               </Group>
               <Group gap="xs">

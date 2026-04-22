@@ -158,6 +158,12 @@ export const AgentStopResultSchema = z.object({
 });
 export type AgentStopResult = z.infer<typeof AgentStopResultSchema>;
 
+export const AgentRunPauseResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type AgentRunPauseResult = z.infer<typeof AgentRunPauseResultSchema>;
+
 // --- Host CRUD schemas ---
 
 const AssignedAgentSchema = z.object({

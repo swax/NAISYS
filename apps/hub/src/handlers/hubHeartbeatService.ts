@@ -25,7 +25,15 @@ export function createHubHeartbeatService(
   // Keyed by hostId so we can drop sessions when a host disconnects.
   const hostActiveSessions = new Map<
     number,
-    Map<number, { runId: number; sessionId: number; lastActive: string }>
+    Map<
+      number,
+      {
+        runId: number;
+        sessionId: number;
+        lastActive: string;
+        paused?: boolean;
+      }
+    >
   >();
 
   // Track per-agent notification IDs (latestLogId, latestMailId)
@@ -79,7 +87,12 @@ export function createHubHeartbeatService(
       // aggregate SESSION_HEARTBEAT broadcast runs on its own interval below.
       const sessionMap = new Map<
         number,
-        { runId: number; sessionId: number; lastActive: string }
+        {
+          runId: number;
+          sessionId: number;
+          lastActive: string;
+          paused?: boolean;
+        }
       >();
       for (const session of parsed.activeSessions) {
         await hubDb.run_session.updateMany({
@@ -94,6 +107,7 @@ export function createHubHeartbeatService(
           runId: session.runId,
           sessionId: session.sessionId,
           lastActive: now,
+          paused: session.paused,
         });
       }
       hostActiveSessions.set(hostId, sessionMap);
@@ -148,6 +162,7 @@ export function createHubHeartbeatService(
           runId: info.runId,
           sessionId: info.sessionId,
           lastActive: info.lastActive,
+          paused: info.paused,
         });
       }
     }

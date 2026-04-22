@@ -28,6 +28,7 @@ export function createHeartbeatService(
       userId: a.agentUserId,
       runId: a.getRunId(),
       sessionId: a.getSessionId(),
+      paused: a.isPaused(),
     }));
 
     if (hubClient) {

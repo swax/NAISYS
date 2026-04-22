@@ -24,7 +24,6 @@ import {
   IconArchiveOff,
   IconChevronDown,
   IconHistory,
-  IconPlayerPause,
   IconPlayerPlay,
   IconPlayerStop,
   IconPower,
@@ -475,15 +474,6 @@ export const AgentDetail: React.FC = () => {
             </Group>
           );
         })()}
-        <Button
-          color="yellow"
-          disabled
-          leftSection={<IconPlayerPause size={16} />}
-        >
-          <Text visibleFrom="sm" span>
-            Pause
-          </Text>
-        </Button>
         {(() => {
           const stopAction = hasAction(actions, "stop", {
             includeDisabled: true,

@@ -1,6 +1,7 @@
 import { ADMIN_USERNAME, sleep } from "@naisys/common";
 import {
   AgentPeekRequestSchema,
+  AgentRunPauseRequestSchema,
   AgentStartRequestSchema,
   AgentStopRequestSchema,
   HubEvents,
@@ -75,6 +76,57 @@ export class AgentManager {
           ack({ success: false, error: String(error) });
         }
       });
+
+      const registerRunPauseHandler = (
+        event:
+          | typeof HubEvents.AGENT_RUN_PAUSE
+          | typeof HubEvents.AGENT_RUN_RESUME,
+      ) => {
+        hubClient.registerEvent(event, (data, ack) => {
+          try {
+            const parsed = AgentRunPauseRequestSchema.parse(data);
+
+            const agent = this.runningAgents.find(
+              (a) => a.agentUserId === parsed.userId,
+            );
+            if (!agent) {
+              ack({
+                success: false,
+                error: `Agent ${parsed.userId} is not running on this host`,
+              });
+              return;
+            }
+
+            // The caller addressed a specific run/session; reject if the
+            // agent has since moved on (compacted session, new run, etc.)
+            if (
+              agent.getRunId() !== parsed.runId ||
+              agent.getSessionId() !== parsed.sessionId
+            ) {
+              ack({
+                success: false,
+                error: `Run/session is no longer the active one for agent ${parsed.userId}`,
+              });
+              return;
+            }
+
+            const paused = event === HubEvents.AGENT_RUN_PAUSE;
+            const changed = agent.setPaused(paused);
+            // Immediate heartbeat so the supervisor UI reflects the change
+            // within roundtrip latency instead of waiting for the 2s tick
+            if (changed) {
+              this.onHeartbeatNeeded?.();
+            }
+
+            ack({ success: true, changed });
+          } catch (error) {
+            ack({ success: false, error: String(error) });
+          }
+        });
+      };
+
+      registerRunPauseHandler(HubEvents.AGENT_RUN_PAUSE);
+      registerRunPauseHandler(HubEvents.AGENT_RUN_RESUME);
 
       hubClient.registerEvent(HubEvents.AGENT_PEEK, (data, ack) => {
         try {

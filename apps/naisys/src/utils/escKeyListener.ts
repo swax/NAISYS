@@ -4,6 +4,7 @@
  */
 
 const ESC_KEY = "\x1b";
+const CTRL_C_KEY = "\x03";
 
 export interface EscKeyListener {
   /** Start listening for ESC key. Returns cleanup function. */
@@ -20,6 +21,10 @@ export function createEscKeyListener(): EscKeyListener {
       const key = data.toString();
       if (key === ESC_KEY) {
         onEsc();
+      } else if (key === CTRL_C_KEY) {
+        // readline is paused during LLM queries, so raw mode must forward
+        // Ctrl+C back to the process-level shutdown handler.
+        process.emit("SIGINT", "SIGINT");
       }
     };
 

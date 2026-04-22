@@ -5,6 +5,10 @@ import type {
   SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
+
+type CachedRunSession = BaseRunSession & {
+  paused?: boolean;
+};
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -18,7 +22,7 @@ import { useTick } from "./useTick";
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
 // Module-level caches (shared across all hook instances and persist across remounts)
-const runsCache = new Map<string, BaseRunSession[]>();
+const runsCache = new Map<string, CachedRunSession[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
 const pagesLoadedCache = new Map<string, number>();
@@ -44,12 +48,12 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   useTick(1000);
 
   const mergeRuns = useCallback(
-    (updatedRuns: BaseRunSession[], total?: number) => {
+    (updatedRuns: CachedRunSession[], total?: number) => {
       if (updatedRuns.length === 0 && total === undefined) return;
 
       const existingRuns = runsCache.get(agentUsername) || [];
 
-      const mergeMap = new Map<string, BaseRunSession>(
+      const mergeMap = new Map<string, CachedRunSession>(
         existingRuns.map((run) => [
           `${run.userId}-${run.runId}-${run.sessionId}`,
           run,
@@ -58,7 +62,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
 
       const existingCount = mergeMap.size;
 
-      updatedRuns.forEach((run: BaseRunSession) => {
+      updatedRuns.forEach((run: CachedRunSession) => {
         mergeMap.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
       });
 
@@ -95,7 +99,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
 
       if (event.type === "new-session") {
         // Add new session as a full RunSession
-        const newRun: BaseRunSession = {
+        const newRun: CachedRunSession = {
           userId: event.userId,
           runId: event.runId,
           sessionId: event.sessionId,
@@ -117,7 +121,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       if (!existing) return;
 
       if (event.type === "log-update") {
-        const updated: BaseRunSession = {
+        const updated: CachedRunSession = {
           ...existing,
           lastActive: event.lastActive,
           latestLogId: event.latestLogId,
@@ -125,15 +129,16 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
         };
         mergeRuns([updated]);
       } else if (event.type === "cost-update") {
-        const updated: BaseRunSession = {
+        const updated: CachedRunSession = {
           ...existing,
           totalCost: existing.totalCost + event.costDelta,
         };
         mergeRuns([updated]);
       } else if (event.type === "heartbeat-update") {
-        const updated: BaseRunSession = {
+        const updated: CachedRunSession = {
           ...existing,
           lastActive: event.lastActive,
+          paused: event.paused,
         };
         mergeRuns([updated]);
       }

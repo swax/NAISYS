@@ -1,24 +1,46 @@
 /** "no" = don't wake, "yes" = wake if agent has wakeOnMessage enabled, "always" = always wake */
 export type WakeLevel = "no" | "yes" | "always";
 
-export interface PromptNotification {
+/**
+ * - `nonCommand`: outputs/wake — draining one bounces the loop to debug.
+ * - `debugCommand`: commands run as debug-mode input.
+ * - `contextCommand`: commands that replace an LLM query (e.g. preemptive compact).
+ */
+export type NotificationKind = "nonCommand" | "debugCommand" | "contextCommand";
+
+/** Outputs are always allowed; only the two command kinds are mutually
+ *  exclusive. Kind is derived from the populated command field. */
+export type PromptNotification = {
   wake: WakeLevel;
   userId?: number;
+  processed?: () => void | Promise<void>;
   contextOutput?: string[];
   commentOutput?: string[];
   errorOutput?: string[];
-  commands?: string[];
-  processed?: () => void | Promise<void>;
-}
+} & (
+  | { contextCommands?: never; debugCommands?: never }
+  | { contextCommands: string[]; debugCommands?: never }
+  | { debugCommands: string[]; contextCommands?: never }
+);
 
 export interface ProcessedResult {
   output: ProcessedOutput[];
-  commands: string[];
+  contextCommands: string[];
+  debugCommands: string[];
+  /** True if any notification was actually drained (vs filtered out by kind). */
+  drained: boolean;
 }
 
 export interface ProcessedOutput {
   type: "context" | "comment" | "error";
   text: string;
+}
+
+/** Derive a notification's kind from which payload field is populated. */
+export function getNotificationKind(n: PromptNotification): NotificationKind {
+  if (n.contextCommands !== undefined) return "contextCommand";
+  if (n.debugCommands !== undefined) return "debugCommand";
+  return "nonCommand";
 }
 
 export function createPromptNotificationService() {
@@ -51,11 +73,26 @@ export function createPromptNotificationService() {
     return wake === "always" || (wake === "yes" && wakeOnMessage);
   }
 
-  function hasPending(userId: number, wakeOnMessage: boolean): boolean {
+  function matchesKind(
+    notification: PromptNotification,
+    kind: NotificationKind | undefined,
+  ): boolean {
+    return kind === undefined || getNotificationKind(notification) === kind;
+  }
+
+  function hasPending(
+    userId: number,
+    wakeOnMessage: boolean,
+    kind?: NotificationKind,
+  ): boolean {
     const userQueue = pending.get(userId) || [];
 
     // Check user's own queue
-    if (userQueue.some((n) => shouldWake(n.wake, wakeOnMessage))) {
+    if (
+      userQueue.some(
+        (n) => matchesKind(n, kind) && shouldWake(n.wake, wakeOnMessage),
+      )
+    ) {
       return true;
     }
 
@@ -63,6 +100,7 @@ export function createPromptNotificationService() {
     if (
       globalNotification &&
       !globalNotifiedUserIds.has(userId) &&
+      matchesKind(globalNotification, kind) &&
       shouldWake(globalNotification.wake, wakeOnMessage)
     ) {
       return true;
@@ -90,28 +128,53 @@ export function createPromptNotificationService() {
         result.output.push({ type: "error", text });
       }
     }
-    if (notification.commands) {
-      result.commands.push(...notification.commands);
+    if (notification.contextCommands) {
+      result.contextCommands.push(...notification.contextCommands);
+    }
+    if (notification.debugCommands) {
+      result.debugCommands.push(...notification.debugCommands);
     }
   }
 
-  async function processPending(userId: number): Promise<ProcessedResult> {
-    const result: ProcessedResult = { output: [], commands: [] };
+  /** Drains notifications matching `kind` (or all if omitted); others stay
+   *  queued for the path that owns that kind. */
+  async function processPending(
+    userId: number,
+    kind?: NotificationKind,
+  ): Promise<ProcessedResult> {
+    const result: ProcessedResult = {
+      output: [],
+      contextCommands: [],
+      debugCommands: [],
+      drained: false,
+    };
 
     // Process user-specific notifications
     const userQueue = pending.get(userId);
     if (userQueue) {
+      const keep: PromptNotification[] = [];
       while (userQueue.length > 0) {
         const notification = userQueue.shift()!;
+        if (!matchesKind(notification, kind)) {
+          keep.push(notification);
+          continue;
+        }
         collectNotification(notification, result);
+        result.drained = true;
         await notification.processed?.();
       }
+      userQueue.push(...keep);
     }
 
-    // Process global notification if unseen
-    if (globalNotification && !globalNotifiedUserIds.has(userId)) {
+    // Process global notification if unseen and matches kind filter
+    if (
+      globalNotification &&
+      !globalNotifiedUserIds.has(userId) &&
+      matchesKind(globalNotification, kind)
+    ) {
       globalNotifiedUserIds.add(userId);
       collectNotification(globalNotification, result);
+      result.drained = true;
       await globalNotification.processed?.();
     }
 
