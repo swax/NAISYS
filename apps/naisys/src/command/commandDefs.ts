@@ -58,7 +58,12 @@ export const desktopCmd: CommandDef = {
     screenshot: {
       usage: "screenshot",
       description:
-        "Save the current viewport at native size and LLM-scaled size to the screenshots folder",
+        "Capture the current LLM-view screenshot and add it to context",
+    },
+    dump: {
+      usage: "dump",
+      description:
+        "Save diagnostic desktop screenshots to the screenshots folder, including full and focused variants",
     },
     focus: {
       usage: "focus [clear|<x> <y> <width> <height>]",

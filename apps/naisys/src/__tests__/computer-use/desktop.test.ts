@@ -44,6 +44,7 @@ describe("desktop focus commands", () => {
       {
         getLlmModel: vi.fn(() => ({
           supportsComputerUse: true,
+          supportsVision: true,
           apiType: LlmApiType.OpenAI,
         })),
       } as any,
@@ -105,6 +106,7 @@ describe("desktop focus commands", () => {
       {
         getLlmModel: vi.fn(() => ({
           supportsComputerUse: true,
+          supportsVision: true,
           apiType: LlmApiType.OpenAI,
         })),
       } as any,
@@ -126,5 +128,120 @@ describe("desktop focus commands", () => {
 
     const toolBlocks = (contextManager.appendDesktopRequest as any).mock.calls[0][1];
     expect(toolBlocks[0].input.viewport).toBeUndefined();
+  });
+
+  test("adds the scaled screenshot to context", async () => {
+    const desktopConfig: DesktopConfig = {
+      displayWidth: 1920,
+      displayHeight: 1080,
+      nativeDisplayWidth: 1920,
+      nativeDisplayHeight: 1080,
+      viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+      desktopPlatform: "Linux (X11)",
+    };
+
+    const contextManager = createMockContextManager();
+    const computerService = {
+      getConfig: vi.fn(() => desktopConfig),
+      captureScaledScreenshot: vi.fn(async () => ({
+        base64: "abc123",
+        filepath: "/tmp/llm-view.png",
+      })),
+      executeAction: vi.fn(),
+      captureNativeScreenshot: vi.fn(),
+      captureFullNativeScreenshot: vi.fn(),
+      setFocus: vi.fn(),
+      platformName: "Linux (X11)",
+      initError: undefined,
+    } as any;
+
+    const desktopService = createDesktopService(
+      computerService,
+      contextManager,
+      createMockOutputService(),
+      {
+        agentConfig: () => ({
+          shellModel: "shell-model",
+          controlDesktop: true,
+          debugPauseSeconds: 0,
+        }),
+      } as any,
+      {
+        getLlmModel: vi.fn(() => ({
+          supportsComputerUse: true,
+          supportsVision: true,
+          apiType: LlmApiType.OpenAI,
+        })),
+      } as any,
+      {
+        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
+      } as any,
+      createMockCommandLoopState() as any,
+    );
+
+    await expect(desktopService.handleCommand("screenshot")).resolves.toBe("");
+    expect(contextManager.appendImage).toHaveBeenCalledWith(
+      "abc123",
+      "image/png",
+      "/tmp/llm-view.png",
+    );
+  });
+
+  test("shows desktop status before help output", async () => {
+    const desktopConfig: DesktopConfig = {
+      displayWidth: 1600,
+      displayHeight: 900,
+      nativeDisplayWidth: 1920,
+      nativeDisplayHeight: 1080,
+      viewport: { x: 100, y: 50, width: 1600, height: 900 },
+      desktopPlatform: "Linux (X11)",
+    };
+
+    const computerService = {
+      getConfig: vi.fn(() => desktopConfig),
+      executeAction: vi.fn(),
+      captureScaledScreenshot: vi.fn(),
+      captureNativeScreenshot: vi.fn(),
+      captureFullNativeScreenshot: vi.fn(),
+      setFocus: vi.fn(),
+      platformName: "Linux (X11)",
+      initError: undefined,
+    } as any;
+
+    const desktopService = createDesktopService(
+      computerService,
+      createMockContextManager(),
+      createMockOutputService(),
+      {
+        agentConfig: () => ({
+          shellModel: "shell-model",
+          controlDesktop: true,
+          debugPauseSeconds: 0,
+        }),
+      } as any,
+      {
+        getLlmModel: vi.fn(() => ({
+          supportsComputerUse: true,
+          supportsVision: true,
+          apiType: LlmApiType.OpenAI,
+        })),
+      } as any,
+      {
+        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
+      } as any,
+      createMockCommandLoopState() as any,
+    );
+
+    const helpText = await desktopService.handleCommand("");
+
+    expect(helpText).toContain("Desktop Status");
+    expect(helpText).toContain("Native Screen: 1920x1080");
+    expect(helpText).toContain(
+      "Viewport: focus (100, 50, 1600x900) within 1920x1080",
+    );
+    expect(helpText).toContain("LLM View:");
+    expect(helpText).toContain("Model Coordinates: scaled pixel space");
+    expect(helpText).toContain("Manual Focus Args: native screen pixels");
+    expect(helpText).toContain("ns-desktop <command>");
   });
 });

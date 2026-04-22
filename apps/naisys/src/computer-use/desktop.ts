@@ -73,6 +73,48 @@ export function createDesktopService(
     };
   }
 
+  function formatDesktopStatus(): string {
+    if (!agentConfig.agentConfig().controlDesktop) {
+      return "Desktop Status\n  State: disabled";
+    }
+
+    if (computerService.initError) {
+      const platform = computerService.platformName ?? "Unknown";
+      return [
+        "Desktop Status",
+        `  State: unavailable`,
+        `  Platform: ${platform}`,
+        `  Reason: ${computerService.initError}`,
+      ].join("\n");
+    }
+
+    const { desktopConfig, scaledWidth, scaledHeight } = getDesktopRuntimeState();
+    if (!desktopConfig || !scaledWidth || !scaledHeight) {
+      return "Desktop Status\n  State: unavailable";
+    }
+
+    const scaleFactor =
+      desktopConfig.displayWidth > 0
+        ? scaledWidth / desktopConfig.displayWidth
+        : 1;
+    const modelCoordSpace =
+      shellModel.apiType === LlmApiType.Google
+        ? "0..999 normalized grid"
+        : `scaled pixel space (${scaledWidth}x${scaledHeight})`;
+
+    return [
+      "Desktop Status",
+      `  Platform: ${desktopConfig.desktopPlatform}`,
+      `  Native Screen: ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`,
+      `  Viewport: ${describeDesktopViewport(desktopConfig)}`,
+      `  LLM View: ${scaledWidth}x${scaledHeight}`,
+      `  Model Coordinates: ${modelCoordSpace}`,
+      `  Scale Factor: ${scaleFactor.toFixed(4)}`,
+      `  Manual Focus Args: native screen pixels`,
+      `  Manual Click Args: current viewport pixels`,
+    ].join("\n");
+  }
+
   function attachViewportToActions(
     actions: DesktopAction[],
     desktopConfig?: NonNullable<ReturnType<ComputerService["getConfig"]>>,
@@ -90,18 +132,45 @@ export function createDesktopService(
     }));
   }
 
-  /** Handle the screenshot subcommand */
-  async function handleScreenshot(): Promise<string> {
+  async function getScreenshotOutputDir(): Promise<string> {
     const cwd = await shellWrapper.getCurrentPath();
     const outDir = path.join(cwd || process.cwd(), "screenshots");
     fs.mkdirSync(outDir, { recursive: true });
+    return outDir;
+  }
 
+  /** Handle the screenshot subcommand */
+  async function handleScreenshot(): Promise<string> {
+    if (!shellModel.supportsVision) {
+      return `Error: Model '${agentConfig.agentConfig().shellModel}' does not support vision. ${desktopCmd.name} screenshot requires a vision-capable model.`;
+    }
+
+    const scaled = await computerService.captureScaledScreenshot();
+    contextManager.appendImage(scaled.base64, "image/png", scaled.filepath);
+
+    return "";
+  }
+
+  /** Handle the dump subcommand */
+  async function handleDump(): Promise<string> {
+    const outDir = await getScreenshotOutputDir();
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
     // Save full native desktop screenshot
     const full = await computerService.captureFullNativeScreenshot();
     const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
     fs.copyFileSync(full.filepath, fullPath);
+
+    // Save native viewport screenshot
+    const viewportNative = await computerService.captureNativeScreenshot();
+    const viewportNativePath = path.join(
+      outDir,
+      `screenshot-${timestamp}-viewport-native.png`,
+    );
+    fs.writeFileSync(
+      viewportNativePath,
+      Buffer.from(viewportNative.base64, "base64"),
+    );
 
     // Save scaled viewport screenshot (same resolution the LLM sees)
     const scaled = await computerService.captureScaledScreenshot();
@@ -113,7 +182,7 @@ export function createDesktopService(
       ? `\nViewport: ${describeDesktopViewport(desktopConfig)}`
       : "";
 
-    return `Full: ${fullPath}\nScaled: ${scaledPath}${viewportLine}`;
+    return `Full: ${fullPath}\nViewport Native: ${viewportNativePath}\nScaled: ${scaledPath}${viewportLine}`;
   }
 
   /** Handle ns-desktop commands */
@@ -130,7 +199,7 @@ export function createDesktopService(
     const sub = argv[0].toLowerCase();
 
     if (sub === "help") {
-      const lines = [`${desktopCmd.name} <command>`];
+      const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
       for (const s of Object.values(subs)) {
         lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
       }
@@ -144,6 +213,10 @@ export function createDesktopService(
     switch (sub) {
       case "screenshot": {
         return handleScreenshot();
+      }
+
+      case "dump": {
+        return handleDump();
       }
 
       case "focus": {
