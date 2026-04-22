@@ -265,6 +265,17 @@ export const talkCmd: CommandDef = {
   isDebug: true,
 };
 
+export const pauseCmd: CommandDef = {
+  name: "ns-pause",
+  description:
+    "Toggle the loop's pause state locally (reproduces remote pause)",
+  isDebug: true,
+  subcommands: {
+    on: { usage: "on", description: "Pause the loop" },
+    off: { usage: "off", description: "Resume the loop" },
+  },
+};
+
 // --- Built-in commands ---
 
 export const helpCmd: CommandDef = {
