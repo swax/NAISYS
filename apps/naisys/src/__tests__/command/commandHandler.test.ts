@@ -4,6 +4,7 @@ import { createCommandHandler } from "../../command/commandHandler.js";
 import { createCommandRegistry } from "../../command/commandRegistry.js";
 import {
   createMockAgentConfig,
+  createMockCommandLoopState,
   createMockCommandProtection,
   createMockContextManager,
   createMockGenImg,
@@ -50,6 +51,7 @@ function createPopFirstCommand() {
     createMockContextManager(),
     createMockOutputService(),
     inputMode,
+    createMockCommandLoopState(),
   );
 
   return {

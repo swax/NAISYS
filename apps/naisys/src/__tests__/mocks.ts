@@ -249,6 +249,13 @@ export function createMockInputMode() {
   };
 }
 
+export function createMockCommandLoopState() {
+  return {
+    setState: vi.fn(),
+    getState: vi.fn(() => "Initializing" as const),
+  };
+}
+
 export function createMockCommandProtection() {
   const validateCommand = vi.fn(() =>
     Promise.resolve({

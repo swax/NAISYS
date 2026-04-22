@@ -5,6 +5,7 @@ import type { AgentConfig } from "../agent/agentConfig.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
+import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
@@ -29,6 +30,7 @@ export function createCommandHandler(
   contextManager: ContextManager,
   output: OutputService,
   inputMode: InputModeService,
+  commandLoopState: CommandLoopStateService,
 ) {
   async function processCommand(
     prompt: string,
@@ -88,6 +90,10 @@ export function createCommandHandler(
       const command = argv[0];
       // cmdArgs is everything after the command name
       const cmdArgs = input.slice(command.length).trim();
+
+      // Restore Executing after commandProtection may have shifted state
+      // to Confirming/LlmQuerying; the actual command is the next hold.
+      commandLoopState.setState("Executing");
 
       // Check command registry first
       const registeredCommand = commandRegistry.get(command);

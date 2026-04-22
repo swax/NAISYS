@@ -1,4 +1,5 @@
 import type {
+  CommandLoopState,
   CostPushEntry,
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
@@ -8,6 +9,7 @@ import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 
 type CachedRunSession = BaseRunSession & {
   paused?: boolean;
+  state?: CommandLoopState;
 };
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -158,6 +160,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
           ...existing,
           lastActive: event.lastActive,
           paused: event.paused,
+          state: event.state,
         };
         mergeRuns([updated]);
       }

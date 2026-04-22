@@ -279,6 +279,20 @@ export const RunSessionLog: React.FC<{
               No logs available for this run
             </Text>
           )}
+          {run.isOnline && run.state && (
+            <Text
+              size="sm"
+              c="dimmed"
+              fs="italic"
+              style={{
+                fontFamily: "monospace",
+                margin: 0,
+                padding: 0,
+              }}
+            >
+              [{run.state}]
+            </Text>
+          )}
         </Stack>
       </Box>
     );

@@ -22,6 +22,7 @@ import type { MailService } from "../mail/mail.js";
 import type { LogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
 import type { RunService } from "../services/runService.js";
+import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
@@ -65,6 +66,7 @@ export function createCommandLoop(
   sessionService: SessionService,
   modelService: ModelService,
   desktopService: DesktopService,
+  commandLoopState: CommandLoopStateService,
 ) {
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current timed wait so preemptive compact can calculate remaining time */
@@ -113,6 +115,7 @@ export function createCommandLoop(
       }
 
       if (nextCommandAction == NextCommandAction.CompactSession) {
+        commandLoopState.setState("Executing");
         clearTimeout(preemptiveCompactTimeout);
         lynxService.clear();
         contextManager.clear();
@@ -121,6 +124,7 @@ export function createCommandLoop(
       }
     }
 
+    commandLoopState.setState("Ending");
     clearTimeout(preemptiveCompactTimeout);
 
     if (abortSignal?.aborted) {
@@ -219,6 +223,8 @@ export function createCommandLoop(
   }> {
     let nextCommandAction = NextCommandAction.Continue;
     let wait: WaitBehavior | undefined = undefined;
+
+    commandLoopState.setState("Initializing");
 
     // This ensures output is appended to the llm context
     inputMode.setLLM();
@@ -320,6 +326,8 @@ export function createCommandLoop(
         currentWait = { startTime: Date.now(), totalSeconds: wait.seconds };
       }
 
+      commandLoopState.setState("Waiting");
+
       commandList = [
         await promptBuilder.getInput(`${prompt}`, wait, () => {
           // User started typing — cancel preemptive compact since a new
@@ -364,6 +372,7 @@ export function createCommandLoop(
       }
 
       if (result.outcome === "desktop") {
+        // desktopService sets Confirming/Executing internally based on focus
         await desktopService.confirmAndExecuteActions(
           result.desktop.textContent,
           result.desktop.actions,
@@ -382,6 +391,7 @@ export function createCommandLoop(
 
     // Run the command
     try {
+      commandLoopState.setState("Executing");
       const commandResult = await commandHandler.processCommand(
         prompt,
         commandList,
@@ -494,6 +504,7 @@ export function createCommandLoop(
 
       let queryCancelled = false;
       try {
+        commandLoopState.setState("LlmQuerying");
         const queryResult = await llmService.query(
           shellModel,
           systemMessage,

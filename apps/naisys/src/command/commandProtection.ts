@@ -1,5 +1,6 @@
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { LLMService } from "../llm/llmService.js";
+import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
 
@@ -12,6 +13,7 @@ export function createCommandProtection(
   { agentConfig }: AgentConfig,
   llmService: LLMService,
   output: OutputService,
+  commandLoopState: CommandLoopStateService,
 ) {
   async function validateCommand(
     command: string,
@@ -22,6 +24,11 @@ export function createCommandProtection(
           commandAllowed: true,
         };
       case "manual": {
+        // getConfirmation auto-denies when unfocused, so only surface the
+        // Confirming state if the operator can actually respond
+        if (output.isConsoleEnabled()) {
+          commandLoopState.setState("Confirming");
+        }
         const commandAllowed = await getConfirmation(
           output,
           "Allow command to run? [Y/n]",
@@ -70,6 +77,7 @@ Respond with exactly one of:
   ALLOW: <reason>
   DENY: <reason>`;
 
+    commandLoopState.setState("LlmQuerying");
     const queryResult = await llmService.query(
       agentConfig().shellModel,
       systemMessage,
@@ -98,6 +106,9 @@ Respond with exactly one of:
       };
     }
 
+    if (output.isConsoleEnabled()) {
+      commandLoopState.setState("Confirming");
+    }
     const overridden = await getConfirmation(
       output,
       "Allow command anyway? [Y/n]",

@@ -6,6 +6,7 @@ import { NextCommandAction } from "../../command/commandRegistry.js";
 import type { DesktopService } from "../../computer-use/desktop.js";
 import type { LLMService } from "../../llm/llmService.js";
 import type { ModelService } from "../../services/modelService.js";
+import { createCommandLoopState } from "../../utils/commandLoopState.js";
 import { createInputMode } from "../../utils/inputMode.js";
 import { createPromptNotificationService } from "../../utils/promptNotificationService.js";
 import {
@@ -72,6 +73,7 @@ describe("commandLoop wait behavior", () => {
       createMockSessionService(),
       modelService,
       desktopService,
+      createCommandLoopState(),
     );
 
     await expect(commandLoop.run()).resolves.toBe("exit");
