@@ -89,7 +89,7 @@ export function createContextManager(
     const text = `[Image: ${filepath}]`;
 
     if (inputMode.isDebug()) {
-      output.comment(text);
+      output.commentAndLog(text, filepath);
       return;
     }
 
@@ -117,7 +117,7 @@ export function createContextManager(
     const text = `[Audio: ${filepath}]`;
 
     if (inputMode.isDebug()) {
-      output.comment(text);
+      output.commentAndLog(text, filepath);
       return;
     }
 
