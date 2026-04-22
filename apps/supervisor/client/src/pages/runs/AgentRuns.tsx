@@ -191,11 +191,30 @@ export const AgentRuns: React.FC = () => {
   const [commandInput, setCommandInput] = useState("");
   const [commandSending, setCommandSending] = useState(false);
   const commandInputRef = useRef<HTMLTextAreaElement>(null);
+  const shouldRefocusCommandInputRef = useRef(false);
+
+  useEffect(() => {
+    if (commandSending || !shouldRefocusCommandInputRef.current) return;
+
+    shouldRefocusCommandInputRef.current = false;
+    const frame = requestAnimationFrame(() => {
+      const input = commandInputRef.current;
+      if (!input || input.disabled) return;
+
+      input.focus();
+      const cursor = input.value.length;
+      input.setSelectionRange(cursor, cursor);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [commandSending]);
 
   const handleSendCommand = async (run: RunSession) => {
-    if (!username) return;
+    if (!username || commandSending) return;
+    // Blank input is meaningful — it bounces the agent into LLM mode,
+    // bypassing an indefinite debug wait or remote pause for one cycle.
     const command = commandInput.trim();
-    if (!command) return;
+    shouldRefocusCommandInputRef.current = true;
     setCommandSending(true);
     try {
       const result = await sendRunCommand(
@@ -221,10 +240,6 @@ export const AgentRuns: React.FC = () => {
       });
     } finally {
       setCommandSending(false);
-      // Defer focus to the next tick so React re-enables the (previously
-      // disabled) textarea before we try to focus it — a disabled element
-      // won't accept focus.
-      setTimeout(() => commandInputRef.current?.focus(), 0);
     }
   };
 
@@ -479,6 +494,10 @@ export const AgentRuns: React.FC = () => {
                       Otherwise, commands run on the shell without being added
                       to the LLM&apos;s context.
                     </Text>
+                    <Text size="xs">
+                      Send blank to bounce the agent into LLM mode for one
+                      cycle — bypasses a paused or indefinite debug wait.
+                    </Text>
                   </Stack>
                 </HoverCard.Dropdown>
               </HoverCard>
@@ -507,11 +526,7 @@ export const AgentRuns: React.FC = () => {
                 variant="filled"
                 color="blue"
                 size="lg"
-                disabled={
-                  !selectedRun.isOnline ||
-                  !commandInput.trim() ||
-                  commandSending
-                }
+                disabled={!selectedRun.isOnline || commandSending}
                 loading={commandSending}
                 onClick={() => void handleSendCommand(selectedRun)}
               >

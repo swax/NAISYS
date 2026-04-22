@@ -73,6 +73,9 @@ export function createCommandLoop(
   let currentWait: { startTime: number; totalSeconds: number } | undefined;
   /** Remote pause — when true, the loop forces indefinite wait between iterations. */
   let paused = false;
+  /** One-shot flag — when set, the next resolveWait bypasses the pause check
+   *  so an LLM response can fire for this cycle before pause re-engages. */
+  let bypassPauseOnce = false;
 
   async function run(abortSignal?: AbortSignal): Promise<string> {
     output.commentAndLog(`AGENT STARTED`);
@@ -405,9 +408,15 @@ export function createCommandLoop(
       // Also switch immediately if the command requested it (e.g. ns-talk).
       if (
         inputMode.isDebug() &&
-        (blankDebugInput || commandResult.switchToLLM)
+        (blankDebugInput || commandResult.triggerLlm)
       ) {
         inputMode.setLLM();
+        // Any debug-initiated LLM switch (blank-line continuation or
+        // triggerLlm) bypasses pause for one cycle so an LLM response can
+        // fire; pause re-engages on the iteration after that.
+        if (paused) {
+          bypassPauseOnce = true;
+        }
       }
       // If in LLM mode, auto switch back to debug
       else if (inputMode.isLLM()) {
@@ -655,10 +664,14 @@ export function createCommandLoop(
       "debugCommand",
     );
 
+    // Consume the one-shot bypass so pause re-engages next iteration.
+    const bypassPause = bypassPauseOnce;
+    bypassPauseOnce = false;
+
     if (wait === undefined) {
       // Remote pause — force indefinite debug-mode wait, interruptible via
       // resume + prompt notifications (the same mechanism that wakes on mail)
-      if (paused) {
+      if (paused && !bypassPause) {
         inputMode.setDebug();
         wait = indefiniteWait();
       }

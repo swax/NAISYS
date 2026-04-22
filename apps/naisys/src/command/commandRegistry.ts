@@ -41,8 +41,10 @@ export interface NextCommandResponse {
   nextCommandAction: NextCommandAction;
   /** Explicit wait behavior before the next iteration. Omit to use the mode default. */
   wait?: WaitBehavior;
-  /** If true, immediately switch to LLM mode for a follow-up response */
-  switchToLLM?: boolean;
+  /** If true, switch to LLM mode for a follow-up response. Also breaks
+   *  pause — a command that needs an LLM response should get one even if
+   *  the operator has the session paused. */
+  triggerLlm?: boolean;
 }
 
 /**

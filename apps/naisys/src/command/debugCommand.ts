@@ -5,7 +5,7 @@ import type { ContextManager } from "../llm/contextManager.js";
 import type { LlmRole } from "../llm/llmDtos.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
-import { contextCmd, exitCmd, talkCmd } from "./commandDefs.js";
+import { contextCmd, exitCmd, pauseCmd, talkCmd } from "./commandDefs.js";
 import type { CommandResponse, RegistrableCommand } from "./commandRegistry.js";
 import { NextCommandAction } from "./commandRegistry.js";
 
@@ -77,11 +77,30 @@ export function createDebugCommands(
           content: "",
           nextCommandResponse: {
             nextCommandAction: NextCommandAction.Continue,
-            switchToLLM: true,
+            triggerLlm: true,
           },
         };
       }
       return { content: "" };
+    },
+  };
+
+  const nsPause: RegistrableCommand = {
+    command: pauseCmd,
+    handleCommand: (cmdArgs) => {
+      const agent = agentManager.runningAgents.find(
+        (a) => a.agentUserId === localUserId,
+      );
+      if (!agent) {
+        return "Agent not running";
+      }
+      const arg = cmdArgs.trim().toLowerCase();
+      const next =
+        arg === "on" ? true : arg === "off" ? false : !agent.isPaused();
+      const changed = agent.setPaused(next);
+      return changed
+        ? `Session ${next ? "paused" : "resumed"}`
+        : `Session already ${next ? "paused" : "resumed"}`;
     },
   };
 
@@ -110,5 +129,5 @@ export function createDebugCommands(
     },
   };
 
-  return [nsContext, nsTalk, nsExit];
+  return [nsContext, nsTalk, nsPause, nsExit];
 }

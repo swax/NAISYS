@@ -166,7 +166,7 @@ export type AgentRunPauseResult = z.infer<typeof AgentRunPauseResultSchema>;
 
 export const AgentRunCommandRequestSchema = z
   .object({
-    command: z.string().min(1).max(4000),
+    command: z.string().max(4000),
   })
   .strict();
 export type AgentRunCommandRequestBody = z.infer<
