@@ -88,6 +88,10 @@ export const HubEvents = {
   AGENT_START: "agent_start",
   /** Stop an agent on its current host */
   AGENT_STOP: "agent_stop",
+  /** Pause a run — forces the command loop to an indefinite wait */
+  AGENT_RUN_PAUSE: "agent_run_pause",
+  /** Resume a paused run */
+  AGENT_RUN_RESUME: "agent_run_resume",
   /** Peek at an agent's output buffer */
   AGENT_PEEK: "agent_peek",
 

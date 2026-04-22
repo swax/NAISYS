@@ -34,6 +34,26 @@ export const AgentStopResponseSchema = z.object({
 });
 export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
 
+/** Request to pause or resume a run's active session */
+export const AgentRunPauseRequestSchema = z.object({
+  userId: z.number(),
+  runId: z.number(),
+  sessionId: z.number(),
+  sourceHostId: z.number().optional(),
+});
+export type AgentRunPauseRequest = z.infer<typeof AgentRunPauseRequestSchema>;
+
+/** Response to pause/resume request */
+export const AgentRunPauseResponseSchema = z.object({
+  success: z.boolean(),
+  error: z.string().optional(),
+  /** True if the request changed the state; false if it was already in that state. */
+  changed: z.boolean().optional(),
+});
+export type AgentRunPauseResponse = z.infer<
+  typeof AgentRunPauseResponseSchema
+>;
+
 /** Request to peek at an agent's output buffer */
 export const AgentPeekRequestSchema = z.object({
   userId: z.number(),

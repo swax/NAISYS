@@ -1,5 +1,6 @@
 import { resolveHubAccessKey } from "@naisys/common-node";
 import type {
+  AgentRunPauseResponse,
   AgentStartResponse,
   AgentStopResponse,
   MailSendResponse,
@@ -486,6 +487,28 @@ export function sendAgentStop(userId: number, reason: string) {
       if (response.success) {
         markAgentStopped(userId);
       }
+      resolve(response);
+    });
+  });
+}
+
+export function sendAgentRunPauseState(
+  userId: number,
+  runId: number,
+  sessionId: number,
+  paused: boolean,
+) {
+  return new Promise<AgentRunPauseResponse>((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    const event = paused
+      ? HubEvents.AGENT_RUN_PAUSE
+      : HubEvents.AGENT_RUN_RESUME;
+
+    socket.emit(event, { userId, runId, sessionId }, (response) => {
       resolve(response);
     });
   });

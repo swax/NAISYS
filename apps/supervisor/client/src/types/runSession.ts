@@ -5,4 +5,5 @@ import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
  */
 export type RunSession = BaseRunSession & {
   isOnline: boolean;
+  paused?: boolean;
 };

@@ -1,25 +1,33 @@
 import type {
+  AgentRunPauseResult,
   AgentUsernameParams,
   ContextLogParams,
   ContextLogRequest,
   ContextLogResponse,
+  ErrorResponse,
   RunsDataRequest,
   RunsDataResponse,
 } from "@naisys/supervisor-shared";
 import {
+  AgentRunPauseResultSchema,
   AgentUsernameParamsSchema,
   ContextLogParamsSchema,
   ContextLogRequestSchema,
   ContextLogResponseSchema,
+  ErrorResponseSchema,
   RunsDataRequestSchema,
   RunsDataResponseSchema,
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-helpers.js";
 import { API_PREFIX, idCursorLinks, timestampCursorLinks } from "../hateoas.js";
 import { resolveAgentId } from "../services/agentService.js";
+import {
+  isHubConnected,
+  sendAgentRunPauseState,
+} from "../services/hubConnectionService.js";
 import {
   getContextLog,
   getRunsData,
@@ -151,6 +159,75 @@ export default function agentRunsRoutes(
           limit !== undefined ? `limit=${limit}` : undefined,
         ),
       };
+    },
+  );
+
+  // Paired pause/resume routes — the verb is carried in the URL rather than
+  // the body so the HATEOAS action list can express them as two distinct
+  // affordances that toggle on/off based on current run state.
+  registerRunPauseRoute(fastify, "pause", true);
+  registerRunPauseRoute(fastify, "resume", false);
+}
+
+function registerRunPauseRoute(
+  fastify: FastifyInstance,
+  verb: "pause" | "resume",
+  paused: boolean,
+) {
+  const label = verb === "pause" ? "Pause" : "Resume";
+
+  fastify.post<{
+    Params: ContextLogParams;
+    Reply: AgentRunPauseResult | ErrorResponse;
+  }>(
+    `/:username/runs/:runId/sessions/:sessionId/${verb}`,
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: `${label} a run's active session via the hub`,
+        tags: ["Runs"],
+        params: ContextLogParamsSchema,
+        response: {
+          200: AgentRunPauseResultSchema,
+          503: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username, runId, sessionId } = request.params;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      if (!isHubConnected()) {
+        return reply.status(503).send({
+          success: false,
+          message: "Hub is not connected",
+        });
+      }
+
+      const response = await sendAgentRunPauseState(
+        id,
+        runId,
+        sessionId,
+        paused,
+      );
+
+      if (response.success) {
+        return {
+          success: true,
+          message: paused ? "Run paused" : "Run resumed",
+        };
+      } else {
+        return reply.status(500).send({
+          success: false,
+          message: response.error || `Failed to ${verb} run`,
+        });
+      }
     },
   );
 }

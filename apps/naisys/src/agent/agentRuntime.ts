@@ -323,6 +323,8 @@ export async function createAgentRuntime(
     agentTitle: config.title,
     getRunId: runService.getRunId,
     getSessionId: runService.getSessionId,
+    isPaused: commandLoop.isPaused,
+    setPaused: commandLoop.setPaused,
     output,
     subagentService,
     runCommandLoop: async () => {

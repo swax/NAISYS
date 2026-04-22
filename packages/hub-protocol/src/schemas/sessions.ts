@@ -58,6 +58,7 @@ export const SessionHeartbeatUpdateSchema = z.object({
   runId: z.number(),
   sessionId: z.number(),
   lastActive: z.string(),
+  paused: z.boolean().optional(),
 });
 export type SessionHeartbeatUpdate = z.infer<
   typeof SessionHeartbeatUpdateSchema

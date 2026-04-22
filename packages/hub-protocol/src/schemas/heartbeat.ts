@@ -11,6 +11,8 @@ export const HeartbeatSessionSchema = z.object({
   userId: z.number(),
   runId: z.number(),
   sessionId: z.number(),
+  /** True when the agent's command loop is pause-locked on indefinite wait. */
+  paused: z.boolean().optional(),
 });
 export type HeartbeatSession = z.infer<typeof HeartbeatSessionSchema>;
 

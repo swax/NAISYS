@@ -1,4 +1,8 @@
-import type { ContextLogResponse, RunsDataResponse } from "./apiClient";
+import type {
+  AgentRunPauseResult,
+  ContextLogResponse,
+  RunsDataResponse,
+} from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
 export interface RunsDataParams {
@@ -71,4 +75,26 @@ export const getContextLog = async (
   const query = queryParams.toString();
   const url = `${apiEndpoints.agentContextLog(params.agentUsername, params.runId, params.sessionId)}${query ? `?${query}` : ""}`;
   return await api.get<ContextLogResponse>(url);
+};
+
+export const pauseRun = async (
+  username: string,
+  runId: number,
+  sessionId: number,
+): Promise<AgentRunPauseResult> => {
+  return await api.post<Record<string, never>, AgentRunPauseResult>(
+    apiEndpoints.agentRunPause(username, runId, sessionId),
+    {},
+  );
+};
+
+export const resumeRun = async (
+  username: string,
+  runId: number,
+  sessionId: number,
+): Promise<AgentRunPauseResult> => {
+  return await api.post<Record<string, never>, AgentRunPauseResult>(
+    apiEndpoints.agentRunResume(username, runId, sessionId),
+    {},
+  );
 };

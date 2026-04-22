@@ -12,6 +12,8 @@ export interface IAgentManager {
     agentTitle: string;
     getRunId: () => number;
     getSessionId: () => number;
+    isPaused: () => boolean;
+    setPaused: (paused: boolean) => boolean;
   }>;
   getBufferLines: (agentUserId: number) => string[];
   setActiveConsoleAgent: (agentUserId: number) => void;
