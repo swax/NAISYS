@@ -31,6 +31,11 @@ function detectPlatform(): Platform | null {
   if (process.platform === "darwin")
     return { backend: macosDesktop, name: "macOS" };
 
+  // WSL: control the Windows host via powershell.exe rather than the WSLg
+  // Wayland compositor, since WSLg only exposes Linux GUI apps.
+  if (process.env.WSL_DISTRO_NAME)
+    return { backend: windowsDesktop, name: "Windows (WSL)" };
+
   const sessionType = process.env.XDG_SESSION_TYPE;
   if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY)
     return { backend: waylandDesktop, name: "Linux (Wayland)" };
@@ -307,27 +312,74 @@ export async function resizeScreenshot(
   return resized.toString("base64");
 }
 
+/** Map a coordinate pair between two 2D spaces with independent X/Y scaling. */
+export function mapCoordinateBetweenSpaces(
+  coord: number[],
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+): number[];
+export function mapCoordinateBetweenSpaces(
+  coord: unknown,
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+): unknown {
+  if (
+    !Array.isArray(coord) ||
+    sourceWidth <= 0 ||
+    sourceHeight <= 0 ||
+    targetWidth <= 0 ||
+    targetHeight <= 0
+  ) {
+    return coord;
+  }
+
+  return [
+    Math.round(((coord as number[])[0] / sourceWidth) * targetWidth),
+    Math.round(((coord as number[])[1] / sourceHeight) * targetHeight),
+  ];
+}
+
+/** Map all action coordinates between two spaces, preserving non-coordinate fields. */
+export function mapActionBetweenSpaces(
+  input: Record<string, unknown>,
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+): Record<string, unknown> {
+  const result = { ...input };
+  if ("coordinate" in result && Array.isArray(result.coordinate)) {
+    result.coordinate = mapCoordinateBetweenSpaces(
+      result.coordinate,
+      sourceWidth,
+      sourceHeight,
+      targetWidth,
+      targetHeight,
+    );
+  }
+  if ("start_coordinate" in result && Array.isArray(result.start_coordinate)) {
+    result.start_coordinate = mapCoordinateBetweenSpaces(
+      result.start_coordinate,
+      sourceWidth,
+      sourceHeight,
+      targetWidth,
+      targetHeight,
+    );
+  }
+  return result;
+}
+
 /** Scale coordinates in a computer use action from API space back to native screen space */
 export function scaleActionToNative(
   input: Record<string, unknown>,
   scaleFactor: number,
 ): Record<string, unknown> {
   if (scaleFactor >= 1) return input;
-
-  const result = { ...input };
-  if (Array.isArray(result.coordinate)) {
-    result.coordinate = [
-      Math.round((result.coordinate as number[])[0] / scaleFactor),
-      Math.round((result.coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  if (Array.isArray(result.start_coordinate)) {
-    result.start_coordinate = [
-      Math.round((result.start_coordinate as number[])[0] / scaleFactor),
-      Math.round((result.start_coordinate as number[])[1] / scaleFactor),
-    ];
-  }
-  return result;
+  return mapActionBetweenSpaces(input, scaleFactor, scaleFactor, 1, 1);
 }
 
 /**
@@ -460,9 +512,7 @@ export function isDesktopFocused(desktopConfig: DesktopConfig): boolean {
   );
 }
 
-export function describeDesktopViewport(
-  desktopConfig: DesktopConfig,
-): string {
+export function describeDesktopViewport(desktopConfig: DesktopConfig): string {
   if (!isDesktopFocused(desktopConfig)) {
     return `full desktop ${desktopConfig.displayWidth}x${desktopConfig.displayHeight}`;
   }
@@ -594,13 +644,12 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
   /** Build the DesktopConfig with native display dimensions. Returns undefined if no platform or init failed. */
   function getConfig(): DesktopConfig | undefined {
     if (!platform || !nativeDimensions) return undefined;
-    const viewport =
-      getViewport() || {
-        x: 0,
-        y: 0,
-        width: nativeDimensions.width,
-        height: nativeDimensions.height,
-      };
+    const viewport = getViewport() || {
+      x: 0,
+      y: 0,
+      width: nativeDimensions.width,
+      height: nativeDimensions.height,
+    };
     return {
       displayWidth: viewport.width,
       displayHeight: viewport.height,

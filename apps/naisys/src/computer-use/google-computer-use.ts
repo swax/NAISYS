@@ -12,25 +12,10 @@ import type {
   DesktopConfig,
   DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
+import { mapCoordinateBetweenSpaces } from "./computerService.js";
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
 const NORMALIZED_MAX = 1000;
-
-function denormalizeX(normalized: number, screenWidth: number): number {
-  return Math.round((normalized / NORMALIZED_MAX) * screenWidth);
-}
-
-function denormalizeY(normalized: number, screenHeight: number): number {
-  return Math.round((normalized / NORMALIZED_MAX) * screenHeight);
-}
-
-function normalizeX(pixel: number, screenWidth: number): number {
-  return Math.round((pixel / screenWidth) * NORMALIZED_MAX);
-}
-
-function normalizeY(pixel: number, screenHeight: number): number {
-  return Math.round((pixel / screenHeight) * NORMALIZED_MAX);
-}
 
 // --- Known Google Computer Use action names ---
 
@@ -50,6 +35,15 @@ const GOOGLE_CU_ACTIONS = new Set([
   "navigate",
 ]);
 
+function isCoordinatePair(value: unknown): value is [number, number] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number"
+  );
+}
+
 export function isGoogleComputerUseAction(name: string): boolean {
   return GOOGLE_CU_ACTIONS.has(name);
 }
@@ -62,29 +56,35 @@ function convertGoogleActionToInternal(
   displayWidth: number,
   displayHeight: number,
 ): Record<string, unknown>[] {
-  const dx = (x: number) => denormalizeX(x, displayWidth);
-  const dy = (y: number) => denormalizeY(y, displayHeight);
+  const denormalize = (x: number, y: number) =>
+    mapCoordinateBetweenSpaces(
+      [x, y],
+      NORMALIZED_MAX,
+      NORMALIZED_MAX,
+      displayWidth,
+      displayHeight,
+    );
 
   switch (name) {
     case "click_at":
       return [
         {
           action: "left_click",
-          coordinate: [dx(args.x as number), dy(args.y as number)],
+          coordinate: denormalize(args.x as number, args.y as number),
         },
       ];
     case "hover_at":
       return [
         {
           action: "mouse_move",
-          coordinate: [dx(args.x as number), dy(args.y as number)],
+          coordinate: denormalize(args.x as number, args.y as number),
         },
       ];
     case "type_text_at": {
       const actions: Record<string, unknown>[] = [];
       actions.push({
         action: "left_click",
-        coordinate: [dx(args.x as number), dy(args.y as number)],
+        coordinate: denormalize(args.x as number, args.y as number),
       });
       if (args.clear_before_typing !== false) {
         actions.push({ action: "key", text: "ctrl+a" });
@@ -116,7 +116,7 @@ function convertGoogleActionToInternal(
       return [
         {
           action: "scroll",
-          coordinate: [dx(args.x as number), dy(args.y as number)],
+          coordinate: denormalize(args.x as number, args.y as number),
           scroll_direction: args.direction as string,
           scroll_amount: amount,
         },
@@ -126,11 +126,11 @@ function convertGoogleActionToInternal(
       return [
         {
           action: "left_click_drag",
-          start_coordinate: [dx(args.x as number), dy(args.y as number)],
-          coordinate: [
-            dx(args.destination_x as number),
-            dy(args.destination_y as number),
-          ],
+          start_coordinate: denormalize(args.x as number, args.y as number),
+          coordinate: denormalize(
+            args.destination_x as number,
+            args.destination_y as number,
+          ),
         },
       ];
     case "wait_5_seconds":
@@ -162,19 +162,32 @@ function reconstructGoogleArgs(
   displayWidth: number,
   displayHeight: number,
 ): Record<string, unknown> {
-  const nx = (x: number) => normalizeX(x, displayWidth);
-  const ny = (y: number) => normalizeY(y, displayHeight);
-  const getCoord = (a: Record<string, unknown>) =>
-    a.coordinate as number[] | undefined;
+  const normalize = (x: number, y: number) =>
+    mapCoordinateBetweenSpaces(
+      [x, y],
+      displayWidth,
+      displayHeight,
+      NORMALIZED_MAX,
+      NORMALIZED_MAX,
+    );
+  const getCoord = (
+    a: Record<string, unknown> | undefined,
+    key: "coordinate" | "start_coordinate" = "coordinate",
+  ) => {
+    const coord = a?.[key];
+    return isCoordinatePair(coord) ? coord : undefined;
+  };
 
   switch (googleFuncName) {
     case "click_at": {
       const coord = getCoord(internalActions[0]);
-      return { x: nx(coord![0]), y: ny(coord![1]) };
+      const [x, y] = normalize(coord![0], coord![1]);
+      return { x, y };
     }
     case "hover_at": {
       const coord = getCoord(internalActions[0]);
-      return { x: nx(coord![0]), y: ny(coord![1]) };
+      const [x, y] = normalize(coord![0], coord![1]);
+      return { x, y };
     }
     case "type_text_at": {
       const clickAction = internalActions.find(
@@ -188,9 +201,10 @@ function reconstructGoogleArgs(
       const hasEnter = internalActions.some(
         (a) => a.action === "key" && a.text === "Return",
       );
+      const [x, y] = normalize(coord![0], coord![1]);
       return {
-        x: nx(coord![0]),
-        y: ny(coord![1]),
+        x,
+        y,
         text: (typeAction?.text as string) || "",
         press_enter: hasEnter,
         clear_before_typing: hasClear,
@@ -205,21 +219,30 @@ function reconstructGoogleArgs(
     case "scroll_at": {
       const coord = getCoord(internalActions[0]);
       const amount = (internalActions[0]?.scroll_amount as number) || 3;
+      const [x, y] = normalize(coord![0], coord![1]);
       return {
-        x: nx(coord![0]),
-        y: ny(coord![1]),
+        x,
+        y,
         direction: (internalActions[0]?.scroll_direction as string) || "down",
         magnitude: amount * 200,
       };
     }
     case "drag_and_drop": {
-      const startCoord = internalActions[0]?.start_coordinate as number[];
+      const startCoord = getCoord(
+        internalActions[0],
+        "start_coordinate",
+      )!;
       const endCoord = getCoord(internalActions[0]);
+      const [x, y] = normalize(startCoord[0], startCoord[1]);
+      const [destination_x, destination_y] = normalize(
+        endCoord![0],
+        endCoord![1],
+      );
       return {
-        x: nx(startCoord[0]),
-        y: ny(startCoord[1]),
-        destination_x: nx(endCoord![0]),
-        destination_y: ny(endCoord![1]),
+        x,
+        y,
+        destination_x,
+        destination_y,
       };
     }
     case "navigate": {
@@ -344,10 +367,7 @@ export function formatContextWithComputerUse(
           parts.push({ text: block.text });
         } else if (block.type === "tool_use") {
           toolUseIdToName.set(block.id, block.name);
-          const replayViewport = getReplayViewport(
-            block.input,
-            desktopConfig,
-          );
+          const replayViewport = getReplayViewport(block.input, desktopConfig);
           const googleArgs = reconstructGoogleArgs(
             block.name,
             (block.input as { actions: Record<string, unknown>[] }).actions,

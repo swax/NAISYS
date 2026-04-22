@@ -9,7 +9,7 @@ import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
+import type { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
@@ -22,6 +22,7 @@ import {
   formatDesktopActions,
   getTargetScaleFactor,
   isDesktopFocused,
+  mapCoordinateBetweenSpaces,
 } from "./computerService.js";
 
 export function createDesktopService(
@@ -33,9 +34,30 @@ export function createDesktopService(
   shellWrapper: ShellWrapper,
   commandLoopState: CommandLoopStateService,
 ) {
+  type DesktopRuntimeState = {
+    desktopConfig: ReturnType<ComputerService["getConfig"]>;
+    scaleFactor?: number;
+    coordScale?: CoordScale;
+    scaledWidth?: number;
+    scaledHeight?: number;
+  };
+  type VisibleDesktopState = {
+    desktopConfig: DesktopConfig;
+    scaleFactor: number;
+    scaledWidth: number;
+    scaledHeight: number;
+  };
+  type DesktopSubcommand = keyof NonNullable<typeof desktopCmd.subcommands>;
+
   const shellModel = modelService.getLlmModel(
     agentConfig.agentConfig().shellModel,
   );
+  const actionByButton: Record<string, string> = {
+    left: "left_click",
+    right: "right_click",
+    middle: "middle_click",
+    double: "double_click",
+  };
 
   function getFocusChangeCostNote(): string {
     if (shellModel.apiType === LlmApiType.Anthropic) {
@@ -44,14 +66,9 @@ export function createDesktopService(
     return "Focus changes can increase next-turn cost because computer-use context has to be refreshed.";
   }
 
-  function getDesktopRuntimeState(): {
-    desktopConfig: ReturnType<ComputerService["getConfig"]>;
-    coordScale?: CoordScale;
-    scaledWidth?: number;
-    scaledHeight?: number;
-  } {
+  function getDesktopRuntimeState(): DesktopRuntimeState {
     const desktopConfig =
-      agentConfig.agentConfig().controlDesktop && shellModel.supportsComputerUse
+      agentConfig.agentConfig().controlDesktop
         ? computerService.getConfig()
         : undefined;
 
@@ -64,13 +81,70 @@ export function createDesktopService(
 
     return {
       desktopConfig,
+      scaleFactor,
       scaledWidth: Math.floor(w * scaleFactor),
       scaledHeight: Math.floor(h * scaleFactor),
       coordScale:
+        shellModel.supportsComputerUse &&
         shellModel.apiType === LlmApiType.Google
           ? { x: 1000 / w, y: 1000 / h }
           : { x: scaleFactor, y: scaleFactor },
     };
+  }
+
+  function requireVisibleDesktopState(): VisibleDesktopState {
+    const { desktopConfig, scaleFactor, scaledWidth, scaledHeight } =
+      getDesktopRuntimeState();
+
+    if (!desktopConfig || !scaleFactor || !scaledWidth || !scaledHeight) {
+      throw "Desktop mode is not enabled or failed to initialize.";
+    }
+
+    return { desktopConfig, scaleFactor, scaledWidth, scaledHeight };
+  }
+
+  function mapScreenshotPointToViewport(
+    x: number,
+    y: number,
+    state: VisibleDesktopState,
+  ): number[] {
+    return mapCoordinateBetweenSpaces(
+      [x, y],
+      state.scaledWidth,
+      state.scaledHeight,
+      state.desktopConfig.displayWidth,
+      state.desktopConfig.displayHeight,
+    );
+  }
+
+  function mapScreenshotRectToNative(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    state: VisibleDesktopState,
+  ): { x: number; y: number; width: number; height: number } {
+    const [startX, startY] = mapScreenshotPointToViewport(x, y, state);
+    const [endX, endY] = mapScreenshotPointToViewport(
+      x + width,
+      y + height,
+      state,
+    );
+
+    return {
+      x: state.desktopConfig.viewport.x + startX,
+      y: state.desktopConfig.viewport.y + startY,
+      width: Math.max(1, endX - startX),
+      height: Math.max(1, endY - startY),
+    };
+  }
+
+  function formatCommandHelp(): string {
+    const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
+    for (const s of Object.values(desktopCmd.subcommands!)) {
+      lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
+    }
+    return lines.join("\n");
   }
 
   function formatDesktopStatus(): string {
@@ -88,16 +162,13 @@ export function createDesktopService(
       ].join("\n");
     }
 
-    const { desktopConfig, scaledWidth, scaledHeight } = getDesktopRuntimeState();
-    if (!desktopConfig || !scaledWidth || !scaledHeight) {
+    const { desktopConfig, scaleFactor, scaledWidth, scaledHeight } =
+      getDesktopRuntimeState();
+    if (!desktopConfig || !scaleFactor || !scaledWidth || !scaledHeight) {
       return "Desktop Status\n  State: unavailable";
     }
-
-    const scaleFactor =
-      desktopConfig.displayWidth > 0
-        ? scaledWidth / desktopConfig.displayWidth
-        : 1;
     const modelCoordSpace =
+      shellModel.supportsComputerUse &&
       shellModel.apiType === LlmApiType.Google
         ? "0..999 normalized grid"
         : `scaled pixel space (${scaledWidth}x${scaledHeight})`;
@@ -110,14 +181,14 @@ export function createDesktopService(
       `  LLM View: ${scaledWidth}x${scaledHeight}`,
       `  Model Coordinates: ${modelCoordSpace}`,
       `  Scale Factor: ${scaleFactor.toFixed(4)}`,
-      `  Manual Focus Args: native screen pixels`,
-      `  Manual Click Args: current viewport pixels`,
+      `  Manual Focus Args: current screenshot pixels (${scaledWidth}x${scaledHeight})`,
+      `  Manual Click Args: current screenshot pixels (${scaledWidth}x${scaledHeight})`,
     ].join("\n");
   }
 
   function attachViewportToActions(
     actions: DesktopAction[],
-    desktopConfig?: NonNullable<ReturnType<ComputerService["getConfig"]>>,
+    desktopConfig?: DesktopConfig,
   ): DesktopAction[] {
     if (!desktopConfig || !isDesktopFocused(desktopConfig)) {
       return actions;
@@ -178,11 +249,116 @@ export function createDesktopService(
     fs.copyFileSync(scaled.filepath, scaledPath);
 
     const desktopConfig = computerService.getConfig();
+    const { scaledWidth, scaledHeight } = getDesktopRuntimeState();
     const viewportLine = desktopConfig
       ? `\nViewport: ${describeDesktopViewport(desktopConfig)}`
       : "";
+    const clickLine =
+      scaledWidth && scaledHeight
+        ? `\nManual Click Coords: scaled screenshot ${scaledWidth}x${scaledHeight}`
+        : "";
 
-    return `Full: ${fullPath}\nViewport Native: ${viewportNativePath}\nScaled: ${scaledPath}${viewportLine}`;
+    return `Full: ${fullPath}\nViewport Native: ${viewportNativePath}\nScaled: ${scaledPath}${viewportLine}${clickLine}`;
+  }
+
+  function handleFocusCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): string {
+    const desktopConfig = computerService.getConfig();
+    if (!argv[1]) {
+      return `Desktop focus: ${describeDesktopViewport(desktopConfig!)}`;
+    }
+
+    if (argv[1].toLowerCase() === "clear") {
+      computerService.setFocus(undefined);
+      return `Desktop focus cleared. Using ${describeDesktopViewport(desktopConfig!)}\n${getFocusChangeCostNote()}`;
+    }
+
+    const x = Number(argv[1]);
+    const y = Number(argv[2]);
+    const width = Number(argv[3]);
+    const height = Number(argv[4]);
+    const state = requireVisibleDesktopState();
+
+    if (
+      !Number.isInteger(x) ||
+      !Number.isInteger(y) ||
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      throw usageError("focus");
+    }
+    if (
+      x < 0 ||
+      y < 0 ||
+      x + width > state.scaledWidth ||
+      y + height > state.scaledHeight
+    ) {
+      throw `Focus rect (${x}, ${y}, ${width}, ${height}) is outside the current screenshot bounds ${state.scaledWidth}x${state.scaledHeight}.`;
+    }
+
+    const viewport = computerService.setFocus(
+      mapScreenshotRectToNative(x, y, width, height, state),
+    );
+    return `Desktop focus set from screenshot (${x}, ${y}, ${width}x${height}) -> native (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}).\n${getFocusChangeCostNote()}`;
+  }
+
+  async function handleKeyCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const key = argv.slice(1).join(" ");
+    if (!key) {
+      throw usageError("key");
+    }
+    await computerService.executeAction({
+      actions: [{ action: "key", text: key }],
+    });
+    return `Pressed key: ${key}`;
+  }
+
+  async function handleClickCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const x = Number(argv[1]);
+    const y = Number(argv[2]);
+    const state = requireVisibleDesktopState();
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw usageError("click");
+    }
+    if (x < 0 || y < 0 || x >= state.scaledWidth || y >= state.scaledHeight) {
+      throw `Click (${x}, ${y}) is outside the current screenshot bounds ${state.scaledWidth}x${state.scaledHeight}.`;
+    }
+    const button = (argv[3] || "left").toLowerCase();
+    const action = actionByButton[button];
+    if (!action) {
+      throw `Unknown button "${button}". Use left, right, middle, or double.`;
+    }
+
+    const [viewportX, viewportY] = mapScreenshotPointToViewport(x, y, state);
+    await computerService.executeAction({
+      actions: [{ action, coordinate: [viewportX, viewportY] }],
+    });
+    return `Clicked (${button}) at screenshot (${x}, ${y}) -> viewport (${viewportX}, ${viewportY})`;
+  }
+
+  async function handleTypeCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const text = argv.slice(1).join(" ");
+    if (!text) {
+      throw usageError("type");
+    }
+    await computerService.executeAction({
+      actions: [{ action: "type", text }],
+    });
+    return `Typed: ${text}`;
   }
 
   /** Handle ns-desktop commands */
@@ -199,11 +375,7 @@ export function createDesktopService(
     const sub = argv[0].toLowerCase();
 
     if (sub === "help") {
-      const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
-      for (const s of Object.values(subs)) {
-        lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
-      }
-      return lines.join("\n");
+      return formatCommandHelp();
     }
 
     if (!computerService.getConfig()) {
@@ -220,79 +392,23 @@ export function createDesktopService(
       }
 
       case "focus": {
-        if (!argv[1]) {
-          return `Desktop focus: ${describeDesktopViewport(computerService.getConfig()!)}`;
-        }
-
-        if (argv[1].toLowerCase() === "clear") {
-          computerService.setFocus(undefined);
-          return `Desktop focus cleared. Using ${describeDesktopViewport(computerService.getConfig()!)}\n${getFocusChangeCostNote()}`;
-        }
-
-        const x = Number(argv[1]);
-        const y = Number(argv[2]);
-        const width = Number(argv[3]);
-        const height = Number(argv[4]);
-        if (
-          !Number.isInteger(x) ||
-          !Number.isInteger(y) ||
-          !Number.isInteger(width) ||
-          !Number.isInteger(height)
-        ) {
-          throw usageError("focus");
-        }
-
-        const viewport = computerService.setFocus({ x, y, width, height });
-        return `Desktop focus set to (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}) in native screen pixels.\n${getFocusChangeCostNote()}`;
+        return handleFocusCommand(argv, usageError);
       }
 
       case "key": {
-        const key = argv.slice(1).join(" ");
-        if (!key) {
-          throw usageError("key");
-        }
-        await computerService.executeAction({
-          actions: [{ action: "key", text: key }],
-        });
-        return `Pressed key: ${key}`;
+        return handleKeyCommand(argv, usageError);
       }
 
       case "click": {
-        const x = Number(argv[1]);
-        const y = Number(argv[2]);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          throw usageError("click");
-        }
-        const button = (argv[3] || "left").toLowerCase();
-        const actionByButton: Record<string, string> = {
-          left: "left_click",
-          right: "right_click",
-          middle: "middle_click",
-          double: "double_click",
-        };
-        const action = actionByButton[button];
-        if (!action) {
-          throw `Unknown button "${button}". Use left, right, middle, or double.`;
-        }
-        await computerService.executeAction({
-          actions: [{ action, coordinate: [x, y] }],
-        });
-        return `Clicked (${button}) at (${x}, ${y}) relative to the current viewport`;
+        return handleClickCommand(argv, usageError);
       }
 
       case "type": {
-        const text = argv.slice(1).join(" ");
-        if (!text) {
-          throw usageError("type");
-        }
-        await computerService.executeAction({
-          actions: [{ action: "type", text }],
-        });
-        return `Typed: ${text}`;
+        return handleTypeCommand(argv, usageError);
       }
 
       default: {
-        const helpResponse = await handleCommand("help");
+        const helpResponse = formatCommandHelp();
         return `Unknown ${desktopCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${helpResponse}`;
       }
     }

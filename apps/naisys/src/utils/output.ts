@@ -66,10 +66,10 @@ export function createOutputService(logService: LogService) {
     write(msg, OutputColor.comment);
   }
 
-  function commentAndLog(msg: string) {
+  function commentAndLog(msg: string, filepath?: string) {
     comment(msg);
 
-    writeDbLog(msg, "comment");
+    writeDbLog(msg, "comment", filepath);
   }
 
   /** Log without echoing to stdout — for input already shown via readline */
@@ -87,12 +87,15 @@ export function createOutputService(logService: LogService) {
     writeDbLog(msg, "error");
   }
 
-  function writeDbLog(msg: string, type: LlmMessageType) {
-    logService.write({
-      role: "user",
-      content: msg,
-      type,
-    });
+  function writeDbLog(msg: string, type: LlmMessageType, filepath?: string) {
+    logService.write(
+      {
+        role: "user",
+        content: msg,
+        type,
+      },
+      filepath,
+    );
   }
 
   return {

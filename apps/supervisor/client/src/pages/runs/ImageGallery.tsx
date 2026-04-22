@@ -66,6 +66,25 @@ export const ImageGalleryProvider: React.FC<{
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < images.length - 1;
 
+  const [naturalSize, setNaturalSize] = useState<{
+    w: number;
+    h: number;
+  } | null>(null);
+  const [hoverCoords, setHoverCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [clickedCoords, setClickedCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  useEffect(() => {
+    setNaturalSize(null);
+    setHoverCoords(null);
+    setClickedCoords(null);
+  }, [currentIndex]);
+
   useEffect(() => {
     if (!opened) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -112,9 +131,58 @@ export const ImageGalleryProvider: React.FC<{
               mah="70vh"
               fit="contain"
               radius="sm"
-              style={{ cursor: "pointer" }}
-              onClick={() => window.open(current.url, "_blank")}
+              style={{ cursor: "crosshair" }}
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                setNaturalSize({
+                  w: img.naturalWidth,
+                  h: img.naturalHeight,
+                });
+              }}
+              onMouseMove={(e) => {
+                if (!naturalSize) return;
+                const img = e.currentTarget as HTMLImageElement;
+                const rect = img.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) return;
+                const x = Math.round(
+                  ((e.clientX - rect.left) / rect.width) * naturalSize.w,
+                );
+                const y = Math.round(
+                  ((e.clientY - rect.top) / rect.height) * naturalSize.h,
+                );
+                setHoverCoords({ x, y });
+              }}
+              onMouseLeave={() => setHoverCoords(null)}
+              onClick={() => {
+                if (hoverCoords) setClickedCoords(hoverCoords);
+              }}
             />
+            <div
+              style={{
+                marginTop: 8,
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 16,
+                fontFamily: "monospace",
+                fontSize: 12,
+                minHeight: 16,
+              }}
+            >
+              <div style={{ opacity: 0.75 }}>
+                {naturalSize && hoverCoords
+                  ? `x: ${hoverCoords.x}, y: ${hoverCoords.y} (of ${naturalSize.w} × ${naturalSize.h})`
+                  : naturalSize
+                    ? `${naturalSize.w} × ${naturalSize.h}`
+                    : ""}
+              </div>
+              <div>
+                {clickedCoords
+                  ? `ns-desktop click ${clickedCoords.x} ${clickedCoords.y}`
+                  : ""}
+              </div>
+            </div>
             {images.length > 1 && (
               <div
                 style={{

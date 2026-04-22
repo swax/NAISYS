@@ -68,7 +68,7 @@ export const desktopCmd: CommandDef = {
     focus: {
       usage: "focus [clear|<x> <y> <width> <height>]",
       description:
-        "Set or clear the desktop focus rectangle in native screen pixels. Screenshots and coordinates become relative to that viewport",
+        "Set or clear the desktop focus rectangle in current screenshot coordinates. Screenshots and coordinates become relative to that viewport",
     },
     key: {
       usage: "key <key>",
@@ -78,7 +78,7 @@ export const desktopCmd: CommandDef = {
     click: {
       usage: "click <x> <y> [left|right|middle|double]",
       description:
-        "Click at current viewport coordinates (defaults to left). Use 'double' for double-click",
+        "Click at current screenshot coordinates (defaults to left). Use 'double' for double-click",
     },
     type: {
       usage: 'type "<text>"',

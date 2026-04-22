@@ -1,6 +1,9 @@
 /**
  * Windows-specific desktop interaction via PowerShell / Win32 P/Invoke.
  * All coordinates are relative to the primary monitor.
+ *
+ * Also used from WSL (powershell.exe is on WSL's PATH by default). When invoked
+ * from WSL, file paths passed to PowerShell are translated via `wslpath -w`.
  */
 
 import { execFileSync } from "child_process";
@@ -10,6 +13,12 @@ function runPowerShell(command: string) {
     stdio: "pipe",
     timeout: 10000,
   });
+}
+
+/** Translate a Linux path to a Windows path when running on WSL. No-op on Windows. */
+function toWindowsPath(p: string): string {
+  if (process.platform === "win32") return p;
+  return execFileSync("wslpath", ["-w", p], { encoding: "utf8" }).trim();
 }
 
 // P/Invoke declarations + DPI awareness + primary monitor bounds.
@@ -41,6 +50,7 @@ export function captureScreenshot(tmpFile: string): void {
   // SetProcessDpiAwarenessContext ensures we capture at native resolution on scaled displays.
   // GetCursorInfo + DrawIconEx draws the actual cursor onto the screenshot
   // (CopyFromScreen doesn't capture the cursor).
+  const winTmpFile = toWindowsPath(tmpFile);
   const psScript = `
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -71,7 +81,7 @@ try {
     [ScreenCapture]::DrawIconEx($hdc, $ci.ptScreenPos.X - $s.Left, $ci.ptScreenPos.Y - $s.Top, $ci.hCursor, 0, 0, 0, [IntPtr]::Zero, [ScreenCapture]::DI_NORMAL)
     $g.ReleaseHdc($hdc)
   }
-  $b.Save('${tmpFile}', [System.Drawing.Imaging.ImageFormat]::Png)
+  $b.Save('${winTmpFile}', [System.Drawing.Imaging.ImageFormat]::Png)
 } finally {
   $g.Dispose()
   $b.Dispose()
