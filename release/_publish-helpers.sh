@@ -37,10 +37,20 @@ generate_shrinkwrap() {
   local tmp_dir
   tmp_dir=$(mktemp -d)
 
-  cp "$pkg_dir/package.json" "$tmp_dir/package.json"
+  # Strip devDependencies from the temp package.json before generating the
+  # lockfile. Under --omit=dev, npm lists dev deps but skips fetching resolution
+  # info for their platform-specific optionalDependencies, leaving stub entries
+  # without resolved/integrity. End users then get "invalid or damaged lockfile"
+  # warnings on install, one per stub. Removing dev deps entirely avoids that.
+  SRC_PKG="$pkg_dir/package.json" DST_PKG="$tmp_dir/package.json" node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync(process.env.SRC_PKG, "utf8"));
+    delete pkg.devDependencies;
+    fs.writeFileSync(process.env.DST_PKG, JSON.stringify(pkg, null, 2) + "\n");
+  '
 
   local install_output
-  if ! install_output=$(cd "$tmp_dir" && npm install --package-lock-only --prefer-offline --ignore-scripts --omit=dev 2>&1); then
+  if ! install_output=$(cd "$tmp_dir" && npm install --package-lock-only --prefer-offline --ignore-scripts 2>&1); then
     echo "$install_output" >&2
     rm -rf "$tmp_dir"
     return 1
