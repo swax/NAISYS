@@ -60,6 +60,20 @@ export const desktopCmd: CommandDef = {
       description:
         "Save a full-size and LLM-scaled screenshot with cursor to the screenshots folder",
     },
+    key: {
+      usage: "key <key>",
+      description:
+        "Send a manual keypress (e.g. Return, Escape, ctrl+c, alt+Tab)",
+    },
+    click: {
+      usage: "click <x> <y> [left|right|middle|double]",
+      description:
+        "Click at native screen coordinates (defaults to left). Use 'double' for double-click",
+    },
+    type: {
+      usage: 'type "<text>"',
+      description: "Type text at the current cursor position",
+    },
   },
 };
 
