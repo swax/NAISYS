@@ -28,15 +28,6 @@ export function createLLMService(
   modelService: ModelService,
   computerService?: ComputerService,
 ) {
-  // Pre-compute desktop config and scaling info at init time
-  const shellModel = modelService.getLlmModel(agentConfig().shellModel);
-  const desktopConfig =
-    agentConfig().controlDesktop &&
-    shellModel.supportsComputerUse &&
-    computerService
-      ? computerService.getConfig()
-      : undefined;
-
   async function query(
     modelKey: string,
     systemMessage: string,
@@ -80,9 +71,12 @@ export function createLLMService(
     }
 
     // Use pre-computed desktop config only if current model supports computer use
-    const effectiveDesktopConfig = model.supportsComputerUse
-      ? desktopConfig
-      : undefined;
+    const effectiveDesktopConfig =
+      model.supportsComputerUse &&
+      agentConfig().controlDesktop &&
+      computerService
+        ? computerService.getConfig()
+        : undefined;
 
     const deps: VendorDeps = {
       modelService,
