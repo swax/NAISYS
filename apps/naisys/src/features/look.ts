@@ -162,10 +162,7 @@ export function createLookService(
     }
 
     // Default: pin image into context
-    contextManager.appendImage(base64, mimeType, filepath);
-
-    // Return empty — the image message is already in context
-    return "";
+    return contextManager.appendImage(base64, mimeType, filepath);
   }
 
   const registrableCommand: RegistrableCommand = {

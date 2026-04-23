@@ -252,6 +252,30 @@ export function pressKey(keyCombo: string) {
   cliclick(args);
 }
 
+export function holdKey(keyCombo: string, durationMs: number) {
+  // Hold a single chord down for a duration using cliclick's kd:/ku: primitives
+  // with a w:<ms> wait between them. Emulators need a real held-down key, not
+  // repeated presses.
+  const chords = normalizeKeyCombo(keyCombo);
+  if (chords.length !== 1) {
+    throw new Error(
+      `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
+    );
+  }
+  const chord = chords[0];
+  const mapped = [
+    ...chord.modifiers.map(mapModifier),
+    ...chord.keys.map(mapKey),
+  ];
+  if (!mapped.length) return;
+
+  const args: string[] = [];
+  for (const token of mapped) args.push(`kd:${token}`);
+  args.push(`w:${Math.round(durationMs)}`);
+  for (const token of [...mapped].reverse()) args.push(`ku:${token}`);
+  cliclick(args);
+}
+
 export function mouseScroll(
   x: number,
   y: number,

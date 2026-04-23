@@ -141,9 +141,26 @@ export function createDesktopService(
     };
   }
 
+  // Subcommands that duplicate native computer-use tool actions — hidden from
+  // help when the model has tooling, since the model should use the native
+  // actions instead. `hold` stays visible because not every vendor supports it
+  // natively (only Anthropic) and even there the shell gives finer timing.
+  const TOOLING_REDUNDANT_SUBCOMMANDS = new Set([
+    "screenshot",
+    "key",
+    "click",
+    "type",
+  ]);
+
   function formatCommandHelp(): string {
     const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
-    for (const s of Object.values(desktopCmd.subcommands!)) {
+    for (const [name, s] of Object.entries(desktopCmd.subcommands!)) {
+      if (
+        shellModel.supportsComputerUse &&
+        TOOLING_REDUNDANT_SUBCOMMANDS.has(name)
+      ) {
+        continue;
+      }
       lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
     }
     return lines.join("\n");
@@ -218,9 +235,11 @@ export function createDesktopService(
     }
 
     const scaled = await computerService.captureScaledScreenshot();
-    contextManager.appendImage(scaled.base64, "image/png", scaled.filepath);
-
-    return "";
+    return contextManager.appendImage(
+      scaled.base64,
+      "image/png",
+      scaled.filepath,
+    );
   }
 
   /** Handle the dump subcommand */
@@ -321,6 +340,27 @@ export function createDesktopService(
     return `Pressed key: ${key}`;
   }
 
+  async function handleHoldCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    // Last arg must be ms; everything before is the key combo.
+    const ms = Number(argv[argv.length - 1]);
+    const key = argv.slice(1, -1).join(" ");
+    if (!key || !Number.isFinite(ms) || ms <= 0) {
+      throw usageError("hold");
+    }
+    // Cap to prevent a stuck-key lockout if the agent picks a huge number.
+    const HOLD_MAX_MS = 10000;
+    if (ms > HOLD_MAX_MS) {
+      throw `hold duration ${ms}ms exceeds max ${HOLD_MAX_MS}ms`;
+    }
+    await computerService.executeAction({
+      actions: [{ action: "hold_key", text: key, duration: ms / 1000 }],
+    });
+    return `Held key: ${key} for ${ms}ms`;
+  }
+
   async function handleClickCommand(
     argv: string[],
     usageError: (sub: DesktopSubcommand) => string,
@@ -398,6 +438,10 @@ export function createDesktopService(
 
       case "key": {
         return handleKeyCommand(argv, usageError);
+      }
+
+      case "hold": {
+        return handleHoldCommand(argv, usageError);
       }
 
       case "click": {
@@ -529,8 +573,12 @@ export function createDesktopService(
     const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
     const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
 
+    const howToInteract = shellModel.supportsComputerUse
+      ? `Use native computer-use actions for clicking, typing, and keypresses; use \`${desktopCmd.name}\` for screenshots, focus, and hold-key (see \`${desktopCmd.name} help\`).`
+      : `Use \`${desktopCmd.name}\` commands to interact (see \`${desktopCmd.name} help\`). The shell is still available alongside.`;
+
     contextManager.append(
-      `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, the shell is still available for commands.` +
+      `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. ${howToInteract}` +
         ` Each action costs time and tokens. Avoid repeating the same action over and over if it is not working.`,
       ContentSource.Console,
     );

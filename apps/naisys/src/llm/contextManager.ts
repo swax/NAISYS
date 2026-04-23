@@ -3,6 +3,7 @@ import { TARGET_MEGAPIXELS } from "@naisys/common";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { WorkspacesFeature } from "../features/workspaces.js";
 import type { LogService } from "../services/logService.js";
+import type { ModelService } from "../services/modelService.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import { OutputColor } from "../utils/output.js";
@@ -16,12 +17,14 @@ import type {
   ToolUseBlock,
 } from "./llmDtos.js";
 import { ContentSource } from "./llmDtos.js";
+import { getImageContextBlockReason } from "./vendors/anthropic.js";
 
 const IMAGE_TOKENS_PER_MEGAPIXEL = 1000;
 const IMAGE_TOKEN_ESTIMATE = IMAGE_TOKENS_PER_MEGAPIXEL * TARGET_MEGAPIXELS;
 
 export function createContextManager(
   { agentConfig }: AgentConfig,
+  modelService: ModelService,
   workspaces: WorkspacesFeature,
   systemMessage: string,
   output: OutputService,
@@ -85,13 +88,26 @@ export function createContextManager(
     logService.write(llmMessage);
   }
 
-  function appendImage(base64: string, mimeType: string, filepath: string) {
+  /** Append an image block to context. Returns the error reason (for the caller
+   *  to surface to the agent) if the image was rejected, or "" on success. */
+  function appendImage(
+    base64: string,
+    mimeType: string,
+    filepath: string,
+  ): string {
     const text = `[Image: ${filepath}]`;
 
     if (inputMode.isDebug()) {
       output.commentAndLog(text, filepath);
-      return;
+      return "";
     }
+
+    const shellModel = modelService.getLlmModel(agentConfig().shellModel);
+    const blockReason = getImageContextBlockReason(
+      shellModel,
+      agentConfig().controlDesktop,
+    );
+    if (blockReason) return blockReason;
 
     const contentBlocks: ContentBlock[] = [
       { type: "text", text },
@@ -111,6 +127,7 @@ export function createContextManager(
 
     // Display placeholder to console
     output.write(text, OutputColor.console);
+    return "";
   }
 
   function appendAudio(base64: string, mimeType: string, filepath: string) {

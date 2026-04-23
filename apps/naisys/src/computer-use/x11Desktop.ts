@@ -156,6 +156,28 @@ export function pressKey(keyCombo: string) {
   xdotool(args);
 }
 
+export function holdKey(keyCombo: string, durationMs: number) {
+  // Hold means a single chord down for a duration — no sequences. Press all
+  // modifiers and keys down, sleep, then release in reverse order. Emulators
+  // sample input state per frame, so a real keydown/keyup is the only way to
+  // get "walking" behavior; a stream of discrete key presses won't do it.
+  const chords = normalizeKeyCombo(keyCombo);
+  if (chords.length !== 1) {
+    throw new Error(
+      `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
+    );
+  }
+  const chord = chords[0];
+  const tokens = [...chord.modifiers, ...chord.keys].map(toLinuxKeyToken);
+  if (!tokens.length) return;
+
+  const args: string[] = [];
+  for (const token of tokens) args.push("keydown", token);
+  args.push("sleep", (durationMs / 1000).toString());
+  for (const token of [...tokens].reverse()) args.push("keyup", token);
+  xdotool(args);
+}
+
 export function mouseScroll(
   x: number,
   y: number,

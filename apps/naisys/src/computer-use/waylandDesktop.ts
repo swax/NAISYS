@@ -208,6 +208,103 @@ export function pressKey(keyCombo: string) {
   }
 }
 
+// Linux input event codes (see /usr/include/linux/input-event-codes.h).
+// ydotool v1.0+ takes these as `<code>:<state>` where state 1=down, 0=up.
+const WAYLAND_KEYCODES: Record<string, number> = {
+  ctrl: 29,
+  alt: 56,
+  shift: 42,
+  meta: 125,
+  enter: 28,
+  tab: 15,
+  escape: 1,
+  backspace: 14,
+  delete: 111,
+  space: 57,
+  up: 103,
+  down: 108,
+  left: 105,
+  right: 106,
+  home: 102,
+  end: 107,
+  pageup: 104,
+  pagedown: 109,
+  a: 30,
+  b: 48,
+  c: 46,
+  d: 32,
+  e: 18,
+  f: 33,
+  g: 34,
+  h: 35,
+  i: 23,
+  j: 36,
+  k: 37,
+  l: 38,
+  m: 50,
+  n: 49,
+  o: 24,
+  p: 25,
+  q: 16,
+  r: 19,
+  s: 31,
+  t: 20,
+  u: 22,
+  v: 47,
+  w: 17,
+  x: 45,
+  y: 21,
+  z: 44,
+  "1": 2,
+  "2": 3,
+  "3": 4,
+  "4": 5,
+  "5": 6,
+  "6": 7,
+  "7": 8,
+  "8": 9,
+  "9": 10,
+  "0": 11,
+};
+
+function toWaylandKeycode(key: string): number {
+  const code = WAYLAND_KEYCODES[key.toLowerCase()];
+  if (code !== undefined) return code;
+  if (/^f([1-9]|1[0-2])$/i.test(key)) {
+    const n = parseInt(key.slice(1));
+    return n <= 10 ? 58 + n : n === 11 ? 87 : 88; // F1=59..F10=68, F11=87, F12=88
+  }
+  throw new Error(`hold does not support key "${key}" on Wayland`);
+}
+
+export function holdKey(keyCombo: string, durationMs: number) {
+  // Hold a single chord for a duration. Emulators need an actual held key —
+  // repeated discrete presses won't register as movement.
+  const chords = normalizeKeyCombo(keyCombo);
+  if (chords.length !== 1) {
+    throw new Error(
+      `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
+    );
+  }
+  const chord = chords[0];
+  const tokens = [...chord.modifiers, ...chord.keys];
+  if (!tokens.length) return;
+
+  if (detectYdotoolVersion() === "legacy") {
+    // v0.1.x has keydown/keyup subcommands that take xdotool-style names.
+    const names = tokens.map(toLinuxKeyToken);
+    for (const n of names) ydotool(["keydown", n]);
+    waitForInputSettle(Math.round(durationMs));
+    for (const n of [...names].reverse()) ydotool(["keyup", n]);
+  } else {
+    // v1.0+ uses numeric keycodes with `:1` (down) / `:0` (up).
+    const codes = tokens.map(toWaylandKeycode);
+    for (const c of codes) ydotool(["key", `${c}:1`]);
+    waitForInputSettle(Math.round(durationMs));
+    for (const c of [...codes].reverse()) ydotool(["key", `${c}:0`]);
+  }
+}
+
 export function mouseScroll(
   x: number,
   y: number,

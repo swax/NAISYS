@@ -322,6 +322,40 @@ export function pressKey(keyCombo: string) {
   );
 }
 
+export function holdKey(keyCombo: string, durationMs: number) {
+  // Hold a single chord down for a duration using keybd_event down + Start-Sleep
+  // + keybd_event up. Emulators sample key state per frame, so a stream of
+  // presses won't register as "held" — we need a real kept-down key.
+  const chords = normalizeKeyCombo(keyCombo);
+  if (chords.length !== 1) {
+    throw new Error(
+      `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
+    );
+  }
+  const chord = chords[0];
+  const tokens = [...chord.modifiers, ...chord.keys];
+  if (!tokens.length) return;
+
+  const downs = tokens.map(
+    (t) => `[NaisysInput]::keybd_event(${winVirtualKey(t)},0,0,[IntPtr]::Zero)`,
+  );
+  const ups = [...tokens]
+    .reverse()
+    .map(
+      (t) =>
+        `[NaisysInput]::keybd_event(${winVirtualKey(t)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+    );
+  const sleepMs = Math.max(0, Math.round(durationMs));
+  runPowerShell(
+    [
+      PS_INPUT_TYPE,
+      ...downs,
+      `Start-Sleep -Milliseconds ${sleepMs}`,
+      ...ups,
+    ].join("; "),
+  );
+}
+
 export function mouseScroll(
   x: number,
   y: number,

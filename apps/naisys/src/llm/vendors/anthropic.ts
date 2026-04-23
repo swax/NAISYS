@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources";
+import { LlmApiType, type LlmModel } from "@naisys/common";
 
 import {
   extractDesktopActions,
@@ -7,6 +8,25 @@ import {
 } from "../../computer-use/anthropic-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+
+/** Anthropic's computer-use beta rejects requests that include computer tool
+ *  output alongside more than one standalone image input. To stay under that
+ *  limit, we disallow adding standalone images (via ns-look, ns-desktop
+ *  screenshot, etc.) whenever the agent is running with the computer tool
+ *  active. The model should request screenshots through the computer tool. */
+export function getImageContextBlockReason(
+  model: LlmModel,
+  controlDesktop: boolean | undefined,
+): string | undefined {
+  if (
+    model.apiType === LlmApiType.Anthropic &&
+    model.supportsComputerUse &&
+    controlDesktop
+  ) {
+    return "Error: Cannot add images to context while the computer tool is active (Anthropic rejects >1 image alongside computer output). Open the image on the desktop and request a screenshot via the computer tool instead.";
+  }
+  return undefined;
+}
 
 const clientCache = new Map<string, Anthropic>();
 
