@@ -41,12 +41,10 @@ describe("waylandDesktop keyboard input", () => {
   test("normalizes lowercase aliases into Linux key names", () => {
     pressKey("up enter pgdn meta+l");
 
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      1,
-      "ydotool",
-      ["key", "Up"],
-      { stdio: "pipe", timeout: 10000 },
-    );
+    expect(execFileSync).toHaveBeenNthCalledWith(1, "ydotool", ["key", "Up"], {
+      stdio: "pipe",
+      timeout: 10000,
+    });
     expect(execFileSync).toHaveBeenNthCalledWith(
       2,
       "ydotool",

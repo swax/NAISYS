@@ -54,10 +54,11 @@ describe("desktop focus commands", () => {
       createMockCommandLoopState() as any,
     );
 
-    await expect(desktopService.handleCommand("focus 0 0 690 388")).resolves
-      .toBe(
-        "Desktop focus set from screenshot (0, 0, 690x388) -> native (0, 0, 1920x1080).\nFocus changes can increase next-turn cost because computer-use context has to be refreshed.",
-      );
+    await expect(
+      desktopService.handleCommand("focus 0 0 690 388"),
+    ).resolves.toBe(
+      "Desktop focus set from screenshot (0, 0, 690x388) -> native (0, 0, 1920x1080).\nFocus changes can increase next-turn cost because computer-use context has to be refreshed.",
+    );
 
     expect(computerService.setFocus).toHaveBeenCalledWith({
       x: 0,
@@ -126,7 +127,8 @@ describe("desktop focus commands", () => {
       },
     ]);
 
-    const toolBlocks = (contextManager.appendDesktopRequest as any).mock.calls[0][1];
+    const toolBlocks = (contextManager.appendDesktopRequest as any).mock
+      .calls[0][1];
     expect(toolBlocks[0].input.viewport).toBeUndefined();
   });
 

@@ -50,9 +50,7 @@ export const AgentRunPauseResponseSchema = z.object({
   /** True if the request changed the state; false if it was already in that state. */
   changed: z.boolean().optional(),
 });
-export type AgentRunPauseResponse = z.infer<
-  typeof AgentRunPauseResponseSchema
->;
+export type AgentRunPauseResponse = z.infer<typeof AgentRunPauseResponseSchema>;
 
 /** Request to send a command to a run's active session */
 export const AgentRunCommandRequestSchema = z.object({

@@ -8,9 +8,7 @@ import {
 describe("keyCombo normalization", () => {
   test("normalizes aliases and casing into canonical key chords", () => {
     expect(
-      normalizeKeyCombo(
-        "up Return esc BackSpace del page_up PGDN ctrl+cmd+T",
-      ),
+      normalizeKeyCombo("up Return esc BackSpace del page_up PGDN ctrl+cmd+T"),
     ).toEqual([
       { modifiers: [], keys: ["up"] },
       { modifiers: [], keys: ["enter"] },

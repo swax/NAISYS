@@ -268,13 +268,7 @@ export function pressKey(keyCombo: string) {
       );
     }
 
-    runPowerShell(
-      [
-        PS_INPUT_TYPE,
-        ...presses,
-        ...releases,
-      ].join("; "),
-    );
+    runPowerShell([PS_INPUT_TYPE, ...presses, ...releases].join("; "));
     return;
   }
 

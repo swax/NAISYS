@@ -129,46 +129,43 @@ export class AgentManager {
       registerRunPauseHandler(HubEvents.AGENT_RUN_PAUSE);
       registerRunPauseHandler(HubEvents.AGENT_RUN_RESUME);
 
-      hubClient.registerEvent(
-        HubEvents.AGENT_RUN_COMMAND,
-        (data, ack) => {
-          try {
-            const parsed = AgentRunCommandRequestSchema.parse(data);
+      hubClient.registerEvent(HubEvents.AGENT_RUN_COMMAND, (data, ack) => {
+        try {
+          const parsed = AgentRunCommandRequestSchema.parse(data);
 
-            const agent = this.runningAgents.find(
-              (a) => a.agentUserId === parsed.userId,
-            );
-            if (!agent) {
-              ack({
-                success: false,
-                error: `Agent ${parsed.userId} is not running on this host`,
-              });
-              return;
-            }
-
-            if (
-              agent.getRunId() !== parsed.runId ||
-              agent.getSessionId() !== parsed.sessionId
-            ) {
-              ack({
-                success: false,
-                error: `Run/session is no longer the active one for agent ${parsed.userId}`,
-              });
-              return;
-            }
-
-            this.promptNotification.notify({
-              wake: "always",
-              userId: parsed.userId,
-              debugCommands: [parsed.command],
+          const agent = this.runningAgents.find(
+            (a) => a.agentUserId === parsed.userId,
+          );
+          if (!agent) {
+            ack({
+              success: false,
+              error: `Agent ${parsed.userId} is not running on this host`,
             });
-
-            ack({ success: true });
-          } catch (error) {
-            ack({ success: false, error: String(error) });
+            return;
           }
-        },
-      );
+
+          if (
+            agent.getRunId() !== parsed.runId ||
+            agent.getSessionId() !== parsed.sessionId
+          ) {
+            ack({
+              success: false,
+              error: `Run/session is no longer the active one for agent ${parsed.userId}`,
+            });
+            return;
+          }
+
+          this.promptNotification.notify({
+            wake: "always",
+            userId: parsed.userId,
+            debugCommands: [parsed.command],
+          });
+
+          ack({ success: true });
+        } catch (error) {
+          ack({ success: false, error: String(error) });
+        }
+      });
 
       hubClient.registerEvent(HubEvents.AGENT_PEEK, (data, ack) => {
         try {
