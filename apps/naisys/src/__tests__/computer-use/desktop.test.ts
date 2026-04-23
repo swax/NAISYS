@@ -132,7 +132,7 @@ describe("desktop focus commands", () => {
     expect(toolBlocks[0].input.viewport).toBeUndefined();
   });
 
-  test("adds the scaled screenshot to context", async () => {
+  test("adds the scaled screenshot to context for non-computer-use models", async () => {
     const desktopConfig: DesktopConfig = {
       displayWidth: 1920,
       displayHeight: 1080,
@@ -170,7 +170,7 @@ describe("desktop focus commands", () => {
       } as any,
       {
         getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
+          supportsComputerUse: false,
           supportsVision: true,
           apiType: LlmApiType.OpenAI,
         })),
@@ -186,6 +186,64 @@ describe("desktop focus commands", () => {
       "abc123",
       "image/png",
       "/tmp/llm-view.png",
+    );
+  });
+
+  test("forwards appendImage rejection reason from screenshot command", async () => {
+    const desktopConfig: DesktopConfig = {
+      displayWidth: 1920,
+      displayHeight: 1080,
+      nativeDisplayWidth: 1920,
+      nativeDisplayHeight: 1080,
+      viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+      desktopPlatform: "Linux (X11)",
+    };
+
+    const contextManager = createMockContextManager();
+    (contextManager.appendImage as any).mockReturnValue(
+      "Error: images are blocked",
+    );
+
+    const computerService = {
+      getConfig: vi.fn(() => desktopConfig),
+      captureScaledScreenshot: vi.fn(async () => ({
+        base64: "abc",
+        filepath: "/tmp/s.png",
+      })),
+      executeAction: vi.fn(),
+      captureNativeScreenshot: vi.fn(),
+      captureFullNativeScreenshot: vi.fn(),
+      setFocus: vi.fn(),
+      platformName: "Linux (X11)",
+      initError: undefined,
+    } as any;
+
+    const desktopService = createDesktopService(
+      computerService,
+      contextManager,
+      createMockOutputService(),
+      {
+        agentConfig: () => ({
+          shellModel: "shell-model",
+          controlDesktop: true,
+          debugPauseSeconds: 0,
+        }),
+      } as any,
+      {
+        getLlmModel: vi.fn(() => ({
+          supportsComputerUse: true,
+          supportsVision: true,
+          apiType: LlmApiType.Anthropic,
+        })),
+      } as any,
+      {
+        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
+      } as any,
+      createMockCommandLoopState() as any,
+    );
+
+    await expect(desktopService.handleCommand("screenshot")).resolves.toBe(
+      "Error: images are blocked",
     );
   });
 
@@ -277,7 +335,7 @@ describe("desktop focus commands", () => {
       } as any,
       {
         getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
+          supportsComputerUse: false,
           supportsVision: true,
           apiType: LlmApiType.OpenAI,
         })),

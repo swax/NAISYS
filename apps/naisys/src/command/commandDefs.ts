@@ -75,6 +75,11 @@ export const desktopCmd: CommandDef = {
       description:
         "Send a manual key combo or sequence (e.g. enter, escape, ctrl+c, alt+tab, up up right)",
     },
+    hold: {
+      usage: "hold <combo> <ms>",
+      description:
+        "Hold a key (or chord) down for the given milliseconds — use when an app needs a real held key (e.g. game emulators where movement requires a held direction)",
+    },
     click: {
       usage: "click <x> <y> [left|right|middle|double]",
       description:

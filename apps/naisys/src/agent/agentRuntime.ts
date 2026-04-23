@@ -125,6 +125,7 @@ export async function createAgentRuntime(
   );
   const contextManager = createContextManager(
     agentConfig,
+    modelService,
     workspaces,
     systemMessage,
     output,

@@ -225,6 +225,14 @@ async function executeSingleAction(
     case "key":
       backend.pressKey(action.text as string);
       break;
+    case "hold_key": {
+      // Anthropic's native hold_key uses `duration` in seconds (can be fractional).
+      // Our ns-desktop `hold` shell command also builds this action. Backends
+      // take integer milliseconds.
+      const durationSec = (action.duration as number) ?? 0;
+      backend.holdKey(action.text as string, Math.round(durationSec * 1000));
+      break;
+    }
     case "mouse_move":
       backend.mouseMove(coord![0], coord![1]);
       break;
@@ -467,6 +475,8 @@ function formatSingleAction(
       return `Type "${input.text}"`;
     case "key":
       return `Press key "${input.text}"`;
+    case "hold_key":
+      return `Hold key "${input.text}" for ${input.duration}s`;
     case "mouse_move":
       return `Move mouse to ${coord}`;
     case "scroll":

@@ -171,7 +171,7 @@ export function createMockContextManager() {
     getMessages: vi.fn((): LlmMessage[] => []),
   };
 
-  const appendImage = vi.fn();
+  const appendImage = vi.fn(() => "");
   const appendAudio = vi.fn();
 
   const contextManager: ContextManager = {
