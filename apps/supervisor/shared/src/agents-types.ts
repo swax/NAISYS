@@ -177,9 +177,7 @@ export const AgentRunCommandResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),
 });
-export type AgentRunCommandResult = z.infer<
-  typeof AgentRunCommandResultSchema
->;
+export type AgentRunCommandResult = z.infer<typeof AgentRunCommandResultSchema>;
 
 // --- Host CRUD schemas ---
 

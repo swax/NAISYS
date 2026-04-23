@@ -1,8 +1,8 @@
 import { LlmApiType } from "@naisys/common";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
 import { createLLMService } from "../../llm/llmService.js";
+import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
 import { createMockCostTracker, createMockGlobalConfig } from "../mocks.js";
 
 const { sendWithGoogle } = vi.hoisted(() => ({

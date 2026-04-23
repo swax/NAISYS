@@ -495,8 +495,8 @@ export const AgentRuns: React.FC = () => {
                       to the LLM&apos;s context.
                     </Text>
                     <Text size="xs">
-                      Send blank to bounce the agent into LLM mode for one
-                      cycle — bypasses a paused or indefinite debug wait.
+                      Send blank to bounce the agent into LLM mode for one cycle
+                      — bypasses a paused or indefinite debug wait.
                     </Text>
                     <Text size="sm" fw={600} mt={4}>
                       Log colors

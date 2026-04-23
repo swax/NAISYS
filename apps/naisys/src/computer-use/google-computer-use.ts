@@ -233,10 +233,7 @@ function reconstructGoogleArgs(
       };
     }
     case "drag_and_drop": {
-      const startCoord = getCoord(
-        internalActions[0],
-        "start_coordinate",
-      )!;
+      const startCoord = getCoord(internalActions[0], "start_coordinate")!;
       const endCoord = getCoord(internalActions[0]);
       const [x, y] = normalize(startCoord[0], startCoord[1]);
       const [destination_x, destination_y] = normalize(

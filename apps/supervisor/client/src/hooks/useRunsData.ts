@@ -103,9 +103,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     ) => {
       const existing = (runsCache.get(agentUsername) || []).find(
         (r) =>
-          r.userId === userId &&
-          r.runId === runId &&
-          r.sessionId === sessionId,
+          r.userId === userId && r.runId === runId && r.sessionId === sessionId,
       );
       if (!existing) return;
       mergeRuns([{ ...existing, ...patch }]);
