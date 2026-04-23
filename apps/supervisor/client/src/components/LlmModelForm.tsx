@@ -30,6 +30,7 @@ interface LlmFormValues {
   cacheTtlSeconds: number | string;
   supportsVision: boolean;
   supportsHearing: boolean;
+  supportsComputerUse: boolean;
 }
 
 function transformFormValues(values: LlmFormValues): Record<string, unknown> {
@@ -52,6 +53,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
     result.cacheTtlSeconds = values.cacheTtlSeconds;
   if (values.supportsVision) result.supportsVision = true;
   if (values.supportsHearing) result.supportsHearing = true;
+  if (values.supportsComputerUse) result.supportsComputerUse = true;
   return result;
 }
 
@@ -93,6 +95,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       cacheTtlSeconds: model?.cacheTtlSeconds ?? ("" as number | string),
       supportsVision: model?.supportsVision ?? false,
       supportsHearing: model?.supportsHearing ?? false,
+      supportsComputerUse: model?.supportsComputerUse ?? false,
     },
     validate: (values) =>
       zodResolver(LlmModelSchema)(transformFormValues(values)),
@@ -213,6 +216,12 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           description="Model can process audio inputs"
           disabled={readOnly}
           {...form.getInputProps("supportsHearing", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supports Computer Use"
+          description="Model can control a computer via screenshots and actions"
+          disabled={readOnly}
+          {...form.getInputProps("supportsComputerUse", { type: "checkbox" })}
         />
       </Stack>
 
