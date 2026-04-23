@@ -182,6 +182,9 @@ export function spawnHub(testDir: string, debug = false): HubTestProcess {
     env: {
       ...process.env,
       FORCE_COLOR: "0",
+      NODE_OPTIONS: "",
+      VITEST: "",
+      VITEST_WORKER_ID: "",
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -279,6 +282,10 @@ export function spawnNaisys(
     env: {
       ...process.env,
       FORCE_COLOR: "0",
+      NAISYS_DISABLE_RESTART_WRAPPER: "1",
+      NODE_OPTIONS: "",
+      VITEST: "",
+      VITEST_WORKER_ID: "",
       ...extraEnv,
     },
     stdio: ["pipe", "pipe", "pipe"],
@@ -324,7 +331,7 @@ export function spawnNaisys(
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" in output since flush. Got:\n${getOutputSinceFlush()}`,
+      `Timeout waiting for "${text}" in output since flush. Got:\n${getOutputSinceFlush()}\n\nstderr:\n${stderr.join("")}\n\nexitCode:${proc.exitCode}`,
     );
   };
 
@@ -345,7 +352,7 @@ export function spawnNaisys(
     }
 
     throw new Error(
-      `Timeout waiting for "${text}" to appear ${count} times since flush. Got:\n${getOutputSinceFlush()}`,
+      `Timeout waiting for "${text}" to appear ${count} times since flush. Got:\n${getOutputSinceFlush()}\n\nstderr:\n${stderr.join("")}\n\nexitCode:${proc.exitCode}`,
     );
   };
 

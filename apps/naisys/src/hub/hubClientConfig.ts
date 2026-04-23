@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
@@ -15,6 +16,8 @@ export function createHubClientConfig(hubUrl: string) {
 
   const hostname = process.env.NAISYS_HOSTNAME || os.hostname();
   const machineId = process.env.NAISYS_MACHINE_ID || "";
+  const instanceId = randomUUID();
+  const processStartedAt = Date.now();
 
   let clientVersion = "";
   try {
@@ -37,6 +40,8 @@ export function createHubClientConfig(hubUrl: string) {
     hubUrl,
     hostname,
     machineId,
+    instanceId,
+    processStartedAt,
     clientVersion,
     environment,
   };

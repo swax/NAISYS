@@ -1,6 +1,8 @@
 import type { DualLogger } from "@naisys/common-node";
 import type {
   HostType,
+  HubConnectErrorCode,
+  HubConnectErrorData,
   HubFireAndForgetEventName,
   HubFireAndForgetEvents,
   HubPushEventName,
@@ -48,6 +50,8 @@ export function createNaisysServer(
   const naisysConnections = new Map<number, NaisysConnection>();
   // Track connected supervisor instances (multiple allowed, all share one hostId)
   const supervisorConnections: NaisysConnection[] = [];
+
+  type ConnectErrorWithData = Error & { data?: HubConnectErrorData };
 
   // Generic event handlers registry - maps event name to set of registered handlers
   const eventHandlers = new Map<string, Set<RegisteredHandler>>();
@@ -161,12 +165,24 @@ export function createNaisysServer(
     return true;
   }
 
+  function createConnectError(
+    message: string,
+    code: HubConnectErrorCode,
+    fatal = true,
+  ): ConnectErrorWithData {
+    const error = new Error(message) as ConnectErrorWithData;
+    error.data = { code, fatal };
+    return error;
+  }
+
   // Authentication middleware
   nsp.use(async (socket, next) => {
     const {
       hubAccessKey: clientAccessKey,
       hostName,
       machineId: rawMachineId,
+      instanceId: rawInstanceId,
+      startedAt: rawStartedAt,
       hostType: rawHostType,
       clientVersion,
       environment: rawEnvironment,
@@ -176,12 +192,14 @@ export function createNaisysServer(
       logService.log(
         `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`,
       );
-      return next(new Error("Invalid access key"));
+      return next(
+        createConnectError("Invalid access key", "invalid_access_key"),
+      );
     }
 
     if (!hostName) {
       logService.log(`[Hub] Connection rejected: missing hostName`);
-      return next(new Error("Missing hostName"));
+      return next(createConnectError("Missing hostName", "missing_host_name"));
     }
 
     try {
@@ -194,6 +212,14 @@ export function createNaisysServer(
         typeof rawMachineId === "string" && rawMachineId
           ? rawMachineId
           : undefined;
+      const instanceId =
+        typeof rawInstanceId === "string" && rawInstanceId
+          ? rawInstanceId
+          : socket.id;
+      const processStartedAt =
+        typeof rawStartedAt === "number" && Number.isFinite(rawStartedAt)
+          ? rawStartedAt
+          : Date.now();
       const environment =
         rawEnvironment && typeof rawEnvironment === "object"
           ? (rawEnvironment as Record<string, unknown>)
@@ -220,16 +246,35 @@ export function createNaisysServer(
       if (hostType === "naisys") {
         const existing = naisysConnections.get(result.hostId);
         if (existing) {
-          logService.log(
-            `[Hub] Superseding existing connection for host '${result.hostName}' — disconnecting old socket`,
-          );
-          existing.disconnect();
+          if (existing.getInstanceId() === instanceId) {
+            logService.log(
+              `[Hub] Replacing existing socket for host '${result.hostName}' from the same process instance`,
+            );
+            existing.disconnect();
+          } else if (processStartedAt >= existing.getProcessStartedAt()) {
+            logService.log(
+              `[Hub] Superseding existing connection for host '${result.hostName}' — newer process instance connected`,
+            );
+            existing.disconnect();
+          } else {
+            logService.log(
+              `[Hub] Connection rejected: older process attempted to reclaim host '${result.hostName}'`,
+            );
+            return next(
+              createConnectError(
+                "Superseded by newer NAISYS instance",
+                "superseded_by_newer_instance",
+              ),
+            );
+          }
         }
       }
 
       socket.data.hostId = result.hostId;
       socket.data.hostName = result.hostName;
       socket.data.machineId = result.machineId;
+      socket.data.instanceId = instanceId;
+      socket.data.processStartedAt = processStartedAt;
       socket.data.hostType = hostType;
       socket.data.clientVersion = resolvedVersion;
       next();
@@ -237,14 +282,26 @@ export function createNaisysServer(
       logService.error(
         `[Hub] Connection rejected: failed to register host ${hostName}: ${err}`,
       );
-      return next(new Error("NAISYS instance registration failed"));
+      return next(
+        createConnectError(
+          "NAISYS instance registration failed",
+          "registration_failed",
+        ),
+      );
     }
   });
 
   // Handle new connections
   nsp.on("connection", (socket) => {
-    const { hostId, hostName, machineId, hostType, clientVersion } =
-      socket.data;
+    const {
+      hostId,
+      hostName,
+      machineId,
+      instanceId,
+      processStartedAt,
+      hostType,
+      clientVersion,
+    } = socket.data;
 
     // Send the client its assigned machineId and authoritative hostname
     const registered: HostRegistered = { machineId, hostName };
@@ -257,6 +314,8 @@ export function createNaisysServer(
         hostId,
         hostName,
         connectedAt: new Date(),
+        instanceId,
+        processStartedAt,
         hostType,
         clientVersion,
       },

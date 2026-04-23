@@ -5,6 +5,8 @@ export interface HostConnectionInfo {
   hostId: number;
   hostName: string;
   connectedAt: Date;
+  instanceId: string;
+  processStartedAt: number;
   hostType: string;
   clientVersion: string;
 }
@@ -26,8 +28,15 @@ export function createNaisysConnection(
   raiseEvent: RaiseEventFn,
   logService: DualLogger,
 ) {
-  const { hostId, hostName, connectedAt, hostType, clientVersion } =
-    connectionInfo;
+  const {
+    hostId,
+    hostName,
+    connectedAt,
+    instanceId,
+    processStartedAt,
+    hostType,
+    clientVersion,
+  } = connectionInfo;
 
   logService.log(
     `[Hub:Connection] NAISYS instance connected: ${hostName} (${hostId})`,
@@ -78,6 +87,8 @@ export function createNaisysConnection(
     getHostId: () => hostId,
     getHostName: () => hostName,
     getConnectedAt: () => connectedAt,
+    getInstanceId: () => instanceId,
+    getProcessStartedAt: () => processStartedAt,
     getSocketId: () => socket.id,
     getHostType: () => hostType,
     getClientVersion: () => clientVersion,

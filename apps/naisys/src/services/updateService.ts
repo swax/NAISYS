@@ -7,6 +7,7 @@ import path from "path";
 import type { AgentManager } from "../agent/agentManager.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import { getInstallPath } from "./pathService.js";
+import { isRestartWrapperActive, RESTART_EXIT_CODE } from "./restartManager.js";
 
 export function createUpdateService(
   globalConfig: GlobalConfig,
@@ -82,18 +83,20 @@ export function createUpdateService(
       logError(`Error stopping agents: ${error}`);
     }
 
-    // If not managed by PM2, respawn as a detached process before exiting
-    if (!process.env.pm_id) {
-      log(`Spawning new process for restart...`);
-      const child = spawn(process.argv[0], process.argv.slice(1), {
-        cwd: process.cwd(),
-        detached: true,
-        stdio: "inherit",
-      });
-      child.unref();
+    if (process.env.pm_id) {
+      log(`Exiting — PM2 will restart`);
+      process.exit(0);
     }
 
-    log(`Exiting for restart...`);
+    if (isRestartWrapperActive()) {
+      log(`Requesting wrapper restart...`);
+      log(`Exiting — wrapper will restart`);
+      process.exit(RESTART_EXIT_CODE);
+    }
+
+    log(
+      `No restart manager active. Restart NAISYS manually to use the update.`,
+    );
     process.exit(0);
   }
 
