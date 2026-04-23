@@ -14,6 +14,11 @@
 
 import { execFileSync } from "child_process";
 
+import { normalizeKeyCombo, toLinuxKeyToken } from "./keyCombo.js";
+
+const YDOTOOL_TIMEOUT_MS = 10000;
+const WAYLAND_KEY_SEQUENCE_SETTLE_MS = 50;
+
 export function captureScreenshot(tmpFile: string): void {
   const errors: string[] = [];
 
@@ -96,7 +101,10 @@ function detectYdotoolVersion(): "legacy" | "modern" {
 
 function ydotool(args: string[]) {
   try {
-    execFileSync("ydotool", args, { stdio: "pipe", timeout: 10000 });
+    execFileSync("ydotool", args, {
+      stdio: "pipe",
+      timeout: YDOTOOL_TIMEOUT_MS,
+    });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(
@@ -105,6 +113,13 @@ function ydotool(args: string[]) {
     }
     throw e;
   }
+}
+
+function waitForInputSettle(ms: number) {
+  // Wayland apps can miss rapid navigation keys when selection or focus changes
+  // between events. A short blocking pause gives the compositor/app time to
+  // observe the previous key before the next one arrives.
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 function moveTo(x: number, y: number) {
@@ -178,8 +193,19 @@ export function typeText(text: string) {
 export function pressKey(keyCombo: string) {
   // Whitespace-separated tokens are pressed in sequence (e.g. "Down Down Right")
   // while a single token may still be a chord like "ctrl+c".
-  const keys = keyCombo.trim().split(/\s+/);
-  ydotool(["key", ...keys]);
+  const keys = normalizeKeyCombo(keyCombo)
+    .map((chord) =>
+      [...chord.modifiers, ...chord.keys].map(toLinuxKeyToken).join("+"),
+    )
+    .filter(Boolean);
+  if (!keys.length) return;
+
+  for (const [index, key] of keys.entries()) {
+    if (index > 0) {
+      waitForInputSettle(WAYLAND_KEY_SEQUENCE_SETTLE_MS);
+    }
+    ydotool(["key", key]);
+  }
 }
 
 export function mouseScroll(
