@@ -24,10 +24,18 @@ import { ensureAgentConfig, getNaisysWizardConfig } from "./naisysSetup.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
+import {
+  runWithRestartWrapper,
+  shouldUseRestartWrapper,
+} from "./services/restartManager.js";
 import { createUpdateService } from "./services/updateService.js";
 import { createPromptNotificationService } from "./utils/promptNotificationService.js";
 
 dotenv.config({ quiet: true });
+
+if (shouldUseRestartWrapper()) {
+  process.exit(await runWithRestartWrapper());
+}
 
 const isHubClient = process.argv.some(
   (a) => a === "--hub" || a.startsWith("--hub="),
@@ -195,7 +203,7 @@ hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
 
 if (updateService?.isUpdateInProgress()) {
-  // Update handler will call process.exit(0) after install and PM2 setup complete
+  // Update handler exits after handing off restart management to the wrapper or PM2
   await new Promise(() => {});
 }
 

@@ -10,6 +10,7 @@ export * from "./events.js";
 export * from "./schemas/admin.js";
 export * from "./schemas/agents.js";
 export * from "./schemas/config.js";
+export * from "./schemas/connectError.js";
 export * from "./schemas/costs.js";
 export * from "./schemas/heartbeat.js";
 export * from "./schemas/hosts.js";

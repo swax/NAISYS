@@ -1,5 +1,7 @@
 import type { DualLogger } from "@naisys/common-node";
 import { resolveHubAccessKey } from "@naisys/common-node";
+import type { HubConnectErrorData } from "@naisys/hub-protocol";
+import { HubConnectErrorDataSchema } from "@naisys/hub-protocol";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
@@ -11,13 +13,20 @@ export type RaiseEventFn = (event: string, ...args: unknown[]) => void;
 /** Callback type for message acknowledgements */
 type AckCallback<T = unknown> = (response: T) => void;
 
+export interface HubConnectErrorInfo {
+  message: string;
+  data?: HubConnectErrorData;
+}
+
+type SocketIoConnectError = Error & { data?: unknown };
+
 export function createHubConnection(
   hubClientConfig: HubClientConfig,
   hubClientLog: DualLogger,
   raiseEvent: RaiseEventFn,
   onConnected: () => void,
   onDisconnected: () => void,
-  onConnectError: (message: string) => void,
+  onConnectError: (error: HubConnectErrorInfo) => void,
 ) {
   const hubUrl = hubClientConfig.hubUrl;
 
@@ -35,7 +44,7 @@ export function createHubConnection(
 
     const hubAccessKey = resolveHubAccessKey();
     if (!hubAccessKey) {
-      onConnectError("No hub access key available");
+      onConnectError({ message: "No hub access key available" });
       return;
     }
 
@@ -50,6 +59,8 @@ export function createHubConnection(
           hubAccessKey: resolveHubAccessKey(),
           hostName: hubClientConfig.hostname,
           machineId: hubClientConfig.machineId || undefined,
+          instanceId: hubClientConfig.instanceId,
+          startedAt: hubClientConfig.processStartedAt,
           hostType: "naisys",
           clientVersion: hubClientConfig.clientVersion,
           environment: hubClientConfig.environment,
@@ -79,11 +90,16 @@ export function createHubConnection(
       }
     });
 
-    socket.on("connect_error", (error) => {
+    socket.on("connect_error", (error: SocketIoConnectError) => {
+      const parsedData = HubConnectErrorDataSchema.safeParse(error.data);
+      const connectError: HubConnectErrorInfo = {
+        message: error.message,
+        data: parsedData.success ? parsedData.data : undefined,
+      };
       hubClientLog.log(
-        `[NAISYS:HubClient] Connection error to ${hubUrl}: ${error.message}`,
+        `[NAISYS:HubClient] Connection error to ${hubUrl}: ${connectError.message}${connectError.data ? ` (${connectError.data.code})` : ""}`,
       );
-      onConnectError(error.message);
+      onConnectError(connectError);
     });
 
     // Forward all socket events to hubClient's event handlers

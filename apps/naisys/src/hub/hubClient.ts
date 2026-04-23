@@ -11,7 +11,7 @@ import type {
 import { hubCmd } from "../command/commandDefs.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { HubClientConfig } from "./hubClientConfig.js";
-import type { HubConnection } from "./hubConnection.js";
+import type { HubConnectErrorInfo, HubConnection } from "./hubConnection.js";
 import { createHubConnection } from "./hubConnection.js";
 
 /** Hub connection status info */
@@ -37,7 +37,7 @@ export function createHubClient(
   let hasConnectedOnce = false;
   let disconnectNotified = false;
   let connectedHandler: (() => void) | null = null;
-  let connectErrorHandler: ((message: string) => void) | null = null;
+  let connectErrorHandler: ((error: HubConnectErrorInfo) => void) | null = null;
 
   // Generic event handlers registry - maps event name to set of handlers
   const eventHandlers = new Map<string, Set<EventHandler>>();
@@ -75,8 +75,19 @@ export function createHubClient(
     disconnectNotified = false;
   }
 
-  function handleConnectError(message: string) {
-    connectErrorHandler?.(message);
+  function handleConnectError(error: HubConnectErrorInfo) {
+    connectErrorHandler?.(error);
+
+    if (error.data?.fatal) {
+      activeConnection?.disconnect();
+
+      if (hasConnectedOnce) {
+        promptNotification.notify({
+          wake: "always",
+          errorOutput: [getUserFacingConnectError(error)],
+        });
+      }
+    }
   }
 
   function handleDisconnected() {
@@ -191,11 +202,8 @@ export function createHubClient(
     });
   }
 
-  /** Auth error messages from the hub that won't be fixed by retrying */
-  const AUTH_ERRORS = ["Invalid access key", "Missing hostName"];
-
   /** Returns a promise that resolves once a hub connection is established,
-   *  or rejects if connection fails due to an auth/config error */
+   *  or rejects if the handshake fails with a fatal structured connect error */
   function waitForConnection(): Promise<void> {
     if (isConnected()) {
       return Promise.resolve();
@@ -211,14 +219,28 @@ export function createHubClient(
         resolve();
       };
 
-      connectErrorHandler = (message: string) => {
-        if (AUTH_ERRORS.some((err) => message.includes(err))) {
+      connectErrorHandler = (error: HubConnectErrorInfo) => {
+        if (error.data?.fatal) {
           cleanup();
-          activeConnection?.disconnect();
-          reject(new Error(`Hub connection rejected: ${message}`));
+          reject(new Error(getUserFacingConnectError(error)));
         }
       };
     });
+  }
+
+  function getUserFacingConnectError(error: HubConnectErrorInfo): string {
+    switch (error.data?.code) {
+      case "superseded_by_newer_instance":
+        return "This NAISYS instance was superseded by a newer local process.";
+      case "invalid_access_key":
+        return "Hub access key was rejected by the server.";
+      case "missing_host_name":
+        return "Hub connection rejected: missing host name.";
+      case "registration_failed":
+        return `Hub rejected host registration: ${error.message}`;
+      default:
+        return `Hub connection failed: ${error.message}`;
+    }
   }
 
   function getConnectionInfo(): HubConnectionInfo | null {
