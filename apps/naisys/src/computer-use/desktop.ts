@@ -9,7 +9,10 @@ import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
-import type { DesktopAction, DesktopConfig } from "../llm/vendors/vendorTypes.js";
+import type {
+  DesktopAction,
+  DesktopConfig,
+} from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
@@ -67,10 +70,9 @@ export function createDesktopService(
   }
 
   function getDesktopRuntimeState(): DesktopRuntimeState {
-    const desktopConfig =
-      agentConfig.agentConfig().controlDesktop
-        ? computerService.getConfig()
-        : undefined;
+    const desktopConfig = agentConfig.agentConfig().controlDesktop
+      ? computerService.getConfig()
+      : undefined;
 
     if (!desktopConfig) {
       return { desktopConfig };
@@ -168,8 +170,7 @@ export function createDesktopService(
       return "Desktop Status\n  State: unavailable";
     }
     const modelCoordSpace =
-      shellModel.supportsComputerUse &&
-      shellModel.apiType === LlmApiType.Google
+      shellModel.supportsComputerUse && shellModel.apiType === LlmApiType.Google
         ? "0..999 normalized grid"
         : `scaled pixel space (${scaledWidth}x${scaledHeight})`;
 
@@ -516,7 +517,8 @@ export function createDesktopService(
       return;
     }
 
-    const { desktopConfig, scaledWidth, scaledHeight } = getDesktopRuntimeState();
+    const { desktopConfig, scaledWidth, scaledHeight } =
+      getDesktopRuntimeState();
     if (!desktopConfig || !scaledWidth || !scaledHeight) return;
 
     const {
@@ -528,13 +530,19 @@ export function createDesktopService(
     const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
 
     contextManager.append(
-      `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, but prefer the shell.` +
+      `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. Use it as needed, the shell is still available for commands.` +
         ` Each action costs time and tokens. Avoid repeating the same action over and over if it is not working.`,
       ContentSource.Console,
     );
     output.commentAndLog(
       `Desktop: ${desktopPlatform}, native ${nativeWidth}x${nativeHeight} (${nativeMP}MP), scaled to ${scaledWidth}x${scaledHeight} (${scaledMP}MP, target ${TARGET_MEGAPIXELS}MP)`,
     );
+
+    if (!shellModel.supportsComputerUse) {
+      output.errorAndLog(
+        `Model '${agentConfig.agentConfig().shellModel}' does not explicitly support computer use through tooling, so position based actions like clicking may be very unreliable`,
+      );
+    }
 
     // Anthropic constrains images to 1568px longest edge and ~1.15MP.
     // If we exceed either limit, the API silently downscales, wasting the

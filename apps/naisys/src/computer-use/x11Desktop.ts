@@ -4,6 +4,13 @@
 
 import { execFileSync } from "child_process";
 
+import { normalizeKeyCombo, toLinuxKeyToken } from "./keyCombo.js";
+
+const XDOTOOL_TIMEOUT_MS = 10000;
+const X11_TYPE_DELAY_MS = "40";
+const X11_KEY_DELAY_MS = "50";
+const X11_KEY_SEQUENCE_SETTLE_S = "0.05";
+
 export function captureScreenshot(tmpFile: string): void {
   const errors: string[] = [];
 
@@ -37,7 +44,10 @@ export function captureScreenshot(tmpFile: string): void {
 
 function xdotool(args: string[]) {
   try {
-    execFileSync("xdotool", args, { stdio: "pipe", timeout: 10000 });
+    execFileSync("xdotool", args, {
+      stdio: "pipe",
+      timeout: XDOTOOL_TIMEOUT_MS,
+    });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(
@@ -106,17 +116,44 @@ export function mouseDrag(
 }
 
 export function typeText(text: string) {
+  if (!text) return;
+
   // xdotool's default 12ms inter-char delay drops keys in browsers, VMs, and
-  // Xvfb. 30ms is slow enough to be reliable and still feels instant.
-  xdotool(["type", "--clearmodifiers", "--delay", "30", text]);
+  // Xvfb. A slightly higher delay is slower on paper but materially more
+  // reliable in practice while still feeling instant to humans.
+  xdotool(["type", "--clearmodifiers", "--delay", X11_TYPE_DELAY_MS, text]);
+}
+
+function buildKeySequenceArgs(keyCombo: string): string[] {
+  const chords = normalizeKeyCombo(keyCombo);
+  const args: string[] = [];
+
+  for (const [index, chord] of chords.entries()) {
+    if (index > 0) {
+      // Many X11 apps miss rapid navigation keys when their focus or selection
+      // state changes between events. A short settle gap improves repeatability
+      // without making sequences feel sluggish.
+      args.push("sleep", X11_KEY_SEQUENCE_SETTLE_S);
+    }
+
+    const key = [...chord.modifiers, ...chord.keys]
+      .map(toLinuxKeyToken)
+      .join("+");
+
+    if (!key) continue;
+    args.push("key", "--clearmodifiers", "--delay", X11_KEY_DELAY_MS, key);
+  }
+
+  return args;
 }
 
 export function pressKey(keyCombo: string) {
-  // xdotool's `key` accepts multiple key-sequence args and presses them in
-  // order, so splitting on whitespace lets callers pass either a single chord
-  // ("ctrl+c") or a sequence ("Down Down Right Right").
-  const keys = keyCombo.trim().split(/\s+/);
-  xdotool(["key", "--clearmodifiers", "--delay", "30", ...keys]);
+  // Whitespace separates sequential chords ("Down Down Right") while `+`
+  // stays inside a single chord ("ctrl+shift+t"). Run sequential chords as
+  // separate xdotool commands with a tiny gap so slower apps can keep up.
+  const args = buildKeySequenceArgs(keyCombo);
+  if (!args.length) return;
+  xdotool(args);
 }
 
 export function mouseScroll(

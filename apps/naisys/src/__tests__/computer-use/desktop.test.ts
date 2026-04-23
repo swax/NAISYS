@@ -298,5 +298,9 @@ describe("desktop focus commands", () => {
     expect(helpText).toContain("Manual Focus Args: current screenshot pixels");
     expect(helpText).toContain("Manual Click Args: current screenshot pixels");
     expect(helpText).toContain("ns-desktop <command>");
+    expect(helpText).toContain("key <combo>");
+    expect(helpText).toContain(
+      "Send a manual key combo or sequence (e.g. enter, escape, ctrl+c, alt+tab, up up right)",
+    );
   });
 });

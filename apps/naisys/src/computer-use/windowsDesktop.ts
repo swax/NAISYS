@@ -8,6 +8,8 @@
 
 import { execFileSync } from "child_process";
 
+import { normalizeKeyCombo } from "./keyCombo.js";
+
 function runPowerShell(command: string) {
   execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
     stdio: "pipe",
@@ -155,19 +157,18 @@ export function typeText(text: string) {
 function winVirtualKey(key: string): string {
   switch (key) {
     case "ctrl":
-    case "control":
       return "0xA2";
     case "alt":
       return "0xA4";
     case "shift":
       return "0xA0";
+    case "meta":
+      return "0x5B";
     case "enter":
-    case "return":
       return "0x0D";
     case "tab":
       return "0x09";
     case "escape":
-    case "esc":
       return "0x1B";
     case "backspace":
       return "0x08";
@@ -188,10 +189,8 @@ function winVirtualKey(key: string): string {
     case "end":
       return "0x23";
     case "pageup":
-    case "page_up":
       return "0x21";
     case "pagedown":
-    case "page_down":
       return "0x22";
     default:
       if (key.startsWith("f") && key.length <= 3) {
@@ -206,60 +205,93 @@ function winVirtualKey(key: string): string {
 export function pressKey(keyCombo: string) {
   // Whitespace separates sequential chords ("Down Down Right"); `+` separates
   // modifiers within one chord ("ctrl+c"). Dispatch each chord individually so
-  // the existing single-chord paths (SendKeys vs. win-key keybd_event) keep
-  // working unchanged.
-  const chords = keyCombo.trim().split(/\s+/);
+  // the existing single-chord paths (SendKeys vs. keybd_event) keep working.
+  const chords = normalizeKeyCombo(keyCombo);
   if (chords.length > 1) {
-    for (const chord of chords) pressKey(chord);
+    for (const chord of chords) {
+      pressKey([...chord.modifiers, ...chord.keys].join("+"));
+    }
     return;
   }
 
-  const keys = keyCombo.split("+").map((k) => k.trim().toLowerCase());
-  const hasWin = keys.some((k) => k === "win" || k === "super");
+  const chord = chords[0];
+  if (!chord) return;
 
-  if (hasWin) {
-    // SendKeys has no Windows-key modifier — use keybd_event (VK_LWIN = 0x5B)
-    const otherKeys = keys.filter((k) => k !== "win" && k !== "super");
-    const presses = otherKeys.map(
-      (k) =>
-        `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,0,[IntPtr]::Zero)`,
-    );
-    const releases = [...otherKeys]
-      .reverse()
-      .map(
-        (k) =>
-          `[NaisysInput]::keybd_event(${winVirtualKey(k)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+  const parts = [...chord.modifiers, ...chord.keys];
+  if (!parts.length) return;
+  const hasMeta = chord.modifiers.includes("meta");
+
+  if (hasMeta || chord.keys.length === 0) {
+    const nonMetaModifiers = chord.modifiers.filter((mod) => mod !== "meta");
+    const presses: string[] = [];
+    const releases: string[] = [];
+
+    if (hasMeta) {
+      presses.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey("meta")},0,0,[IntPtr]::Zero)`,
       );
+    }
+
+    for (const mod of nonMetaModifiers) {
+      presses.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey(mod)},0,0,[IntPtr]::Zero)`,
+      );
+    }
+
+    if (hasMeta && (nonMetaModifiers.length > 0 || chord.keys.length > 0)) {
+      // Windows shortcuts with the meta key are timing-sensitive. Give the
+      // shell a moment to observe LWIN before sending the rest of the chord.
+      presses.push("Start-Sleep -Milliseconds 50");
+    }
+
+    for (const key of chord.keys) {
+      presses.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey(key)},0,0,[IntPtr]::Zero)`,
+      );
+    }
+
+    for (const key of [...chord.keys].reverse()) {
+      releases.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey(key)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+      );
+    }
+
+    for (const mod of [...nonMetaModifiers].reverse()) {
+      releases.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey(mod)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+      );
+    }
+
+    if (hasMeta) {
+      releases.push(
+        `[NaisysInput]::keybd_event(${winVirtualKey("meta")},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
+      );
+    }
+
     runPowerShell(
       [
         PS_INPUT_TYPE,
-        `[NaisysInput]::keybd_event(0x5B,0,0,[IntPtr]::Zero)`,
-        `Start-Sleep -Milliseconds 50`,
         ...presses,
         ...releases,
-        `[NaisysInput]::keybd_event(0x5B,0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
       ].join("; "),
     );
     return;
   }
 
-  const sendKeysStr = keys
-    .map((key) => {
-      switch (key) {
+  const sendKeysStr = parts
+    .map((part) => {
+      switch (part) {
         case "ctrl":
-        case "control":
           return "^";
         case "alt":
           return "%";
         case "shift":
           return "+";
         case "enter":
-        case "return":
           return "{ENTER}";
         case "tab":
           return "{TAB}";
         case "escape":
-        case "esc":
           return "{ESC}";
         case "backspace":
           return "{BACKSPACE}";
@@ -280,16 +312,14 @@ export function pressKey(keyCombo: string) {
         case "end":
           return "{END}";
         case "pageup":
-        case "page_up":
           return "{PGUP}";
         case "pagedown":
-        case "page_down":
           return "{PGDN}";
         default:
-          if (key.startsWith("f") && key.length <= 3) {
-            return `{${key.toUpperCase()}}`;
+          if (part.startsWith("f") && part.length <= 3) {
+            return `{${part.toUpperCase()}}`;
           }
-          return key;
+          return part;
       }
     })
     .join("");

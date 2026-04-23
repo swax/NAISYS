@@ -17,6 +17,8 @@
 
 import { execFileSync } from "child_process";
 
+import { normalizeKeyCombo } from "./keyCombo.js";
+
 // --- Retina / HiDPI coordinate handling ---
 
 let backingScaleFactor: number | undefined;
@@ -176,48 +178,27 @@ export function typeText(text: string) {
 
 // --- Key mapping ---
 
-const MODIFIERS = new Set([
-  "ctrl",
-  "control",
-  "alt",
-  "option",
-  "shift",
-  "super",
-  "win",
-  "cmd",
-  "command",
-  "meta",
-  "fn",
-]);
-
 /** Map a modifier name to cliclick's modifier name */
 function mapModifier(mod: string): string {
-  switch (mod.toLowerCase()) {
+  switch (mod) {
     case "ctrl":
-    case "control":
       return "ctrl";
     case "alt":
-    case "option":
       return "alt";
     case "shift":
       return "shift";
-    case "super":
-    case "win":
-    case "cmd":
-    case "command":
     case "meta":
       return "cmd";
     case "fn":
       return "fn";
     default:
-      return mod.toLowerCase();
+      return mod;
   }
 }
 
 /** Map a key name to cliclick's key name */
 function mapKey(key: string): string {
-  switch (key.toLowerCase()) {
-    case "return":
+  switch (key) {
     case "enter":
       return "return";
     case "space":
@@ -225,7 +206,6 @@ function mapKey(key: string): string {
     case "tab":
       return "tab";
     case "escape":
-    case "esc":
       return "esc";
     case "backspace":
       return "delete";
@@ -236,10 +216,8 @@ function mapKey(key: string): string {
     case "end":
       return "end";
     case "pageup":
-    case "page_up":
       return "page-up";
     case "pagedown":
-    case "page_down":
       return "page-down";
     case "up":
       return "arrow-up";
@@ -259,19 +237,18 @@ export function pressKey(keyCombo: string) {
   // Whitespace separates sequential chords ("Down Down Right"); `+` separates
   // modifiers within a single chord ("ctrl+shift+t"). Accumulate all kd/kp/ku
   // args into one cliclick invocation so sequences run without process overhead.
-  const chords = keyCombo.trim().split(/\s+/);
+  const chords = normalizeKeyCombo(keyCombo);
   const args: string[] = [];
 
   for (const chord of chords) {
-    const parts = chord.split("+").map((k) => k.trim());
-    const mods = parts.filter((k) => MODIFIERS.has(k.toLowerCase()));
-    const keys = parts.filter((k) => !MODIFIERS.has(k.toLowerCase()));
-
-    for (const mod of mods) args.push(`kd:${mapModifier(mod)}`);
-    for (const key of keys) args.push(`kp:${mapKey(key)}`);
-    for (const mod of [...mods].reverse()) args.push(`ku:${mapModifier(mod)}`);
+    for (const mod of chord.modifiers) args.push(`kd:${mapModifier(mod)}`);
+    for (const key of chord.keys) args.push(`kp:${mapKey(key)}`);
+    for (const mod of [...chord.modifiers].reverse()) {
+      args.push(`ku:${mapModifier(mod)}`);
+    }
   }
 
+  if (!args.length) return;
   cliclick(args);
 }
 

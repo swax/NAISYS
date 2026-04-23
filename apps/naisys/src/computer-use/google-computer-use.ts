@@ -13,6 +13,7 @@ import type {
   DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
 import { mapCoordinateBetweenSpaces } from "./computerService.js";
+import { canonicalizeKeyCombo } from "./keyCombo.js";
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
 const NORMALIZED_MAX = 1000;
@@ -88,11 +89,11 @@ function convertGoogleActionToInternal(
       });
       if (args.clear_before_typing !== false) {
         actions.push({ action: "key", text: "ctrl+a" });
-        actions.push({ action: "key", text: "BackSpace" });
+        actions.push({ action: "key", text: "backspace" });
       }
       actions.push({ action: "type", text: args.text as string });
       if (args.press_enter !== false) {
-        actions.push({ action: "key", text: "Return" });
+        actions.push({ action: "key", text: "enter" });
       }
       return actions;
     }
@@ -136,14 +137,14 @@ function convertGoogleActionToInternal(
     case "wait_5_seconds":
       return [{ action: "wait" }];
     case "go_back":
-      return [{ action: "key", text: "alt+Left" }];
+      return [{ action: "key", text: "alt+left" }];
     case "go_forward":
-      return [{ action: "key", text: "alt+Right" }];
+      return [{ action: "key", text: "alt+right" }];
     case "navigate": {
       const actions: Record<string, unknown>[] = [];
       actions.push({ action: "key", text: "ctrl+l" });
       actions.push({ action: "type", text: args.url as string });
-      actions.push({ action: "key", text: "Return" });
+      actions.push({ action: "key", text: "enter" });
       return actions;
     }
     case "open_web_browser":
@@ -196,10 +197,14 @@ function reconstructGoogleArgs(
       const typeAction = internalActions.find((a) => a.action === "type");
       const coord = getCoord(clickAction!);
       const hasClear = internalActions.some(
-        (a) => a.action === "key" && a.text === "ctrl+a",
+        (a) =>
+          a.action === "key" &&
+          canonicalizeKeyCombo((a.text as string) || "") === "ctrl+a",
       );
       const hasEnter = internalActions.some(
-        (a) => a.action === "key" && a.text === "Return",
+        (a) =>
+          a.action === "key" &&
+          canonicalizeKeyCombo((a.text as string) || "") === "enter",
       );
       const [x, y] = normalize(coord![0], coord![1]);
       return {

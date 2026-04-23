@@ -71,9 +71,9 @@ export const desktopCmd: CommandDef = {
         "Set or clear the desktop focus rectangle in current screenshot coordinates. Screenshots and coordinates become relative to that viewport",
     },
     key: {
-      usage: "key <key>",
+      usage: "key <combo>",
       description:
-        "Send a manual keypress (e.g. Return, Escape, ctrl+c, alt+Tab)",
+        "Send a manual key combo or sequence (e.g. enter, escape, ctrl+c, alt+tab, up up right)",
     },
     click: {
       usage: "click <x> <y> [left|right|middle|double]",
