@@ -339,6 +339,7 @@ function LlmReadOnlyTable({
     cacheTtlSeconds?: number;
     supportsVision?: boolean;
     supportsHearing?: boolean;
+    supportsComputerUse?: boolean;
   };
 }) {
   const rows: [string, string | number][] = [
@@ -363,6 +364,10 @@ function LlmReadOnlyTable({
   }
   rows.push(["Supports Vision", model.supportsVision ? "Yes" : "No"]);
   rows.push(["Supports Hearing", model.supportsHearing ? "Yes" : "No"]);
+  rows.push([
+    "Supports Computer Use",
+    model.supportsComputerUse ? "Yes" : "No",
+  ]);
 
   return (
     <Table striped style={{ maxWidth: 600 }}>
