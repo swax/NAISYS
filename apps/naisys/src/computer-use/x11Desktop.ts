@@ -4,10 +4,11 @@
 
 import { execFileSync } from "child_process";
 
+import type {
+  CanonicalKeyChord} from "./keyCombo.js";
 import {
-  CanonicalKeyChord,
-  PRESS_KEY_HOLD_MS,
   normalizeKeyCombo,
+  PRESS_KEY_HOLD_MS,
   toLinuxKeyToken,
 } from "./keyCombo.js";
 

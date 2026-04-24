@@ -86,10 +86,12 @@ describe("desktop focus commands", () => {
     const computerService = {
       getConfig: vi.fn(() => desktopConfig),
       executeAction: vi.fn(async () => {}),
-      captureScaledScreenshot: vi.fn(async () => ({
-        base64: "abc",
-        filepath: "/tmp/screenshot.png",
-      })),
+      captureScaledScreenshot: vi.fn(() =>
+        Promise.resolve({
+          base64: "abc",
+          filepath: "/tmp/screenshot.png",
+        }),
+      ),
       captureNativeScreenshot: vi.fn(),
       captureFullNativeScreenshot: vi.fn(),
       setFocus: vi.fn(),
@@ -149,10 +151,12 @@ describe("desktop focus commands", () => {
     const contextManager = createMockContextManager();
     const computerService = {
       getConfig: vi.fn(() => desktopConfig),
-      captureScaledScreenshot: vi.fn(async () => ({
-        base64: "abc123",
-        filepath: "/tmp/llm-view.png",
-      })),
+      captureScaledScreenshot: vi.fn(() =>
+        Promise.resolve({
+          base64: "abc123",
+          filepath: "/tmp/llm-view.png",
+        }),
+      ),
       executeAction: vi.fn(),
       captureNativeScreenshot: vi.fn(),
       captureFullNativeScreenshot: vi.fn(),
@@ -210,10 +214,12 @@ describe("desktop focus commands", () => {
 
     const computerService = {
       getConfig: vi.fn(() => desktopConfig),
-      captureScaledScreenshot: vi.fn(async () => ({
-        base64: "abc",
-        filepath: "/tmp/s.png",
-      })),
+      captureScaledScreenshot: vi.fn(() =>
+        Promise.resolve({
+          base64: "abc",
+          filepath: "/tmp/s.png",
+        }),
+      ),
       executeAction: vi.fn(),
       captureNativeScreenshot: vi.fn(),
       captureFullNativeScreenshot: vi.fn(),

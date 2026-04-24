@@ -6,10 +6,12 @@ import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
 import { createMockCostTracker, createMockGlobalConfig } from "../mocks.js";
 
 const { sendWithGoogle } = vi.hoisted(() => ({
-  sendWithGoogle: vi.fn(async () => ({
-    responses: [""],
-    messagesTokenCount: 0,
-  })),
+  sendWithGoogle: vi.fn(() =>
+    Promise.resolve({
+      responses: [""],
+      messagesTokenCount: 0,
+    }),
+  ),
 }));
 
 vi.mock("../../llm/vendors/google.js", () => ({

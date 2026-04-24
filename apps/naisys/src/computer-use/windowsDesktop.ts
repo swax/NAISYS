@@ -8,10 +8,11 @@
 
 import { execFileSync } from "child_process";
 
+import type {
+  CanonicalKeyChord} from "./keyCombo.js";
 import {
-  CanonicalKeyChord,
-  PRESS_KEY_HOLD_MS,
   normalizeKeyCombo,
+  PRESS_KEY_HOLD_MS,
 } from "./keyCombo.js";
 
 function runPowerShell(command: string, timeoutMs: number = 10000) {
