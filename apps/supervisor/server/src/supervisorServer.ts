@@ -256,6 +256,7 @@ export const startServer: StartServer = async (
   const isProd = process.env.NODE_ENV === "production";
 
   const fastify = Fastify({
+    pluginTimeout: 60_000,
     logger:
       // Log to file in hosted mode
       isProd
