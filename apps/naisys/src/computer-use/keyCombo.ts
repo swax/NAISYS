@@ -5,6 +5,12 @@ export interface CanonicalKeyChord {
   keys: string[];
 }
 
+// How long each chord in a press is held down. Matches typical human keypress
+// duration (~100ms) and, crucially, spans enough frames (~6 @ 60Hz) for games
+// and emulators to reliably sample the input. Agent loops think and screenshot
+// between presses, so the throughput cost is irrelevant here — reliability wins.
+export const PRESS_KEY_HOLD_MS = 100;
+
 const MODIFIER_ALIASES = new Map<string, CanonicalModifier>([
   ["ctrl", "ctrl"],
   ["control", "ctrl"],

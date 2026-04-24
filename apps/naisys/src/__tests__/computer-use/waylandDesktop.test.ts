@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 const { execFileSync } = vi.hoisted(() => ({
   execFileSync: vi.fn(),
@@ -13,55 +13,50 @@ import { pressKey } from "../../computer-use/waylandDesktop.js";
 describe("waylandDesktop keyboard input", () => {
   beforeEach(() => {
     execFileSync.mockClear();
+    vi.spyOn(Atomics, "wait").mockReturnValue("timed-out");
   });
 
-  test("dispatches sequential chords as separate ydotool invocations", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("dispatches sequential chords as held keydown/keyup invocations", () => {
     pressKey("Down Down Right");
 
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      1,
-      "ydotool",
-      ["key", "Down"],
-      { stdio: "pipe", timeout: 10000 },
+    const keyCalls = execFileSync.mock.calls
+      .map(([, args]) => args)
+      .filter((args) => args[0] === "keydown" || args[0] === "keyup");
+
+    expect(keyCalls).toEqual([
+      ["keydown", "Down"],
+      ["keyup", "Down"],
+      ["keydown", "Down"],
+      ["keyup", "Down"],
+      ["keydown", "Right"],
+      ["keyup", "Right"],
+    ]);
+    expect(Atomics.wait).toHaveBeenCalledWith(
+      expect.any(Int32Array),
+      0,
+      0,
+      100,
     );
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      2,
-      "ydotool",
-      ["key", "Down"],
-      { stdio: "pipe", timeout: 10000 },
-    );
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      3,
-      "ydotool",
-      ["key", "Right"],
-      { stdio: "pipe", timeout: 10000 },
+    expect(Atomics.wait).toHaveBeenCalledWith(
+      expect.any(Int32Array),
+      0,
+      0,
+      50,
     );
   });
 
   test("normalizes lowercase aliases into Linux key names", () => {
     pressKey("up enter pgdn meta+l");
 
-    expect(execFileSync).toHaveBeenNthCalledWith(1, "ydotool", ["key", "Up"], {
-      stdio: "pipe",
-      timeout: 10000,
-    });
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      2,
-      "ydotool",
-      ["key", "Return"],
-      { stdio: "pipe", timeout: 10000 },
-    );
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      3,
-      "ydotool",
-      ["key", "Page_Down"],
-      { stdio: "pipe", timeout: 10000 },
-    );
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      4,
-      "ydotool",
-      ["key", "super+l"],
-      { stdio: "pipe", timeout: 10000 },
-    );
+    const downKeys = execFileSync.mock.calls
+      .map(([, args]) => args)
+      .filter((args) => args[0] === "keydown")
+      .map((args) => args[1]);
+
+    expect(downKeys).toEqual(["Up", "Return", "Page_Down", "super", "l"]);
   });
 });

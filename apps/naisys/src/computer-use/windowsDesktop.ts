@@ -8,12 +8,16 @@
 
 import { execFileSync } from "child_process";
 
-import { normalizeKeyCombo } from "./keyCombo.js";
+import {
+  CanonicalKeyChord,
+  PRESS_KEY_HOLD_MS,
+  normalizeKeyCombo,
+} from "./keyCombo.js";
 
-function runPowerShell(command: string) {
+function runPowerShell(command: string, timeoutMs: number = 10000) {
   execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
     stdio: "pipe",
-    timeout: 10000,
+    timeout: timeoutMs,
   });
 }
 
@@ -36,10 +40,11 @@ public class NaisysInput {
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, int dx, int dy, int d, IntPtr e);
   [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);
+  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
   public const uint LEFTDOWN=2, LEFTUP=4, RIGHTDOWN=8, RIGHTUP=16, MIDDLEDOWN=32, MIDDLEUP=64, WHEEL=0x800;
-  public const uint KEYEVENTF_KEYUP=2;
+  public const uint KEYEVENTF_KEYUP=2, KEYEVENTF_EXTENDEDKEY=1;
 }
 "@
 try { [void][NaisysInput]::SetProcessDpiAwarenessContext([IntPtr]::new(-4)) } catch { }
@@ -153,6 +158,23 @@ export function typeText(text: string) {
   );
 }
 
+// VK_OEM_* codes for US-layout punctuation. Needed because punctuation
+// char codes don't match Windows virtual-key codes (e.g. "/" is 0x2F = VK_HELP,
+// not the slash key), so the generic ASCII fallback would fire the wrong key.
+const WIN_PUNCTUATION_VK: Record<string, string> = {
+  ";": "0xBA",
+  "=": "0xBB",
+  ",": "0xBC",
+  "-": "0xBD",
+  ".": "0xBE",
+  "/": "0xBF",
+  "`": "0xC0",
+  "[": "0xDB",
+  "\\": "0xDC",
+  "]": "0xDD",
+  "'": "0xDE",
+};
+
 /** Map a key name to a Windows virtual-key code (hex string) for keybd_event */
 function winVirtualKey(key: string): string {
   switch (key) {
@@ -197,163 +219,115 @@ function winVirtualKey(key: string): string {
         const n = parseInt(key.slice(1));
         return `0x${(0x6f + n).toString(16).toUpperCase()}`; // F1=0x70 …
       }
-      // Single character — use its uppercase ASCII code (A=0x41, I=0x49, …)
-      return `0x${key.toUpperCase().charCodeAt(0).toString(16).toUpperCase()}`;
+      if (key.length === 1) {
+        const punct = WIN_PUNCTUATION_VK[key];
+        if (punct) return punct;
+        const code = key.toUpperCase().charCodeAt(0);
+        // Letters A-Z (0x41-0x5A) and digits 0-9 (0x30-0x39) map directly to
+        // their VK codes. Anything else would hit unrelated VKs (e.g. VK_LWIN).
+        if (
+          (code >= 0x41 && code <= 0x5a) ||
+          (code >= 0x30 && code <= 0x39)
+        ) {
+          return `0x${code.toString(16).toUpperCase()}`;
+        }
+      }
+      throw new Error(
+        `Windows does not have a virtual-key mapping for "${key}" — use typeText for arbitrary characters`,
+      );
   }
+}
+
+// Keys that Windows flags as "extended" (set 1 in the scan-code map). Without
+// KEYEVENTF_EXTENDEDKEY, the arrow/navigation events collide with numpad
+// variants and many emulators reading raw input/DirectInput miss them.
+const WIN_EXTENDED_KEYS = new Set([
+  "up",
+  "down",
+  "left",
+  "right",
+  "home",
+  "end",
+  "pageup",
+  "pagedown",
+  "delete",
+  "insert",
+  "meta",
+]);
+
+// Generate a keybd_event PowerShell statement with a proper scan code
+// (via MapVirtualKey) and the extended flag when needed. bScan=0 with no flag
+// produces half-populated raw-input events that emulators can drop — this is
+// why the 100ms hold alone wasn't enough to fix the "keys not registering"
+// issue on Windows.
+function winKeyEventStmt(key: string, up: boolean): string {
+  const vk = winVirtualKey(key);
+  const flags =
+    (WIN_EXTENDED_KEYS.has(key) ? 1 : 0) | (up ? 2 : 0); // EXTENDED | KEYUP
+  return `[NaisysInput]::keybd_event(${vk},[byte]([NaisysInput]::MapVirtualKey(${vk},0) -band 0xFF),${flags},[IntPtr]::Zero)`;
+}
+
+function holdChord(chord: CanonicalKeyChord, durationMs: number) {
+  if (!chord.modifiers.length && !chord.keys.length) return;
+
+  const hasMeta = chord.modifiers.includes("meta");
+  const nonMetaModifiers = chord.modifiers.filter((mod) => mod !== "meta");
+  const presses: string[] = [];
+  const releases: string[] = [];
+
+  if (hasMeta) presses.push(winKeyEventStmt("meta", false));
+  for (const mod of nonMetaModifiers) presses.push(winKeyEventStmt(mod, false));
+
+  if (hasMeta && (nonMetaModifiers.length > 0 || chord.keys.length > 0)) {
+    // Windows shortcuts with the meta key are timing-sensitive. Give the
+    // shell a moment to observe LWIN before sending the rest of the chord.
+    presses.push("Start-Sleep -Milliseconds 50");
+  }
+
+  for (const key of chord.keys) presses.push(winKeyEventStmt(key, false));
+
+  for (const key of [...chord.keys].reverse()) {
+    releases.push(winKeyEventStmt(key, true));
+  }
+  for (const mod of [...nonMetaModifiers].reverse()) {
+    releases.push(winKeyEventStmt(mod, true));
+  }
+  if (hasMeta) releases.push(winKeyEventStmt("meta", true));
+
+  const sleepMs = Math.max(0, Math.round(durationMs));
+  // The Start-Sleep runs inside PowerShell, so the subprocess timeout must
+  // cover the full hold plus startup and keyup — otherwise a long hold would
+  // SIGKILL the shell mid-sleep and strand the key down. PowerShell startup
+  // (Add-Type compilation) can be slow, so use a generous 10s margin.
+  runPowerShell(
+    [
+      PS_INPUT_TYPE,
+      ...presses,
+      `Start-Sleep -Milliseconds ${sleepMs}`,
+      ...releases,
+    ].join("; "),
+    sleepMs + 10000,
+  );
 }
 
 export function pressKey(keyCombo: string) {
   // Whitespace separates sequential chords ("Down Down Right"); `+` separates
-  // modifiers within one chord ("ctrl+c"). Dispatch each chord individually so
-  // the existing single-chord paths (SendKeys vs. keybd_event) keep working.
+  // modifiers within one chord ("ctrl+c"). Dispatch each chord as its own
+  // PowerShell invocation so sequences behave consistently.
   const chords = normalizeKeyCombo(keyCombo);
-  if (chords.length > 1) {
-    for (const chord of chords) {
-      pressKey([...chord.modifiers, ...chord.keys].join("+"));
-    }
-    return;
+  for (const chord of chords) {
+    holdChord(chord, PRESS_KEY_HOLD_MS);
   }
-
-  const chord = chords[0];
-  if (!chord) return;
-
-  const parts = [...chord.modifiers, ...chord.keys];
-  if (!parts.length) return;
-  const hasMeta = chord.modifiers.includes("meta");
-
-  if (hasMeta || chord.keys.length === 0) {
-    const nonMetaModifiers = chord.modifiers.filter((mod) => mod !== "meta");
-    const presses: string[] = [];
-    const releases: string[] = [];
-
-    if (hasMeta) {
-      presses.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey("meta")},0,0,[IntPtr]::Zero)`,
-      );
-    }
-
-    for (const mod of nonMetaModifiers) {
-      presses.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey(mod)},0,0,[IntPtr]::Zero)`,
-      );
-    }
-
-    if (hasMeta && (nonMetaModifiers.length > 0 || chord.keys.length > 0)) {
-      // Windows shortcuts with the meta key are timing-sensitive. Give the
-      // shell a moment to observe LWIN before sending the rest of the chord.
-      presses.push("Start-Sleep -Milliseconds 50");
-    }
-
-    for (const key of chord.keys) {
-      presses.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey(key)},0,0,[IntPtr]::Zero)`,
-      );
-    }
-
-    for (const key of [...chord.keys].reverse()) {
-      releases.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey(key)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
-      );
-    }
-
-    for (const mod of [...nonMetaModifiers].reverse()) {
-      releases.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey(mod)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
-      );
-    }
-
-    if (hasMeta) {
-      releases.push(
-        `[NaisysInput]::keybd_event(${winVirtualKey("meta")},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
-      );
-    }
-
-    runPowerShell([PS_INPUT_TYPE, ...presses, ...releases].join("; "));
-    return;
-  }
-
-  const sendKeysStr = parts
-    .map((part) => {
-      switch (part) {
-        case "ctrl":
-          return "^";
-        case "alt":
-          return "%";
-        case "shift":
-          return "+";
-        case "enter":
-          return "{ENTER}";
-        case "tab":
-          return "{TAB}";
-        case "escape":
-          return "{ESC}";
-        case "backspace":
-          return "{BACKSPACE}";
-        case "delete":
-          return "{DELETE}";
-        case "space":
-          return " ";
-        case "up":
-          return "{UP}";
-        case "down":
-          return "{DOWN}";
-        case "left":
-          return "{LEFT}";
-        case "right":
-          return "{RIGHT}";
-        case "home":
-          return "{HOME}";
-        case "end":
-          return "{END}";
-        case "pageup":
-          return "{PGUP}";
-        case "pagedown":
-          return "{PGDN}";
-        default:
-          if (part.startsWith("f") && part.length <= 3) {
-            return `{${part.toUpperCase()}}`;
-          }
-          return part;
-      }
-    })
-    .join("");
-  runPowerShell(
-    `Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${sendKeysStr}')`,
-  );
 }
 
 export function holdKey(keyCombo: string, durationMs: number) {
-  // Hold a single chord down for a duration using keybd_event down + Start-Sleep
-  // + keybd_event up. Emulators sample key state per frame, so a stream of
-  // presses won't register as "held" — we need a real kept-down key.
   const chords = normalizeKeyCombo(keyCombo);
   if (chords.length !== 1) {
     throw new Error(
       `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
     );
   }
-  const chord = chords[0];
-  const tokens = [...chord.modifiers, ...chord.keys];
-  if (!tokens.length) return;
-
-  const downs = tokens.map(
-    (t) => `[NaisysInput]::keybd_event(${winVirtualKey(t)},0,0,[IntPtr]::Zero)`,
-  );
-  const ups = [...tokens]
-    .reverse()
-    .map(
-      (t) =>
-        `[NaisysInput]::keybd_event(${winVirtualKey(t)},0,[NaisysInput]::KEYEVENTF_KEYUP,[IntPtr]::Zero)`,
-    );
-  const sleepMs = Math.max(0, Math.round(durationMs));
-  runPowerShell(
-    [
-      PS_INPUT_TYPE,
-      ...downs,
-      `Start-Sleep -Milliseconds ${sleepMs}`,
-      ...ups,
-    ].join("; "),
-  );
+  holdChord(chords[0], durationMs);
 }
 
 export function mouseScroll(

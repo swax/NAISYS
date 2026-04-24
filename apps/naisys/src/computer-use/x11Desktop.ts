@@ -4,11 +4,15 @@
 
 import { execFileSync } from "child_process";
 
-import { normalizeKeyCombo, toLinuxKeyToken } from "./keyCombo.js";
+import {
+  CanonicalKeyChord,
+  PRESS_KEY_HOLD_MS,
+  normalizeKeyCombo,
+  toLinuxKeyToken,
+} from "./keyCombo.js";
 
 const XDOTOOL_TIMEOUT_MS = 10000;
 const X11_TYPE_DELAY_MS = "40";
-const X11_KEY_DELAY_MS = "50";
 const X11_KEY_SEQUENCE_SETTLE_S = "0.05";
 
 export function captureScreenshot(tmpFile: string): void {
@@ -42,11 +46,11 @@ export function captureScreenshot(tmpFile: string): void {
   );
 }
 
-function xdotool(args: string[]) {
+function xdotool(args: string[], timeoutMs: number = XDOTOOL_TIMEOUT_MS) {
   try {
     execFileSync("xdotool", args, {
       stdio: "pipe",
-      timeout: XDOTOOL_TIMEOUT_MS,
+      timeout: timeoutMs,
     });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
@@ -124,58 +128,62 @@ export function typeText(text: string) {
   xdotool(["type", "--clearmodifiers", "--delay", X11_TYPE_DELAY_MS, text]);
 }
 
-function buildKeySequenceArgs(keyCombo: string): string[] {
-  const chords = normalizeKeyCombo(keyCombo);
-  const args: string[] = [];
+// Hold a chord for a duration using chained keydown / sleep / keyup in one
+// xdotool invocation. --clearmodifiers protects the press and release events
+// themselves — it saves ambient modifiers, clears them, sends the event, then
+// restores them — so an injected Right seen by an app at the press instant is
+// Right alone, not Shift+Right. It does NOT cover the sleep window: because
+// the modifiers are restored at the end of the keydown, a physically-held
+// Shift is back on the kernel state during the hold and can combine with the
+// held key. Good enough for agent use where the user typically isn't
+// co-driving the keyboard. This is the single primitive used by both pressKey
+// (fixed 100ms) and holdKey (caller duration).
+function holdChord(chord: CanonicalKeyChord, durationMs: number) {
+  const key = [...chord.modifiers, ...chord.keys]
+    .map(toLinuxKeyToken)
+    .join("+");
+  if (!key) return;
 
-  for (const [index, chord] of chords.entries()) {
-    if (index > 0) {
-      // Many X11 apps miss rapid navigation keys when their focus or selection
-      // state changes between events. A short settle gap improves repeatability
-      // without making sequences feel sluggish.
-      args.push("sleep", X11_KEY_SEQUENCE_SETTLE_S);
-    }
-
-    const key = [...chord.modifiers, ...chord.keys]
-      .map(toLinuxKeyToken)
-      .join("+");
-
-    if (!key) continue;
-    args.push("key", "--clearmodifiers", "--delay", X11_KEY_DELAY_MS, key);
-  }
-
-  return args;
+  // The sleep runs inside xdotool, so the subprocess timeout must cover the
+  // full hold plus startup and keyup — otherwise a 10s hold at the 10s default
+  // timeout would SIGKILL xdotool mid-sleep and strand the key down.
+  xdotool(
+    [
+      "keydown",
+      "--clearmodifiers",
+      key,
+      "sleep",
+      (durationMs / 1000).toString(),
+      "keyup",
+      "--clearmodifiers",
+      key,
+    ],
+    durationMs + XDOTOOL_TIMEOUT_MS,
+  );
 }
 
 export function pressKey(keyCombo: string) {
   // Whitespace separates sequential chords ("Down Down Right") while `+`
-  // stays inside a single chord ("ctrl+shift+t"). Run sequential chords as
-  // separate xdotool commands with a tiny gap so slower apps can keep up.
-  const args = buildKeySequenceArgs(keyCombo);
-  if (!args.length) return;
-  xdotool(args);
+  // stays inside a single chord ("ctrl+shift+t"). Many X11 apps miss rapid
+  // navigation keys when focus/selection changes between events, so we leave
+  // a short settle between chords.
+  const chords = normalizeKeyCombo(keyCombo);
+  for (const [index, chord] of chords.entries()) {
+    if (index > 0) {
+      xdotool(["sleep", X11_KEY_SEQUENCE_SETTLE_S]);
+    }
+    holdChord(chord, PRESS_KEY_HOLD_MS);
+  }
 }
 
 export function holdKey(keyCombo: string, durationMs: number) {
-  // Hold means a single chord down for a duration — no sequences. Press all
-  // modifiers and keys down, sleep, then release in reverse order. Emulators
-  // sample input state per frame, so a real keydown/keyup is the only way to
-  // get "walking" behavior; a stream of discrete key presses won't do it.
   const chords = normalizeKeyCombo(keyCombo);
   if (chords.length !== 1) {
     throw new Error(
       `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
     );
   }
-  const chord = chords[0];
-  const tokens = [...chord.modifiers, ...chord.keys].map(toLinuxKeyToken);
-  if (!tokens.length) return;
-
-  const args: string[] = [];
-  for (const token of tokens) args.push("keydown", token);
-  args.push("sleep", (durationMs / 1000).toString());
-  for (const token of [...tokens].reverse()) args.push("keyup", token);
-  xdotool(args);
+  holdChord(chords[0], durationMs);
 }
 
 export function mouseScroll(

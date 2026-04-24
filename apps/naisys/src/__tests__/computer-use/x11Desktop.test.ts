@@ -18,30 +18,62 @@ describe("x11Desktop keyboard input", () => {
   test("adds settle gaps between sequential key chords", () => {
     pressKey("Down Down Right");
 
-    expect(execFileSync).toHaveBeenCalledWith(
+    expect(execFileSync).toHaveBeenNthCalledWith(
+      1,
       "xdotool",
       [
-        "key",
+        "keydown",
         "--clearmodifiers",
-        "--delay",
-        "50",
         "Down",
         "sleep",
-        "0.05",
-        "key",
+        "0.1",
+        "keyup",
         "--clearmodifiers",
-        "--delay",
-        "50",
+        "Down",
+      ],
+      { stdio: "pipe", timeout: 10100 },
+    );
+    expect(execFileSync).toHaveBeenNthCalledWith(
+      2,
+      "xdotool",
+      ["sleep", "0.05"],
+      { stdio: "pipe", timeout: 10000 },
+    );
+    expect(execFileSync).toHaveBeenNthCalledWith(
+      3,
+      "xdotool",
+      [
+        "keydown",
+        "--clearmodifiers",
         "Down",
         "sleep",
-        "0.05",
-        "key",
+        "0.1",
+        "keyup",
         "--clearmodifiers",
-        "--delay",
-        "50",
+        "Down",
+      ],
+      { stdio: "pipe", timeout: 10100 },
+    );
+    expect(execFileSync).toHaveBeenNthCalledWith(
+      4,
+      "xdotool",
+      ["sleep", "0.05"],
+      { stdio: "pipe", timeout: 10000 },
+    );
+    expect(execFileSync).toHaveBeenNthCalledWith(
+      5,
+      "xdotool",
+      [
+        "keydown",
+        "--clearmodifiers",
+        "Right",
+        "sleep",
+        "0.1",
+        "keyup",
+        "--clearmodifiers",
         "Right",
       ],
-      { stdio: "pipe", timeout: 10000 },
+      { stdio: "pipe", timeout: 10100 },
     );
   });
 
@@ -50,46 +82,45 @@ describe("x11Desktop keyboard input", () => {
 
     expect(execFileSync).toHaveBeenCalledWith(
       "xdotool",
-      ["key", "--clearmodifiers", "--delay", "50", "ctrl+shift+t"],
-      { stdio: "pipe", timeout: 10000 },
+      [
+        "keydown",
+        "--clearmodifiers",
+        "ctrl+shift+t",
+        "sleep",
+        "0.1",
+        "keyup",
+        "--clearmodifiers",
+        "ctrl+shift+t",
+      ],
+      { stdio: "pipe", timeout: 10100 },
     );
   });
 
   test("normalizes lowercase aliases into X11 key names", () => {
     pressKey("up enter pgdn meta+l");
 
-    expect(execFileSync).toHaveBeenCalledWith(
-      "xdotool",
-      [
-        "key",
+    const keyCalls = execFileSync.mock.calls
+      .map(([, args]) => args)
+      .filter((args) => args[0] === "keydown");
+
+    expect(keyCalls.map((args) => args[2])).toEqual([
+      "Up",
+      "Return",
+      "Page_Down",
+      "super+l",
+    ]);
+    for (const args of keyCalls) {
+      expect(args).toEqual([
+        "keydown",
         "--clearmodifiers",
-        "--delay",
-        "50",
-        "Up",
+        args[2],
         "sleep",
-        "0.05",
-        "key",
+        "0.1",
+        "keyup",
         "--clearmodifiers",
-        "--delay",
-        "50",
-        "Return",
-        "sleep",
-        "0.05",
-        "key",
-        "--clearmodifiers",
-        "--delay",
-        "50",
-        "Page_Down",
-        "sleep",
-        "0.05",
-        "key",
-        "--clearmodifiers",
-        "--delay",
-        "50",
-        "super+l",
-      ],
-      { stdio: "pipe", timeout: 10000 },
-    );
+        args[2],
+      ]);
+    }
   });
 
   test("uses a slower text delay and ignores empty text", () => {
