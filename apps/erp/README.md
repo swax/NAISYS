@@ -23,7 +23,7 @@ Ships as its own package with a dedicated database — see [doc 006](../../docs/
 - **Completion notes** on step/op with status-note transitions
 - Order revisions with diff, copy-on-new-rev with dependencies, rev_no ordering, latest-rev default
 
-### API (agent-facing) ([doc 014](../../docs/014-hateoas.md))
+### API (agent-facing) ([doc 012](../../docs/012-hateoas.md))
 
 - HATEOAS-driven discoverable REST API
 - Per-resource action builders co-located with route files; `hateoas.ts` only holds generic helpers

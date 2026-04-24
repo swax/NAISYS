@@ -16,7 +16,7 @@ Run standalone with `npx naisys_hub`, or in-process with `npx naisys --integrate
 - Run-session tracking per run with keep-alive and authoritative online/offline state
 - Per-app host filter (naisys-host vs supervisor-host)
 
-### Persistence ([doc 015](../../docs/015-database-design.md))
+### Persistence ([doc 001](../../docs/001-database-design.md))
 
 The hub owns all shared data, so runners stay ephemeral:
 

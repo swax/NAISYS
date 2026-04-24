@@ -4,7 +4,12 @@ This directory contains shared packages used across the NAISYS monorepo.
 
 ## Packages
 
-- **[@naisys/database](./database/README.md)** - Prisma schema, generated client, and database utilities for NAISYS and Supervisor
+- **@naisys/common** - Common utilities and constants
+- **@naisys/common-browser** - Shared React/Mantine components and utilities for client apps
+- **@naisys/common-node** - Node-only utilities
+- **[@naisys/hub-database](./hub-database/README.md)** - Hub database schema and Prisma client
+- **@naisys/hub-protocol** - Protocol types and schemas for Hub communication
+- **@naisys/supervisor-database** - Supervisor database schema and Prisma client
 
 ## Usage
 

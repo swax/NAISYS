@@ -30,7 +30,7 @@ Run standalone with `npx naisys_supervisor`, or in-process with `npx naisys --su
 - Agent model icon in the nav header
 - PWA detection with refresh prompt
 
-### Agent-facing / HATEOAS ([doc 014](../../docs/014-hateoas.md))
+### Agent-facing / HATEOAS ([doc 012](../../docs/012-hateoas.md))
 
 - Permission system with HATEOAS actions gating both UI and API (`permGate`)
 - Disabled-action states include a reason so agents know why they can't act
