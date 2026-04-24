@@ -15,6 +15,10 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
+import type {
+  UserListItem,
+  UserListResponse,
+} from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -36,7 +40,7 @@ export const UserList: React.FC = () => {
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<UserListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [createOpened, { open: openCreate, close: closeCreate }] =
     useDisclosure();
@@ -95,7 +99,7 @@ export const UserList: React.FC = () => {
     setLoadingAgents(true);
     try {
       const agentResponse = await getAgentData();
-      let allUsers: any[] = [];
+      let allUsers: UserListItem[] = [];
       let userPage = 1;
       let userResult;
       do {
@@ -103,7 +107,7 @@ export const UserList: React.FC = () => {
         allUsers = allUsers.concat(userResult.items);
         userPage++;
       } while (allUsers.length < userResult.total);
-      const existingUuids = new Set(allUsers.map((u: any) => u.uuid));
+      const existingUuids = new Set(allUsers.map((u) => u.uuid));
       const filtered = agentResponse.items
         .filter((a) => !a.archived && !existingUuids.has(a.uuid))
         .map((a) => ({
@@ -189,7 +193,7 @@ export const UserList: React.FC = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {data.items.map((item: any) => (
+              {data.items.map((item) => (
                 <Table.Tr key={item.id} style={{ cursor: "pointer" }}>
                   <Table.Td>
                     <Link to={`/users/${item.username}`} style={cellLinkStyle}>

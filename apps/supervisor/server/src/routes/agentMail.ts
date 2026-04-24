@@ -1,4 +1,4 @@
-import type { MultipartFile } from "@fastify/multipart";
+import type { MultipartFile, MultipartValue } from "@fastify/multipart";
 import type {
   AgentUsernameParams,
   ArchiveMailResponse,
@@ -182,14 +182,14 @@ export default function agentMailRoutes(
 
         for await (const part of parts) {
           if (part.type === "field") {
-            const field = part as any;
+            const field = part as MultipartValue<string>;
             switch (field.fieldname) {
               case "fromId":
                 fromId = Number(field.value);
                 break;
               case "toIds":
                 try {
-                  toIds = JSON.parse(field.value as string);
+                  toIds = JSON.parse(field.value);
                 } catch {
                   return badRequest(reply, "toIds must be valid JSON array");
                 }

@@ -1,3 +1,7 @@
+import type {
+  BatchUpdateFieldValues,
+  UpdateFieldValue,
+} from "@naisys/erp-shared";
 import {
   BatchFieldValueMutateResponseSchema,
   BatchFieldValueUpdateResponseSchema,
@@ -9,7 +13,7 @@ import {
   getValueFormatHint,
   UpdateFieldValueSchema,
 } from "@naisys/erp-shared";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
@@ -46,6 +50,7 @@ const FieldSeqNoParamsSchema = z.object({
   stepSeqNo: z.coerce.number().int(),
   fieldSeqNo: z.coerce.number().int(),
 });
+type FieldSeqNoParams = z.infer<typeof FieldSeqNoParamsSchema>;
 
 const SetFieldSeqNoParamsSchema = z.object({
   orderKey: z.string(),
@@ -62,6 +67,7 @@ const StepSeqNoParamsSchema = z.object({
   seqNo: z.coerce.number().int(),
   stepSeqNo: z.coerce.number().int(),
 });
+type StepSeqNoParams = z.infer<typeof StepSeqNoParamsSchema>;
 
 const SetIndexParamsSchema = z.object({
   orderKey: z.string(),
@@ -75,9 +81,14 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
 
   // Shared handler for updating a single field value
-  async function handleFieldUpdate(request: any, reply: any, setIndex: number) {
-    const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } = request.params;
-    const { value } = request.body;
+  async function handleFieldUpdate(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    setIndex: number,
+  ) {
+    const { orderKey, runNo, seqNo, stepSeqNo, fieldSeqNo } =
+      request.params as FieldSeqNoParams;
+    const { value } = request.body as UpdateFieldValue;
     const userId = request.erpUser!.id;
 
     const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -271,12 +282,13 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
 
   // Shared handler for batch updating field values
   async function handleBatchFieldUpdate(
-    request: any,
-    reply: any,
+    request: FastifyRequest,
+    reply: FastifyReply,
     setIndex: number,
   ) {
-    const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
-    const { fieldValues } = request.body;
+    const { orderKey, runNo, seqNo, stepSeqNo } =
+      request.params as StepSeqNoParams;
+    const { fieldValues } = request.body as BatchUpdateFieldValues;
     const userId = request.erpUser!.id;
 
     const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
@@ -418,11 +430,12 @@ export default function stepRunFieldRoutes(fastify: FastifyInstance) {
 
   // Shared handler for batch reading field values
   async function handleBatchFieldGet(
-    request: any,
-    reply: any,
+    request: FastifyRequest,
+    reply: FastifyReply,
     setIndex?: number,
   ) {
-    const { orderKey, runNo, seqNo, stepSeqNo } = request.params;
+    const { orderKey, runNo, seqNo, stepSeqNo } =
+      request.params as StepSeqNoParams;
 
     const resolved = await resolveStepRun(orderKey, runNo, seqNo, stepSeqNo);
     if (!resolved) {
