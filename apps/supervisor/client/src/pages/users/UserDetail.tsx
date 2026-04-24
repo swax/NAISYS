@@ -22,6 +22,7 @@ import { SecretField } from "@naisys/common-browser";
 import {
   type Permission,
   PermissionDescriptions,
+  type UserDetailResponse,
 } from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
@@ -46,7 +47,7 @@ import {
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
   const [editUsername, setEditUsername] = useState("");
@@ -82,7 +83,7 @@ export const UserDetail: React.FC = () => {
   const handleDelete = async () => {
     if (!routeUsername) return;
     const isAdmin = user?.permissions?.some(
-      (p: any) => p.permission === "supervisor_admin",
+      (p) => p.permission === "supervisor_admin",
     );
     if (isAdmin) {
       if (
@@ -199,7 +200,7 @@ export const UserDetail: React.FC = () => {
   }
 
   const grantablePermissions = allPermissions.filter(
-    (p) => !user.permissions?.some((up: any) => up.permission === p),
+    (p) => !user.permissions?.some((up) => up.permission === p),
   );
 
   return (
@@ -270,7 +271,7 @@ export const UserDetail: React.FC = () => {
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
           </Group>
           {(() => {
-            const agentLink = user._links?.find((l: any) => l.rel === "agent");
+            const agentLink = user._links?.find((l) => l.rel === "agent");
             if (!agentLink) return null;
             const agentUsername =
               agentLink.href.match(/\/agents\/([^/]+)/)?.[1];
@@ -332,7 +333,7 @@ export const UserDetail: React.FC = () => {
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {user.permissions.map((p: any) => (
+            {user.permissions.map((p) => (
               <Table.Tr key={p.permission}>
                 <Table.Td>
                   <Text ff="monospace">{p.permission}</Text>

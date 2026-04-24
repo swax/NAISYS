@@ -1,4 +1,10 @@
-import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "@naisys/common";
+import {
+  HateoasActionSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+  URL_SAFE_KEY_MESSAGE,
+  URL_SAFE_KEY_REGEX,
+} from "@naisys/common";
 import { z } from "zod";
 
 export const PermissionEnum = z.enum([
@@ -73,3 +79,61 @@ export const CreateAgentUserSchema = z
   .strict();
 
 export type CreateAgentUser = z.infer<typeof CreateAgentUserSchema>;
+
+// --- Response schemas ---
+
+export const UserListItemSchema = z.object({
+  id: z.number(),
+  uuid: z.string(),
+  username: z.string(),
+  isAgent: z.boolean(),
+  createdAt: z.string(),
+  permissionCount: z.number(),
+});
+export type UserListItem = z.infer<typeof UserListItemSchema>;
+
+export const UserListResponseSchema = z.object({
+  items: z.array(UserListItemSchema),
+  total: z.number(),
+  pageSize: z.number(),
+  _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+export type UserListResponse = z.infer<typeof UserListResponseSchema>;
+
+export const UserPermissionSchema = z.object({
+  permission: PermissionEnum,
+  grantedAt: z.string(),
+  grantedBy: z.number().nullable(),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+export type UserPermission = z.infer<typeof UserPermissionSchema>;
+
+export const UserDetailResponseSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  isAgent: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  apiKey: z.string().nullable().optional(),
+  hasApiKey: z.boolean(),
+  permissions: z.array(UserPermissionSchema),
+  _links: z.array(HateoasLinkSchema),
+  _actions: z.array(HateoasActionSchema).optional(),
+});
+export type UserDetailResponse = z.infer<typeof UserDetailResponseSchema>;
+
+export const UserActionResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type UserActionResult = z.infer<typeof UserActionResultSchema>;
+
+export const CreateUserResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  id: z.number(),
+  username: z.string(),
+});
+export type CreateUserResponse = z.infer<typeof CreateUserResponseSchema>;

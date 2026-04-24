@@ -1,4 +1,4 @@
-import type { MultipartFile } from "@fastify/multipart";
+import type { MultipartFile, MultipartValue } from "@fastify/multipart";
 import type {
   AgentUsernameParams,
   ArchiveChatResponse,
@@ -231,7 +231,7 @@ export default function agentChatRoutes(
 
         for await (const part of parts) {
           if (part.type === "field") {
-            const field = part as any;
+            const field = part as MultipartValue<string>;
             switch (field.fieldname) {
               case "fromId":
                 fromId = Number(field.value);
