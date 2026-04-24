@@ -1,38 +1,19 @@
-## NAISYS (Networked Agents Interface System)
+# NAISYS (Networked Agents Interface System)
 
 [← Back to main README](../../README.md)
 
-NAISYS allows any LLM you want to operate a standard Linux shell given your instructions. You can control how much
-to spend, the maximum number of tokens to use per session, how long to wait between commands, etc.. Between each command
-NAISYS will wait a few seconds to accept any input you want to put in yourself in case you want to collaborate with the
-LLM, give it hints, and/or diagnose the session. Once the LLM reaches the token max you specified for the session it
-will wrap things up, and start a fresh shell for the LLM to continue on its work.
+NAISYS is the agent runner: it proxies a real shell to any LLM (Anthropic, OpenAI, Google, Grok, OpenRouter, local), keeps the context within configured token/cost limits, and exposes a set of `ns-*` commands that make the shell "context friendly" — paginated web browsing, inter-agent mail, sub-agent spawning, image generation, desktop control, and more.
 
-NAISYS tries to be a minimal wrapper, just helping the LLM operate in the shell 'better'. Making commands 'context friendly'. For instace if a command is long running, NAISYS will interrupt it, show the LLM the current output, and ask the LLM what it wants to
-do next - wait, kill, or send input. The custom command prompt helps the LLM keep track of its token usage during the session. The 'ns-comment' command helps the LLM think out loud without putting invalid commands into the shell.
-
-Some use cases are building websites, diagnosing a system for security concerns, mapping out the topology of the local
-network, learning and performing arbitrary tasks, or just plain exploring the limits of autonomy. NAISYS has a built-in
-system for inter-agent communication. You can manually startup multiple instances of NAISYS with different roles, or
-you can allow agents to start their own sub-agents on demand with instructions defined by the LLM itself!
-
-#### Node.js is used to create a simple proxy shell environment for the LLM that
-
-- Helps the LLM keep track of its current context size
-- Gives the LLM the ability to 'reset' the context and carry over information to a new session/context
-- Proxy commands to a real shell, and help guide the LLM to use context friendly commands
-- Prevent the context from being polluted by catching common errors like output that includes the command prompt itself
-- Allows debugging by way of a 'debug' prompt after each run of the LLM
-- A custom 'mail' system for context friendly inter-agent communication
-- A browser called 'ns-lynx' that paginates web pages and makes links unique across the context
-- Cost tracking and cost limits that must be set in the config
-- Support for multiple LLM backends, configurable per agent - OpenAI, Google, Anthropic, and self-hosted LLMs
+Run agents locally with `npx naisys agent.yaml`, or connect to a hub for persistence and cross-machine operation.
 
 ## Getting Started
 
-- Create a `.env` file based off the `.env.example` file
+- Create a `.env` file based on `.env.example` (or let `--setup` walk you through it)
+- Create an agent configuration file — see [`agents/template.yaml`](../../agents/template.yaml) for all available options and supported models
+- Run `naisys <path to agent yaml or directory> [options]`
+  - Pass a directory to run all agent yamls in that folder
 
-- Create an agent configuration file — see [`agents/template.yaml`](../../agents/template.yaml) for all available options and supported models. A minimal example:
+A minimal agent:
 
 ```yaml
 username: smith
@@ -45,63 +26,113 @@ debugPauseSeconds: 5
 spendLimitDollars: 5.00
 ```
 
-- Run `naisys <path to agent yaml or directory> [options]`
-  - Pass a directory to run all agent yamls in that folder
-
 ## Using NAISYS
 
-#### The Basics
+### The Basics
 
-- NAISYS will start with a debug prompt, this is where you can use and run commands in NAISYS just like the LLM will
-- If you hit `Enter` without typing anything, the LLM will run against the prompt
-- Afterwards NAISYS will return to the debug prompt
-- Depending on how the agents' `debugPauseSeconds` is configured NAISYS will
-  - Continue immediately when set to `0`
-  - Pause on the debug prompt for that many seconds when set to a positive value
-  - Pause indefinitely when left unset
-  - Wake early when a new message is received and `wakeOnMessage` is enabled
+- NAISYS starts at a debug prompt — where you can run commands interactively
+- Hit `Enter` on an empty prompt to let the LLM take a turn
+- After the LLM responds, NAISYS returns to the debug prompt
+- `debugPauseSeconds` controls behavior: `0` = continue immediately, positive = pause that long, unset = pause indefinitely; `wakeOnMessage` wakes early on new mail
 
-#### Console Colors Legend
+### Console Color Legend
 
-- Purple: Response from LLM, added to context
-- White: Generated locally or from a real shell, added to context
-- Green: Debug prompt and debug command reponses. Not added to context. Used for diagnostics between calls to LLM
-- Red: High level NAISYS errors, not added to the context
+- Purple: LLM response, added to context
+- White: Local/shell output, added to context
+- Green: Debug prompt and responses, not added to context
+- Red: High-level NAISYS errors, not added to context
 
-#### Commands
+## Features
 
-- NAISYS tries to be light, acting as a helpful proxy between the LLM and a real shell, most commands should pass right though to the shell
-- Debug Commands
-  - `ns-cost` - Prints the current total LLM cost
-  - `ns-context` - Prints the current context
-  - `ns-talk` - Communicate with the local agent to give hints or ask questions (the agent itself does not know about talk and is directed to use `ns-comment` or `ns-mail` for communication)
-  - `exit` - Exits NAISYS in debug mode. If the LLM tries to use `exit`, it is directed to use `ns-session compact/complete` instead
-- Special Commands usable by the LLM as well as by the debug prompt
-  - `ns-comment "<note>"` - The LLM is directed to use this for 'thinking out loud' which avoids 'invalid command' errors
-  - `ns-session` - Session management commands:
-    - `ns-session wait <seconds>` - Pause execution for a set number of seconds
-    - `ns-session trim <indexes>` - Remove prompts by index to save tokens (e.g., "1-5, 8")
-    - `ns-session compact` - Compact the context and restart the session with that
-    - `ns-session complete "<result>"` - Mark task as complete and exit (for sub-agents: notifies lead agent)
-- NAISYS apps
-  - `ns-mail` - A context friendly 'mail system' used for agent to agent communication
-  - `ns-lynx` - A context friendly wrapping on the lynx browser that can use a separate LLM to reduce the size of a large webpage into something that can fit into the LLM's context
-  - `ns-genimg "<description>" <filepath>` - Generates an image with the given description, save at the specified fully qualified path
-  - `ns-agent` - A way for LLMs to start/stop their own sub-agents. Communicating with each other with `ns-mail`.
+### Agent commands
+
+All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../docs/003-revise-commands.md)).
+
+- `ns-help`, `ns-hubs`, `ns-hosts`, `ns-users` — cluster discovery
+- `ns-agent` — start/stop/peek/local subagents; `peek` works across the cluster
+- `ns-mail` — flat (non-thread) mail model ([doc 002](../../docs/002-revised-llmail-plan.md)), `@host` addressing, short-id threads, archive-all, from-title, gap detection/recovery, markdown, cross-machine delivery through the hub
+- `ns-chat` — shorter-form conversation service layered on mail
+- `ns-lynx` — text web browser, cost-tracked Google Custom Search
+- `ns-genimg` — image generation (vendor-agnostic model registry)
+- `ns-look` — load images into LLM context
+- `ns-listen` — audio listening with optional transcription
+- `ns-talk` — spoken input; auto-switches back to LLM mode after talk, indefinite wait support
+- `ns-desktop` — screenshot / click / key / focus / hold, usable from the console without tool calls, runs on any model with image input (not just models with native computer use); see the [XFCE/VNC host setup guide](../../guides/xfce-computer-use.md)
+- `ns-session` — consolidated pause/compact/wait
+- `ns-workspace` — cache-friendly per-agent file list
+- `ns-agent-command` — agent can modify its own config at runtime
+- `ns-comment` — agent comment/thinking capture
+- `ns-admin-pw` — reset the supervisor superadmin password
+- `ns-api` / `ns-db` / `ns-claude` — call the NAISYS REST API or query the DB directly (handy for Claude Code agents)
+- Custom `ns-*` commands with env-var expansion defined per agent
+- `exit all` / `stop all` — shut down all agents and the app together
+
+### LLM and model support
+
+- Anthropic Claude 4.5 and Haiku 4.5
+- Extended thinking for Anthropic models
+- Tool-use-based prompt completion for Anthropic and OpenAI
+- OpenAI Responses API, updated GPT catalog and pricing
+- Grok 4
+- Google Gemini with tool/cache cost tracking
+- Gemini, OpenAI, and Claude computer-use integrations
+- Windows desktop computer-use (Claude + PowerShell control, no WSL required)
+- Preliminary macOS desktop support via `cliclick`
+- Ubuntu/Wayland desktop control
+- DB-backed, user-editable LLM and image model catalogs
+- `none` LLM type for human-managed agents
+- `mock`/`dummy` LLMs for concurrency and integration testing
+
+### Session, cost, and safety
+
+- Per-agent and global spend limits; time-bounded rolling windows; cost-suspended status surfaced to supervisor
+- Cost history aggregated in 5-minute blocks for charting
+- Context/token limit checking mid-command loop to avoid blowing past limits
+- Pre-emptive session compact before cache expiry; `cacheTtl` config
+- Session compactor uses caching and includes media
+- Context rollback if invalid media is added
+- Random command end-markers to prevent log spoofing
+- "Semi-auto" command protection — only confirms flagged commands and considers the agent's own rationale
+- Esc to cancel the current LLM query
+- Prompt includes timestamp, platform, and resolution on startup
+
+### Runner infrastructure
+
+- In-process multi-agent support via an agent manager, with output buffering when a console is inactive
+- `--supervisor` integrated mode runs runner + supervisor in a single process
+- `--setup` wizard generates `.env` interactively including supervisor password
+- Auto-update service with target version/commit, rollback via `git restore` / `npm ci`, minimum-version floor, stashes local changes, disable flag
+- Per-agent home directory when `naisys_folder` is set
+- Batched logs pushed to hub for all agents
+- PowerShell multi-line command handling (dot-source + try/finally + policy bypass)
+- Variables stored in DB; sensitive flag hides them in the UI; optional export to shell
+
+### Remote / cross-machine
+
+- Hub connection required for clustered mode; indefinite reconnect on disconnect; new connection from the same host supersedes a stale one
+- Remote start/stop/log/peek of agents via hub
+- Remote debug command input from the supervisor to the agent
+- Remote `pause` routed supervisor → hub → runner
+- Restricted hosts that only run explicitly assigned agents
+- Cross-machine mail with `@host` addressing
+- Mail/chat file attachments delivered through the hub ([doc 011](../../docs/011-mail-attachments.md))
+- Auto-start agent on new mail/chat in local mode ([doc 004](../../docs/004-start-agents-on-mail.md))
+- Hostname changes pushed from supervisor and stored with history
+- Command-loop / run-session state sent to supervisor so the user sees definitive active status
 
 ## Changelog
 
-- 3.0: ERP and Desktop Control
-- 2.2: NAISYS cross machine support enabled by a new hub process
-- 2.1: Monorepo architecture, allowing Supervisor to run in-process
+- 3.0: ERP and desktop control
+- 2.2: Cross-machine support via the hub process
+- 2.1: Monorepo architecture; supervisor can run in-process
 - 2.0: Agent multiplexing in the same process
-- 1.7: Prompt caching, ns-lynx pagination, complete task command
-- 1.6: Support for long running shell commands and full screen terminal output
-- 1.5: Allow agents to start their own parallel `subagents`
-- 1.4: `ns-genimg` command for generating images
-- 1.3: Post-session session compaction as well as a mail 'blackout' period
-- 1.2: Created stand-in shell commands for custom Naisys commands
-- 1.1: Added command protection settings to prevent unwanted writes
+- 1.7: Prompt caching, ns-lynx pagination, complete-task command
+- 1.6: Long-running shell commands and full-screen terminal output
+- 1.5: Agents can start their own parallel sub-agents
+- 1.4: `ns-genimg` image generation
+- 1.3: Post-session compaction and mail 'blackout' period
+- 1.2: Stand-in shell commands for custom NAISYS commands
+- 1.1: Command protection to prevent unwanted writes
 - 1.0: Initial release
 
 ## License

@@ -1,512 +1,233 @@
-# Auto-Start Agents on Pending Mail - Planning Document
+# Auto-Start Agents on Pending Mail
 
 ## Overview
 
-This document outlines a significant architectural change to simplify agent lifecycle management by automatically starting agents when they receive mail, rather than requiring explicit `ns-agent start` commands.
+This document is the reference for the "auto-start agents on pending mail" feature. It describes the as-built system and — where useful — the original design intent so the document can stand as an explanation of why the implementation looks the way it does.
 
-## Current State
+The goal was to simplify agent lifecycle management: instead of requiring an explicit `ns-agent start <username> "<task>"` from a lead agent, any unread mail addressed to an idle agent is enough to wake that agent up. Agents no longer have to be "spawned" — they're just mailed.
 
-### Agent Startup Flow
+## Architecture Summary
 
-1. Lead agent runs `ns-agent start <username> "<task description>"`
-2. Subagent service validates the agent exists and isn't already running
-3. AgentManager creates AgentRuntime and starts command loop
-4. Startup message is sent via `llmail.sendMessage()` to the new agent
+Two running modes share a common policy but implement it differently:
 
-### Cross-Machine Architecture
+- **Hub mode** (multi-host): The hub owns auto-start. `hubMailService` polls every 10 seconds (plus reacts to `MAIL_SEND` and `CLIENT_CONNECTED`) for users with unread mail who are not currently active, picks the least-loaded eligible host, and sends an `AGENT_START` event to that host.
+- **Standalone mode** (single process, no hub): Auto-start is triggered inline from `MailService.sendMessage()` — after writing the mail to the in-process event bus, any inactive recipient has `AgentManager.startAgent()` called.
 
-- Agents are registered per-host via `AgentRegistrar` (scans YAML files)
-- Each host runs its own `AgentManager` with local agents only
-- `HubSyncClient` syncs data (including mail) to/from central hub
-- Mail messages include `host_id` of sender
-- Recipients tracked in `mail_recipients` table with status in `mail_status`
+In both modes, the same global flag gates the behavior (`globalConfig.autoStartAgentsOnMessage`, currently hardcoded to `true` in `packages/common/src/globalConfigLoader.ts`).
 
-### Current Commands
-
-- `ns-agent list` - Shows subagents of current agent with status
-- `ns-agent start <username> "<description>"` - Starts a subagent
-- `ns-agent stop <id>` - Stops a running subagent
-- `ns-agent switch <id>` - Switches console focus (debug mode)
-- `ns-mail users` - Lists all users in the system
-- `ns-mail wait <seconds>` - Waits for new mail
-
-### Wake on Message
-
-- Agents can be configured with `wakeOnMessage: true`
-- `promptBuilder.ts:getInput()` polls `llmail.getUnreadMessages()` every 5 seconds
-- If unread mail found, aborts the current pause/wait
-- Only works for already-running agents that are paused (distinct from auto-start which starts non-running agents)
+Agents shut themselves down via `ns-session complete "<result>"`, which mails the result to the agent's lead (or admin as fallback) and exits the process.
 
 ---
 
-## Proposed Changes
+## Components
 
-### 1. Auto-Start Agents on Pending Mail
+### Hub-side auto-start loop
 
-**Concept**: The AgentManager monitors for unread mail addressed to local agents and automatically starts those agents.
+`apps/hub/src/handlers/hubMailService.ts`
 
-**Implementation Location**: `AgentManager` class in `apps/naisys/src/agent/agentManager.ts`
+- `MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000` — polling interval.
+- `checkPendingAutoStarts()`:
+  1. Short-circuits if `autoStartAgentsOnMessage` is disabled in config.
+  2. Queries `mail_recipients` for distinct `user_id`s with `read_at = null` where the user is `enabled` and not `archived`, skipping `type = "from"` rows (senders pre-mark those read).
+  3. Filters to users not in `heartbeatService.getActiveUserIds()`.
+  4. Runs `costService.checkSpendLimits()` on the candidates so suspension decisions are up to date.
+  5. For each remaining candidate, skips if spend-suspended, then calls `agentService.tryStartAgent(userId)`.
+- Triggers for the loop:
+  - `setInterval` every 10s.
+  - `MAIL_SEND` event — immediately after accepting mail.
+  - `CLIENT_CONNECTED` event — when a naisys host comes online, sweep for pending mail addressed to agents assigned to it.
 
-**New Behavior**:
+`apps/hub/src/handlers/hubAgentService.ts`
 
-1. AgentManager runs a polling loop (configurable interval, e.g., 5-10 seconds)
-2. Query for unread mail where recipient is a local agent (by `host_id`) that isn't running
-3. For each such agent, automatically start it
-4. Agent wakes up, sees unread mail, processes it
-5. Agent can complete via `ns-session complete <username> "<result>"` or continue running
+- `findBestHost(startUserId)`:
+  - If the user has entries in `user_hosts`, restrict eligible hosts to those.
+  - Otherwise, eligible = all currently-connected non-restricted hosts.
+  - Pick the host with the fewest active agents (`heartbeatService.getHostActiveAgentCount`).
+- `tryStartAgent(startUserId)`:
+  - Verifies the user is enabled/not archived.
+  - Finds a best host; bails if none available.
+  - Sends `AGENT_START` to that host. On successful ack, marks the agent as started in the heartbeat service so subsequent polls won't re-pick it.
 
-**Key Considerations**:
+The `AGENT_START` hub event is dual-purpose: auto-start (hub-originated, no `requesterUserId`) and manual start via `ns-agent start` (runner-originated, carries `requesterUserId` and `taskDescription`). In the manual case the hub routes to the chosen host and, after the host acks success, sends a "Agent Start" mail from the requester to the target so the start is visible in the mail thread. The mail is only sent after a successful start to avoid orphan mails from failed attempts.
 
-- Shutdown behavior is unified: agents call `ns-session complete <username> "<result>"` to send result to specified user
-- No limit on concurrent agents - allows natural agent-to-agent communication without bottlenecks
-- LLM usage is throttled by existing `SPEND_LIMIT_DOLLARS` env var (spend limit per hour)
-- 5 second polling interval serves as natural rate limiting for startup checks
+### Standalone (non-hub) auto-start
 
-**Configuration**:
+`apps/naisys/src/mail/mail.ts` — `sendMessage()`:
 
-- `.env` var `START_AGENT_ON_MAIL` (default: `true`) - global toggle for the feature
-- `LlmModel.startOnMailDisabled` in `llModels.ts` - set to `true` for mock/none models to prevent auto-start
+After emitting the new-message notification to recipients, it walks the recipient list and calls `agentManager.startAgent(recipient.userId)` for any recipient that is not the sender and not currently in `agentManager.runningAgents`. No cross-host routing is required.
 
-**Why No Agent Limit**:
+### Runner-side agent handlers
 
-- Prioritizing which agent to start when multiple have pending messages is complex and error-prone
-- Agents often need to communicate with each other - limiting concurrency creates artificial bottlenecks
-- The `SPEND_LIMIT_DOLLARS` env var already provides cost control by throttling LLM API calls per hour
-- Let all agents run; the spend limit naturally gates overall system activity
+`apps/naisys/src/agent/agentManager.ts` registers these hub event handlers when `hubClient` is present:
 
-### 2. Enhanced `ns-mail users` Command
+- `AGENT_START` — calls `startAgent(userId)`; acks with `{ success, hostname }`. If the start was triggered by another host (i.e. `sourceHostId !== localHostId`), also surfaces a debug notification on the admin user so someone watching in debug mode sees the event.
+- `AGENT_STOP` — calls `stopAgent(userId, reason)`; acks `{ success }`. Same cross-host notification as above.
+- `AGENT_RUN_PAUSE` / `AGENT_RUN_RESUME` — pause/resume an agent's active run/session. Rejects if the run/session has advanced since the request was issued. On a successful state change, triggers an immediate heartbeat so the supervisor UI updates within roundtrip latency.
+- `AGENT_RUN_COMMAND` — inject a debug command into a running session via `promptNotification`.
+- `AGENT_PEEK` — return a slice of the agent's output buffer (`getBufferLines`), stripped of ANSI.
 
-**Purpose**: Unified view of all users/agents in the organization hierarchy
+There is no dedicated `remoteAgentRouter.ts` / `remoteAgentHandler.ts` file. The design originally called for separate router modules, but the handlers ended up inline in the existing `hubAgentService` (hub side) and `AgentManager` (runner side) where the context was already available.
 
-**Location**: Enhanced in `apps/naisys/src/features/llmail.ts` (replaced standalone `ns-users` command)
+### `ns-agent` command
 
-**Output Format**:
+`apps/naisys/src/features/subagent.ts`. Subcommands:
 
-```
-Username      | Title                  | Host     | Lead     | Status
----------------------------------------------------------------------------
-alice         | Project Manager        | server-1 | (none)   | Running
-  bob         | Senior Developer       | server-1 | alice    | Available
-    charlie   | Junior Developer       | server-2 | bob      | Running
-    dave      | QA Engineer            | server-2 | bob      | Offline
-  eve         | Designer               | server-1 | alice    | Running
-```
+| Subcommand | Usage | Notes |
+| --- | --- | --- |
+| `help` | `help` | Lists subcommands. Shows debug-only commands when in debug mode. |
+| `list` | `list` | Lists the caller's subagents (filtered by `leadUserId === localUserId`) with per-agent running state. |
+| `start` | `start <name> "<task>"` | Local or remote start. In hub mode routes through `AGENT_START`. Requires target to be a direct subordinate (bypassed in debug mode). |
+| `stop` | `stop [-r] <name>` | Stops one agent, or with `-r` also stops all running subordinates recursively. Same subordinate-only permission check (bypassed in debug mode). |
+| `peek` | `peek <name> [skip] [take]` | Shows buffered output of a running agent. Remote-capable via `AGENT_PEEK`. Same subordinate-only permission check. |
+| `local` | `!local` | Debug-only. Lists agents running in this process. |
+| `switch` | `!switch <name>` | Debug-only. Switches the console focus to a locally-running agent. |
 
-**Features**:
+Notes vs. the original plan:
 
-- Tree-style hierarchy based on `lead_username`
-- Shows hostname for multi-host environments
-- Status: Running, Available (not running, host online), Offline (host offline)
+- The plan proposed removing `ns-agent list`. It was kept: `ns-users` shows the whole organization hierarchy, but `ns-agent list` remains as a quick "just my subordinates" view.
+- The plan proposed an `ns-agent log` subcommand. Output buffers are exposed via `ns-agent peek` instead; the request type is `AGENT_PEEK` rather than a separate `AGENT_LOG`.
+- The plan proposed `<username@host>` disambiguation. In practice, usernames are globally unique across the cluster (enforced by the hub user table) so bare `<username>` is always sufficient — no host suffix is needed.
+- `ns-agent stop` supports `-r` for recursive stops of all running subordinates; not in the original plan.
 
-**Status Determination**:
+Permissions are checked in `subagent.ts`:
 
-- Check `user_notifications.last_active` (updated every 2s by running agents)
-- Running: last_active > now - `USER_ONLINE_THRESHOLD_MS` (16 seconds)
-- Available: agent not active but host is online
-- Offline: `hosts.last_active` < now - `HOST_ONLINE_THRESHOLD_MS` (10 seconds)
+- `start` — target must be a subordinate (via `isSubordinate()` walking `leadUserId`). Debug mode bypasses the check.
+- `stop` — same subordinate-only check. Debug mode bypasses.
+- `peek` — same subordinate-only check. (The original plan had no permission check on logs; in the implementation peek is treated the same as stop to keep debug output scoped.)
 
-**Note**: Threshold constants are defined in `@naisys/common` package:
+### `ns-users` command
 
-- `HOST_ONLINE_THRESHOLD_MS` = 10 seconds (10 \* 1000)
-- `USER_ONLINE_THRESHOLD_MS` = 16 seconds (8 _ 2 _ 1000) - accounts for propagation delays
-- Utility functions: `isHostOnline()`, `isAgentOnline()`
+`apps/naisys/src/agent/userDisplayService.ts`. Command definition: `usersCmd` in `commandDefs.ts` (kept as its own top-level command, not folded into `ns-mail users`).
 
-### 3. Simplified `ns-agent` Command
+Output is a tree indented by depth. Columns: `Username`, `Title`, `Lead`, `Status`, and in debug mode an additional `*Host` column showing assigned host display names.
 
-**New Subcommands**:
+Perspective:
 
-| Command                              | Description                                | Scope              |
-| ------------------------------------ | ------------------------------------------ | ------------------ |
-| `ns-agent help`                      | Show help                                  | -                  |
-| `ns-agent start <username> "<task>"` | Manually start an agent with task          | Local + Remote     |
-| `ns-agent stop <username>`           | Force stop an agent                        | Local + Remote     |
-| `ns-agent switch <username>`         | Switch console focus                       | Local only (debug) |
-| `ns-agent log <username> [lines]`    | View recent log output (default: 50 lines) | Local + Remote     |
+- Default is the calling user.
+- `ns-users <username>` re-roots the view on another user.
+- The view filters to "relevant" users only: root-level users, the perspective user's ancestor chain, all peers at each level of that chain, and all descendants. Users in hidden branches are replaced with a `(+N not shown)` marker under the visible parent so the caller knows they exist without flooding the output.
 
-**Username Resolution**:
+Status is computed by `determineAgentStatus()` in `packages/common/src/agentStatus.ts`, which returns one of `active | available | disabled | offline | suspended` with priority `disabled > offline > suspended > active > available`:
 
-- Commands use `<username>` (e.g., `ns-agent stop bob`)
-- If username is ambiguous (exists on multiple hosts), use `<username@host>` format (e.g., `ns-agent stop bob@server-2`)
-- Reuse `resolveUserIdentifier()` from `llmailAddress.ts` for consistent address resolution
+- `disabled` — user not enabled.
+- `offline` — user has assigned hosts and none are online; or no assigned hosts and no non-restricted host is online.
+- `suspended` — spend-suspended via cost tracking.
+- `active` — currently running (from hub heartbeat).
+- `available` — otherwise eligible to be auto-started.
 
-**Removed Commands**:
+The design doc originally proposed `HOST_ONLINE_THRESHOLD_MS` and `USER_ONLINE_THRESHOLD_MS` constants in `@naisys/common` with `isHostOnline()` / `isAgentOnline()` helpers based on timestamp comparison against `hosts.last_active`. The implementation took a different path: the hub tracks real-time connection state directly (a host is online iff it currently has a naisys socket open), and active-agent tracking uses the heartbeat service rather than `last_active` polling. The threshold-based helpers were not needed.
 
-- `ns-agent list` - Replaced by `ns-users` (which shows all agents, not just subagents)
+### `ns-session complete`
 
-### 4. Remote Agent Control Protocol
+`apps/naisys/src/features/session.ts` — `handleComplete()`.
 
-**Purpose**: Enable `ns-agent stop` and `ns-agent log` to work on agents running on remote hosts.
+Syntax: `ns-session complete "<result>"`.
 
-**Architecture**: Use existing Hub infrastructure for message routing
+Recipient resolution: `localUser.leadUserId ?? getUserByName(ADMIN_USERNAME).userId`. The original plan had the caller specify a target username (`complete <username> "<result>"`); this was simplified because in practice the result always goes to the lead (or admin as fallback), and adding a recipient parameter invited misuse.
 
-**New Hub Events**:
-
-#### Start Agent Request
-
-```typescript
-// Runner → Hub → Target Runner
-interface AgentStartRequest {
-  targetUserId: string; // user_id to start
-  targetHostId: string; // resolved from user's host_id
-  requesterId: string; // user_id of requester
-  task: string; // task description added to context
-}
-
-// Target Runner → Hub → Requester
-interface AgentStartResponse {
-  success: boolean;
-  error?: string;
-}
-```
-
-#### Stop Agent Request
-
-```typescript
-// Runner → Hub → Target Runner
-interface AgentStopRequest {
-  targetUserId: string; // user_id to stop
-  targetHostId: string; // resolved from user's host_id
-  requesterId: string; // user_id of requester (must be lead or higher)
-  reason: string;
-}
-
-// Target Runner → Hub → Requester
-interface AgentStopResponse {
-  success: boolean;
-  error?: string;
-}
-```
-
-#### Log Request
-
-```typescript
-// Runner → Hub → Target Runner
-interface AgentLogRequest {
-  targetUserId: string; // user_id to get logs for
-  targetHostId: string; // resolved from user's host_id
-  lines: number; // How many lines to return (default: 50)
-}
-
-// Target Runner → Hub → Requester
-interface AgentLogResponse {
-  success: boolean;
-  lines: string[];
-  error?: string;
-}
-```
-
-**Implementation Components**:
-
-1. **Hub Side** (`apps/hub/src/services/`):
-   - `remoteAgentRouter.ts`
-   - Routes requests to target host
-   - Validates permissions (only lead agents can stop their subagents)
-   - Returns response to requester
-
-2. **Runner Side** (`apps/naisys/src/hub/`):
-   - `remoteAgentHandler.ts` - Handles incoming requests from hub
-   - `remoteAgentRequester.ts` - Sends outgoing requests through hub
-   - Executes local operations via `AgentManager`
-   - Sends response back through hub
-
-**Security Considerations**:
-
-- `ns-agent stop`: Requester must be lead agent or higher in hierarchy (validates `lead_username` chain)
-- `ns-agent log`: No permission check - any agent can view logs
-- `ns-agent start`: No permission check - any agent can start another agent
-- Rate limiting on remote operations
-- Audit logging of remote stop commands
-
-### 5. Mail Delivery Status Feedback
-
-**Purpose**: When sending mail to an agent on an offline host, inform sender that delivery is pending.
-
-**Implementation**:
-
-```typescript
-// In llmail.sendMessage()
-async function sendMessage(userIdentifiers, subject, message) {
-  // ... existing validation ...
-
-  // After creating message, check host status
-  const offlineHosts = await checkRecipientHostStatus(recipients);
-
-  if (offlineHosts.length > 0) {
-    return `Mail sent. Note: ${offlineHosts.join(", ")} currently offline - delivery pending.`;
-  }
-
-  return "Mail sent";
-}
-```
-
-**Host Status Check**:
-
-- Query `hosts.last_active` for each recipient's `host_id`
-- Offline if `last_active < now - HOST_ONLINE_THRESHOLD_MS` (same threshold used by `ns-users`)
+Gated by `agentConfig.completeSessionEnabled` — agents without that flag only have `wait`.
 
 ---
 
-## Technical Implementation Details
+## Hub protocol
 
-### Auto-Start Polling Loop
-
-```typescript
-// In AgentManager
-private autoStartInterval: NodeJS.Timeout | null = null;
-
-// Track which mail_id triggered each user's last auto-start
-// Prevents re-starting for the same mail; only starts if newer mail arrives
-private lastStartedMailId: Map<string, number> = new Map(); // user_id -> mail_id
-
-async startAutoStartMonitor(intervalMs: number = 5000) {
-  if (!this.globalConfig.startAgentOnMail) {
-    return; // Feature disabled globally
-  }
-
-  this.autoStartInterval = setInterval(async () => {
-    await this.checkAndStartPendingAgents();
-  }, intervalMs);
-}
-
-private async checkAndStartPendingAgents() {
-  const pendingAgents = await this.dbService.usingDatabase(async (prisma) => {
-    // Find local agents with unread mail that aren't running
-    // Returns user_id, config, and the latest unread mail_id
-    return prisma.users.findMany({
-      where: {
-        host_id: this.hostService.localHostId,
-        deleted_at: null,
-        // Has unread mail (no read status or read_at is null, and not archived)
-        mail_recipients: {
-          some: {
-            message: {
-              status: {
-                none: {
-                  user_id: { /* matched by join */ },
-                  read_at: { not: null }
-                }
-              }
-            }
-          }
-        }
-      },
-      include: {
-        mail_recipients: {
-          where: {
-            message: {
-              status: { none: { read_at: { not: null } } }
-            }
-          },
-          orderBy: { message: { created_at: 'desc' } },
-          take: 1,
-          select: { message_id: true }
-        }
-      }
-    });
-  });
-
-  // Filter by model's startOnMailDisabled, running status, and mail_id tracking
-  const eligibleAgents = pendingAgents
-    .filter(agent => {
-      const config = parseAgentConfig(agent.config);
-      const model = this.llModels.get(config.llmModel);
-      return !model.startOnMailDisabled;
-    })
-    .filter(agent => !this.runningAgents.find(a => a.agentUsername === agent.username))
-    .filter(agent => {
-      // Only start if this is a newer mail than last start
-      const latestMailId = agent.mail_recipients[0]?.message_id;
-      const lastStartedFor = this.lastStartedMailId.get(agent.id);
-      return latestMailId && (!lastStartedFor || latestMailId > lastStartedFor);
-    });
-
-  // Start all eligible agents - no concurrency limit
-  // LLM usage is throttled by SPEND_LIMIT_DOLLARS env var
-  for (const agent of eligibleAgents) {
-    const latestMailId = agent.mail_recipients[0]?.message_id;
-    if (latestMailId) {
-      this.lastStartedMailId.set(agent.id, latestMailId);
-    }
-    await this.startAgentByUserId(agent.id); // Agent config is in users table
-  }
-}
-```
-
-### Remote Agent Message Flow
-
-```
-┌─────────────────┐     ┌─────────┐     ┌─────────────────┐
-│  Requester      │     │   Hub   │     │  Target Host    │
-│  (Server-1)     │     │         │     │  (Server-2)     │
-└────────┬────────┘     └────┬────┘     └────────┬────────┘
-         │                   │                   │
-         │ agent_stop_request│                   │
-         │──────────────────>│                   │
-         │                   │ agent_stop_request│
-         │                   │──────────────────>│
-         │                   │                   │
-         │                   │                   │ AgentManager.stopAgent()
-         │                   │                   │
-         │                   │ agent_stop_response
-         │                   │<──────────────────│
-         │ agent_stop_response                   │
-         │<──────────────────│                   │
-         │                   │                   │
-```
-
----
-
-## Configuration Changes
-
-### Environment Variables
-
-```bash
-START_AGENT_ON_MAIL=true      # Enable auto-start on pending mail (default: true)
-# SPEND_LIMIT_DOLLARS already exists - throttles LLM usage per hour (no agent concurrency limit)
-```
-
-### LlmModel Addition (`llModels.ts`)
+`packages/hub-protocol/src/schemas/agents.ts` defines the request/response schemas:
 
 ```typescript
-interface LlmModel {
-  // ... existing fields ...
-  startOnMailDisabled?: boolean; // Set to true for mock/none models
-}
+AgentStartRequest { startUserId, taskDescription?, requesterUserId?, sourceHostId? }
+AgentStartResponse { success, error?, hostname? }
+
+AgentStopRequest { userId, reason, sourceHostId? }
+AgentStopResponse { success, error? }
+
+AgentRunPauseRequest { userId, runId, sessionId, sourceHostId? }
+AgentRunPauseResponse { success, error?, changed? }
+
+AgentRunCommandRequest { userId, runId, sessionId, command, sourceHostId? }
+AgentRunCommandResponse { success, error? }
+
+AgentPeekRequest { userId, skip?, take?, sourceHostId? }
+AgentPeekResponse { success, error?, lines?, totalLines? }
 ```
 
-### Hardcoded Settings
+Key fields vs. the original design:
 
-- Poll interval: 5000ms (5 seconds) - serves as natural rate limiting
+- `requesterUserId` is used by the hub to send the "Agent Start" task mail after a successful start.
+- `sourceHostId` is used by runners to suppress a redundant "this came from you" notification on loopback.
+- There is no separate log request type; `AGENT_PEEK` covers the buffer-inspection use case for both local and remote.
 
----
+### Stop fan-out
 
-## Decisions Made
-
-1. **Auto-Start Task Context**: Pending mail serves as the task context - agent wakes up, sees mail, processes it.
-
-2. **Manual Start Task Context**: `ns-agent start <username> "<task>"` adds the task description directly to the agent's startup context (not sent as mail). Works remotely - returns when agent is started.
-
-3. **No Agent Limit**: All agents with pending mail are started - no concurrency cap. LLM usage is throttled by existing `SPEND_LIMIT_DOLLARS` env var. This avoids complex prioritization logic and allows natural agent-to-agent communication.
-
-4. **Cooldown Behavior**: No cooldown needed - the 5s polling interval provides natural rate limiting for startup checks.
-
-5. **Exempt Agents**: New `LlmModel.startOnMailDisabled` field in `llModels.ts`. Set to `true` for mock/none models to prevent unnecessary auto-starts.
-
-6. **Command Identifiers**: All `ns-agent` commands use `<username>` (or `<username@host>` if ambiguous). Reuse `resolveUserIdentifier()` from `llmailAddress.ts`.
-
-7. **Permissions**:
-   - `ns-agent stop`: Requires lead or higher in hierarchy
-   - `ns-agent log`: No permission check
-   - `ns-agent start`: No permission check
-
-8. **Race Condition Prevention**: Track `Map<user_id, mail_id>` in memory. Only auto-start if there's a newer `mail_id` than the last start. Map resets on AgentManager restart (acceptable since all agents restart anyway).
-
-9. **Log Default**: `ns-agent log` defaults to 50 lines.
-
-10. **wakeOnMessage vs Auto-Start**: These are distinct features:
-    - `wakeOnMessage`: Wakes paused but already-running agents
-    - Auto-start: Starts agents that aren't running at all
-
-11. **Threshold Constants**: Moved to `@naisys/common` package:
-    - `HOST_ONLINE_THRESHOLD_MS` = 10 seconds
-    - `USER_ONLINE_THRESHOLD_MS` = 16 seconds (accounts for propagation delays)
-    - `isHostOnline()` and `isAgentOnline()` utility functions
+`AGENT_STOP` on the hub is forwarded to every host that heartbeat tracking shows currently running the agent. The hub acks with the first response; `heartbeatService.removeStoppedAgent` is called when a host acks success. This handles the (rare) case where more than one host believes it's running the same user.
 
 ---
 
-## Future Considerations
+## Idempotency / duplicate-start prevention
 
-- **Cluster-Wide Spend Limits**: Currently `SPEND_LIMIT_DOLLARS` is per-machine. Need to implement spend tracking/throttling across the entire cluster so total spend is controlled regardless of how many hosts are running agents.
+The original design proposed an in-memory `Map<user_id, mail_id>` on each `AgentManager` to avoid restarting an agent for mail it's already seen. That turned out to be unnecessary because:
 
-- **Startup Error Escalation**: Bubble up serious startup errors (repeated crashes, configuration issues) to supervisor/lead agent somehow. Currently handled implicitly by mail_id tracking preventing infinite restart loops.
+1. Auto-start only fires when the user is not in `heartbeatService.getActiveUserIds()`. An already-active agent is skipped.
+2. A successful start calls `heartbeatService.addStartedAgent(hostId, userId)` eagerly (before the host's first heartbeat arrives), so the next poll won't re-pick the same user in the brief window before the heartbeat catches up.
+3. Agents read their own unread mail on startup via `ns-mail` — the mail triggers the wake-up but isn't itself consumed by the start.
+
+Cost throttling is provided by the existing `SPEND_LIMIT_DOLLARS` / `SPEND_LIMIT_HOURS` mechanism plus `costService.isUserSpendSuspended()` checks in the auto-start path. There is no hard concurrency cap on agents.
 
 ---
 
-## Task Checklist
+## `wakeOnMessage` vs. auto-start
 
-### Phase 1: Add Infrastructure
+These remain distinct:
 
-#### @naisys/common Package & Threshold Constants
+- `wakeOnMessage` (per-agent config in `agentConfig.ts`) — for an agent that is already running but paused in `ns-session wait`, wake the session when new mail arrives. Consumed by `promptNotificationService.shouldWake()` and `promptBuilder.getInput()`.
+- Auto-start — starts the agent process from scratch when it isn't running.
 
-- [x] Create `@naisys/common` package in `packages/common`
-- [x] Add `HOST_ONLINE_THRESHOLD_MS` = 10 seconds
-- [x] Add `USER_ONLINE_THRESHOLD_MS` = 16 seconds (accounts for propagation delays)
-- [x] Add `isHostOnline()` utility function
-- [x] Add `isAgentOnline()` utility function
-- [x] Update `hostService.ts` to use `@naisys/common`
-- [x] Update supervisor client to use `@naisys/common`
+An agent can have `wakeOnMessage: false` and still be auto-started; the two controls operate at different lifecycle stages.
 
-#### Remote Agent Protocol
+---
 
-- [x] Define TypeScript interfaces for request/response messages (in `@naisys/hub-protocol`)
-- [x] Create `remoteAgentRouter.ts` on hub side
-- [x] Create `remoteAgentHandler.ts` on runner side (handles incoming requests)
-- [x] Create `remoteAgentRequester.ts` on runner side (sends outgoing requests)
-- [x] Implement `agent_start` request handler (response via callback)
-- [x] Implement `agent_stop` request handler (response via callback)
-- [x] Implement `agent_log` request handler (response via callback)
-- [x] Add error handling and logging
-- [ ] Add permission validation for stop (lead or higher only)
-- [x] Add timeout handling for requests (30 second timeout in requester)
+## Mail delivery feedback
 
-#### Enhanced `ns-mail users` Command
+Not implemented. The original plan had `sendMessage()` return a "delivery pending — recipient's host is offline" hint. In hub mode the message is always accepted (queued in the hub database), and once a host connects the `CLIENT_CONNECTED` sweep picks it up. The caller gets a plain "Mail sent" either way.
 
-- [x] Enhance `llmail.ts` with hierarchical user listing (removed standalone `ns-users` command)
-- [x] Query entire table and do hierarchy in memory
-- [x] Format output as tree with indentation
-- [x] Show host information for multi-host mode
-- [x] Show running/available/offline status based on `last_active`
-- [x] Command accessible via existing `ns-mail users`
+---
 
-#### Updated `ns-agent` Command
+## Configuration
 
-- [ ] Refactor `subagent.ts` for new command structure
-- [x] Add user lookup with host resolution (similar to `resolveUserIdentifier()`)
-- [x] Update `ns-agent start` to work remotely (via `hubRemoteAgentRequester`)
-- [ ] Update `ns-agent stop` to support remote agents (lead+ permission required)
-- [ ] Implement `ns-agent log` subcommand (local + remote, default 50 lines, no permission check)
-- [ ] Keep `ns-agent switch` for local debug mode only
-- [ ] Update help text
+### Global config flag
 
-#### Remove Old Commands
+`autoStartAgentsOnMessage: boolean` in `GlobalConfig` (`packages/common/src/globalConfigLoader.ts`). Currently hardcoded to `true`; the field exists so future environments can disable the behavior without code changes. No `.env` var binding yet.
 
-- [x] Remove `ns-users` command (enhanced `ns-mail users` instead)
-- [ ] Remove `ns-agent list` (replaced by enhanced `ns-mail users`)
+### Hardcoded values
 
-### Phase 2: Enable Auto-Start
+- Hub poll interval: `MAIL_AUTOSTART_CHECK_INTERVAL_MS = 10_000` (10 seconds).
+- Runner auto-start in standalone mode: no interval — triggered inline from `sendMessage()`.
 
-#### Auto-Start Feature
+### Removed config
 
-- [ ] Add `START_AGENT_ON_MAIL` env var to global config (default: `true`)
-- [ ] Add `startOnMailDisabled` to `LlmModel` interface in `llModels.ts`
-- [ ] Set `startOnMailDisabled: true` for mock/none models
-- [ ] Add auto-start polling loop to `AgentManager`
-- [ ] Implement query for agents with pending unread mail (filter by model's `startOnMailDisabled`)
-- [ ] Add `lastStartedMailId: Map<string, number>` to track user_id → mail_id
-- [ ] Only auto-start if newer mail_id than last start (prevents duplicate starts)
-- [ ] Implement `startAgentByUserId()` (agent config in users table)
+- `subagentMax` has been removed from agent config. With auto-start in place there is no concurrency cap to manage; spend limits gate overall activity instead.
 
-#### Update `ns-session complete` Command
+---
 
-- [ ] Update syntax to `ns-session complete <username> "<result>"`
-- [ ] Username specifies who receives the completion message
-- [ ] Update help text in `session.ts`
-- [ ] Remove dependency on `leadAgent` config for completion message target
+## Files of interest
 
-#### Mail Delivery Feedback
+| Area | File |
+| --- | --- |
+| Hub auto-start loop | `apps/hub/src/handlers/hubMailService.ts` |
+| Hub agent routing / host selection | `apps/hub/src/handlers/hubAgentService.ts` |
+| Runner agent event handlers | `apps/naisys/src/agent/agentManager.ts` |
+| `ns-agent` command | `apps/naisys/src/features/subagent.ts` |
+| `ns-users` command | `apps/naisys/src/agent/userDisplayService.ts` |
+| `ns-session complete` | `apps/naisys/src/features/session.ts` |
+| Agent status calculation | `packages/common/src/agentStatus.ts` |
+| Standalone auto-start | `apps/naisys/src/mail/mail.ts` — `sendMessage()` |
+| Hub event schemas | `packages/hub-protocol/src/schemas/agents.ts` |
+| Hub event names | `packages/hub-protocol/src/events.ts` |
+| Global config loader | `packages/common/src/globalConfigLoader.ts` |
 
-- [ ] Add host status check to `llmail.sendMessage()`
-- [ ] Return appropriate message when recipients' hosts are offline
+---
 
-#### Testing
+## Open / future items
 
-- [ ] Write unit tests for auto-start logic
-- [ ] Write integration tests for remote control
-- [ ] Test multi-host scenarios
-- [ ] Test edge cases (rapid mail, network partitions)
-
-### Phase 3: Full Transition
-
-- [x] Remove `subagentMax` from agent config (no longer needed - no concurrency limit)
-- [ ] Update existing agent configs if needed
-- [ ] Update any scripts/tools that use old commands
+- **Cluster-wide spend limits.** `SPEND_LIMIT_DOLLARS` is currently per-host. With auto-start distributing agents across hosts, we want a cluster-total spend cap so overall activity is bounded regardless of how many hosts are up.
+- **`autoStartAgentsOnMessage` env binding.** The config field exists but isn't wired to an environment variable. If a deployment needs to disable auto-start it currently has to patch `globalConfigLoader.ts`.
+- **Startup error escalation.** If an agent repeatedly fails to start (crash loop, bad config), nothing currently surfaces that to a human or lead agent. Today the behavior is implicit: the hub keeps trying on each poll tick.

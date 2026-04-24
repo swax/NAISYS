@@ -4,6 +4,8 @@
 
 Shared database schema and Prisma client for NAISYS monorepo.
 
+For the overall database strategy (Prisma rationale, the three schemas, migration flow, connection conventions), see [doc 015 — Database Design](../../docs/015-database-design.md).
+
 ## Overview
 
 This package provides:
