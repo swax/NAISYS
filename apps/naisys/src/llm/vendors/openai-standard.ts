@@ -12,7 +12,6 @@ import type {
 import {
   extractDesktopActions,
   formatInputWithComputerUse,
-  prepareComputerUse,
 } from "../../computer-use/vendors/openai-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
@@ -88,9 +87,6 @@ export async function sendWithOpenAiStandard(
     };
   }
 
-  // Computer use: compute scale factor for image resizing / coordinate mapping
-  const cuSetup = desktopConfig ? prepareComputerUse(desktopConfig) : undefined;
-
   const response = await openAI.responses.create(
     {
       model: model.versionName,
@@ -132,9 +128,9 @@ export async function sendWithOpenAiStandard(
     cacheReadTokens,
   );
 
-  // Extract desktop actions (computer_call items), scaling coordinates back to viewport space
+  // Extract desktop actions (computer_call items); coords land in viewport-local space
   const desktopActions = desktopConfig
-    ? extractDesktopActions(response.output, cuSetup!.scaleFactor)
+    ? extractDesktopActions(response.output, desktopConfig)
     : [];
 
   // Extract console commands (function_call items)

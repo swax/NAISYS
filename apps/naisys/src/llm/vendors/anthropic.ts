@@ -124,12 +124,10 @@ export async function sendWithAnthropic(
   }
 
   // Computer use: add tool, scale dimensions
-  let desktopScaleFactor = 1;
   let desktopBetaFlag = "";
 
   if (desktopConfig) {
     const setup = prepareComputerUse(desktopConfig, model.versionName);
-    desktopScaleFactor = setup.scaleFactor;
     desktopBetaFlag = setup.betaFlag;
 
     // computerTool is a Beta tool (not in the non-beta ToolUnion) but we
@@ -179,9 +177,9 @@ export async function sendWithAnthropic(
     cacheReadTokens,
   );
 
-  // Extract desktop actions, scaling coordinates back to viewport space
+  // Extract desktop actions; coords land in viewport-local space
   const desktopActions = desktopConfig
-    ? extractDesktopActions(msgResponse.content, desktopScaleFactor)
+    ? extractDesktopActions(msgResponse.content, desktopConfig)
     : [];
 
   // Extract console commands (submit_commands tool_use blocks)

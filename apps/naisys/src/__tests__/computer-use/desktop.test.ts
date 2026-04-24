@@ -12,11 +12,12 @@ import {
 describe("desktop focus commands", () => {
   test("maps screenshot focus coordinates into native desktop focus", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 3840,
-      displayHeight: 2160,
       nativeDisplayWidth: 3840,
       nativeDisplayHeight: 2160,
       viewport: { x: 0, y: 0, width: 3840, height: 2160 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.359375,
       desktopPlatform: "Linux (X11)",
     };
 
@@ -24,7 +25,7 @@ describe("desktop focus commands", () => {
       getConfig: vi.fn(() => desktopConfig),
       setFocus: vi.fn(() => ({ x: 0, y: 0, width: 1920, height: 1080 })),
       executeAction: vi.fn(),
-      captureNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
       captureScaledScreenshot: vi.fn(),
       platformName: "Linux (X11)",
       initError: undefined,
@@ -74,11 +75,12 @@ describe("desktop focus commands", () => {
 
   test("does not attach viewport metadata when the full desktop is in view", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 1920,
-      displayHeight: 1080,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.71875,
       desktopPlatform: "Linux (X11)",
     };
 
@@ -92,8 +94,8 @@ describe("desktop focus commands", () => {
           filepath: "/tmp/screenshot.png",
         }),
       ),
-      captureNativeScreenshot: vi.fn(),
-      captureFullNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
+      captureFullScreenshot: vi.fn(),
       setFocus: vi.fn(),
       platformName: "Linux (X11)",
       initError: undefined,
@@ -140,11 +142,12 @@ describe("desktop focus commands", () => {
 
   test("adds the scaled screenshot to context for non-computer-use models", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 1920,
-      displayHeight: 1080,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.71875,
       desktopPlatform: "Linux (X11)",
     };
 
@@ -158,8 +161,8 @@ describe("desktop focus commands", () => {
         }),
       ),
       executeAction: vi.fn(),
-      captureNativeScreenshot: vi.fn(),
-      captureFullNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
+      captureFullScreenshot: vi.fn(),
       setFocus: vi.fn(),
       platformName: "Linux (X11)",
       initError: undefined,
@@ -199,11 +202,12 @@ describe("desktop focus commands", () => {
 
   test("forwards appendImage rejection reason from screenshot command", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 1920,
-      displayHeight: 1080,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 0, y: 0, width: 1920, height: 1080 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.71875,
       desktopPlatform: "Linux (X11)",
     };
 
@@ -221,8 +225,8 @@ describe("desktop focus commands", () => {
         }),
       ),
       executeAction: vi.fn(),
-      captureNativeScreenshot: vi.fn(),
-      captureFullNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
+      captureFullScreenshot: vi.fn(),
       setFocus: vi.fn(),
       platformName: "Linux (X11)",
       initError: undefined,
@@ -259,11 +263,12 @@ describe("desktop focus commands", () => {
 
   test("maps manual click coordinates from the current screenshot to viewport pixels", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 3840,
-      displayHeight: 2160,
       nativeDisplayWidth: 3840,
       nativeDisplayHeight: 2160,
       viewport: { x: 0, y: 0, width: 3840, height: 2160 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.359375,
       desktopPlatform: "Windows (WSL)",
     };
 
@@ -271,8 +276,8 @@ describe("desktop focus commands", () => {
       getConfig: vi.fn(() => desktopConfig),
       executeAction: vi.fn(async () => {}),
       captureScaledScreenshot: vi.fn(),
-      captureNativeScreenshot: vi.fn(),
-      captureFullNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
+      captureFullScreenshot: vi.fn(),
       setFocus: vi.fn(),
       platformName: "Windows (WSL)",
       initError: undefined,
@@ -303,7 +308,7 @@ describe("desktop focus commands", () => {
     );
 
     await expect(desktopService.handleCommand("click 828 764")).resolves.toBe(
-      "Clicked (left) at screenshot (828, 764) -> viewport (2304, 2127)",
+      "Clicked (left) at screenshot (828, 764) -> viewport-local (2304, 2127)",
     );
 
     expect(computerService.executeAction).toHaveBeenCalledWith({
@@ -313,11 +318,12 @@ describe("desktop focus commands", () => {
 
   test("shows desktop status before help output", async () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 1600,
-      displayHeight: 900,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 100, y: 50, width: 1600, height: 900 },
+      scaledWidth: 1380,
+      scaledHeight: 776,
+      scaleFactor: 0.8625,
       desktopPlatform: "Linux (X11)",
     };
 
@@ -325,8 +331,8 @@ describe("desktop focus commands", () => {
       getConfig: vi.fn(() => desktopConfig),
       executeAction: vi.fn(),
       captureScaledScreenshot: vi.fn(),
-      captureNativeScreenshot: vi.fn(),
-      captureFullNativeScreenshot: vi.fn(),
+      captureViewportScreenshot: vi.fn(),
+      captureFullScreenshot: vi.fn(),
       setFocus: vi.fn(),
       platformName: "Linux (X11)",
       initError: undefined,

@@ -382,19 +382,6 @@ export function mapActionBetweenSpaces(
 }
 
 /**
- * Scale coordinates in a computer use action from API (downscaled) space to
- * viewport space. The viewport offset is applied later by executeAction when
- * translating viewport coords to absolute screen coords.
- */
-export function scaleActionToViewport(
-  input: Record<string, unknown>,
-  scaleFactor: number,
-): Record<string, unknown> {
-  if (scaleFactor >= 1) return input;
-  return mapActionBetweenSpaces(input, scaleFactor, scaleFactor, 1, 1);
-}
-
-/**
  * Check if any coordinates in an action exceed native screen bounds.
  * Returns an error message referencing the API-space coordinates and
  * the scaled resolution the LLM was told, or undefined if all OK.
@@ -521,17 +508,18 @@ export function isDesktopFocused(desktopConfig: DesktopConfig): boolean {
   return (
     desktopConfig.viewport.x !== 0 ||
     desktopConfig.viewport.y !== 0 ||
-    desktopConfig.displayWidth !== desktopConfig.nativeDisplayWidth ||
-    desktopConfig.displayHeight !== desktopConfig.nativeDisplayHeight
+    desktopConfig.viewport.width !== desktopConfig.nativeDisplayWidth ||
+    desktopConfig.viewport.height !== desktopConfig.nativeDisplayHeight
   );
 }
 
 export function describeDesktopViewport(desktopConfig: DesktopConfig): string {
+  const { viewport } = desktopConfig;
   if (!isDesktopFocused(desktopConfig)) {
-    return `full desktop ${desktopConfig.displayWidth}x${desktopConfig.displayHeight}`;
+    return `full desktop ${viewport.width}x${viewport.height}`;
   }
 
-  return `focus (${desktopConfig.viewport.x}, ${desktopConfig.viewport.y}, ${desktopConfig.displayWidth}x${desktopConfig.displayHeight}) within ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`;
+  return `focus (${viewport.x}, ${viewport.y}, ${viewport.width}x${viewport.height}) within ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`;
 }
 
 // --- Service factory ---
@@ -561,8 +549,8 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     return focusViewport ? { ...focusViewport } : undefined;
   }
 
-  /** Capture the full native desktop before optional viewport cropping */
-  async function captureFullNativeScreenshot(): Promise<{
+  /** Capture the full physical display at native resolution. */
+  async function captureFullScreenshot(): Promise<{
     base64: string;
     width: number;
     height: number;
@@ -579,14 +567,14 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     return result;
   }
 
-  /** Capture the current viewport at native resolution */
-  async function captureNativeScreenshot(): Promise<{
+  /** Capture the current viewport (cropped from the full display) at native resolution. */
+  async function captureViewportScreenshot(): Promise<{
     base64: string;
     width: number;
     height: number;
     filepath: string;
   }> {
-    const screenshot = await captureFullNativeScreenshot();
+    const screenshot = await captureFullScreenshot();
     const viewport = getViewport();
     if (!viewport) {
       return screenshot;
@@ -601,12 +589,12 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     return cropped;
   }
 
-  /** Capture screenshot scaled to TARGET_MEGAPIXELS and saved to disk */
+  /** Capture the current viewport scaled to TARGET_MEGAPIXELS (what the model sees). */
   async function captureScaledScreenshot(): Promise<{
     base64: string;
     filepath: string;
   }> {
-    const raw = await captureNativeScreenshot();
+    const raw = await captureViewportScreenshot();
 
     const scaleFactor = getTargetScaleFactor(raw.width, raw.height);
     if (scaleFactor < 1) {
@@ -638,14 +626,19 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     } else {
       try {
         platform.backend.checkDependencies?.();
-        await captureFullNativeScreenshot();
+        await captureFullScreenshot();
       } catch (e) {
         initError = e instanceof Error ? e.message : String(e);
       }
     }
   }
 
-  /** Execute an action using viewport-relative coordinates */
+  /**
+   * Execute an action whose coordinates are in viewport-local space
+   * (0..viewport.width, 0..viewport.height at native resolution). The
+   * viewport origin is added here to translate into absolute screen coords
+   * before dispatching to the platform backend.
+   */
   async function execute(action: DesktopAction["input"]) {
     if (!platform) {
       throw new Error(
@@ -664,12 +657,14 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
       width: nativeDimensions.width,
       height: nativeDimensions.height,
     };
+    const scaleFactor = getTargetScaleFactor(viewport.width, viewport.height);
     return {
-      displayWidth: viewport.width,
-      displayHeight: viewport.height,
       nativeDisplayWidth: nativeDimensions.width,
       nativeDisplayHeight: nativeDimensions.height,
       viewport,
+      scaledWidth: Math.floor(viewport.width * scaleFactor),
+      scaledHeight: Math.floor(viewport.height * scaleFactor),
+      scaleFactor,
       desktopPlatform: platform.name,
     };
   }
@@ -701,8 +696,8 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
 
   return {
     captureScaledScreenshot,
-    captureNativeScreenshot,
-    captureFullNativeScreenshot,
+    captureViewportScreenshot,
+    captureFullScreenshot,
     executeAction: execute,
     getConfig,
     getFocus: getViewport,

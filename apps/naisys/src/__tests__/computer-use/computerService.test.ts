@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import {
   mapActionBetweenSpaces,
   mapCoordinateBetweenSpaces,
-  scaleActionToViewport,
 } from "../../computer-use/computerService.js";
 
 describe("computerService coordinate mapping", () => {
@@ -33,18 +32,4 @@ describe("computerService coordinate mapping", () => {
     });
   });
 
-  test("scaleActionToViewport uses the shared remapping logic", () => {
-    expect(
-      scaleActionToViewport(
-        {
-          action: "left_click",
-          coordinate: [400, 200],
-        },
-        0.2,
-      ),
-    ).toEqual({
-      action: "left_click",
-      coordinate: [2000, 1000],
-    });
-  });
 });

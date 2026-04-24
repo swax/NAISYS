@@ -12,10 +12,7 @@ import type {
   DesktopAction,
   DesktopConfig,
 } from "../../llm/vendors/vendorTypes.js";
-import {
-  getTargetScaleFactor,
-  scaleActionToViewport,
-} from "../computerService.js";
+import { mapActionBetweenSpaces } from "../computerService.js";
 
 // --- Action format conversion ---
 
@@ -147,32 +144,17 @@ function convertInternalActionToOpenAi(
 
 // --- Public API ---
 
-export interface OpenAiComputerUseSetup {
-  scaleFactor: number;
-}
-
 /**
- * Compute the scale factor for OpenAI computer use based on native display dimensions.
- */
-export function prepareComputerUse(
-  desktopConfig: DesktopConfig,
-): OpenAiComputerUseSetup {
-  const scaleFactor = getTargetScaleFactor(
-    desktopConfig.displayWidth,
-    desktopConfig.displayHeight,
-  );
-  return { scaleFactor };
-}
-
-/**
- * Extract desktop actions from the OpenAI response output.
- * Each computer_call item becomes a single DesktopAction with batched internal actions.
- * Coordinates are scaled from API (downscaled) space back to viewport space.
+ * Extract desktop actions from the OpenAI response output. Each computer_call
+ * item becomes a single DesktopAction with batched internal actions.
+ * Coordinates are mapped from the API's scaled-pixel space to viewport-local
+ * pixels.
  */
 export function extractDesktopActions(
   output: ResponseOutputItem[],
-  scaleFactor: number,
+  desktopConfig: DesktopConfig,
 ): DesktopAction[] {
+  const { viewport, scaledWidth, scaledHeight } = desktopConfig;
   const actions: DesktopAction[] = [];
   for (const item of output) {
     if (item.type === "computer_call") {
@@ -181,7 +163,13 @@ export function extractDesktopActions(
       const rawActions =
         (item as unknown as { actions?: Record<string, any>[] }).actions || [];
       const internalActions = rawActions.map((a) =>
-        scaleActionToViewport(convertOpenAiActionToInternal(a), scaleFactor),
+        mapActionBetweenSpaces(
+          convertOpenAiActionToInternal(a),
+          scaledWidth,
+          scaledHeight,
+          viewport.width,
+          viewport.height,
+        ),
       );
       actions.push({
         id: item.call_id,
