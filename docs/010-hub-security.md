@@ -1,100 +1,123 @@
-# Hub TLS: Self-Signed Certificate + Access Key Authentication
+# Hub Security: Access Key Authentication
 
 ## Goal
 
-Make self-hosted hubs secure by default with zero manual TLS configuration. Auto-generated TLS provides encryption, and an auto-generated secret key provides authentication.
+Make self-hosted hubs secure with zero manual secret setup. An auto-generated access key authenticates clients; TLS is delegated to a reverse proxy.
 
 ## Problem
 
-Previously the hub used plain HTTP with a manually configured `HUB_ACCESS_KEY` shared secret. This had two issues:
+The hub originally used plain HTTP with a manually configured `HUB_ACCESS_KEY` shared secret. Two issues:
 
-1. **No encryption** — All traffic between hub and clients (NAISYS instances, Supervisor) was in cleartext, including auth tokens and agent data.
-2. **Manual key management** — The admin had to invent a secret and copy it to every machine's `.env` file.
+1. **No encryption** — traffic between hub and clients (NAISYS instances, Supervisor) was cleartext, including auth tokens and agent data.
+2. **Manual key management** — the admin had to invent a secret and copy it to every machine's `.env`.
 
 ## Design
 
-### Auto-generated self-signed TLS certificate
+### Division of responsibility
 
-On first startup the hub checks for `NAISYS_FOLDER/cert/hub-key.pem` and `hub-cert.pem`. If missing, it generates a self-signed certificate (RSA 2048, SHA-256, 10-year validity) and writes both files to disk. On subsequent startups it loads the existing cert.
+- **Transport encryption** → reverse proxy (nginx, Caddy, Cloudflare, ngrok, etc.). The hub listens on plain HTTP bound to `0.0.0.0`; the proxy terminates TLS in front of it.
+- **Client authentication** → hub access key, checked in the Socket.IO auth middleware.
+- **Per-user authorization** (attachment upload/download, REST endpoints) → separate user API keys sent as `Authorization: Bearer <key>`.
 
-The hub runs HTTPS (not HTTP). All Socket.IO connections are encrypted.
+This keeps the hub implementation simple and lets operators use whatever TLS setup they already trust (Let's Encrypt via Caddy, a managed tunnel, an internal CA, etc.) instead of a self-signed fingerprint-pinning scheme.
 
-### Hub access key format
+### Access key format
 
-The hub access key is a compound value: `<fingerprint_prefix>+<secret>`
+A single random secret: 32 bytes of `crypto.randomBytes` hex-encoded to 64 characters. No structure, no prefix, no embedded identifier.
 
-- **Fingerprint prefix** (16 hex chars) — the first 16 characters of the SHA-256 fingerprint of the certificate's DER encoding. This identifies which hub the key belongs to.
-- **Secret** (16 hex chars) — a randomly generated value stored in `NAISYS_FOLDER/cert/hub-access-key` (mode 0o600). This is the actual authentication token.
+Stored at `NAISYS_FOLDER/cert/hub-access-key` with mode `0o600`. On first startup the hub generates it; on subsequent startups it reads the existing file.
 
-The combined value is printed at startup and must be presented by clients in their Socket.IO auth handshake.
+The path still uses `cert/` for historical reasons (it previously held TLS material too).
 
-### Why a separate secret?
+### Access key resolution on clients
 
-The TLS certificate (and its fingerprint) is sent to any client during the TLS handshake — it's public information. Using the fingerprint alone as an access key would mean any host that can reach the port could authenticate. The random secret ensures that only clients who received the key out-of-band can connect.
+Clients resolve the access key via `resolveHubAccessKey()` in `@naisys/common-node`:
 
-### Why include the fingerprint prefix?
+1. `process.env.HUB_ACCESS_KEY` if set (standalone/multi-machine mode)
+2. Otherwise fall back to reading `NAISYS_FOLDER/cert/hub-access-key` (integrated mode, where the hub and client share a data folder)
 
-The fingerprint prefix serves as an identifier — if the admin is managing multiple hubs, the prefix helps match keys to the correct hub. It also changes if the cert is regenerated, making it obvious that all clients need a new key.
+The key is re-read on every connection attempt so that a rotated key is picked up on the next reconnect without restarting the client.
 
-### Mutual verification
+### Authentication middleware
 
-Both sides of the connection are verified:
+The hub's Socket.IO middleware (`apps/hub/src/services/naisysServer.ts`) validates `socket.handshake.auth.hubAccessKey` against the hub's current access key. Mismatch → connection rejected with error code `invalid_access_key`. Missing `hostName` → `missing_host_name`. Registration failure → `registration_failed`.
 
-- **Server verifies the client** — The hub's Socket.IO middleware checks that the client presents the correct full access key (fingerprint prefix + secret). This prevents unauthorized clients from connecting.
-- **Client verifies the server** — Before establishing the Socket.IO connection, the client makes a TLS probe to the hub, retrieves the server's certificate, computes its SHA-256 fingerprint, and checks that it starts with the fingerprint prefix from the access key. This prevents MITM attacks — an attacker cannot produce a certificate whose fingerprint matches the expected prefix.
+The middleware also records `hostType` (`naisys` or `supervisor`), `machineId`, `instanceId`, `processStartedAt`, and `clientVersion` on `socket.data` for downstream services. If a newer process for the same host reconnects, the older connection is superseded; an older process trying to reclaim a host is rejected with `superseded_by_newer_instance`.
 
-The initial TLS probe uses `rejectUnauthorized: false` to retrieve the certificate for fingerprint verification (similar to SSH host key verification). Once verified, a pinned `https.Agent` is created that trusts only that specific certificate, and all subsequent connections (Socket.IO, attachment uploads/downloads) use this pinned agent.
+### Access key rotation
 
-### Why not a traditional CA-signed cert?
+The supervisor admin page exposes a rotate action. The flow:
 
-Self-hosted hubs typically run on internal networks or home servers where:
+1. Supervisor emits `rotate_access_key` to the hub over its existing socket.
+2. `hubAccessKeyService.ts` calls `rotateAccessKey()`, which writes a new random 32-byte hex key to `hub-access-key` (still mode `0o600`).
+3. The hub's auth middleware is updated in-memory via `naisysServer.updateHubAccessKey(newKey)` so new connections use the new key immediately.
+4. The ack response returns the new key to the requesting supervisor so the admin can copy it.
+5. The hub then calls `disconnectAllClients()`. All NAISYS instances and supervisors drop. Each will reconnect, but only clients that have been given the new key will succeed.
 
-- There's no domain name to get a Let's Encrypt cert for
-- Buying a cert for an internal IP is unnecessary overhead
-- The admin controls both ends (hub and clients)
+The rotated key is shown in the supervisor UI's admin page only — it is not pushed to other clients. Remote NAISYS instances must be re-configured with the new `HUB_ACCESS_KEY`.
+
+### Why no fingerprint-pinning scheme?
+
+The original design bundled a TLS certificate fingerprint prefix into the access key so clients could verify the server out-of-band. That was removed once TLS moved to the reverse proxy:
+
+- The proxy typically holds a real CA-signed certificate (Let's Encrypt, internal CA), which clients validate through the normal browser/Node trust chain.
+- Even when the proxy uses self-signed certs, operators already have their own process for distributing trust roots.
+- Keeping the hub itself plain-HTTP simplifies testing, makes `ngrok` and managed tunnels work out of the box, and removes the need for cert rotation in the hub.
+
+Clients never do TLS pinning. The access key alone authenticates them to the hub; the TLS layer (if any) is the operator's responsibility.
 
 ## Setup flows
 
 ### Integrated mode (single machine)
 
-When running `naisys --integrated-hub`, the hub starts in-process and the access key is passed in-memory. No configuration needed — it just works.
+`naisys --integrated-hub` runs the hub in the same process as the NAISYS runner. Both read the access key from the shared `NAISYS_FOLDER/cert/hub-access-key` file, so no configuration is needed — it just works.
 
 ### Standalone mode (multi-machine)
 
-1. Start the hub on machine A — it prints the access key to the console
-2. On machine B, set the `.env` file:
+1. Start the hub on machine A. It logs the access key path: `[Hub] Hub access key located at: <NAISYS_FOLDER>/cert/hub-access-key`. Read the file to get the key — or copy it from the supervisor admin page.
+2. On machine B, set the client `.env`:
    ```
    HUB_ACCESS_KEY=<the access key from step 1>
    ```
-3. Run naisys with `--hub=https://machine-a:3300`
-4. The client connects over TLS and authenticates with the access key
+3. Run naisys with `--hub=https://hub.example.com/hub` (where the reverse proxy sits in front of machine A's plain-HTTP hub port).
+4. The client connects, the proxy terminates TLS, Socket.IO authenticates via the access key.
 
-The access key only needs to be copied once per client machine. If the hub's cert directory is deleted and regenerated, all clients need the new access key.
+The access key only needs to be copied once per client machine. If it's rotated, every client needs the new key.
+
+### Reverse proxy notes
+
+- The hub serves Socket.IO on `/hub/socket.io` and attachment routes on `/hub/attachments`. Route everything under `/hub` through to the hub's `SERVER_PORT` (default 3300).
+- Socket.IO needs WebSocket upgrade support (`Connection: upgrade`, `Upgrade: websocket`).
+- For ngrok, clients send the `ngrok-skip-browser-warning: true` header automatically (`hubConnection.ts:54`).
 
 ## Security considerations
 
-- **Secret key file permissions** — `hub-access-key` is written with mode `0o600` (owner read/write only).
-- **Private key permissions** — `hub-key.pem` is also written with mode `0o600`.
-- **No downgrade** — The hub only serves HTTPS. There is no HTTP fallback.
-- **Cert persistence** — Certs and the access key survive restarts. Deleting the `cert/` directory forces regeneration.
-- **MITM protection** — Clients verify the server's certificate fingerprint on first contact, then pin the certificate for all subsequent connections. Only the initial TLS probe uses `rejectUnauthorized: false`; everything after that goes through the pinned agent.
-- **Access key required** — Clients that don't have a `HUB_ACCESS_KEY` configured will fail fast with an error rather than attempting an unauthenticated connection.
+- **File permissions** — `hub-access-key` is written with mode `0o600` (owner read/write only).
+- **Access key required** — Clients without an access key fail fast (`hubClientConfig.ts:11` throws; `hubConnection.ts:46` reports `No hub access key available`) rather than attempting an unauthenticated connection.
+- **Transport encryption** — Provided externally by the reverse proxy. The hub does not serve HTTPS itself, so deploying the hub directly on the public internet without a proxy exposes the access key in cleartext. The documented setup assumes a proxy is in front of any non-loopback deployment.
+- **Rotation disconnects everyone** — Rotation is deliberately disruptive: all clients are kicked so there's no grace period where the old key still works. The new key is returned only to the requesting supervisor.
+- **Persistence** — The access key survives restarts. Deleting `cert/hub-access-key` forces regeneration on next startup.
+- **Per-user keys are separate** — Attachment upload/download and REST endpoints use per-user API keys (`Authorization: Bearer`), not the hub access key. Those are managed on the supervisor Users page.
 
 ## Environment variables
 
 | Variable         | Where                     | Purpose                                                                   |
 | ---------------- | ------------------------- | ------------------------------------------------------------------------- |
-| `NAISYS_FOLDER`  | Hub                       | Base directory for cert storage (`NAISYS_FOLDER/cert/`)                   |
-| `HUB_ACCESS_KEY` | NAISYS client, Supervisor | The hub's access key, only needed for remote (standalone) hub connections |
+| `NAISYS_FOLDER`  | Hub, NAISYS, Supervisor   | Base directory for the access key file (`NAISYS_FOLDER/cert/`)            |
+| `HUB_ACCESS_KEY` | NAISYS client, Supervisor | The hub's access key — required for remote (standalone) hub connections   |
+| `SERVER_PORT`    | Hub                       | Plain-HTTP port the hub listens on (default 3300); the proxy points here  |
+
+`HUB_ACCESS_KEY` is listed in `globalConfigLoader.EXCLUDED_KEYS` so the hub never distributes it to clients through the config channel.
 
 ## Files
 
-| File                                                          | Role                                                                       |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `packages/common-node/src/hubCertVerification.ts`             | Shared: access key parsing, fingerprint computation, TLS cert verification |
-| `apps/hub/src/services/certService.ts`                        | Generates/loads cert and access key                                        |
-| `apps/naisys/src/hub/hubConnection.ts`                        | Client-side cert verification before socket.io connect                     |
-| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor-side cert verification before socket.io connect                 |
-| `NAISYS_FOLDER/cert/hub-key.pem`                              | TLS private key (mode 0o600)                                               |
-| `NAISYS_FOLDER/cert/hub-cert.pem`                             | Self-signed TLS certificate                                                |
-| `NAISYS_FOLDER/cert/hub-access-key`                           | Full composite access key (mode 0o600)                                     |
+| File                                                          | Role                                                        |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk    |
+| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor    |
+| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key     |
+| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()`   |
+| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured          |
+| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`           |
+| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`       |
+| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                                 |

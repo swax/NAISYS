@@ -2,97 +2,65 @@
 
 [← Back to main README](../../README.md)
 
-A management application for NAISYS agents that provides a monitoring interface and communication capabilities. NAISYS Supervisor sits above the NAISYS database to provide visibility into how agents are working and enables communication with the agents.
+The supervisor is the web UI for monitoring and managing a NAISYS cluster. It connects to the hub over WebSocket for live updates on agents, runs, mail, and hosts, and exposes a permission-aware REST API that agents themselves can call (via `ns-api`) thanks to HATEOAS action gating.
 
-## Overview
+Run standalone with `npx naisys_supervisor`, or in-process with `npx naisys --supervisor`.
 
-NAISYS Supervisor is a full-stack TypeScript application that consists of:
+## Features
 
-- **Frontend**: React application with Mantine UI components
-- **Backend**: Fastify server with SQLite databases
-- **Shared**: Common types and utilities
+### Pages
 
-The application provides a web interface to monitor NAISYS agents, view their logs, manage mail/messaging, and control agent operations.
+- **Agents** — list + detail page with live config, controls, archive/delete, start/stop, host assignment, initial commands, create/edit in UI, yaml import, model/template-variable selects, config revision history
+- **Runs** — paging, run sessions grouped by session, real-time logs with attachments, fold-out console, image previews, image gallery for computer-use runs
+- **Mail** — two-panel design with chat UI, read/delivered status, attachment send, archive-all, paging, from-title
+- **Hosts** — CRUD, agent assignment, recent runs, last-known IP, environment info, remote hostname change
+- **Cost analysis** — graphs and a model cost calculator (Chart.js)
+- **Admin** — system info/config, DB sizes, app/DB version, error-filtered logs
+- **Variables** — sensitive-value hiding, read-only mode
+- **Users & permissions** ([doc 008](../../docs/008-supervisor-users.md)) — CRUD, permission management, create-user-from-agent, password reset, API keys with rotation
+- **API reference** — Scalar UI gated behind auth; OpenAPI spec hidden from agents
 
-## Quick Start
+### UX
 
-### Prerequisites
+- Socket-based live updates for agents, hosts, mail, chat, status (no polling)
+- Permission-aware UI via HATEOAS action gating — buttons hide when the action isn't allowed
+- Error boundaries and toast notifications via a global error handler
+- Responsive layouts with collapsible sidebar; widescreen tweaks
+- Person/agent icons to visually separate humans from agents
+- Agent model icon in the nav header
+- PWA detection with refresh prompt
 
-- Node.js 20.0.0 or higher
-- NPM or compatible package manager
-- Access to a NAISYS database
+### Agent-facing / HATEOAS ([doc 014](../../docs/014-hateoas.md))
 
-### Installation
+- Permission system with HATEOAS actions gating both UI and API (`permGate`)
+- Disabled-action states include a reason so agents know why they can't act
+- Backward pagination (`prev` links) symmetric with forward pagination
+- Agent API keys for calling ERP/supervisor APIs from agents
 
-1. Clone the repository
-2. Install dependencies:
+### Auth ([doc 007](../../docs/007-web-auth.md))
 
-   ```bash
-   npm run install:all
-   ```
+- Username/password auth with bcryptjs
+- Sessions table with multi-session support; cookie sharing between co-hosted supervisor + ERP
+- Login/logout, rate limiting, secure cookies in production
+- Password reset from CLI
+- Forced setup of the superadmin password at first run, logged for acknowledgement
+- Read-only mode for variables/users
 
-3. Set up environment variables:
+### Supervising running agents
 
-   ```bash
-   export NAISYS_FOLDER=/path/to/naisys/data
-   ```
-
-4. Start development servers:
-   ```bash
-   npm run dev
-   ```
-
-The application will be available at `http://localhost:2201/supervisor/` (development) or `http://localhost:3301/supervisor/` (production).
+- Send `pause` to a live agent
+- Send a debug command to a live agent
+- Live command-loop state from the runner
 
 ## Architecture
 
-### Database Architecture
+Full-stack TypeScript:
 
-The application uses a dual database system managed through Prisma ORM:
+- **client/** — React + Mantine frontend
+- **server/** — Fastify backend
+- **shared/** — shared types and Zod schemas
 
-- **NAISYS Database** (Read-only): Contains agent data, logs, and messaging
-- **Supervisor Database** (Read/Write): Manages sessions, settings, and read status
-
-Database schema is defined in `packages/database/prisma/schema.prisma`.
-
-### Core Features
-
-- **Agent Monitoring**: View agent status, activity, and hierarchical relationships
-- **Log Viewing**: Browse system logs with pagination and filtering
-- **Mail System**: Inter-agent messaging with thread-based conversations
-- **Session Management**: Authentication and access control
-- **Read Status Tracking**: Track unread notifications per agent
-
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development servers
-- `npm run build` - Build all packages
-- `npm start` - Start production server
-- `npm run format` - Format code with Prettier
-
-### Project Structure
-
-```
-├── client/          # React frontend
-├── server/          # Fastify backend
-└── shared/          # Shared TypeScript types
-```
-
-### Environment Variables
-
-- `NAISYS_FOLDER` - Path to NAISYS data folder (required)
-- `NODE_ENV` - Environment mode (development/production)
-- `SERVER_PORT` - Server port (defaults to 3301)
-
-## API Endpoints
-
-- `GET /api/data` - Main data endpoint with pagination
-- `POST /api/access-key` - Access key validation
-- `GET /api/session` - Session validation
-- `POST /api/settings` - Settings management
-- `POST /api/read-status` - Update read status
+Data lives in the hub ([apps/hub](../hub/README.md)); the supervisor is a thin UI + API layer on top.
 
 ## License
 

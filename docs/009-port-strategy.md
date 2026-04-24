@@ -14,7 +14,12 @@ Within each range, ports are assigned sequentially.
 
 ## Unified Server Port
 
-All server apps (Hub, Supervisor, ERP) use the same `SERVER_PORT` env var. When running together in the same process, they share a single port — Supervisor and ERP register as Fastify plugins inside the Hub.
+All server apps (Hub, Supervisor, ERP) use the same `SERVER_PORT` env var. When running together in the same process, they share a single port via nested Fastify plugin registration:
+
+- Hub registers the Supervisor plugin
+- Supervisor registers the ERP plugin
+
+Each server can also run standalone on its own default port. Hub binds to `0.0.0.0` for external access; Supervisor and ERP default to localhost.
 
 ## Dev / Production Ports
 
@@ -43,8 +48,10 @@ Each test file picks unique ports within the `44xx` range. When adding a new e2e
 
 ## External Services (not managed by us)
 
-| Port | Service       | Notes                   |
-| ---- | ------------- | ----------------------- |
-| 5432 | PostgreSQL    | Standard default        |
-| 5555 | Prisma Studio | `npm run prisma:studio` |
-| 8069 | Odoo          | ERP integration target  |
+NAISYS's own databases are SQLite (hub, supervisor, and erp each have their own Prisma schema with `provider = "sqlite"`), so there is no Postgres port for NAISYS itself. The external ports below are only relevant to the Odoo MCP integration target.
+
+| Port | Service       | Notes                                              |
+| ---- | ------------- | -------------------------------------------------- |
+| 5555 | Prisma Studio | `npm run prisma:studio` — inspects SQLite DBs      |
+| 5432 | PostgreSQL    | Backing store for Odoo when running it locally     |
+| 8069 | Odoo          | ERP integration target, accessed via `odoo` MCP    |

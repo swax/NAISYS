@@ -1,6 +1,6 @@
 # NAISYS Supervisor - User Management
 
-**Status: Planning**
+**Status: Implemented**
 
 ## Overview
 
@@ -8,120 +8,141 @@ The Supervisor Users page provides user and permission management for the NAISYS
 
 ## Design Philosophy
 
-The supervisor API should be fully discoverable and operable by AI, just like the ERP. The access management endpoints follow the same HATEOAS patterns: `_links` for navigation, `_actions` for state-dependent operations, and schema endpoints for request body discovery.
+The supervisor API is fully discoverable and operable by AI, just like the ERP. The user management endpoints follow the same HATEOAS patterns: `_links` for navigation, `_actions` for state-dependent operations, `_linkTemplates` for parameterised item URLs, and schema endpoints for request body discovery.
+
+Server-side enforcement uses a single `requirePermission(...)` middleware plus a `requireAdminOrSelf` guard for the update endpoint. Client-side UI is driven by the `_actions` returned on each resource — buttons are rendered/disabled from those actions via `hasAction()` and `permGate()` rather than from ad-hoc permission checks.
 
 ## Navigation
 
-The supervisor header gains a top-level navigation split between **Main** (the existing agent management views) and **Access** (the new user/permission management). The Access menu item is only visible to users with the `supervisor_admin` permission.
+Page navigation lives in `apps/supervisor/client/src/headers/navTabs.ts`. Tabs are filtered in `AppHeader` by `hasPermission(tab.permission)`. A tab without a `permission` field is always visible when authenticated.
 
-### Header Layout
-
+```ts
+export const navTabs: NavTab[] = [
+  { path: "/agents", label: "Agents" },
+  { path: "/hosts", label: "Hosts" },
+  { path: "/variables", label: "Variables" },
+  { path: "/models", label: "Models" },
+  { path: "/costs", label: "Costs" },
+  { path: "/users", label: "Users" },
+  { path: "/admin", label: "Admin", permission: "supervisor_admin" },
+];
 ```
-[Logo] NAISYS  Main | Users   [ERP link if enabled]   [API Ref] [Status] [User/Login]
-```
 
-- **Main**: Links to `/` (existing home/agent views). The current `AgentNavHeader` tabs (Controls, Runs, Mail) appear as sub-navigation when Main is active.
-- **Users**: Links to `/users` (user list). Only shown if the current user has `supervisor_admin` permission.
+The `Users` tab is visible to all authenticated users (a non-admin can view the list and their own detail). The `Admin` tab is `supervisor_admin`-only. Per-action admin gating happens in the UI via `_actions` returned from the API.
+
+The authenticated user menu in `AppHeader.tsx` also has a "My User" item that links to `/users/:username` for the current user.
 
 ## Data Model
 
 ### Permission Enum
 
-Permissions are defined as a Prisma enum to keep the set of valid permissions constrained and explicit:
+Permissions are defined as a Prisma enum on the supervisor database (`packages/supervisor-database/prisma/schema.prisma`). New permissions are added to the enum as the system grows.
 
 ```prisma
 enum Permission {
   supervisor_admin
   manage_agents
+  remote_execution
+  manage_hosts
+  agent_communication
+  manage_models
+  manage_variables
+  view_run_logs
 }
 ```
 
-| Permission         | Description                                              |
-| ------------------ | -------------------------------------------------------- |
-| `supervisor_admin` | Full access to the Users page (user and permission CRUD) |
-| `manage_agents`    | Ability to create, configure, and control agents         |
+| Permission            | Description                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| `supervisor_admin`    | Full access, including user management                                             |
+| `manage_agents`       | Create, configure, start/stop, pause/resume, archive, and delete agents            |
+| `remote_execution`    | Send arbitrary commands to an agent's active run (remote shell access)             |
+| `manage_hosts`        | Register and manage agent hosts                                                    |
+| `agent_communication` | Send messages to agents via mail and chat                                          |
+| `manage_models`       | Add, edit, and remove LLM model configurations                                     |
+| `manage_variables`    | Manage global variables used by agents                                             |
+| `view_run_logs`       | View unobfuscated run logs                                                         |
 
-New permissions can be added to the enum as the system grows (e.g., `view_logs`, `send_mail`).
+Human-readable descriptions for each permission are maintained alongside the Zod enum in `apps/supervisor/shared/src/user-types.ts` as `PermissionDescriptions`.
 
-### AuthType Enum
+`supervisor_admin` is treated as a superset — `hasPermission(user, X)` returns true if the user holds `X` **or** `supervisor_admin`. This lives in `auth-middleware.ts` (server) and `SessionContext.tsx` (client) as identical logic.
 
-The authentication type is stored as a field on the User model (not derived), mirroring the ERP pattern:
+### User Model
+
+Instead of an `AuthType` enum, the User model uses an `isAgent` boolean together with an optional `apiKey` string. Humans have a bcrypt `passwordHash` and a generated `apiKey`. Agent users have `isAgent=true`, no `passwordHash`, and look up their API key in the hub database by uuid (see _Hub API User Auto-Provisioning_).
 
 ```prisma
-enum AuthType {
-  password
-  api_key
+model User {
+  id                 Int              @id @default(autoincrement())
+  username           String           @unique
+  uuid               String           @default("")
+  isAgent            Boolean          @default(false) @map("is_agent")
+  passwordHash       String           @default("") @map("password_hash")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  apiKey             String?          @unique @map("api_key")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  permissions        UserPermission[] @relation("UserPermissions")
+  grantedPermissions UserPermission[] @relation("GrantedByPermissions")
+  sessions           Session[]
+
+  @@map("users")
 }
 ```
-
-When a user is created via the web UI, they get `password`. When an API-key-based agent from the hub database accesses the supervisor and is auto-provisioned into the local users table, they get `api_key`.
 
 ### UserPermission Model
 
-A join table mapping users to their granted permissions:
+A join table mapping users to their granted permissions. `grantedBy` is nullable so that the bootstrap `supervisor_admin` grant (no grantor exists yet) can be recorded.
 
 ```prisma
 model UserPermission {
-  id         Int        @id @default(autoincrement())
-  userId     Int        @map("user_id")
-  permission Permission
-  grantedAt  DateTime   @default(now()) @map("granted_at")
-  grantedBy  Int        @map("granted_by")
-
-  user       User       @relation("user_permissions", fields: [userId], references: [id])
-  grantor    User       @relation("granted_permissions", fields: [grantedBy], references: [id])
+  id            Int        @id @default(autoincrement())
+  userId        Int        @map("user_id")
+  permission    Permission
+  grantedAt     DateTime   @default(now()) @map("granted_at")
+  grantedBy     Int?       @map("granted_by")
+  user          User       @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  grantedByUser User?      @relation("GrantedByPermissions", fields: [grantedBy], references: [id])
 
   @@unique([userId, permission])
   @@map("user_permissions")
 }
 ```
 
-The `User` model gains an `authType` field and two reverse relations:
-
-```prisma
-model User {
-  // ...existing fields...
-  authType           AuthType         @default(password) @map("auth_type")
-  permissions        UserPermission[] @relation("user_permissions")
-  grantedPermissions UserPermission[] @relation("granted_permissions")
-}
-```
-
 ### Admin Bootstrap
 
-When `ensureAdminUser()` creates the initial admin user, it should also grant `supervisor_admin` (and `manage_agents`) permissions to that user. This ensures the first user can access the Users page immediately.
+`ensureSuperAdmin(password?)` in `packages/supervisor-database/src/sessionService.ts` creates (or updates the password of) the `admin` user on boot and grants it `supervisor_admin`. No other permissions are granted by default — because `supervisor_admin` is a superset, the admin user has full access without needing the other seven permissions explicitly. It is called from `supervisorServer.ts` after migrations, before routes register.
 
 ## API Design
 
-**Base path**: `/supervisor/api/users`
+**Base path**: `/supervisor/api/users` (mounted in `routes/api.ts` with prefix `/users`).
 
-All access endpoints require authentication. Endpoints that modify users or permissions additionally require the `supervisor_admin` permission (enforced server-side).
+All endpoints require authentication. Write endpoints require `supervisor_admin` via the `requirePermission("supervisor_admin")` preHandler. The `PUT /:username` endpoint uses `requireAdminOrSelf` (admins can edit any user; non-admins can only change their own password). `POST /me/password` only requires authentication (any user may change their own password).
 
 ### API Root Discovery
 
-The supervisor API root (`GET /supervisor/api/`) should be updated to include access links:
+`GET /supervisor/api/` (`routes/root.ts`) returns link discovery. The `users` and `admin` links are only added when the authenticated user holds `supervisor_admin`:
 
 ```json
 {
   "_links": [
-    { "rel": "users", "href": "/supervisor/api/users", "title": "Users" },
-    { "rel": "schemas", "href": "/supervisor/api/schemas/", "title": "Schemas" }
-  ],
-  "_actions": [
-    {
-      "rel": "create-user",
-      "href": "/supervisor/api/users",
-      "method": "POST",
-      "title": "Create User",
-      "schema": "/supervisor/api/schemas/CreateUser"
-    }
+    { "rel": "self", "href": "/supervisor/api/" },
+    { "rel": "auth-me", "href": "/supervisor/api/auth/me", "title": "Current User" },
+    { "rel": "schemas", "href": "/supervisor/api/schemas/", "title": "Schemas" },
+    { "rel": "agents", "href": "/supervisor/api/agents", "title": "Agents" },
+    { "rel": "hosts", "href": "/supervisor/api/hosts", "title": "Hosts" },
+    { "rel": "models", "href": "/supervisor/api/models", "title": "Models" },
+    { "rel": "variables", "href": "/supervisor/api/variables", "title": "Variables" },
+    { "rel": "permissions", "href": "/supervisor/api/permissions", "title": "Available Permissions" },
+    { "rel": "users", "href": "/supervisor/api/users", "title": "User Management" },
+    { "rel": "admin", "href": "/supervisor/api/admin", "title": "Admin" }
   ]
 }
 ```
 
-The `schemas` link is always present (it serves all supervisor schemas). The `users` link and `create-user` action are only included when the authenticated user has `supervisor_admin`.
+`GET /supervisor/api/permissions` returns the enumeration of permission names (`PermissionEnum.options`) so clients can drive "grant permission" dropdowns without hardcoding.
 
 ### Users API
+
+Endpoints are keyed by **username** (the stable URL-safe identifier), not numeric id.
 
 #### List Users
 
@@ -129,27 +150,29 @@ The `schemas` link is always present (it serves all supervisor schemas). The `us
 GET /supervisor/api/users?page=1&pageSize=20&search=
 ```
 
-Response:
+List items are deliberately compact (no per-item permissions, no actions). Actions live on the collection (create) and on each detail resource.
 
 ```json
 {
   "items": [
     {
       "id": 1,
+      "uuid": "...",
       "username": "admin",
-      "authType": "password",
+      "isAgent": false,
       "createdAt": "2025-01-01T00:00:00.000Z",
-      "updatedAt": "2025-01-01T00:00:00.000Z",
-      "_links": [{ "rel": "self", "href": "/supervisor/api/users/1" }]
+      "permissionCount": 1
     }
   ],
   "total": 1,
-  "page": 1,
   "pageSize": 20,
   "_links": [
-    { "rel": "self", "href": "/supervisor/api/users?page=1&pageSize=20" },
+    { "rel": "self",  "href": "/supervisor/api/users?page=1&pageSize=20" },
     { "rel": "first", "href": "/supervisor/api/users?page=1&pageSize=20" },
-    { "rel": "last", "href": "/supervisor/api/users?page=1&pageSize=20" }
+    { "rel": "last",  "href": "/supervisor/api/users?page=1&pageSize=20" }
+  ],
+  "_linkTemplates": [
+    { "rel": "item", "hrefTemplate": "/supervisor/api/users/{username}" }
   ],
   "_actions": [
     {
@@ -157,430 +180,500 @@ Response:
       "href": "/supervisor/api/users",
       "method": "POST",
       "title": "Create User",
-      "schema": "/supervisor/api/schemas/CreateUser"
+      "schema": "/supervisor/api/schemas/CreateUser",
+      "body": { "username": "", "password": "" }
+    },
+    {
+      "rel": "create-from-agent",
+      "href": "/supervisor/api/users/from-agent",
+      "method": "POST",
+      "title": "Import User from Agent",
+      "schema": "/supervisor/api/schemas/CreateAgentUser",
+      "body": { "agentId": 0 }
     }
   ]
 }
 ```
 
-The `authType` field is stored on the User model. Users created via the web UI are `"password"`; agent users auto-provisioned from the hub database are `"api_key"`.
+Actions are always emitted. When the caller lacks the required permission, the action carries `disabled: true` and a `disabledReason` (see _Action Gating_), so clients can render every action predictably and the UI can explain why something is unavailable. Each action also carries a `body` stub that matches its schema, useful both for the UI and for AI callers that want to see the shape inline.
 
 #### Get User Detail
 
 ```
-GET /supervisor/api/users/:id
+GET /supervisor/api/users/:username
 ```
-
-Response:
 
 ```json
 {
   "id": 1,
   "username": "admin",
-  "authType": "password",
+  "isAgent": false,
   "createdAt": "2025-01-01T00:00:00.000Z",
   "updatedAt": "2025-01-01T00:00:00.000Z",
+  "apiKey": "...",
+  "hasApiKey": true,
   "permissions": [
     {
       "permission": "supervisor_admin",
       "grantedAt": "2025-01-01T00:00:00.000Z",
-      "grantedBy": "admin"
-    },
-    {
-      "permission": "manage_agents",
-      "grantedAt": "2025-01-01T00:00:00.000Z",
-      "grantedBy": "admin"
+      "grantedBy": null,
+      "_actions": []
     }
   ],
   "_links": [
-    { "rel": "self", "href": "/supervisor/api/users/1" },
-    { "rel": "collection", "href": "/supervisor/api/users" },
-    { "rel": "schema", "href": "/supervisor/api/schemas/User" }
+    { "rel": "self", "href": "/supervisor/api/users/admin" },
+    { "rel": "collection", "href": "/supervisor/api/users", "title": "users" },
+    { "rel": "schema", "href": "/supervisor/api/schemas/UpdateUser" }
   ],
   "_actions": [
-    {
-      "rel": "update",
-      "href": "/supervisor/api/users/1",
-      "method": "PUT",
-      "title": "Update User",
-      "schema": "/supervisor/api/schemas/UpdateUser"
-    },
-    {
-      "rel": "grant-permission",
-      "href": "/supervisor/api/users/1/permissions",
-      "method": "POST",
-      "title": "Grant Permission",
-      "schema": "/supervisor/api/schemas/GrantPermission"
-    },
-    {
-      "rel": "delete",
-      "href": "/supervisor/api/users/1",
-      "method": "DELETE",
-      "title": "Delete User"
-    }
+    { "rel": "update", "href": "/supervisor/api/users/admin", "method": "PUT",    "title": "Update",         "schema": "/supervisor/api/schemas/UpdateUser", "body": { "username": "" } },
+    { "rel": "change-password",  "href": "/supervisor/api/users/me/password", "method": "POST", "title": "Change Password", "schema": "/supervisor/api/schemas/ChangePassword", "body": { "password": "" } },
+    { "rel": "grant-permission", "href": "/supervisor/api/users/admin/permissions", "method": "POST", "title": "Grant Permission", "schema": "/supervisor/api/schemas/GrantPermission", "body": { "permission": "" } },
+    { "rel": "rotate-key", "href": "/supervisor/api/users/admin/rotate-key", "method": "POST", "title": "Rotate API Key" }
+    // "delete" is omitted entirely when isSelf
   ]
 }
 ```
 
-Each permission entry also includes an action to revoke it:
+Notes on the response shape:
+
+- `apiKey` is only included when the **caller** is `supervisor_admin`; non-admins never see anyone's key (including their own) via this endpoint. `hasApiKey` is always included.
+- For agent users (`isAgent: true`) the server looks up the key in the hub DB via `getUserApiKey()` — agent keys are stored in the hub `users` table, not the supervisor `users` table.
+- If the user is an agent, `_links` also includes `{ "rel": "agent", "href": "/supervisor/api/agents/<agent-username>" }`.
+- The `change-password` action is only emitted when the caller is viewing their own record. The `delete` action is omitted when viewing self. The `revoke` action on a permission entry is omitted for `(self, supervisor_admin)` — you cannot revoke your own supervisor_admin.
+
+Each permission entry has its own `_actions`:
 
 ```json
 {
   "permission": "manage_agents",
   "grantedAt": "2025-01-01T00:00:00.000Z",
-  "grantedBy": "admin",
+  "grantedBy": 1,
   "_actions": [
     {
       "rel": "revoke",
-      "href": "/supervisor/api/users/1/permissions/manage_agents",
+      "href": "/supervisor/api/users/admin/permissions/manage_agents",
       "method": "DELETE",
-      "title": "Revoke Permission"
+      "title": "Revoke"
     }
   ]
 }
 ```
-
-**Self-protection**: Users cannot delete themselves or revoke their own `supervisor_admin` permission (the `delete` and `revoke` actions are omitted from responses for the requesting user's own record).
 
 #### Create User
 
 ```
 POST /supervisor/api/users
 ```
-
 ```json
-{
-  "username": "operator",
-  "password": "securepassword"
-}
+{ "username": "operator", "password": "securepassword" }
 ```
 
-Response: `201` with the full user detail (same as GET).
+Requires `supervisor_admin`. Username must be url-safe (`URL_SAFE_KEY_REGEX`, 1–64 chars); password minimum 6 chars. Server generates a `uuid` and a 32-byte hex `apiKey`.
+
+Response: `201 { success, message, id, username }`. A `409` is returned on username conflict.
+
+#### Create User From Agent
+
+```
+POST /supervisor/api/users/from-agent
+```
+```json
+{ "agentId": 42 }
+```
+
+Imports an existing hub agent as a supervisor user, linking by uuid. Creates a local `User` with `isAgent: true` and no passwordHash. Conflicts on duplicate uuid or username. Requires `supervisor_admin`. This is the same shape as the lazy auto-provision path (see below), just driven explicitly.
+
+Response: `201 { success, message, id, username }`.
 
 #### Update User
 
 ```
-PUT /supervisor/api/users/:id
+PUT /supervisor/api/users/:username
 ```
-
 ```json
-{
-  "username": "new-name",
-  "password": "newpassword"
-}
+{ "username": "new-name", "password": "newpassword" }
 ```
 
-All fields optional. Password is hashed server-side before storage.
+All fields optional. Guarded by `requireAdminOrSelf`:
 
-Response: `200` with the full user detail.
+- **Admins** may change either field on any user.
+- **Non-admins** may only change their own password; the server drops the `username` field server-side when the caller isn't admin.
+
+Passwords are bcrypt-hashed server-side before storage. On success the auth cache is cleared wholesale (see _Auth Cache Integration_).
+
+Response: `{ success, message }`. Conflicts on duplicate username return `409`.
+
+#### Change Own Password
+
+```
+POST /supervisor/api/users/me/password
+```
+```json
+{ "password": "newpassword" }
+```
+
+Convenience endpoint for the current user. Requires authentication but **no** specific permission. Registered before `/:username` to avoid route collision.
 
 #### Delete User
 
 ```
-DELETE /supervisor/api/users/:id
+DELETE /supervisor/api/users/:username
 ```
 
-Response: `204 No Content`.
+Requires `supervisor_admin`. Returns `409` if the caller targets themselves ("Cannot delete yourself"). Cascades delete `user_permissions` and `sessions`.
 
-Guard: cannot delete self (409 Conflict).
+Response: `{ success, message }`.
+
+#### Rotate API Key
+
+```
+POST /supervisor/api/users/:username/rotate-key
+```
+
+Requires `supervisor_admin`. Generates a new 32-byte hex key. For a regular user, writes it to `users.api_key`. For an agent user, delegates to `rotateAgentApiKeyByUuid()` which updates the hub database.
+
+Response: `{ success, message }`. Clears the auth cache.
 
 ### Permissions API
 
 #### Grant Permission
 
 ```
-POST /supervisor/api/users/:userId/permissions
+POST /supervisor/api/users/:username/permissions
 ```
-
 ```json
-{
-  "permission": "manage_agents"
-}
+{ "permission": "manage_agents" }
 ```
 
-Response: `200` with the updated user detail (includes refreshed permissions and actions).
+Requires `supervisor_admin`. Conflicts return `409 "Permission already granted"`.
 
-If the permission is already granted, returns 409 Conflict.
+Response: `{ success, message }`. Clears the auth cache.
 
 #### Revoke Permission
 
 ```
-DELETE /supervisor/api/users/:userId/permissions/:permission
+DELETE /supervisor/api/users/:username/permissions/:permission
 ```
 
-Response: `200` with the updated user detail.
+Requires `supervisor_admin`. Returns `409` if the caller targets their own `supervisor_admin`.
 
-Guard: cannot revoke own `supervisor_admin` (409 Conflict).
+Response: `{ success, message }`. Clears the auth cache.
 
 ### Schema Endpoints
 
-Following the ERP pattern, schemas are a single top-level endpoint serving all supervisor schemas (not scoped per module). As new supervisor features add schemas, they register with the same catalog.
+Schemas are served from a single top-level endpoint registered in `routes/schemas.ts`, backed by a `schemaRegistry` object that every module contributes to at registration time.
 
 ```
-GET /supervisor/api/schemas/          → List all available schema names
-GET /supervisor/api/schemas/:name     → Get a single JSON Schema
+GET /supervisor/api/schemas/        → { "schemas": [...names] }
+GET /supervisor/api/schemas/:name   → JSON Schema (via Zod's z.toJSONSchema)
 ```
 
-Schemas added by the access module: `CreateUser`, `UpdateUser`, `GrantPermission`, `User`.
+Names contributed by the users module: `CreateUser`, `UpdateUser`, `GrantPermission`, `ChangePassword`, `CreateAgentUser`.
 
 ## Permission Enforcement
 
 ### Server-Side
 
-A `requirePermission` middleware function checks the authenticated user's permissions before allowing access to protected routes:
-
 ```typescript
-function requirePermission(permission: Permission) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!request.supervisorUser) {
-      return reply.status(401).send({ ... });
-    }
-    const hasPermission = await checkUserPermission(request.supervisorUser.id, permission);
-    if (!hasPermission) {
+// apps/supervisor/server/src/auth-middleware.ts
+export function hasPermission(user, permission): boolean {
+  return (user?.permissions.includes(permission)
+       || user?.permissions.includes("supervisor_admin")) ?? false;
+}
+
+export function requirePermission(permission: Permission) {
+  return async (request, reply) => {
+    if (!request.supervisorUser) return reply.status(401).send({ ... });
+    if (!hasPermission(request.supervisorUser, permission))
       return reply.status(403).send({
-        statusCode: 403,
-        error: "Forbidden",
-        message: `Requires '${permission}' permission`
+        statusCode: 403, error: "Forbidden",
+        message: `Permission '${permission}' required`,
       });
-    }
   };
 }
 ```
 
-All `/supervisor/api/users/*` routes use `requirePermission("supervisor_admin")`.
+All write routes on `/supervisor/api/users` use `requirePermission("supervisor_admin")` as their preHandler, except `PUT /:username` (uses `requireAdminOrSelf`) and `POST /me/password` (auth-only). GETs are authenticated but open to any logged-in user — the list endpoint deliberately returns compact rows with no sensitive fields so non-admins can see who else exists.
 
-The `manage_agents` permission is enforced on agent configuration endpoints (create, update, delete agent config). This is a future enhancement noted here for completeness.
+Permissions other than `supervisor_admin` are enforced on their respective feature endpoints (for example, `manage_agents` on agent lifecycle routes). Those live outside this module and are out of scope here.
 
-### Client-Side
+### Client-Side (Action Gating)
 
-The `/auth/me` response is extended to include the user's permissions:
+The server emits every action a user might see and marks the ones they cannot invoke as `disabled` with a `disabledReason`:
 
-```json
-{
-  "id": 1,
-  "username": "admin",
-  "permissions": ["supervisor_admin", "manage_agents"]
+```typescript
+// packages/common/src/hateoas.ts
+export function permGate(hasPerm: boolean, permission: Permission) {
+  return hasPerm ? {} : { disabled: true, disabledReason: `Requires '${permission}' permission` };
 }
 ```
 
-The client uses this to conditionally show the Users header tab and to hide UI elements the user lacks permission for.
+The client renders buttons from `_actions` using `hasAction(actions, "rel")` (returns the action if emitted) and disables/annotates them based on the action's `disabled` flag. This keeps the UI source of truth on the server — add a new action to the server response and the UI surfaces it; gate it and the UI shows why.
+
+Two cases are handled by **omission** instead of gating:
+
+- `delete` is omitted from user actions when viewing self.
+- `revoke` is omitted from permission actions when the target is `(self, supervisor_admin)`.
+
+State-dependent guards (self-protection) are omitted outright; permission-dependent guards use `permGate()`.
 
 ### Hub API User Auto-Provisioning
 
-When an API-key-based agent from the hub database makes a request to the supervisor, the auth middleware looks up the agent in the hub `users` table. If found and not yet in the local supervisor `users` table, it auto-provisions a local user with `authType: "api_key"` (mirroring the existing SSO auto-provisioning for password users). The auto-provisioned API user does not receive any permissions by default; an admin must grant permissions via the Users page.
+When an API-key-based agent from the hub makes a request to the supervisor, the auth middleware resolves it lazily:
+
+1. `resolveUserFromApiKey(apiKey)` looks up the key in the supervisor DB (`findUserByApiKey`) first, then falls back to the hub DB (`findAgentByApiKey`).
+2. If the match is from the hub, `getUserByUuid(match.uuid)` checks for a pre-existing local supervisor user.
+3. If absent, `createUserForAgent(username, uuid)` creates a local `User` row with `isAgent: true`, empty `passwordHash`, and null `apiKey` (the key stays in the hub).
+4. Permissions are loaded from the local supervisor DB via `getUserPermissions(id)`. Auto-provisioned agents get **no** permissions by default — an admin must grant them explicitly before they can do anything beyond reading public data.
+
+The same flow is available as the explicit `POST /users/from-agent` endpoint (admin-driven, picks an agent by hub id).
 
 ### Auth Cache Integration
 
-The existing `AuthCache` caches `SupervisorUser` objects. The `SupervisorUser` interface is extended to include permissions:
+`packages/common/src/authCache.ts` provides a shared `AuthCache<SupervisorUser>` used by both session-cookie auth and API-key auth.
 
 ```typescript
 interface SupervisorUser {
   id: number;
   username: string;
-  permissions: string[];
+  uuid: string;
+  permissions: Permission[];
 }
 ```
 
-Permissions are loaded alongside the user during auth middleware resolution and cached together. When permissions change, the affected user's cache entries are invalidated.
+Cache keys are `cookie:${hashToken(token)}` or `apikey:${hashToken(apiKey)}`. `null` is cached for unknown tokens (short TTL) to short-circuit floods of bad requests.
+
+Any mutation that changes users or permissions (update, delete, grant, revoke, rotate-key, change-password) calls `authCache.clear()`. This is coarser than per-user invalidation but keeps the logic simple, and the cache rebuilds on the next request.
 
 ## HATEOAS Implementation
 
 ### Shared Types
 
-The HATEOAS type definitions (`HateoasLinkSchema`, `HateoasActionSchema`, `HateoasLinksSchema`) are moved from `apps/erp/shared/src/hateoas-types.ts` to `packages/common/src/hateoas-types.ts`. Both the ERP and supervisor import from the common package. The client-side `hasAction` utility also moves to common.
+The HATEOAS type definitions live in `packages/common/src/hateoas-types.ts`:
+
+- `HateoasLinkSchema`, `HateoasActionSchema`
+- `HateoasLinkTemplateSchema`, `HateoasActionTemplateSchema`
+- `HateoasLinksSchema` (the standard `{ _links, _actions }` envelope)
+
+The client-side utilities live in `packages/common/src/hateoas.ts`:
+
+- `hasAction()`, `hasActionTemplate()`, `hasLinkTemplate()`
+- `resolveActions()` — declarative action builder used server-side
+- `permGate()`, `formatDisabledReason()`
+
+Both the supervisor and the ERP import from `@naisys/common`. The ERP's `apps/erp/shared/src/hateoas-types.ts` is a thin re-export of the common types for backwards compatibility with existing ERP imports.
 
 ### Server Helpers
 
-A `hateoas.ts` file in the supervisor server provides helper functions following the ERP pattern:
+Helpers are split by scope:
 
-```typescript
-const API_PREFIX = "/supervisor/api/users";
+`apps/supervisor/server/src/hateoas.ts` — **generic** helpers reusable across every route file:
 
-function selfLink(path: string): HateoasLink { ... }
-function collectionLink(): HateoasLink { ... }
-function paginationLinks(...): HateoasLink[] { ... }
-function userActions(userId: number, isSelf: boolean): HateoasAction[] { ... }
-function permissionActions(userId: number, permission: string, isSelf: boolean): HateoasAction[] { ... }
+```ts
+export const API_PREFIX = "/supervisor/api";
+export function selfLink(path, title?): HateoasLink
+export function collectionLink(resource): HateoasLink
+export function schemaLink(schemaName): HateoasLink
+export function paginationLinks(basePath, page, pageSize, total, filters?)
+export function timestampCursorLinks(...)
+export function idCursorLinks(...)
+export function attachmentUrl(id, filename)
 ```
+
+Domain-specific action/link builders are **co-located with their route file**, not hoisted into `hateoas.ts`. This keeps the HATEOAS surface and the endpoints that emit it visible in the same place. For users:
+
+```ts
+// apps/supervisor/server/src/routes/users.ts
+function userItemLinks(username, agentUsername?): HateoasLink[]
+function userActions(username, isSelf, isAdmin): HateoasAction[]
+function permissionActions(username, permission, isSelf, isAdmin): HateoasAction[]
+function formatUser(user, currentUserId, currentUserPermissions, options)
+function formatListUser(user)
+```
+
+The same pattern applies for agents (`routes/agents.ts` carries `agentActions()` / `agentLinks()`), hosts, models, etc.
 
 ### Response Formatters
 
-Following the ERP `formatItem` / `formatListItem` pattern:
+`formatUser()` is the single source of truth for the detail payload. It takes the DB row plus the **caller's** id and permissions and returns the full resource:
 
 ```typescript
-function formatUser(user, permissions, requestingUserId) {
-  const isSelf = user.id === requestingUserId;
+function formatUser(user, currentUserId, currentUserPermissions, options) {
+  const isSelf = user.id === currentUserId;
+  const isAdmin = currentUserPermissions.includes("supervisor_admin");
+  const apiKeyValue = options?.apiKey ?? null;
   return {
     id: user.id,
     username: user.username,
-    authType: user.authType,
+    isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
-    permissions: permissions.map((p) => ({
+    apiKey: isAdmin ? apiKeyValue : undefined,
+    hasApiKey: apiKeyValue !== null,
+    permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
-      grantedBy: p.grantor.username,
-      _actions: permissionActions(user.id, p.permission, isSelf),
+      grantedBy: p.grantedBy,
+      _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
-    _links: userItemLinks(user.id),
-    _actions: userActions(user.id, isSelf),
-  };
-}
-
-function formatListUser(user) {
-  return {
-    id: user.id,
-    username: user.username,
-    authType: user.authType,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-    _links: [selfLink(`/users/${user.id}`)],
+    _links: userItemLinks(user.username, options?.agentUsername),
+    _actions: userActions(user.username, isSelf, isAdmin),
   };
 }
 ```
+
+`formatListUser()` returns the compact row used by `GET /users`.
 
 ## Web UI
 
 ### User List Page (`/users`)
 
-Route: `/users`
+`apps/supervisor/client/src/pages/users/UserList.tsx`. A paginated Mantine table of users with search and the `create` / `create-from-agent` actions gated via `hasAction()` + `permGate()`.
 
-A paginated table showing all users:
+Columns: Username, Agent? (from `isAgent`), Created, Permission count.
 
-| Column    | Description             |
-| --------- | ----------------------- |
-| Username  | User's login name       |
-| Auth Type | `password` or `api_key` |
-| Created   | Account creation date   |
+Clicking a row navigates to `/users/:username` (resolved from the `item` link template).
 
-Clicking a row navigates to `/users/:id`.
+### User Detail Page (`/users/:username`)
 
-Uses Mantine `Table` with pagination, following the ERP list page patterns.
+`apps/supervisor/client/src/pages/users/UserDetail.tsx`. Shows:
 
-### User Detail Page (`/users/:id`)
+- **User info card**: username, isAgent, created/updated dates, API key (visible to admins only — from `apiKey` field in response), with a "Rotate API Key" button (gated by `_actions.rotate-key`).
+- **Edit**: inline edit of username/password (gated by `_actions.update`).
+- **Change password**: inline form (gated by `_actions.change-password`, only emitted on self).
+- **Permissions list**: each entry has a revoke button rendered from its `_actions.revoke`.
+- **Grant permission**: dropdown of not-yet-granted permissions + button (gated by `_actions.grant-permission`). The dropdown options are fed by `GET /permissions` and filtered against the current `permissions[]`.
+- **Delete**: delete button gated by `_actions.delete` (omitted for self).
 
-Route: `/users/:id`
-
-Shows user details and an editable permissions section:
-
-- **User info card**: Username, auth type, created/updated dates
-- **Edit button**: Opens inline edit for username/password (from `_actions.update`)
-- **Permissions section**: List of current permissions with revoke buttons (from each permission's `_actions.revoke`)
-- **Grant permission**: A select dropdown + button to grant a new permission (from `_actions.grant-permission`). The dropdown lists permissions that the user does not yet have.
-- **Delete button**: Deletes the user (from `_actions.delete`). Hidden for self.
-
-All buttons are conditionally rendered based on `_actions` from the API response, following the ERP pattern with `hasAction()`.
+All buttons use `hasAction()` + action `disabled`/`disabledReason` for rendering — no component imports `useSession().hasPermission()` to decide what to show in the users UI.
 
 ### Client Routing
 
-New routes added to `App.tsx`:
+`App.tsx` declares:
 
 ```
 /users               → UserList
-/users/:id           → UserDetail
+/users/:username     → UserDetail
 ```
+
+The root `<AppContent />` fetches `/supervisor/api/client-config` once on mount (plugins, publicRead, permissions) and exposes `permissions` via the router `Outlet` context. `SessionContext` exposes the authenticated user (including `permissions`) and the `hasPermission(p)` helper used by the nav.
 
 ### API Client
 
-New functions added to the supervisor `apiClient.ts`:
+`apps/supervisor/client/src/lib/apiUsers.ts`:
 
 ```typescript
-getUsers(params)                → GET /users
-getUser(id)                     → GET /users/:id
+getUsers(params)                → GET /users?page=&pageSize=&search=
+getUser(username)               → GET /users/:username
 createUser(data)                → POST /users
-updateUser(id, data)            → PUT /users/:id
-deleteUser(id)                  → DELETE /users/:id
-grantPermission(userId, data)   → POST /users/:userId/permissions
-revokePermission(userId, perm)  → DELETE /users/:userId/permissions/:perm
+createAgentUser(agentId)        → POST /users/from-agent
+updateUser(username, data)      → PUT /users/:username  (client only sends { username })
+deleteUser(username)            → DELETE /users/:username
+grantPermission(username, p)    → POST /users/:username/permissions
+revokePermission(username, p)   → DELETE /users/:username/permissions/:p
+changePassword(password)        → POST /users/me/password
+rotateUserApiKey(username)      → POST /users/:username/rotate-key
 ```
 
-## File Changes Summary
+`apiAuth.ts` handles login/logout/getMe. `getMe()` returns `AuthUser` with `{ id, username, permissions }`.
 
-### New Files
+## Implementation Layout
 
-| File                                                    | Description                                                           |
-| ------------------------------------------------------- | --------------------------------------------------------------------- |
-| `apps/supervisor/server/src/routes/users.ts`            | Users API routes (users + permissions CRUD)                           |
-| `apps/supervisor/server/src/routes/schemas.ts`          | Schema discovery endpoints (top-level, serves all supervisor schemas) |
-| `apps/supervisor/server/src/services/userService.ts`    | User + permission business logic                                      |
-| `apps/supervisor/server/src/hateoas.ts`                 | HATEOAS helper functions                                              |
-| `apps/supervisor/shared/src/user-types.ts`              | Zod schemas and types for users API                                   |
-| `apps/supervisor/client/src/pages/users/UserList.tsx`   | User list page                                                        |
-| `apps/supervisor/client/src/pages/users/UserDetail.tsx` | User detail page                                                      |
-| `packages/common/src/hateoas-types.ts`                  | Shared HATEOAS Zod schemas and types                                  |
-| `packages/common/src/hateoas.ts`                        | Shared client-side `hasAction` utility                                |
+### Server
 
-### Modified Files
+| Path                                                                       | Purpose                                                          |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `packages/supervisor-database/prisma/schema.prisma`                        | `Permission` enum, `User`, `UserPermission`, `Session`           |
+| `packages/supervisor-database/src/sessionService.ts::ensureSuperAdmin`     | Admin bootstrap (grants `supervisor_admin` only)                 |
+| `apps/supervisor/server/src/routes/users.ts`                               | Users + permissions endpoints, domain HATEOAS builders, formatters |
+| `apps/supervisor/server/src/routes/schemas.ts`                             | Schema discovery                                                 |
+| `apps/supervisor/server/src/routes/root.ts`                                | API root `_links` + `/permissions` enum endpoint                 |
+| `apps/supervisor/server/src/services/userService.ts`                      | User + permission business logic                                 |
+| `apps/supervisor/server/src/auth-middleware.ts`                            | `SupervisorUser`, authCache, `requirePermission`, auto-provisioning |
+| `apps/supervisor/server/src/hateoas.ts`                                    | Generic HATEOAS helpers                                          |
+| `apps/supervisor/server/src/route-helpers.ts`                              | `permGate` + `resolveActions` wrappers                           |
+| `apps/supervisor/server/src/schema-registry.ts`                            | Registry backing `/schemas/*`                                    |
+| `apps/supervisor/shared/src/user-types.ts`                                 | Zod: `PermissionEnum`, `CreateUser`, `UpdateUser`, `GrantPermission`, `ChangePassword`, `CreateAgentUser`, `PermissionDescriptions` |
+| `apps/supervisor/shared/src/auth-types.ts`                                 | Zod: `LoginRequest`, `AuthUser` (id, username, permissions[])    |
 
-| File                                                     | Change                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `apps/supervisor/server/prisma/schema.prisma`            | Add `Permission` enum, `UserPermission` model, relations on `User`       |
-| `apps/supervisor/server/src/routes/api.ts`               | Register user routes                                                     |
-| `apps/supervisor/server/src/auth-middleware.ts`          | Extend `SupervisorUser` with permissions, load permissions in auth flow  |
-| `apps/supervisor/server/src/server.ts`                   | Add "Access" to swagger tag groups, grant admin permissions in bootstrap |
-| `apps/supervisor/shared/src/auth-types.ts`               | Add `permissions` to `AuthUserSchema`                                    |
-| `apps/supervisor/client/src/App.tsx`                     | Add Users routes, update header with Main/Users navigation               |
-| `apps/supervisor/client/src/contexts/SessionContext.tsx` | Expose permissions from auth state                                       |
-| `apps/supervisor/client/src/lib/apiClient.ts`            | Add users API functions                                                  |
-| `apps/erp/shared/src/hateoas-types.ts`                   | Re-export from `@naisys/common` (or update imports)                      |
-| `apps/erp/server/src/hateoas.ts`                         | Update imports to use common package                                     |
-| `apps/erp/client/src/lib/hateoas.ts`                     | Update imports to use common package                                     |
-| `packages/database/src/hubSessionService.ts`             | Update `ensureAdminUser` to accept permission grant callback             |
+### Client
 
-## Database Schema
+| Path                                                                       | Purpose                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `apps/supervisor/client/src/App.tsx`                                       | `/users` + `/users/:username` routes, client-config  |
+| `apps/supervisor/client/src/headers/navTabs.ts`                            | Nav tab config (Users visible, Admin admin-gated)    |
+| `apps/supervisor/client/src/headers/AppHeader.tsx`                         | Header rendering, `My User` menu link                |
+| `apps/supervisor/client/src/pages/users/UserList.tsx`                      | User list page                                       |
+| `apps/supervisor/client/src/pages/users/UserDetail.tsx`                    | User detail + permissions management                 |
+| `apps/supervisor/client/src/lib/apiUsers.ts`                               | Users API client                                     |
+| `apps/supervisor/client/src/contexts/SessionContext.tsx`                   | Auth state, `hasPermission()`                        |
 
-The Prisma schema adds:
+### Shared
 
-1. The `AuthType` enum (`password`, `api_key`)
-2. The `Permission` enum (`supervisor_admin`, `manage_agents`)
-3. The `authType` field on the `User` model (default: `password`)
-4. The `user_permissions` table with columns: `id`, `user_id`, `permission`, `granted_at`, `granted_by`
-5. Unique index on `(user_id, permission)`
-6. Foreign keys to `users` table
+| Path                                                                       | Purpose                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `packages/common/src/hateoas-types.ts`                                     | `HateoasLink`, `HateoasAction`, templates, envelopes |
+| `packages/common/src/hateoas.ts`                                           | `hasAction`, `resolveActions`, `permGate`            |
+| `packages/common/src/authCache.ts`                                         | Shared `AuthCache<T>` used by both supervisor and ERP auth |
+| `apps/erp/shared/src/hateoas-types.ts`                                     | Re-exports from `@naisys/common`                     |
 
 ## API Endpoints Summary
 
-| Method | Path                                          | Description                      | Permission         |
-| ------ | --------------------------------------------- | -------------------------------- | ------------------ |
-| GET    | `/supervisor/api/users`                       | List users (paginated)           | `supervisor_admin` |
-| POST   | `/supervisor/api/users`                       | Create user                      | `supervisor_admin` |
-| GET    | `/supervisor/api/users/:id`                   | Get user detail                  | `supervisor_admin` |
-| PUT    | `/supervisor/api/users/:id`                   | Update user                      | `supervisor_admin` |
-| DELETE | `/supervisor/api/users/:id`                   | Delete user                      | `supervisor_admin` |
-| POST   | `/supervisor/api/users/:id/permissions`       | Grant permission                 | `supervisor_admin` |
-| DELETE | `/supervisor/api/users/:id/permissions/:perm` | Revoke permission                | `supervisor_admin` |
-| GET    | `/supervisor/api/schemas/`                    | List all supervisor schema names | (authenticated)    |
-| GET    | `/supervisor/api/schemas/:name`               | Get a single JSON Schema         | (authenticated)    |
+| Method | Path                                                   | Description                        | Permission                  |
+| ------ | ------------------------------------------------------ | ---------------------------------- | --------------------------- |
+| GET    | `/supervisor/api/`                                     | API discovery root                 | (authenticated)             |
+| GET    | `/supervisor/api/permissions`                          | Enumerate available permissions    | (authenticated)             |
+| GET    | `/supervisor/api/users`                                | List users (paginated)             | (authenticated)             |
+| POST   | `/supervisor/api/users`                                | Create user                        | `supervisor_admin`          |
+| POST   | `/supervisor/api/users/from-agent`                     | Import hub agent as user           | `supervisor_admin`          |
+| POST   | `/supervisor/api/users/me/password`                    | Change own password                | (authenticated)             |
+| GET    | `/supervisor/api/users/:username`                      | Get user detail                    | (authenticated)             |
+| PUT    | `/supervisor/api/users/:username`                      | Update user                        | admin (any) / self (password) |
+| DELETE | `/supervisor/api/users/:username`                      | Delete user                        | `supervisor_admin` (not self) |
+| POST   | `/supervisor/api/users/:username/rotate-key`           | Rotate API key                     | `supervisor_admin`          |
+| POST   | `/supervisor/api/users/:username/permissions`          | Grant permission                   | `supervisor_admin`          |
+| DELETE | `/supervisor/api/users/:username/permissions/:perm`    | Revoke permission                  | `supervisor_admin` (not own `supervisor_admin`) |
+| GET    | `/supervisor/api/schemas/`                             | List all supervisor schema names   | (authenticated)             |
+| GET    | `/supervisor/api/schemas/:name`                        | Get a single JSON Schema           | (authenticated)             |
 
 ## Example AI Agent Workflow
 
 ```
 1. GET /supervisor/api/
-   → Discover _links including "users" and _actions including "create-user"
+   → Discover _links including "users", "permissions", "schemas"
 
 2. GET /supervisor/api/users
-   → List all users, see pagination links and create action
+   → List users, see _actions.create and _actions.create-from-agent
+      (with disabledReason if caller lacks supervisor_admin)
 
 3. GET /supervisor/api/schemas/CreateUser
    → Learn required fields: username, password
 
 4. POST /supervisor/api/users { "username": "operator", "password": "..." }
-   → 201: New user with _actions: [update, grant-permission, delete]
+   → 201 { success, id, username }
 
-5. GET /supervisor/api/schemas/GrantPermission
-   → Learn: { permission: enum["supervisor_admin", "manage_agents"] }
+5. GET /supervisor/api/users/operator
+   → See detail, _actions includes update/grant-permission/rotate-key/delete
+     and each permission entry has its own revoke action
 
-6. POST /supervisor/api/users/2/permissions { "permission": "manage_agents" }
-   → 200: Updated user with manage_agents in permissions list
+6. GET /supervisor/api/permissions
+   → [supervisor_admin, manage_agents, remote_execution, ...]
 
-7. GET /supervisor/api/users/2
-   → See user detail with permission entries, each with revoke _action
+7. GET /supervisor/api/schemas/GrantPermission
+   → { permission: enum[...] }
+
+8. POST /supervisor/api/users/operator/permissions { "permission": "manage_agents" }
+   → 200 { success, message }
+
+9. GET /supervisor/api/users/operator
+   → manage_agents now in permissions list with a revoke action
 ```
 
 ## Future Considerations
 
 - Role-based groupings (bundle permissions into named roles)
-- Audit log for permission changes
-- `manage_agents` permission enforcement on agent config endpoints
-- Permission checks on more granular operations (view_logs, send_mail, etc.)
+- Audit log for permission changes (the `grantedBy` + `grantedAt` columns already record each grant; surfacing them in the UI and adding a revoke log would complete the picture)
+- Per-user auth-cache invalidation instead of wholesale `authCache.clear()` on every mutation
+- More granular permissions as new features land (so far `manage_agents`, `remote_execution`, `manage_hosts`, `agent_communication`, `manage_models`, `manage_variables`, `view_run_logs` have been added beyond the original two)
 - Sync permissions across hub for multi-supervisor deployments
