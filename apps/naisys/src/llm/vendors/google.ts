@@ -1,4 +1,15 @@
-import { GoogleGenAI } from "@google/genai";
+import type {
+  Content,
+  CreateChatParameters,
+  FunctionDeclaration,
+  Part,
+  Tool,
+} from "@google/genai";
+import {
+  Environment,
+  FunctionCallingConfigMode,
+  GoogleGenAI,
+} from "@google/genai";
 
 import {
   extractDesktopActions,
@@ -51,9 +62,9 @@ export async function sendWithGoogle(
   const lastMessage = context[context.length - 1];
 
   // Build history from context (excluding last message)
-  let history: any[];
+  let history: Content[];
   // Last message parts formatted for sendMessage
-  let cuLastMessageParts: any[] | undefined;
+  let cuLastMessageParts: Part[] | undefined;
   if (desktopConfig) {
     // Format ALL messages in one pass so the tool_use ID → name map is
     // available when processing tool_result blocks (which may be the last message)
@@ -74,7 +85,7 @@ export async function sendWithGoogle(
   }
 
   // Prepare config with system instruction
-  const chatConfig: any = {
+  const chatConfig: CreateChatParameters = {
     model: model.versionName,
     config: {
       systemInstruction: systemMessage,
@@ -87,22 +98,27 @@ export async function sendWithGoogle(
   };
 
   // Build tools array — console and desktop tools can coexist
-  const toolsDefs: any[] = [];
+  const toolsDefs: Tool[] = [];
 
   if (source === "console" && useToolsForLlmConsoleResponses) {
+    // consoleToolGoogle's properties are typed as a union per
+    // multipleCommandsEnabled; FunctionDeclaration expects a flat record,
+    // so go through unknown to reconcile
     toolsDefs.push({
-      functionDeclarations: [tools.consoleToolGoogle],
+      functionDeclarations: [
+        tools.consoleToolGoogle as unknown as FunctionDeclaration,
+      ],
     });
   }
 
   if (desktopConfig) {
     toolsDefs.push({
-      computerUse: { environment: "ENVIRONMENT_BROWSER" },
+      computerUse: { environment: Environment.ENVIRONMENT_BROWSER },
     });
   }
 
   if (toolsDefs.length > 0) {
-    chatConfig.config.tools = toolsDefs;
+    chatConfig.config!.tools = toolsDefs;
 
     // Only force console tool when desktop is not also enabled
     if (
@@ -110,9 +126,9 @@ export async function sendWithGoogle(
       useToolsForLlmConsoleResponses &&
       !desktopConfig
     ) {
-      chatConfig.config.toolConfig = {
+      chatConfig.config!.toolConfig = {
         functionCallingConfig: {
-          mode: "ANY",
+          mode: FunctionCallingConfigMode.ANY,
         },
       };
     }
@@ -127,7 +143,7 @@ export async function sendWithGoogle(
     message: lastMessageParts,
     // Merge abortSignal into the full config — passing { abortSignal } alone
     // replaces the chat config entirely, losing tools and other settings
-    config: abortSignal ? { ...chatConfig.config, abortSignal } : undefined,
+    config: abortSignal ? { ...chatConfig.config!, abortSignal } : undefined,
   });
 
   // Use actual token counts from Google API response
@@ -153,13 +169,13 @@ export async function sendWithGoogle(
 
   // Extract desktop actions from raw response parts (not result.functionCalls)
   // so we can capture thoughtSignature which lives at the Part level
-  const responseParts = (result.candidates?.[0]?.content?.parts || []) as any[];
+  const responseParts: Part[] = result.candidates?.[0]?.content?.parts || [];
 
   const desktopActions = desktopConfig
     ? extractDesktopActions(
         responseParts.filter(
-          (p: any) =>
-            p.functionCall && isGoogleComputerUseAction(p.functionCall.name),
+          (p) =>
+            p.functionCall && isGoogleComputerUseAction(p.functionCall.name!),
         ),
         desktopConfig.displayWidth,
         desktopConfig.displayHeight,
@@ -169,11 +185,11 @@ export async function sendWithGoogle(
   // Extract console commands (non-computer-use function calls)
   const consoleFunctionCalls = responseParts
     .filter(
-      (p: any) =>
-        p.functionCall && !isGoogleComputerUseAction(p.functionCall.name),
+      (p) =>
+        p.functionCall && !isGoogleComputerUseAction(p.functionCall.name!),
     )
-    .map((p: any) => p.functionCall);
-  const consoleCommands = chatConfig.config.tools
+    .map((p) => p.functionCall!);
+  const consoleCommands = chatConfig.config!.tools
     ? tools.getCommandsFromGoogleToolUse(consoleFunctionCalls)
     : undefined;
 
@@ -182,7 +198,7 @@ export async function sendWithGoogle(
   const textParts: string[] = [];
   const candidateParts = result.candidates?.[0]?.content?.parts;
   if (candidateParts) {
-    for (const part of candidateParts as any[]) {
+    for (const part of candidateParts) {
       if (part.text) {
         textParts.push(part.text);
       }
@@ -205,12 +221,12 @@ export async function sendWithGoogle(
   };
 }
 
-function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
+function formatPartsForGoogle(content: string | ContentBlock[]): Part[] {
   if (typeof content === "string") {
     return [{ text: content }];
   }
   return content
-    .map((block) => {
+    .map((block): Part | null => {
       if (block.type === "text") {
         return { text: block.text };
       }
@@ -227,5 +243,5 @@ function formatPartsForGoogle(content: string | ContentBlock[]): Array<any> {
       }
       return null;
     })
-    .filter(Boolean);
+    .filter((p): p is Part => p !== null);
 }

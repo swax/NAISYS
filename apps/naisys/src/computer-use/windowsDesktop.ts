@@ -8,6 +8,7 @@
 
 import { execFileSync } from "child_process";
 
+import type { ExecError } from "./execError.js";
 import type {
   CanonicalKeyChord} from "./keyCombo.js";
 import {
@@ -101,9 +102,10 @@ try {
       stdio: "pipe",
       timeout: 5000,
     });
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as ExecError;
     throw new Error(
-      `Windows screenshot capture failed. Ensure PowerShell and .NET Framework are available. ${e?.message || e}`,
+      `Windows screenshot capture failed. Ensure PowerShell and .NET Framework are available. ${err.message || err}`,
     );
   }
 }

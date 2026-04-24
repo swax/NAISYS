@@ -17,6 +17,7 @@
 
 import { execFileSync } from "child_process";
 
+import type { ExecError } from "./execError.js";
 import type {
   CanonicalKeyChord} from "./keyCombo.js";
 import {
@@ -64,8 +65,8 @@ function toLogical(x: number, y: number): [number, number] {
 function cliclick(args: string[], timeoutMs: number = 10000) {
   try {
     execFileSync("cliclick", args, { stdio: "pipe", timeout: timeoutMs });
-  } catch (e: any) {
-    if (e?.code === "ENOENT") {
+  } catch (e) {
+    if ((e as ExecError).code === "ENOENT") {
       throw new Error(
         "cliclick is not installed. Install it with: brew install cliclick",
       );
@@ -93,13 +94,14 @@ export function checkDependencies(): void {
   try {
     // "p:." prints cursor position — read-only, non-destructive
     execFileSync("cliclick", ["p:."], { stdio: "pipe", timeout: 3000 });
-  } catch (e: any) {
-    if (e?.code === "ENOENT") {
+  } catch (e) {
+    const err = e as ExecError;
+    if (err.code === "ENOENT") {
       throw new Error(
         "cliclick is not installed. Install it with: brew install cliclick",
       );
     }
-    if (e?.killed || e?.code === "ETIMEDOUT" || e?.signal === "SIGTERM") {
+    if (err.killed || err.code === "ETIMEDOUT" || err.signal === "SIGTERM") {
       throw new Error(
         "cliclick timed out — likely missing Accessibility permission. " +
           "Grant it in System Settings → Privacy & Security → Accessibility for your terminal app, " +
@@ -119,9 +121,10 @@ export function captureScreenshot(tmpFile: string): void {
       stdio: "pipe",
       timeout: 5000,
     });
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as ExecError;
     throw new Error(
-      `macOS screenshot failed. Grant Screen Recording permission in System Settings → Privacy & Security. ${e?.message || e}`,
+      `macOS screenshot failed. Grant Screen Recording permission in System Settings → Privacy & Security. ${err.message || err}`,
     );
   }
 }

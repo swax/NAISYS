@@ -320,7 +320,7 @@ export function createMockAgentConfig(): AgentConfig {
       completeSessionEnabled: false,
       debugPauseSeconds: 0,
       wakeOnMessage: false,
-      commandProtection: "none" as any,
+      commandProtection: "none",
       initialCommands: [],
       multipleCommandsEnabled: true,
       workspacesEnabled: false,

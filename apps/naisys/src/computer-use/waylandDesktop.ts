@@ -14,6 +14,7 @@
 
 import { execFileSync } from "child_process";
 
+import type { ExecError } from "./execError.js";
 import type {
   CanonicalKeyChord} from "./keyCombo.js";
 import {
@@ -32,9 +33,10 @@ export function captureScreenshot(tmpFile: string): void {
   try {
     execFileSync("grim", [tmpFile], { stdio: "pipe", timeout: 5000 });
     return;
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as ExecError;
     errors.push(
-      `grim: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+      `grim: ${err.code === "ENOENT" ? "not installed" : err.stderr?.toString().trim() || err.message || err}`,
     );
   }
 
@@ -45,9 +47,10 @@ export function captureScreenshot(tmpFile: string): void {
       timeout: 5000,
     });
     return;
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as ExecError;
     errors.push(
-      `gnome-screenshot: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+      `gnome-screenshot: ${err.code === "ENOENT" ? "not installed" : err.stderr?.toString().trim() || err.message || err}`,
     );
   }
 
@@ -71,9 +74,10 @@ export function captureScreenshot(tmpFile: string): void {
       { stdio: "pipe", timeout: 5000 },
     );
     return;
-  } catch (e: any) {
+  } catch (e) {
+    const err = e as ExecError;
     errors.push(
-      `gdbus: ${e?.code === "ENOENT" ? "not installed" : e?.stderr?.toString?.()?.trim() || e?.message || e}`,
+      `gdbus: ${err.code === "ENOENT" ? "not installed" : err.stderr?.toString().trim() || err.message || err}`,
     );
   }
 
@@ -111,8 +115,8 @@ function ydotool(args: string[]) {
       stdio: "pipe",
       timeout: YDOTOOL_TIMEOUT_MS,
     });
-  } catch (e: any) {
-    if (e?.code === "ENOENT") {
+  } catch (e) {
+    if ((e as ExecError).code === "ENOENT") {
       throw new Error(
         "ydotool is not installed. Install it with: sudo apt install ydotool",
       );
