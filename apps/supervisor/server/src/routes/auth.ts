@@ -14,7 +14,11 @@ import {
   LoginResponseSchema,
   LogoutResponseSchema,
 } from "@naisys/supervisor-shared";
-import type { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type {
+  FastifyInstance,
+  FastifyPluginOptions,
+  FastifyRequest,
+} from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import { authCache } from "../auth-middleware.js";
@@ -22,8 +26,6 @@ import {
   getUserByUsername,
   getUserPermissions,
 } from "../services/userService.js";
-
-let lastLoginRequestTime = 0;
 
 export default function authRoutes(
   fastify: FastifyInstance,
@@ -39,6 +41,14 @@ export default function authRoutes(
         rateLimit: {
           max: 5,
           timeWindow: "1 minute",
+          // preHandler so request.body is parsed/validated before we key on it
+          hook: "preHandler",
+          keyGenerator: (req: FastifyRequest) => {
+            const body = req.body as { username?: unknown } | undefined;
+            const username =
+              typeof body?.username === "string" ? body.username : "";
+            return `${req.ip}:${username}`;
+          },
         },
       },
       schema: {
@@ -53,18 +63,6 @@ export default function authRoutes(
       },
     },
     async (request, reply) => {
-      const currentTime = Date.now();
-
-      if (currentTime - lastLoginRequestTime < 5000) {
-        reply.code(429);
-        return {
-          success: false as const,
-          message: "Too many requests. Please wait before trying again.",
-        };
-      }
-
-      lastLoginRequestTime = currentTime;
-
       const { username, password } = request.body;
 
       const authResult = await authenticateAndCreateSession(username, password);
