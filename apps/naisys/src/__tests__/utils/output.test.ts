@@ -19,10 +19,13 @@ describe("commentAndLog function", () => {
     output.commentAndLog("Test message");
 
     // Verify the mock was called correctly
-    expect(mockLogService.write).toHaveBeenCalledWith({
-      content: "Test message",
-      role: "user",
-      type: "comment",
-    });
+    expect(mockLogService.write).toHaveBeenCalledWith(
+      {
+        content: "Test message",
+        role: "user",
+        type: "comment",
+      },
+      undefined,
+    );
   });
 });

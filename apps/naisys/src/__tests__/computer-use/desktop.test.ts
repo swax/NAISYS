@@ -30,10 +30,11 @@ describe("desktop focus commands", () => {
       initError: undefined,
     } as any;
 
+    const output = createMockOutputService();
     const desktopService = createDesktopService(
       computerService,
       createMockContextManager(),
-      createMockOutputService(),
+      output,
       {
         agentConfig: () => ({
           shellModel: "shell-model",
@@ -57,7 +58,10 @@ describe("desktop focus commands", () => {
     await expect(
       desktopService.handleCommand("focus 0 0 690 388"),
     ).resolves.toBe(
-      "Desktop focus set from screenshot (0, 0, 690x388) -> native (0, 0, 1920x1080).\nFocus changes can increase next-turn cost because computer-use context has to be refreshed.",
+      "Desktop focus set from screenshot (0, 0, 690x388) -> native (0, 0, 1920x1080).",
+    );
+    expect(output.commentAndLog).toHaveBeenCalledWith(
+      "Focus changes can increase next-turn cost because computer-use context has to be refreshed.",
     );
 
     expect(computerService.setFocus).toHaveBeenCalledWith({

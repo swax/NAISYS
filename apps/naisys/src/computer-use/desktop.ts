@@ -292,7 +292,8 @@ export function createDesktopService(
 
     if (argv[1].toLowerCase() === "clear") {
       computerService.setFocus(undefined);
-      return `Desktop focus cleared. Using ${describeDesktopViewport(desktopConfig!)}\n${getFocusChangeCostNote()}`;
+      output.commentAndLog(getFocusChangeCostNote());
+      return `Desktop focus cleared. Using ${describeDesktopViewport(desktopConfig!)}`;
     }
 
     const x = Number(argv[1]);
@@ -323,7 +324,8 @@ export function createDesktopService(
     const viewport = computerService.setFocus(
       mapScreenshotRectToNative(x, y, width, height, state),
     );
-    return `Desktop focus set from screenshot (${x}, ${y}, ${width}x${height}) -> native (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}).\n${getFocusChangeCostNote()}`;
+    output.commentAndLog(getFocusChangeCostNote());
+    return `Desktop focus set from screenshot (${x}, ${y}, ${width}x${height}) -> native (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}).`;
   }
 
   async function handleKeyCommand(

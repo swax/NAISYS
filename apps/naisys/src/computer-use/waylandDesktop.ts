@@ -14,7 +14,12 @@
 
 import { execFileSync } from "child_process";
 
-import { normalizeKeyCombo, toLinuxKeyToken } from "./keyCombo.js";
+import {
+  CanonicalKeyChord,
+  PRESS_KEY_HOLD_MS,
+  normalizeKeyCombo,
+  toLinuxKeyToken,
+} from "./keyCombo.js";
 
 const YDOTOOL_TIMEOUT_MS = 10000;
 const WAYLAND_KEY_SEQUENCE_SETTLE_MS = 50;
@@ -190,21 +195,33 @@ export function typeText(text: string) {
   ydotool(["type", "--", text]);
 }
 
+// Hold a chord for a duration. Emulators need a real held-down key, not
+// repeated presses. This is the single primitive used by both pressKey
+// (fixed 100ms) and holdKey (caller-specified duration).
+function holdChord(chord: CanonicalKeyChord, durationMs: number) {
+  const tokens = [...chord.modifiers, ...chord.keys];
+  if (!tokens.length) return;
+
+  if (detectYdotoolVersion() === "legacy") {
+    const names = tokens.map(toLinuxKeyToken);
+    for (const n of names) ydotool(["keydown", n]);
+    waitForInputSettle(Math.round(durationMs));
+    for (const n of [...names].reverse()) ydotool(["keyup", n]);
+  } else {
+    const codes = tokens.map(toWaylandKeycode);
+    for (const c of codes) ydotool(["key", `${c}:1`]);
+    waitForInputSettle(Math.round(durationMs));
+    for (const c of [...codes].reverse()) ydotool(["key", `${c}:0`]);
+  }
+}
+
 export function pressKey(keyCombo: string) {
   // Whitespace-separated tokens are pressed in sequence (e.g. "Down Down Right")
   // while a single token may still be a chord like "ctrl+c".
-  const keys = normalizeKeyCombo(keyCombo)
-    .map((chord) =>
-      [...chord.modifiers, ...chord.keys].map(toLinuxKeyToken).join("+"),
-    )
-    .filter(Boolean);
-  if (!keys.length) return;
-
-  for (const [index, key] of keys.entries()) {
-    if (index > 0) {
-      waitForInputSettle(WAYLAND_KEY_SEQUENCE_SETTLE_MS);
-    }
-    ydotool(["key", key]);
+  const chords = normalizeKeyCombo(keyCombo);
+  for (const [index, chord] of chords.entries()) {
+    if (index > 0) waitForInputSettle(WAYLAND_KEY_SEQUENCE_SETTLE_MS);
+    holdChord(chord, PRESS_KEY_HOLD_MS);
   }
 }
 
@@ -274,35 +291,17 @@ function toWaylandKeycode(key: string): number {
     const n = parseInt(key.slice(1));
     return n <= 10 ? 58 + n : n === 11 ? 87 : 88; // F1=59..F10=68, F11=87, F12=88
   }
-  throw new Error(`hold does not support key "${key}" on Wayland`);
+  throw new Error(`ydotool v1.0+ does not have a keycode for "${key}"`);
 }
 
 export function holdKey(keyCombo: string, durationMs: number) {
-  // Hold a single chord for a duration. Emulators need an actual held key —
-  // repeated discrete presses won't register as movement.
   const chords = normalizeKeyCombo(keyCombo);
   if (chords.length !== 1) {
     throw new Error(
       `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
     );
   }
-  const chord = chords[0];
-  const tokens = [...chord.modifiers, ...chord.keys];
-  if (!tokens.length) return;
-
-  if (detectYdotoolVersion() === "legacy") {
-    // v0.1.x has keydown/keyup subcommands that take xdotool-style names.
-    const names = tokens.map(toLinuxKeyToken);
-    for (const n of names) ydotool(["keydown", n]);
-    waitForInputSettle(Math.round(durationMs));
-    for (const n of [...names].reverse()) ydotool(["keyup", n]);
-  } else {
-    // v1.0+ uses numeric keycodes with `:1` (down) / `:0` (up).
-    const codes = tokens.map(toWaylandKeycode);
-    for (const c of codes) ydotool(["key", `${c}:1`]);
-    waitForInputSettle(Math.round(durationMs));
-    for (const c of [...codes].reverse()) ydotool(["key", `${c}:0`]);
-  }
+  holdChord(chords[0], durationMs);
 }
 
 export function mouseScroll(

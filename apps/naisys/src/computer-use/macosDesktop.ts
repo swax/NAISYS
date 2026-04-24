@@ -17,7 +17,11 @@
 
 import { execFileSync } from "child_process";
 
-import { normalizeKeyCombo } from "./keyCombo.js";
+import {
+  CanonicalKeyChord,
+  PRESS_KEY_HOLD_MS,
+  normalizeKeyCombo,
+} from "./keyCombo.js";
 
 // --- Retina / HiDPI coordinate handling ---
 
@@ -56,9 +60,9 @@ function toLogical(x: number, y: number): [number, number] {
 
 // --- cliclick helper ---
 
-function cliclick(args: string[]) {
+function cliclick(args: string[], timeoutMs: number = 10000) {
   try {
-    execFileSync("cliclick", args, { stdio: "pipe", timeout: 10000 });
+    execFileSync("cliclick", args, { stdio: "pipe", timeout: timeoutMs });
   } catch (e: any) {
     if (e?.code === "ENOENT") {
       throw new Error(
@@ -233,47 +237,46 @@ function mapKey(key: string): string {
   }
 }
 
+// Hold a chord down for a duration using cliclick's kd:/ku: primitives with a
+// w:<ms> wait between them. Emulators need a real held-down key, not repeated
+// presses. This is the single primitive used by both pressKey (fixed 100ms)
+// and holdKey (caller-specified duration).
+function holdChord(chord: CanonicalKeyChord, durationMs: number) {
+  const tokens = [
+    ...chord.modifiers.map(mapModifier),
+    ...chord.keys.map(mapKey),
+  ];
+  if (!tokens.length) return;
+
+  const args: string[] = [];
+  for (const t of tokens) args.push(`kd:${t}`);
+  args.push(`w:${Math.round(durationMs)}`);
+  for (const t of [...tokens].reverse()) args.push(`ku:${t}`);
+  // The wait runs inside cliclick, so the subprocess timeout must cover the
+  // full hold plus startup and keyup — otherwise a long hold would SIGKILL
+  // cliclick mid-wait and strand the key down.
+  cliclick(args, durationMs + 10000);
+}
+
 export function pressKey(keyCombo: string) {
   // Whitespace separates sequential chords ("Down Down Right"); `+` separates
-  // modifiers within a single chord ("ctrl+shift+t"). Accumulate all kd/kp/ku
-  // args into one cliclick invocation so sequences run without process overhead.
+  // modifiers within a single chord ("ctrl+shift+t"). Each chord is held for
+  // PRESS_KEY_HOLD_MS with a short settle between chords.
   const chords = normalizeKeyCombo(keyCombo);
-  const args: string[] = [];
-
-  for (const chord of chords) {
-    for (const mod of chord.modifiers) args.push(`kd:${mapModifier(mod)}`);
-    for (const key of chord.keys) args.push(`kp:${mapKey(key)}`);
-    for (const mod of [...chord.modifiers].reverse()) {
-      args.push(`ku:${mapModifier(mod)}`);
-    }
+  for (const [index, chord] of chords.entries()) {
+    if (index > 0) cliclick(["w:50"]);
+    holdChord(chord, PRESS_KEY_HOLD_MS);
   }
-
-  if (!args.length) return;
-  cliclick(args);
 }
 
 export function holdKey(keyCombo: string, durationMs: number) {
-  // Hold a single chord down for a duration using cliclick's kd:/ku: primitives
-  // with a w:<ms> wait between them. Emulators need a real held-down key, not
-  // repeated presses.
   const chords = normalizeKeyCombo(keyCombo);
   if (chords.length !== 1) {
     throw new Error(
       `hold requires a single key combo (e.g. "right" or "ctrl+right"), got ${chords.length} chords: "${keyCombo}"`,
     );
   }
-  const chord = chords[0];
-  const mapped = [
-    ...chord.modifiers.map(mapModifier),
-    ...chord.keys.map(mapKey),
-  ];
-  if (!mapped.length) return;
-
-  const args: string[] = [];
-  for (const token of mapped) args.push(`kd:${token}`);
-  args.push(`w:${Math.round(durationMs)}`);
-  for (const token of [...mapped].reverse()) args.push(`ku:${token}`);
-  cliclick(args);
+  holdChord(chords[0], durationMs);
 }
 
 export function mouseScroll(
