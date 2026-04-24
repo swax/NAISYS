@@ -12,7 +12,10 @@ import type {
   DesktopConfig,
   DesktopViewport,
 } from "../../llm/vendors/vendorTypes.js";
-import { mapCoordinateBetweenSpaces } from "../computerService.js";
+import {
+  getTargetScaleFactor,
+  mapCoordinateBetweenSpaces,
+} from "../computerService.js";
 import { canonicalizeKeyCombo } from "../keyCombo.js";
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
@@ -54,16 +57,16 @@ export function isGoogleComputerUseAction(name: string): boolean {
 function convertGoogleActionToInternal(
   name: string,
   args: Record<string, unknown>,
-  viewportWidth: number,
-  viewportHeight: number,
+  scaledWidth: number,
+  scaledHeight: number,
 ): Record<string, unknown>[] {
   const denormalize = (x: number, y: number) =>
     mapCoordinateBetweenSpaces(
       [x, y],
       NORMALIZED_MAX,
       NORMALIZED_MAX,
-      viewportWidth,
-      viewportHeight,
+      scaledWidth,
+      scaledHeight,
     );
 
   switch (name) {
@@ -104,8 +107,8 @@ function convertGoogleActionToInternal(
         {
           action: "scroll",
           coordinate: [
-            Math.round(viewportWidth / 2),
-            Math.round(viewportHeight / 2),
+            Math.round(scaledWidth / 2),
+            Math.round(scaledHeight / 2),
           ],
           scroll_direction: args.direction as string,
           scroll_amount: 3,
@@ -160,14 +163,14 @@ function convertGoogleActionToInternal(
 function reconstructGoogleArgs(
   googleFuncName: string,
   internalActions: Record<string, unknown>[],
-  viewportWidth: number,
-  viewportHeight: number,
+  scaledWidth: number,
+  scaledHeight: number,
 ): Record<string, unknown> {
   const normalize = (x: number, y: number) =>
     mapCoordinateBetweenSpaces(
       [x, y],
-      viewportWidth,
-      viewportHeight,
+      scaledWidth,
+      scaledHeight,
       NORMALIZED_MAX,
       NORMALIZED_MAX,
     );
@@ -262,24 +265,36 @@ function reconstructGoogleArgs(
   }
 }
 
-function getReplayViewport(
+/**
+ * Derive the scaled dimensions to use when replaying a stored action back
+ * to the Google API as 0-999 normalized coords. Reads the viewport stamp
+ * `attachViewportToActions` puts on every emitted action, so a later focus
+ * change cannot misalign replayed coords. Falls back to the native display
+ * only for malformed/legacy input that lacks a stamp.
+ */
+function getReplayScaledDimensions(
   input: Record<string, unknown>,
   desktopConfig: DesktopConfig,
-): Pick<DesktopViewport, "width" | "height"> {
-  const viewport = input.viewport as Partial<DesktopViewport> | undefined;
-  if (
-    viewport &&
-    typeof viewport.width === "number" &&
-    typeof viewport.height === "number" &&
-    viewport.width > 0 &&
-    viewport.height > 0
-  ) {
-    return { width: viewport.width, height: viewport.height };
-  }
+): { scaledWidth: number; scaledHeight: number } {
+  const stamped = input.viewport as Partial<DesktopViewport> | undefined;
+  const hasStamp =
+    !!stamped &&
+    typeof stamped.width === "number" &&
+    typeof stamped.height === "number" &&
+    stamped.width > 0 &&
+    stamped.height > 0;
 
+  const width = hasStamp
+    ? (stamped!.width as number)
+    : desktopConfig.nativeDisplayWidth;
+  const height = hasStamp
+    ? (stamped!.height as number)
+    : desktopConfig.nativeDisplayHeight;
+
+  const scaleFactor = getTargetScaleFactor(width, height);
   return {
-    width: desktopConfig.viewport.width,
-    height: desktopConfig.viewport.height,
+    scaledWidth: Math.floor(width * scaleFactor),
+    scaledHeight: Math.floor(height * scaleFactor),
   };
 }
 
@@ -294,8 +309,8 @@ function getReplayViewport(
  */
 export function extractDesktopActions(
   parts: any[],
-  viewportWidth: number,
-  viewportHeight: number,
+  scaledWidth: number,
+  scaledHeight: number,
 ): DesktopAction[] {
   const actions: DesktopAction[] = [];
   for (const part of parts) {
@@ -308,8 +323,8 @@ export function extractDesktopActions(
     const internalActions = convertGoogleActionToInternal(
       name,
       args,
-      viewportWidth,
-      viewportHeight,
+      scaledWidth,
+      scaledHeight,
     );
 
     const id =
@@ -369,12 +384,15 @@ export function formatContextWithComputerUse(
           parts.push({ text: block.text });
         } else if (block.type === "tool_use") {
           toolUseIdToName.set(block.id, block.name);
-          const replayViewport = getReplayViewport(block.input, desktopConfig);
+          const { scaledWidth, scaledHeight } = getReplayScaledDimensions(
+            block.input,
+            desktopConfig,
+          );
           const googleArgs = reconstructGoogleArgs(
             block.name,
             (block.input as { actions: Record<string, unknown>[] }).actions,
-            replayViewport.width,
-            replayViewport.height,
+            scaledWidth,
+            scaledHeight,
           );
           const inputObj = block.input as Record<string, unknown>;
           parts.push({

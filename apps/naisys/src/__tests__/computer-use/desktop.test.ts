@@ -73,7 +73,7 @@ describe("desktop focus commands", () => {
     });
   });
 
-  test("does not attach viewport metadata when the full desktop is in view", async () => {
+  test("stamps every action with the viewport it was emitted against, including full-desktop", async () => {
     const desktopConfig: DesktopConfig = {
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
@@ -137,7 +137,12 @@ describe("desktop focus commands", () => {
 
     const toolBlocks = (contextManager.appendDesktopRequest as any).mock
       .calls[0][1];
-    expect(toolBlocks[0].input.viewport).toBeUndefined();
+    expect(toolBlocks[0].input.viewport).toEqual({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    });
   });
 
   test("adds the scaled screenshot to context for non-computer-use models", async () => {
@@ -308,11 +313,11 @@ describe("desktop focus commands", () => {
     );
 
     await expect(desktopService.handleCommand("click 828 764")).resolves.toBe(
-      "Clicked (left) at screenshot (828, 764) -> viewport-local (2304, 2127)",
+      "Clicked (left) at screenshot (828, 764)",
     );
 
     expect(computerService.executeAction).toHaveBeenCalledWith({
-      actions: [{ action: "left_click", coordinate: [2304, 2127] }],
+      actions: [{ action: "left_click", coordinate: [828, 764] }],
     });
   });
 

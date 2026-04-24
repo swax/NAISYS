@@ -8,11 +8,7 @@
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 
 import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
-import type {
-  DesktopAction,
-  DesktopConfig,
-} from "../../llm/vendors/vendorTypes.js";
-import { mapActionBetweenSpaces } from "../computerService.js";
+import type { DesktopAction } from "../../llm/vendors/vendorTypes.js";
 
 // --- Action format conversion ---
 
@@ -147,14 +143,12 @@ function convertInternalActionToOpenAi(
 /**
  * Extract desktop actions from the OpenAI response output. Each computer_call
  * item becomes a single DesktopAction with batched internal actions.
- * Coordinates are mapped from the API's scaled-pixel space to viewport-local
- * pixels.
+ * Action shapes are normalized to the internal (Anthropic-compatible) form,
+ * but coordinates are left in the API's scaled-pixel space.
  */
 export function extractDesktopActions(
   output: ResponseOutputItem[],
-  desktopConfig: DesktopConfig,
 ): DesktopAction[] {
-  const { viewport, scaledWidth, scaledHeight } = desktopConfig;
   const actions: DesktopAction[] = [];
   for (const item of output) {
     if (item.type === "computer_call") {
@@ -162,15 +156,7 @@ export function extractDesktopActions(
       // ResponseComputerToolCall shape consistently; read loosely.
       const rawActions =
         (item as unknown as { actions?: Record<string, any>[] }).actions || [];
-      const internalActions = rawActions.map((a) =>
-        mapActionBetweenSpaces(
-          convertOpenAiActionToInternal(a),
-          scaledWidth,
-          scaledHeight,
-          viewport.width,
-          viewport.height,
-        ),
-      );
+      const internalActions = rawActions.map(convertOpenAiActionToInternal);
       actions.push({
         id: item.call_id,
         name: "computer",

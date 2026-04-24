@@ -164,29 +164,39 @@ async function cropScreenshotToViewport(
   };
 }
 
-function translateCoordinate(
+function translateScaledCoordinate(
   coord: unknown,
-  viewport?: DesktopViewport,
+  desktopConfig: DesktopConfig,
 ): unknown {
-  if (!viewport || !Array.isArray(coord)) return coord;
-  return [coord[0] + viewport.x, coord[1] + viewport.y];
+  if (!Array.isArray(coord)) return coord;
+  const { scaledWidth, scaledHeight, viewport } = desktopConfig;
+  // scaled → viewport-local → screen (single multiply/add per axis)
+  return [
+    Math.round((coord[0] / scaledWidth) * viewport.width) + viewport.x,
+    Math.round((coord[1] / scaledHeight) * viewport.height) + viewport.y,
+  ];
 }
 
-function translateActionToScreen(
+/**
+ * Translate an action's coordinates from scaled (API/screenshot) space to
+ * absolute screen space. Handles both `coordinate` and `start_coordinate`.
+ */
+function translateScaledActionToScreen(
   action: Record<string, unknown>,
-  viewport?: DesktopViewport,
+  desktopConfig: DesktopConfig,
 ): Record<string, unknown> {
-  if (!viewport) return action;
-
   const translated = { ...action };
 
   if ("coordinate" in action) {
-    translated.coordinate = translateCoordinate(action.coordinate, viewport);
+    translated.coordinate = translateScaledCoordinate(
+      action.coordinate,
+      desktopConfig,
+    );
   }
   if ("start_coordinate" in action) {
-    translated.start_coordinate = translateCoordinate(
+    translated.start_coordinate = translateScaledCoordinate(
       action.start_coordinate,
-      viewport,
+      desktopConfig,
     );
   }
 
@@ -266,11 +276,11 @@ async function executeSingleAction(
 async function executeAction(
   action: DesktopAction["input"],
   platform: Platform,
-  viewport?: DesktopViewport,
+  desktopConfig: DesktopConfig,
 ): Promise<void> {
   for (const subAction of action.actions) {
     await executeSingleAction(
-      translateActionToScreen(subAction, viewport),
+      translateScaledActionToScreen(subAction, desktopConfig),
       platform,
     );
   }
@@ -382,43 +392,34 @@ export function mapActionBetweenSpaces(
 }
 
 /**
- * Check if any coordinates in an action exceed native screen bounds.
- * Returns an error message referencing the API-space coordinates and
- * the scaled resolution the LLM was told, or undefined if all OK.
+ * Check if any coordinates in an action exceed the scaled-screenshot bounds.
+ * Action coordinates are in scaled-pixel space (same space the model sees).
  */
 export function checkActionBounds(
   input: DesktopAction["input"],
-  nativeWidth: number,
-  nativeHeight: number,
-  coordScale: CoordScale,
+  scaledWidth: number,
+  scaledHeight: number,
 ): string | undefined {
-  const apiW = Math.round(nativeWidth * coordScale.x);
-  const apiH = Math.round(nativeHeight * coordScale.y);
-
   for (const action of input.actions) {
     const coord = action.coordinate as number[] | undefined;
     if (
       coord &&
-      (coord[0] >= nativeWidth ||
-        coord[1] >= nativeHeight ||
+      (coord[0] >= scaledWidth ||
+        coord[1] >= scaledHeight ||
         coord[0] < 0 ||
         coord[1] < 0)
     ) {
-      const apiX = Math.round(coord[0] * coordScale.x);
-      const apiY = Math.round(coord[1] * coordScale.y);
-      return `Coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
+      return `Coordinate (${coord[0]}, ${coord[1]}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
     }
     const startCoord = action.start_coordinate as number[] | undefined;
     if (
       startCoord &&
-      (startCoord[0] >= nativeWidth ||
-        startCoord[1] >= nativeHeight ||
+      (startCoord[0] >= scaledWidth ||
+        startCoord[1] >= scaledHeight ||
         startCoord[0] < 0 ||
         startCoord[1] < 0)
     ) {
-      const apiX = Math.round(startCoord[0] * coordScale.x);
-      const apiY = Math.round(startCoord[1] * coordScale.y);
-      return `Start coordinate (${apiX}, ${apiY}) is outside the screen resolution ${apiW}x${apiH}`;
+      return `Start coordinate (${startCoord[0]}, ${startCoord[1]}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
     }
   }
   return undefined;
@@ -426,28 +427,24 @@ export function checkActionBounds(
 
 // --- Display formatting ---
 
-/** Coordinate scale for converting native screen coordinates to API-space coordinates */
-export interface CoordScale {
-  x: number;
-  y: number;
-}
-
-/** Format a coordinate pair, optionally showing API-space coordinates */
-function fmtCoord(coord: number[], scale?: CoordScale): string {
-  if (!scale) return `(${coord.join(", ")})`;
-  const apiX = Math.round(coord[0] * scale.x);
-  const apiY = Math.round(coord[1] * scale.y);
-  return `(${apiX}, ${apiY}) → screen (${coord.join(", ")})`;
+/**
+ * Format a coordinate pair. Coord is in scaled space; if desktopConfig is
+ * supplied, also shows the absolute screen coord the click will land on.
+ */
+function fmtCoord(coord: number[], desktopConfig?: DesktopConfig): string {
+  if (!desktopConfig) return `(${coord.join(", ")})`;
+  const screen = translateScaledCoordinate(coord, desktopConfig) as number[];
+  return `(${coord.join(", ")}) → screen (${screen.join(", ")})`;
 }
 
 /** Format a single action for human-readable display */
 function formatSingleAction(
   input: Record<string, unknown>,
-  scale?: CoordScale,
+  desktopConfig?: DesktopConfig,
 ): string {
   const action = input.action;
   const coordinate = input.coordinate as number[] | undefined;
-  const coord = coordinate ? fmtCoord(coordinate, scale) : "";
+  const coord = coordinate ? fmtCoord(coordinate, desktopConfig) : "";
 
   switch (action) {
     case "screenshot":
@@ -474,7 +471,7 @@ function formatSingleAction(
       return `Scroll ${input.scroll_direction} by ${input.scroll_amount} at ${coord}`;
     case "left_click_drag": {
       const startCoord = input.start_coordinate as number[] | undefined;
-      const startStr = startCoord ? fmtCoord(startCoord, scale) : "";
+      const startStr = startCoord ? fmtCoord(startCoord, desktopConfig) : "";
       return `Drag from ${startStr} to ${coord}`;
     }
     case "wait":
@@ -487,20 +484,20 @@ function formatSingleAction(
 /** Format a computer use action for human-readable display. Actions are always { actions: [...] }. */
 export function formatDesktopAction(
   input: DesktopAction["input"],
-  coordScale?: CoordScale,
+  desktopConfig?: DesktopConfig,
 ): string {
   return input.actions
-    .map((a) => formatSingleAction(a, coordScale))
+    .map((a) => formatSingleAction(a, desktopConfig))
     .join(", then ");
 }
 
 /** Format a batch of desktop actions for human-readable display */
 export function formatDesktopActions(
   actions: DesktopAction[],
-  coordScale?: CoordScale,
+  desktopConfig?: DesktopConfig,
 ): string {
   return actions
-    .map((a) => formatDesktopAction(a.input, coordScale))
+    .map((a) => formatDesktopAction(a.input, desktopConfig))
     .join(", then ");
 }
 
@@ -634,10 +631,11 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
   }
 
   /**
-   * Execute an action whose coordinates are in viewport-local space
-   * (0..viewport.width, 0..viewport.height at native resolution). The
-   * viewport origin is added here to translate into absolute screen coords
-   * before dispatching to the platform backend.
+   * Execute an action whose coordinates are in scaled-pixel space (the same
+   * space the model sees in its screenshot and the space it sends back in
+   * tool calls). Translation to absolute screen coords happens here —
+   * scaled → viewport-local → screen — before dispatch to the platform
+   * backend.
    */
   async function execute(action: DesktopAction["input"]) {
     if (!platform) {
@@ -645,7 +643,11 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
         "Desktop mode is not enabled or no display server detected.",
       );
     }
-    await executeAction(action, platform, getViewport());
+    const config = getConfig();
+    if (!config) {
+      throw new Error("Desktop config unavailable.");
+    }
+    await executeAction(action, platform, config);
   }
 
   /** Build the DesktopConfig with native display dimensions. Returns undefined if no platform or init failed. */
