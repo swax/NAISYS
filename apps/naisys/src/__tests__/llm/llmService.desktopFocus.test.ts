@@ -25,19 +25,21 @@ describe("llmService desktop config", () => {
 
   test("reads the current desktop config for each query", async () => {
     const firstConfig: DesktopConfig = {
-      displayWidth: 1200,
-      displayHeight: 900,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 0, y: 0, width: 1200, height: 900 },
+      scaledWidth: 1200,
+      scaledHeight: 900,
+      scaleFactor: 1,
       desktopPlatform: "Linux (X11)",
     };
     const secondConfig: DesktopConfig = {
-      displayWidth: 400,
-      displayHeight: 300,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 100, y: 200, width: 400, height: 300 },
+      scaledWidth: 400,
+      scaledHeight: 300,
+      scaleFactor: 1,
       desktopPlatform: "Linux (X11)",
     };
 

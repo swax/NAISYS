@@ -39,16 +39,10 @@ export function createDesktopService(
 ) {
   type DesktopRuntimeState = {
     desktopConfig: ReturnType<ComputerService["getConfig"]>;
-    scaleFactor?: number;
     coordScale?: CoordScale;
-    scaledWidth?: number;
-    scaledHeight?: number;
   };
   type VisibleDesktopState = {
     desktopConfig: DesktopConfig;
-    scaleFactor: number;
-    scaledWidth: number;
-    scaledHeight: number;
   };
   type DesktopSubcommand = keyof NonNullable<typeof desktopCmd.subcommands>;
 
@@ -78,56 +72,58 @@ export function createDesktopService(
       return { desktopConfig };
     }
 
-    const { displayWidth: w, displayHeight: h } = desktopConfig;
-    const scaleFactor = getTargetScaleFactor(w, h);
-
+    const { viewport, scaleFactor } = desktopConfig;
     return {
       desktopConfig,
-      scaleFactor,
-      scaledWidth: Math.floor(w * scaleFactor),
-      scaledHeight: Math.floor(h * scaleFactor),
       coordScale:
         shellModel.supportsComputerUse &&
         shellModel.apiType === LlmApiType.Google
-          ? { x: 1000 / w, y: 1000 / h }
+          ? { x: 1000 / viewport.width, y: 1000 / viewport.height }
           : { x: scaleFactor, y: scaleFactor },
     };
   }
 
   function requireVisibleDesktopState(): VisibleDesktopState {
-    const { desktopConfig, scaleFactor, scaledWidth, scaledHeight } =
-      getDesktopRuntimeState();
-
-    if (!desktopConfig || !scaleFactor || !scaledWidth || !scaledHeight) {
+    const { desktopConfig } = getDesktopRuntimeState();
+    if (!desktopConfig) {
       throw "Desktop mode is not enabled or failed to initialize.";
     }
-
-    return { desktopConfig, scaleFactor, scaledWidth, scaledHeight };
+    return { desktopConfig };
   }
 
-  function mapScreenshotPointToViewport(
+  /**
+   * Map a point from scaled-screenshot coord space (what the user sees) to
+   * viewport-local coord space (native pixels, 0..viewport.width, 0..viewport.height).
+   * The result is NOT an absolute screen coord — add viewport.x/y for that.
+   */
+  function mapScreenshotPointToViewportLocal(
     x: number,
     y: number,
     state: VisibleDesktopState,
   ): number[] {
     return mapCoordinateBetweenSpaces(
       [x, y],
-      state.scaledWidth,
-      state.scaledHeight,
-      state.desktopConfig.displayWidth,
-      state.desktopConfig.displayHeight,
+      state.desktopConfig.scaledWidth,
+      state.desktopConfig.scaledHeight,
+      state.desktopConfig.viewport.width,
+      state.desktopConfig.viewport.height,
     );
   }
 
-  function mapScreenshotRectToNative(
+  /**
+   * Map a rect from scaled-screenshot coord space to absolute screen coord
+   * space (native pixels, relative to the full display origin). Used by
+   * focus, which takes absolute screen rects.
+   */
+  function mapScreenshotRectToScreen(
     x: number,
     y: number,
     width: number,
     height: number,
     state: VisibleDesktopState,
   ): { x: number; y: number; width: number; height: number } {
-    const [startX, startY] = mapScreenshotPointToViewport(x, y, state);
-    const [endX, endY] = mapScreenshotPointToViewport(
+    const [startX, startY] = mapScreenshotPointToViewportLocal(x, y, state);
+    const [endX, endY] = mapScreenshotPointToViewportLocal(
       x + width,
       y + height,
       state,
@@ -181,11 +177,11 @@ export function createDesktopService(
       ].join("\n");
     }
 
-    const { desktopConfig, scaleFactor, scaledWidth, scaledHeight } =
-      getDesktopRuntimeState();
-    if (!desktopConfig || !scaleFactor || !scaledWidth || !scaledHeight) {
+    const { desktopConfig } = getDesktopRuntimeState();
+    if (!desktopConfig) {
       return "Desktop Status\n  State: unavailable";
     }
+    const { scaleFactor, scaledWidth, scaledHeight } = desktopConfig;
     const modelCoordSpace =
       shellModel.supportsComputerUse && shellModel.apiType === LlmApiType.Google
         ? "0..999 normalized grid"
@@ -248,12 +244,12 @@ export function createDesktopService(
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 
     // Save full native desktop screenshot
-    const full = await computerService.captureFullNativeScreenshot();
+    const full = await computerService.captureFullScreenshot();
     const fullPath = path.join(outDir, `screenshot-${timestamp}-full.png`);
     fs.copyFileSync(full.filepath, fullPath);
 
     // Save native viewport screenshot
-    const viewportNative = await computerService.captureNativeScreenshot();
+    const viewportNative = await computerService.captureViewportScreenshot();
     const viewportNativePath = path.join(
       outDir,
       `screenshot-${timestamp}-viewport-native.png`,
@@ -269,14 +265,12 @@ export function createDesktopService(
     fs.copyFileSync(scaled.filepath, scaledPath);
 
     const desktopConfig = computerService.getConfig();
-    const { scaledWidth, scaledHeight } = getDesktopRuntimeState();
     const viewportLine = desktopConfig
       ? `\nViewport: ${describeDesktopViewport(desktopConfig)}`
       : "";
-    const clickLine =
-      scaledWidth && scaledHeight
-        ? `\nManual Click Coords: scaled screenshot ${scaledWidth}x${scaledHeight}`
-        : "";
+    const clickLine = desktopConfig
+      ? `\nManual Click Coords: scaled screenshot ${desktopConfig.scaledWidth}x${desktopConfig.scaledHeight}`
+      : "";
 
     return `Full: ${fullPath}\nViewport Native: ${viewportNativePath}\nScaled: ${scaledPath}${viewportLine}${clickLine}`;
   }
@@ -315,14 +309,14 @@ export function createDesktopService(
     if (
       x < 0 ||
       y < 0 ||
-      x + width > state.scaledWidth ||
-      y + height > state.scaledHeight
+      x + width > state.desktopConfig.scaledWidth ||
+      y + height > state.desktopConfig.scaledHeight
     ) {
-      throw `Focus rect (${x}, ${y}, ${width}, ${height}) is outside the current screenshot bounds ${state.scaledWidth}x${state.scaledHeight}.`;
+      throw `Focus rect (${x}, ${y}, ${width}, ${height}) is outside the current screenshot bounds ${state.desktopConfig.scaledWidth}x${state.desktopConfig.scaledHeight}.`;
     }
 
     const viewport = computerService.setFocus(
-      mapScreenshotRectToNative(x, y, width, height, state),
+      mapScreenshotRectToScreen(x, y, width, height, state),
     );
     output.commentAndLog(getFocusChangeCostNote());
     return `Desktop focus set from screenshot (${x}, ${y}, ${width}x${height}) -> native (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}).`;
@@ -374,8 +368,8 @@ export function createDesktopService(
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       throw usageError("click");
     }
-    if (x < 0 || y < 0 || x >= state.scaledWidth || y >= state.scaledHeight) {
-      throw `Click (${x}, ${y}) is outside the current screenshot bounds ${state.scaledWidth}x${state.scaledHeight}.`;
+    if (x < 0 || y < 0 || x >= state.desktopConfig.scaledWidth || y >= state.desktopConfig.scaledHeight) {
+      throw `Click (${x}, ${y}) is outside the current screenshot bounds ${state.desktopConfig.scaledWidth}x${state.desktopConfig.scaledHeight}.`;
     }
     const button = (argv[3] || "left").toLowerCase();
     const action = actionByButton[button];
@@ -383,11 +377,11 @@ export function createDesktopService(
       throw `Unknown button "${button}". Use left, right, middle, or double.`;
     }
 
-    const [viewportX, viewportY] = mapScreenshotPointToViewport(x, y, state);
+    const [localX, localY] = mapScreenshotPointToViewportLocal(x, y, state);
     await computerService.executeAction({
-      actions: [{ action, coordinate: [viewportX, viewportY] }],
+      actions: [{ action, coordinate: [localX, localY] }],
     });
-    return `Clicked (${button}) at screenshot (${x}, ${y}) -> viewport (${viewportX}, ${viewportY})`;
+    return `Clicked (${button}) at screenshot (${x}, ${y}) -> viewport-local (${localX}, ${localY})`;
   }
 
   async function handleTypeCommand(
@@ -504,8 +498,8 @@ export function createDesktopService(
         if (desktopConfig && coordScale) {
           const boundsError = checkActionBounds(
             action.input,
-            desktopConfig.displayWidth,
-            desktopConfig.displayHeight,
+            desktopConfig.viewport.width,
+            desktopConfig.viewport.height,
             coordScale,
           );
           if (boundsError) {
@@ -563,17 +557,18 @@ export function createDesktopService(
       return;
     }
 
-    const { desktopConfig, scaledWidth, scaledHeight } =
-      getDesktopRuntimeState();
-    if (!desktopConfig || !scaledWidth || !scaledHeight) return;
+    const { desktopConfig } = getDesktopRuntimeState();
+    if (!desktopConfig) return;
 
     const {
       nativeDisplayWidth: nativeWidth,
       nativeDisplayHeight: nativeHeight,
+      scaledWidth,
+      scaledHeight,
       desktopPlatform,
     } = desktopConfig;
     const nativeMP = ((nativeWidth * nativeHeight) / 1_000_000).toFixed(2);
-    const scaledMP = ((scaledWidth! * scaledHeight!) / 1_000_000).toFixed(2);
+    const scaledMP = ((scaledWidth * scaledHeight) / 1_000_000).toFixed(2);
 
     const howToInteract = shellModel.supportsComputerUse
       ? `Use native computer-use actions for clicking, typing, and keypresses; use \`${desktopCmd.name}\` for screenshots, focus, and hold-key (see \`${desktopCmd.name} help\`).`
@@ -598,8 +593,8 @@ export function createDesktopService(
     // If we exceed either limit, the API silently downscales, wasting the
     // resolution we carefully chose. Warn so TARGET_MEGAPIXELS can be reduced.
     if (shellModel.apiType === LlmApiType.Anthropic) {
-      const longestEdge = Math.max(scaledWidth!, scaledHeight!);
-      const scaledPixels = scaledWidth! * scaledHeight!;
+      const longestEdge = Math.max(scaledWidth, scaledHeight);
+      const scaledPixels = scaledWidth * scaledHeight;
       if (longestEdge > 1568) {
         output.errorAndLog(
           `Warning: Scaled longest edge ${longestEdge}px exceeds Anthropic's 1568px limit — API will internally downscale. Reduce TARGET_MEGAPIXELS to avoid.`,

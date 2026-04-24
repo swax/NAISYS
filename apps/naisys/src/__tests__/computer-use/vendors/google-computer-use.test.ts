@@ -7,11 +7,12 @@ import type { DesktopConfig } from "../../../llm/vendors/vendorTypes.js";
 describe("google computer use context formatting", () => {
   test("replays prior tool calls against the viewport they were created in", () => {
     const desktopConfig: DesktopConfig = {
-      displayWidth: 800,
-      displayHeight: 600,
       nativeDisplayWidth: 1920,
       nativeDisplayHeight: 1080,
       viewport: { x: 300, y: 200, width: 800, height: 600 },
+      scaledWidth: 800,
+      scaledHeight: 600,
+      scaleFactor: 1,
       desktopPlatform: "Linux (X11)",
     };
 

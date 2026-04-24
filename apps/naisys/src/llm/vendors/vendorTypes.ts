@@ -28,14 +28,30 @@ export interface DesktopViewport {
 }
 
 export interface DesktopConfig {
-  /** Current viewport dimensions exposed to the model */
-  displayWidth: number;
-  displayHeight: number;
-  /** Native full-screen dimensions */
+  /**
+   * Full physical display size at native resolution. Unchanged by focus.
+   */
   nativeDisplayWidth: number;
   nativeDisplayHeight: number;
-  /** Viewport origin within the native desktop */
+  /**
+   * Subsection of the native display that the model sees and acts on. When
+   * unfocused, this covers the full display (x=0, y=0, width=native, height=native).
+   * When focused, `x/y` is the viewport origin on the native display and
+   * `width/height` is the viewport size at native resolution.
+   */
   viewport: DesktopViewport;
+  /**
+   * The viewport resized to fit TARGET_MEGAPIXELS — what the model actually
+   * sees in screenshots and the coord space it receives from the API. Equal
+   * to the viewport dimensions when no downscaling is needed.
+   */
+  scaledWidth: number;
+  scaledHeight: number;
+  /**
+   * viewport → scaled divisor. scaledWidth = floor(viewport.width * scaleFactor).
+   * 1 when the viewport is already at or below TARGET_MEGAPIXELS.
+   */
+  scaleFactor: number;
   desktopPlatform: string;
 }
 

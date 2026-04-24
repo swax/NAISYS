@@ -54,16 +54,16 @@ export function isGoogleComputerUseAction(name: string): boolean {
 function convertGoogleActionToInternal(
   name: string,
   args: Record<string, unknown>,
-  displayWidth: number,
-  displayHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
 ): Record<string, unknown>[] {
   const denormalize = (x: number, y: number) =>
     mapCoordinateBetweenSpaces(
       [x, y],
       NORMALIZED_MAX,
       NORMALIZED_MAX,
-      displayWidth,
-      displayHeight,
+      viewportWidth,
+      viewportHeight,
     );
 
   switch (name) {
@@ -104,8 +104,8 @@ function convertGoogleActionToInternal(
         {
           action: "scroll",
           coordinate: [
-            Math.round(displayWidth / 2),
-            Math.round(displayHeight / 2),
+            Math.round(viewportWidth / 2),
+            Math.round(viewportHeight / 2),
           ],
           scroll_direction: args.direction as string,
           scroll_amount: 3,
@@ -160,14 +160,14 @@ function convertGoogleActionToInternal(
 function reconstructGoogleArgs(
   googleFuncName: string,
   internalActions: Record<string, unknown>[],
-  displayWidth: number,
-  displayHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
 ): Record<string, unknown> {
   const normalize = (x: number, y: number) =>
     mapCoordinateBetweenSpaces(
       [x, y],
-      displayWidth,
-      displayHeight,
+      viewportWidth,
+      viewportHeight,
       NORMALIZED_MAX,
       NORMALIZED_MAX,
     );
@@ -278,8 +278,8 @@ function getReplayViewport(
   }
 
   return {
-    width: desktopConfig.displayWidth,
-    height: desktopConfig.displayHeight,
+    width: desktopConfig.viewport.width,
+    height: desktopConfig.viewport.height,
   };
 }
 
@@ -294,8 +294,8 @@ function getReplayViewport(
  */
 export function extractDesktopActions(
   parts: any[],
-  displayWidth: number,
-  displayHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
 ): DesktopAction[] {
   const actions: DesktopAction[] = [];
   for (const part of parts) {
@@ -308,8 +308,8 @@ export function extractDesktopActions(
     const internalActions = convertGoogleActionToInternal(
       name,
       args,
-      displayWidth,
-      displayHeight,
+      viewportWidth,
+      viewportHeight,
     );
 
     const id =
