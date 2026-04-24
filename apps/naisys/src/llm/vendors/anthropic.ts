@@ -177,9 +177,9 @@ export async function sendWithAnthropic(
     cacheReadTokens,
   );
 
-  // Extract desktop actions; coords land in viewport-local space
+  // Extract desktop actions; coords stay in scaled-pixel space (API space)
   const desktopActions = desktopConfig
-    ? extractDesktopActions(msgResponse.content, desktopConfig)
+    ? extractDesktopActions(msgResponse.content)
     : [];
 
   // Extract console commands (submit_commands tool_use blocks)

@@ -17,14 +17,12 @@ import type { ModelService } from "../services/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
 import type { OutputService } from "../utils/output.js";
-import type { ComputerService, CoordScale } from "./computerService.js";
+import type { ComputerService } from "./computerService.js";
 import {
   checkActionBounds,
   describeDesktopViewport,
   formatDesktopAction,
   formatDesktopActions,
-  getTargetScaleFactor,
-  isDesktopFocused,
   mapCoordinateBetweenSpaces,
 } from "./computerService.js";
 
@@ -39,7 +37,6 @@ export function createDesktopService(
 ) {
   type DesktopRuntimeState = {
     desktopConfig: ReturnType<ComputerService["getConfig"]>;
-    coordScale?: CoordScale;
   };
   type VisibleDesktopState = {
     desktopConfig: DesktopConfig;
@@ -67,20 +64,7 @@ export function createDesktopService(
     const desktopConfig = agentConfig.agentConfig().controlDesktop
       ? computerService.getConfig()
       : undefined;
-
-    if (!desktopConfig) {
-      return { desktopConfig };
-    }
-
-    const { viewport, scaleFactor } = desktopConfig;
-    return {
-      desktopConfig,
-      coordScale:
-        shellModel.supportsComputerUse &&
-        shellModel.apiType === LlmApiType.Google
-          ? { x: 1000 / viewport.width, y: 1000 / viewport.height }
-          : { x: scaleFactor, y: scaleFactor },
-    };
+    return { desktopConfig };
   }
 
   function requireVisibleDesktopState(): VisibleDesktopState {
@@ -200,13 +184,17 @@ export function createDesktopService(
     ].join("\n");
   }
 
+  /**
+   * Stamp every action with the viewport it was emitted against (focused
+   * or not). Replay paths derive their coord frame from this stamp, so
+   * actions are self-describing and a later focus change cannot misalign
+   * a previously-emitted action.
+   */
   function attachViewportToActions(
     actions: DesktopAction[],
     desktopConfig?: DesktopConfig,
   ): DesktopAction[] {
-    if (!desktopConfig || !isDesktopFocused(desktopConfig)) {
-      return actions;
-    }
+    if (!desktopConfig) return actions;
 
     return actions.map((action) => ({
       ...action,
@@ -377,11 +365,10 @@ export function createDesktopService(
       throw `Unknown button "${button}". Use left, right, middle, or double.`;
     }
 
-    const [localX, localY] = mapScreenshotPointToViewportLocal(x, y, state);
     await computerService.executeAction({
-      actions: [{ action, coordinate: [localX, localY] }],
+      actions: [{ action, coordinate: [x, y] }],
     });
-    return `Clicked (${button}) at screenshot (${x}, ${y}) -> viewport-local (${localX}, ${localY})`;
+    return `Clicked (${button}) at screenshot (${x}, ${y})`;
   }
 
   async function handleTypeCommand(
@@ -463,11 +450,12 @@ export function createDesktopService(
     textContent: string,
     actions: DesktopAction[],
   ): Promise<void> {
-    const { desktopConfig, coordScale } = getDesktopRuntimeState();
+    const { desktopConfig } = getDesktopRuntimeState();
     const actionsWithViewport = attachViewportToActions(actions, desktopConfig);
 
     for (const action of actionsWithViewport) {
-      const desc = formatDesktopAction(action.input, coordScale) || action.name;
+      const desc =
+        formatDesktopAction(action.input, desktopConfig) || action.name;
       output.commentAndLog(`Desktop Action: ${desc}`);
     }
 
@@ -490,17 +478,16 @@ export function createDesktopService(
     contextManager.appendDesktopRequest(
       textContent,
       actionsWithViewport,
-      formatDesktopActions(actionsWithViewport, coordScale),
+      formatDesktopActions(actionsWithViewport, desktopConfig),
     );
 
     if (approved) {
       for (const action of actionsWithViewport) {
-        if (desktopConfig && coordScale) {
+        if (desktopConfig) {
           const boundsError = checkActionBounds(
             action.input,
-            desktopConfig.viewport.width,
-            desktopConfig.viewport.height,
-            coordScale,
+            desktopConfig.scaledWidth,
+            desktopConfig.scaledHeight,
           );
           if (boundsError) {
             const { base64, filepath } =
@@ -515,7 +502,7 @@ export function createDesktopService(
         }
 
         const desc =
-          formatDesktopAction(action.input, coordScale) || action.name;
+          formatDesktopAction(action.input, desktopConfig) || action.name;
         output.commentAndLog(`[Executing: ${desc}]`);
 
         try {

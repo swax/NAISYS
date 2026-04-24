@@ -2,6 +2,8 @@
 
 Setup a NAISYS agent with an XFCE desktop accessible via VNC on a fresh Ubuntu install.
 
+For the design side — how NAISYS translates screenshot clicks to real pixels, how focus works, and the per-vendor coord contracts — see [doc 013](../docs/013-computer-use.md).
+
 ## 1. Install packages
 
 ```bash

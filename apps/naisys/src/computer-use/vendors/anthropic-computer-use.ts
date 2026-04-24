@@ -1,8 +1,8 @@
 /**
  * Anthropic-specific computer use helpers.
- * Handles image resizing to fit API constraints, coordinate scaling
- * between the API image space and native screen space, and
- * desktop action extraction from responses.
+ * Builds the tool definition and extracts tool_use blocks from responses.
+ * Coordinates stay in scaled-pixel (API) space throughout — ComputerService
+ * handles translation to absolute screen coords at execute time.
  */
 
 import type {
@@ -14,7 +14,6 @@ import type {
   DesktopAction,
   DesktopConfig,
 } from "../../llm/vendors/vendorTypes.js";
-import { mapActionBetweenSpaces } from "../computerService.js";
 
 // --- Anthropic version config ---
 
@@ -71,31 +70,17 @@ export function prepareComputerUse(
 }
 
 /**
- * Extract desktop actions from the response content, mapping coordinates
- * from the API's scaled-pixel space back to viewport-local pixels.
+ * Extract desktop actions from the response content. Coordinates are passed
+ * through as-is in the API's scaled-pixel space.
  */
-export function extractDesktopActions(
-  content: any[],
-  desktopConfig: DesktopConfig,
-): DesktopAction[] {
-  const { viewport, scaledWidth, scaledHeight } = desktopConfig;
+export function extractDesktopActions(content: any[]): DesktopAction[] {
   const actions: DesktopAction[] = [];
   for (const block of content) {
     if (block.type === "tool_use" && block.name === "computer") {
       actions.push({
         id: block.id,
         name: block.name,
-        input: {
-          actions: [
-            mapActionBetweenSpaces(
-              block.input,
-              scaledWidth,
-              scaledHeight,
-              viewport.width,
-              viewport.height,
-            ),
-          ],
-        },
+        input: { actions: [block.input] },
       });
     }
   }

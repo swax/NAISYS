@@ -177,8 +177,8 @@ export async function sendWithGoogle(
           (p) =>
             p.functionCall && isGoogleComputerUseAction(p.functionCall.name!),
         ),
-        desktopConfig.viewport.width,
-        desktopConfig.viewport.height,
+        desktopConfig.scaledWidth,
+        desktopConfig.scaledHeight,
       )
     : [];
 

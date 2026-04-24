@@ -128,9 +128,9 @@ export async function sendWithOpenAiStandard(
     cacheReadTokens,
   );
 
-  // Extract desktop actions (computer_call items); coords land in viewport-local space
+  // Extract desktop actions (computer_call items); coords stay in scaled-pixel space
   const desktopActions = desktopConfig
-    ? extractDesktopActions(response.output, desktopConfig)
+    ? extractDesktopActions(response.output)
     : [];
 
   // Extract console commands (function_call items)

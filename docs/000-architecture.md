@@ -71,7 +71,7 @@ Each agent has its own `AgentRuntime` — a bag of services scoped to that agent
 - `shellWrapper`, `workspaces` — shell and file context
 - `mailService`, `chatService`, `mailQueryService` — inter-agent messaging
 - `commandLoop`, `commandHandler`, `commandRegistry`, `commandProtection` — main loop and `ns-*` dispatch
-- `desktopService`, `computerService`, `lookService`, `listenService`, `genimg`, `subagentService` — feature services
+- `desktopService`, `computerService`, `lookService`, `listenService`, `genimg`, `subagentService` — feature services (see [doc 013](013-computer-use.md) for the desktop/computer-use design)
 - `logService`, `output` — logging and buffered console
 
 ### Factory-function DI

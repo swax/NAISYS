@@ -57,7 +57,7 @@ All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../
 - `ns-look` — load images into LLM context
 - `ns-listen` — audio listening with optional transcription
 - `ns-talk` — spoken input; auto-switches back to LLM mode after talk, indefinite wait support
-- `ns-desktop` — screenshot / click / key / focus / hold, usable from the console without tool calls, runs on any model with image input (not just models with native computer use); see the [XFCE/VNC host setup guide](../../guides/xfce-computer-use.md)
+- `ns-desktop` — screenshot / click / key / focus / hold, usable from the console without tool calls, runs on any model with image input (not just models with native computer use); see the [XFCE/VNC host setup guide](../../guides/xfce-computer-use.md) and [doc 013](../../docs/013-computer-use.md) for the coord-space / focus / vendor design
 - `ns-session` — consolidated pause/compact/wait
 - `ns-workspace` — cache-friendly per-agent file list
 - `ns-agent-command` — agent can modify its own config at runtime

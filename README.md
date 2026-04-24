@@ -86,6 +86,7 @@ NAISYS is split into four packages, each with its own README:
 
 - [Architecture overview](docs/000-architecture.md) — how the packages fit together
 - [HATEOAS API design](docs/012-hateoas.md) — how the supervisor and ERP expose AI-first REST APIs
+- [Computer use](docs/013-computer-use.md) — coord spaces, focus, and per-vendor contracts for desktop control
 - [Database design](docs/001-database-design.md) — Prisma strategy, the three schemas, migrations
 - [Agent config options and supported models](agents/template.yaml)
 - Other design docs under [`docs/`](docs/) cover the larger initiatives (multi-machine, mail, web auth, supervisor users, port strategy, hub security, mail attachments)
