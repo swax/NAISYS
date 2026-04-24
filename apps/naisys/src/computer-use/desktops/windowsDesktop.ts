@@ -8,13 +8,13 @@
 
 import { execFileSync } from "child_process";
 
-import type { ExecError } from "./execError.js";
+import type { ExecError } from "../execError.js";
 import type {
-  CanonicalKeyChord} from "./keyCombo.js";
+  CanonicalKeyChord} from "../keyCombo.js";
 import {
   normalizeKeyCombo,
   PRESS_KEY_HOLD_MS,
-} from "./keyCombo.js";
+} from "../keyCombo.js";
 
 function runPowerShell(command: string, timeoutMs: number = 10000) {
   execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {

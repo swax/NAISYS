@@ -13,7 +13,7 @@ import {
   extractDesktopActions,
   formatInputWithComputerUse,
   prepareComputerUse,
-} from "../../computer-use/openai-computer-use.js";
+} from "../../computer-use/vendors/openai-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
@@ -132,7 +132,7 @@ export async function sendWithOpenAiStandard(
     cacheReadTokens,
   );
 
-  // Extract desktop actions (computer_call items), scaling coordinates back to native
+  // Extract desktop actions (computer_call items), scaling coordinates back to viewport space
   const desktopActions = desktopConfig
     ? extractDesktopActions(response.output, cuSetup!.scaleFactor)
     : [];

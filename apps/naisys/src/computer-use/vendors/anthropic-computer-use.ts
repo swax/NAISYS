@@ -13,11 +13,11 @@ import type {
 import type {
   DesktopAction,
   DesktopConfig,
-} from "../llm/vendors/vendorTypes.js";
+} from "../../llm/vendors/vendorTypes.js";
 import {
   getTargetScaleFactor,
-  scaleActionToNative,
-} from "./computerService.js";
+  scaleActionToViewport,
+} from "../computerService.js";
 
 // --- Anthropic version config ---
 
@@ -84,7 +84,7 @@ export function prepareComputerUse(
 
 /**
  * Extract desktop actions from the response content,
- * scaling coordinates from API space back to native screen space.
+ * scaling coordinates from API space back to viewport space.
  */
 export function extractDesktopActions(
   content: any[],
@@ -96,7 +96,7 @@ export function extractDesktopActions(
       actions.push({
         id: block.id,
         name: block.name,
-        input: { actions: [scaleActionToNative(block.input, scaleFactor)] },
+        input: { actions: [scaleActionToViewport(block.input, scaleFactor)] },
       });
     }
   }

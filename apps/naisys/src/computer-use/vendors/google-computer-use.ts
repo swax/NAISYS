@@ -6,14 +6,14 @@
  * screenshots, and context formatting with function_call/function_response.
  */
 
-import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
 import type {
   DesktopAction,
   DesktopConfig,
   DesktopViewport,
-} from "../llm/vendors/vendorTypes.js";
-import { mapCoordinateBetweenSpaces } from "./computerService.js";
-import { canonicalizeKeyCombo } from "./keyCombo.js";
+} from "../../llm/vendors/vendorTypes.js";
+import { mapCoordinateBetweenSpaces } from "../computerService.js";
+import { canonicalizeKeyCombo } from "../keyCombo.js";
 // --- Coordinate normalization ---
 // Google uses a 0-999 normalized grid regardless of screen resolution.
 const NORMALIZED_MAX = 1000;

@@ -8,7 +8,7 @@ vi.mock("child_process", () => ({
   execFileSync,
 }));
 
-import { pressKey } from "../../computer-use/waylandDesktop.js";
+import { pressKey } from "../../../computer-use/desktops/waylandDesktop.js";
 
 describe("waylandDesktop keyboard input", () => {
   beforeEach(() => {
