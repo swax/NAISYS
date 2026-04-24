@@ -71,7 +71,7 @@ export const startHub: StartHub = async (
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
 
     // Create Fastify instance (TLS is handled by the reverse proxy)
-    const fastify = Fastify();
+    const fastify = Fastify({ pluginTimeout: 60_000 });
 
     // Register HTTP attachment upload/download routes
     createHubAttachmentService(fastify, hubDatabaseService, logService);
