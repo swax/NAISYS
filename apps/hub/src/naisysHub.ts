@@ -76,13 +76,12 @@ export const startHub: StartHub = async (
     // Register HTTP attachment upload/download routes
     createHubAttachmentService(fastify, hubDatabaseService, logService);
 
-    // Attach Socket.IO to the underlying HTTP server
+    // Attach Socket.IO to the underlying HTTP server.
+    // No CORS config: only Node socket.io-clients (NAISYS instance, supervisor server)
+    // connect here, and they aren't subject to CORS. Omitting the header keeps
+    // browsers from initiating handshakes.
     const io = new Server(fastify.server, {
       path: "/hub/socket.io",
-      cors: {
-        origin: "*", // In production, restrict this
-        methods: ["GET", "POST"],
-      },
     });
 
     const naisysServer = createNaisysServer(
