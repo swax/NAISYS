@@ -13,7 +13,7 @@ import { LlmApiType, type LlmModel } from "@naisys/common";
 import {
   extractDesktopActions,
   prepareComputerUse,
-} from "../../computer-use/anthropic-computer-use.js";
+} from "../../computer-use/vendors/anthropic-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
@@ -179,7 +179,7 @@ export async function sendWithAnthropic(
     cacheReadTokens,
   );
 
-  // Extract desktop actions, scaling coordinates back to native
+  // Extract desktop actions, scaling coordinates back to viewport space
   const desktopActions = desktopConfig
     ? extractDesktopActions(msgResponse.content, desktopScaleFactor)
     : [];

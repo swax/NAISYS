@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { formatContextWithComputerUse } from "../../computer-use/google-computer-use.js";
-import type { LlmMessage } from "../../llm/llmDtos.js";
-import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
+import { formatContextWithComputerUse } from "../../../computer-use/vendors/google-computer-use.js";
+import type { LlmMessage } from "../../../llm/llmDtos.js";
+import type { DesktopConfig } from "../../../llm/vendors/vendorTypes.js";
 
 describe("google computer use context formatting", () => {
   test("replays prior tool calls against the viewport they were created in", () => {

@@ -7,15 +7,15 @@
 
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 
-import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
+import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
 import type {
   DesktopAction,
   DesktopConfig,
-} from "../llm/vendors/vendorTypes.js";
+} from "../../llm/vendors/vendorTypes.js";
 import {
   getTargetScaleFactor,
-  scaleActionToNative,
-} from "./computerService.js";
+  scaleActionToViewport,
+} from "../computerService.js";
 
 // --- Action format conversion ---
 
@@ -167,7 +167,7 @@ export function prepareComputerUse(
 /**
  * Extract desktop actions from the OpenAI response output.
  * Each computer_call item becomes a single DesktopAction with batched internal actions.
- * Coordinates are scaled from API (downscaled) space back to native screen space.
+ * Coordinates are scaled from API (downscaled) space back to viewport space.
  */
 export function extractDesktopActions(
   output: ResponseOutputItem[],
@@ -181,7 +181,7 @@ export function extractDesktopActions(
       const rawActions =
         (item as unknown as { actions?: Record<string, any>[] }).actions || [];
       const internalActions = rawActions.map((a) =>
-        scaleActionToNative(convertOpenAiActionToInternal(a), scaleFactor),
+        scaleActionToViewport(convertOpenAiActionToInternal(a), scaleFactor),
       );
       actions.push({
         id: item.call_id,

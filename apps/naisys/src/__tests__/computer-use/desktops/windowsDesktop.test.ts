@@ -8,7 +8,7 @@ vi.mock("child_process", () => ({
   execFileSync,
 }));
 
-import { pressKey } from "../../computer-use/windowsDesktop.js";
+import { pressKey } from "../../../computer-use/desktops/windowsDesktop.js";
 
 describe("windowsDesktop keyboard input", () => {
   beforeEach(() => {

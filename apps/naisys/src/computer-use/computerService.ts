@@ -15,10 +15,10 @@ import type {
   DesktopConfig,
   DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
-import * as macosDesktop from "./macosDesktop.js";
-import * as waylandDesktop from "./waylandDesktop.js";
-import * as windowsDesktop from "./windowsDesktop.js";
-import * as x11Desktop from "./x11Desktop.js";
+import * as macosDesktop from "./desktops/macosDesktop.js";
+import * as waylandDesktop from "./desktops/waylandDesktop.js";
+import * as windowsDesktop from "./desktops/windowsDesktop.js";
+import * as x11Desktop from "./desktops/x11Desktop.js";
 
 type DesktopBackend = typeof windowsDesktop & {
   checkDependencies?: () => void;
@@ -381,8 +381,12 @@ export function mapActionBetweenSpaces(
   return result;
 }
 
-/** Scale coordinates in a computer use action from API space back to native screen space */
-export function scaleActionToNative(
+/**
+ * Scale coordinates in a computer use action from API (downscaled) space to
+ * viewport space. The viewport offset is applied later by executeAction when
+ * translating viewport coords to absolute screen coords.
+ */
+export function scaleActionToViewport(
   input: Record<string, unknown>,
   scaleFactor: number,
 ): Record<string, unknown> {

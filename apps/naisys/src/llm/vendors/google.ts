@@ -15,7 +15,7 @@ import {
   extractDesktopActions,
   formatContextWithComputerUse,
   isGoogleComputerUseAction,
-} from "../../computer-use/google-computer-use.js";
+} from "../../computer-use/vendors/google-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
