@@ -1,5 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { MessageParam } from "@anthropic-ai/sdk/resources";
+import type {
+  Base64ImageSource,
+  ContentBlockParam,
+  ImageBlockParam,
+  Message,
+  MessageParam,
+  TextBlockParam,
+  ToolUnion,
+} from "@anthropic-ai/sdk/resources";
 import { LlmApiType, type LlmModel } from "@naisys/common";
 
 import {
@@ -124,20 +132,29 @@ export async function sendWithAnthropic(
     desktopScaleFactor = setup.scaleFactor;
     desktopBetaFlag = setup.betaFlag;
 
+    // computerTool is a Beta tool (not in the non-beta ToolUnion) but we
+    // route through the beta endpoint below — cast to appease the shared
+    // createParams shape.
+    const computerTool = setup.computerTool as unknown as ToolUnion;
     if (createParams.tools) {
-      createParams.tools.push(setup.computerTool as any);
+      createParams.tools.push(computerTool);
       createParams.tool_choice = { type: "auto" };
     } else {
-      createParams.tools = [setup.computerTool as any];
+      createParams.tools = [computerTool];
     }
   }
 
-  // Use beta endpoint when computer use tool is present, otherwise normal
-  const msgResponse = desktopConfig
-    ? await (anthropic.beta.messages.create as Function)(
-        { ...createParams, betas: [desktopBetaFlag] },
+  // Use beta endpoint when computer use tool is present, otherwise normal.
+  // The beta endpoint uses BetaMessageCreateParams/BetaMessage which are
+  // structurally compatible with the non-beta equivalents for our usage;
+  // cast here rather than duplicating the request construction.
+  const msgResponse: Message = desktopConfig
+    ? ((await anthropic.beta.messages.create(
+        { ...createParams, betas: [desktopBetaFlag] } as unknown as Parameters<
+          typeof anthropic.beta.messages.create
+        >[0],
         { signal: abortSignal },
-      )
+      )) as unknown as Message)
     : await anthropic.messages.create(createParams, { signal: abortSignal });
 
   // Record token usage
@@ -174,8 +191,8 @@ export async function sendWithAnthropic(
 
   // Extract text blocks
   const textParts: string[] = msgResponse.content
-    .filter((c: any) => c.type === "text" && c.text)
-    .map((c: any) => c.text);
+    .filter((c) => c.type === "text" && c.text)
+    .map((c) => (c as Extract<typeof c, { type: "text" }>).text);
 
   // Desktop actions present — they take priority for the response flow.
   // Console commands (if any) are folded into the text so the model sees them
@@ -198,7 +215,7 @@ export async function sendWithAnthropic(
 function formatContentForAnthropic(
   content: string | ContentBlock[],
   cachePoint?: boolean,
-): string | Array<any> {
+): string | Array<ContentBlockParam> {
   if (typeof content === "string") {
     if (cachePoint) {
       return [
@@ -216,7 +233,7 @@ function formatContentForAnthropic(
     const isLast = index === content.length - 1;
 
     if (block.type === "text") {
-      const textBlock: any = { type: "text", text: block.text };
+      const textBlock: TextBlockParam = { type: "text", text: block.text };
       if (cachePoint && isLast) {
         textBlock.cache_control = { type: "ephemeral" };
       }
@@ -234,7 +251,7 @@ function formatContentForAnthropic(
           ? (block.input.actions as Record<string, unknown>[])[0]
           : block.input;
       return {
-        type: "tool_use",
+        type: "tool_use" as const,
         id: block.id,
         name: block.name,
         input,
@@ -242,30 +259,31 @@ function formatContentForAnthropic(
     }
     if (block.type === "tool_result") {
       return {
-        type: "tool_result",
+        type: "tool_result" as const,
         tool_use_id: block.toolUseId,
         ...(block.isError ? { is_error: true } : {}),
         content: block.resultContent.map((c) => {
           if (c.type === "image") {
             return {
-              type: "image",
+              type: "image" as const,
               source: {
-                type: "base64",
-                media_type: c.mimeType,
+                type: "base64" as const,
+                media_type: c.mimeType as Base64ImageSource["media_type"],
                 data: c.base64,
               },
             };
           }
-          return { type: "text", text: c.text };
+          return { type: "text" as const, text: c.text };
         }),
       };
     }
-    // image block
-    const imageBlock: any = {
+    // image block — cast mimeType because our ImageBlock uses `string` while
+    // Anthropic narrows to a literal union of supported media types
+    const imageBlock: ImageBlockParam = {
       type: "image",
       source: {
         type: "base64",
-        media_type: block.mimeType,
+        media_type: block.mimeType as Base64ImageSource["media_type"],
         data: block.base64,
       },
     };

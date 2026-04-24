@@ -5,6 +5,8 @@
  * responses, and context formatting for computer_call / computer_call_output items.
  */
 
+import type { ResponseOutputItem } from "openai/resources/responses/responses";
+
 import type { ContentBlock, LlmMessage } from "../llm/llmDtos.js";
 import type {
   DesktopAction,
@@ -17,7 +19,9 @@ import {
 
 // --- Action format conversion ---
 
-/** Convert an OpenAI computer use action to internal (Anthropic-compatible) format */
+/** Convert an OpenAI computer use action to internal (Anthropic-compatible) format.
+ *  Fields are accessed dynamically by `action.type`; the runtime API shape is looser
+ *  than the SDK's ComputerAction union so `any` is used to avoid extensive narrowing. */
 function convertOpenAiActionToInternal(
   action: Record<string, any>,
 ): Record<string, unknown> {
@@ -166,15 +170,18 @@ export function prepareComputerUse(
  * Coordinates are scaled from API (downscaled) space back to native screen space.
  */
 export function extractDesktopActions(
-  output: any[],
+  output: ResponseOutputItem[],
   scaleFactor: number,
 ): DesktopAction[] {
   const actions: DesktopAction[] = [];
   for (const item of output) {
     if (item.type === "computer_call") {
-      const internalActions = (item.actions || []).map(
-        (a: Record<string, any>) =>
-          scaleActionToNative(convertOpenAiActionToInternal(a), scaleFactor),
+      // The batched `actions` field is an extension not yet in the typed
+      // ResponseComputerToolCall shape consistently; read loosely.
+      const rawActions =
+        (item as unknown as { actions?: Record<string, any>[] }).actions || [];
+      const internalActions = rawActions.map((a) =>
+        scaleActionToNative(convertOpenAiActionToInternal(a), scaleFactor),
       );
       actions.push({
         id: item.call_id,
@@ -192,15 +199,15 @@ export function extractDesktopActions(
  * computer_call / computer_call_output input items, resizing screenshot images
  * to the downscaled resolution.
  */
-export function formatInputWithComputerUse(
+export function formatInputWithComputerUse<Part>(
   context: LlmMessage[],
   formatContentBlocks: (
     content: string | ContentBlock[],
     role: string,
-  ) => any[],
-  formatSingleBlock: (block: ContentBlock, role: string) => any | null,
-): any[] {
-  const items: any[] = [];
+  ) => Part[],
+  formatSingleBlock: (block: ContentBlock, role: string) => Part | null,
+): unknown[] {
+  const items: unknown[] = [];
 
   for (const msg of context) {
     if (typeof msg.content === "string") {

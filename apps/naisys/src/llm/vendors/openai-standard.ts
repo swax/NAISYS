@@ -1,4 +1,13 @@
 import OpenAI from "openai";
+import type {
+  FunctionTool,
+  ResponseInput,
+  ResponseInputContent,
+  ResponseInputText,
+  ResponseOutputItem,
+  Tool,
+  ToolChoiceFunction,
+} from "openai/resources/responses/responses";
 
 import {
   extractDesktopActions,
@@ -7,6 +16,11 @@ import {
 } from "../../computer-use/openai-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
+
+/** A relaxed output_text — the API accepts it as input even though the
+ *  strict ResponseOutputText shape requires an `annotations` array. */
+type OutputTextInput = { type: "output_text"; text: string };
+type ContentPart = ResponseInputContent | OutputTextInput;
 
 const clientCache = new Map<string, OpenAI>();
 
@@ -49,25 +63,27 @@ export async function sendWithOpenAiStandard(
     source === "console" && useToolsForLlmConsoleResponses;
 
   // Build tools array — console and desktop tools can coexist
-  const toolsDefs: any[] = [];
+  const toolsDefs: Tool[] = [];
   if (useConsoleTools) {
-    toolsDefs.push({
-      type: "function" as const,
+    const functionTool: FunctionTool = {
+      type: "function",
       name: tools.consoleToolOpenAI.function.name,
       description: tools.consoleToolOpenAI.function.description,
-      parameters: tools.consoleToolOpenAI.function.parameters,
+      parameters: tools.consoleToolOpenAI.function
+        .parameters as FunctionTool["parameters"],
       strict: false,
-    });
+    };
+    toolsDefs.push(functionTool);
   }
   if (desktopConfig) {
     toolsDefs.push({ type: "computer" });
   }
 
   // Force console tool only when desktop is not also enabled
-  let toolChoice: any = undefined;
+  let toolChoice: ToolChoiceFunction | undefined = undefined;
   if (useConsoleTools && !desktopConfig) {
     toolChoice = {
-      type: "function" as const,
+      type: "function",
       name: tools.consoleToolOpenAI.function.name,
     };
   }
@@ -79,7 +95,7 @@ export async function sendWithOpenAiStandard(
     {
       model: model.versionName,
       instructions: systemMessage,
-      input: desktopConfig
+      input: (desktopConfig
         ? formatInputWithComputerUse(
             context,
             formatContentBlocks,
@@ -88,7 +104,7 @@ export async function sendWithOpenAiStandard(
         : context.map((m) => ({
             role: m.role === "assistant" ? "assistant" : "user",
             content: formatContentBlocks(m.content, m.role),
-          })),
+          }))) as ResponseInput,
       reasoning: { effort: useThinking ? "medium" : "none" },
       tools: toolsDefs.length > 0 ? toolsDefs : undefined,
       tool_choice: toolChoice,
@@ -148,12 +164,14 @@ export async function sendWithOpenAiStandard(
 }
 
 function extractConsoleCommands(
-  output: any[],
+  output: ResponseOutputItem[],
   tools: VendorDeps["tools"],
 ): string[] | undefined {
   const toolCalls = output
-    .filter((item: any) => item.type === "function_call")
-    .map((item: any) => ({
+    .filter((item): item is Extract<ResponseOutputItem, { type: "function_call" }> =>
+      item.type === "function_call",
+    )
+    .map((item) => ({
       type: "function",
       function: { name: item.name, arguments: item.arguments },
     }));
@@ -163,35 +181,45 @@ function extractConsoleCommands(
 
 // --- Content formatting helpers (shared with openai-computer-use) ---
 
+function makeTextPart(text: string, role: string): ContentPart {
+  return role === "assistant"
+    ? { type: "output_text", text }
+    : ({ type: "input_text", text } satisfies ResponseInputText);
+}
+
 function formatContentBlocks(
   content: string | ContentBlock[],
   role: string,
-): any[] {
-  const textType = role === "assistant" ? "output_text" : "input_text";
+): ContentPart[] {
   if (typeof content === "string") {
-    return [{ type: textType, text: content }];
+    return [makeTextPart(content, role)];
   }
-  return content.map((b) => formatSingleBlock(b, role)).filter(Boolean);
+  return content
+    .map((b) => formatSingleBlock(b, role))
+    .filter((p): p is ContentPart => p !== null);
 }
 
-function formatSingleBlock(block: ContentBlock, role: string): any | null {
-  const textType = role === "assistant" ? "output_text" : "input_text";
+function formatSingleBlock(
+  block: ContentBlock,
+  role: string,
+): ContentPart | null {
   switch (block.type) {
     case "text":
-      return { type: textType, text: block.text };
+      return makeTextPart(block.text, role);
     case "image":
       return {
         type: "input_image",
         image_url: `data:${block.mimeType};base64,${block.base64}`,
+        detail: "auto",
       };
     case "tool_use":
       // Fallback when desktop is not enabled — include as text description
-      return {
-        type: textType,
-        text: `[Desktop action: ${JSON.stringify(block.input)}]`,
-      };
+      return makeTextPart(
+        `[Desktop action: ${JSON.stringify(block.input)}]`,
+        role,
+      );
     case "tool_result":
-      return { type: textType, text: "[Desktop screenshot]" };
+      return makeTextPart("[Desktop screenshot]", role);
     case "audio":
       return null;
     default:

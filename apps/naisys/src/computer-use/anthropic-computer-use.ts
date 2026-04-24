@@ -6,6 +6,11 @@
  */
 
 import type {
+  BetaToolComputerUse20250124,
+  BetaToolComputerUse20251124,
+} from "@anthropic-ai/sdk/resources/beta/messages/messages.js";
+
+import type {
   DesktopAction,
   DesktopConfig,
 } from "../llm/vendors/vendorTypes.js";
@@ -16,9 +21,13 @@ import {
 
 // --- Anthropic version config ---
 
+type ComputerToolType =
+  | BetaToolComputerUse20250124["type"]
+  | BetaToolComputerUse20251124["type"];
+
 /** Determine the computer use tool type and beta flag for an Anthropic model */
 function getVersionConfig(versionName: string): {
-  toolType: string;
+  toolType: ComputerToolType;
   betaFlag: string;
 } {
   if (versionName.includes("4-6") || versionName.includes("4-5")) {
@@ -35,8 +44,12 @@ function getVersionConfig(versionName: string): {
 
 // --- Public API ---
 
+export type AnthropicComputerTool =
+  | BetaToolComputerUse20250124
+  | BetaToolComputerUse20251124;
+
 export interface ComputerUseSetup {
-  computerTool: any;
+  computerTool: AnthropicComputerTool;
   scaleFactor: number;
   betaFlag: string;
 }
@@ -59,7 +72,7 @@ export function prepareComputerUse(
   const scaledWidth = Math.floor(desktopConfig.displayWidth * scaleFactor);
   const scaledHeight = Math.floor(desktopConfig.displayHeight * scaleFactor);
 
-  const computerTool = {
+  const computerTool: AnthropicComputerTool = {
     type: toolType,
     name: "computer",
     display_width_px: scaledWidth,

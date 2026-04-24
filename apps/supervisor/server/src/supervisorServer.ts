@@ -312,8 +312,8 @@ export const startServer: StartServer = async (
           `[Supervisor] Running on http://${host}:${port}/supervisor`,
         );
         return port;
-      } catch (err: any) {
-        if (err.code === "EADDRINUSE") {
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "EADDRINUSE") {
           fastify.log.warn(
             `[Supervisor] Port ${port} is in use, trying port ${port + 1}...`,
           );
