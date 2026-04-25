@@ -18,37 +18,7 @@ This doc covers:
 
 In rough priority order:
 
-1. Stop testing copied production functions in `costTracker.test.ts`.
-2. Replace duplicated ERP OpenAPI route lists with production route registration.
-
-## Test Real Pure Functions
-
-`apps/naisys/src/__tests__/llm/costTracker.test.ts` currently copies production
-logic into the test:
-
-- `calculatePeriodBoundaries` is copied at `costTracker.test.ts:5-36`
-- `calculateModelCacheSavings` is copied at `costTracker.test.ts:175-204`
-
-That pattern is brittle. A copied implementation can pass forever while the real
-implementation changes. The cache-savings test is already at risk because the
-test copy reads snake_case fields like `cache_write_tokens`,
-`cache_read_tokens`, and `modelData.total`, while production
-`apps/naisys/src/llm/costDisplayService.ts` reads camelCase fields like
-`cacheWriteTokens`, `cacheReadTokens`, `inputTokens`, and `outputTokens`, then
-calculates total cost from those token counts. That is exactly the kind of
-divergence copied test logic hides.
-
-Fix:
-
-- Add an optional `now = new Date()` parameter to
-  `packages/common/src/costUtils.ts:calculatePeriodBoundaries`, then test the
-  exported function directly.
-- Move/export `calculateModelCacheSavings` from
-  `apps/naisys/src/llm/costDisplayService.ts` into a small pure helper module,
-  or export it as an internal testable helper if the project accepts that
-  pattern.
-- Convert the many period-boundary examples into `test.each` cases so adding a
-  new boundary costs one row, not a full test body.
+1. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## ERP UI Page Actions
 
