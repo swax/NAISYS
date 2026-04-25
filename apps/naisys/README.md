@@ -53,6 +53,7 @@ All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../
 - `ns-mail` — flat (non-thread) mail model ([doc 002](../../docs/002-revised-llmail-plan.md)), `@host` addressing, short-id threads, archive-all, from-title, gap detection/recovery, markdown, cross-machine delivery through the hub
 - `ns-chat` — shorter-form conversation service layered on mail
 - `ns-lynx` — text web browser, cost-tracked Google Custom Search
+- `ns-browser` — headless Chromium via Playwright; selector-based click/fill, on-demand screenshots
 - `ns-genimg` — image generation (vendor-agnostic model registry)
 - `ns-look` — load images into LLM context
 - `ns-listen` — audio listening with optional transcription

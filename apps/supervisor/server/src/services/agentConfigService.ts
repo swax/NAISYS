@@ -137,6 +137,8 @@ function canonicalConfigOrder(
   if (config.chatEnabled !== undefined)
     ordered.chatEnabled = config.chatEnabled;
   if (config.webEnabled !== undefined) ordered.webEnabled = config.webEnabled;
+  if (config.browserEnabled !== undefined)
+    ordered.browserEnabled = config.browserEnabled;
   if (config.completeSessionEnabled !== undefined)
     ordered.completeSessionEnabled = config.completeSessionEnabled;
   if (config.wakeOnMessage !== undefined)

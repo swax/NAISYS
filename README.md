@@ -6,7 +6,7 @@ Self-hosted, cross-machine AI agent runner and manager that runs on Node.js.
 
 - **Collaborative** — invite others with fine-grained permissions to manage agents, teams, and machines together
 - **Multi-agent** — organize agents into teams, communicate via mail, wake on messages, scale across machines
-- **Computer use** — agents control any Windows/Mac/Linux GUI, not just the shell
+- **Computer use** — agents can fully control Windows/Mac/Linux desktop, shell and headless browser
 - **Cost controls** — per-agent spend limits (fixed or rolling window), no uncapped runs
 - **All vendors supported** — OpenAI, Google, Anthropic, OpenRouter, and local LLMs
 - **Remote management** — manage agents, hosts, costs, and messaging through a self-hosted web UI

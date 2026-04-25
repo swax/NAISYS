@@ -4,6 +4,7 @@ import * as readline from "readline";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { DesktopService } from "../computer-use/desktop.js";
+import type { BrowserService } from "../features/browser.js";
 import type { LynxService } from "../features/lynx.js";
 import type { SessionService } from "../features/session.js";
 import type { WorkspacesFeature } from "../features/workspaces.js";
@@ -50,6 +51,7 @@ export function createCommandLoop(
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
   lynxService: LynxService,
+  browserService: BrowserService,
   contextManager: ContextManager,
   workspaces: WorkspacesFeature,
   llmService: LLMService,
@@ -121,6 +123,7 @@ export function createCommandLoop(
         commandLoopState.setState("Executing");
         clearTimeout(preemptiveCompactTimeout);
         lynxService.clear();
+        browserService.clear();
         contextManager.clear();
         await runService.incrementSession();
         nextCommandAction = NextCommandAction.Continue;

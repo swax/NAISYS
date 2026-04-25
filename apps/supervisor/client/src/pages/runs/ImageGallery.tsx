@@ -179,7 +179,7 @@ export const ImageGalleryProvider: React.FC<{
               </div>
               <div>
                 {clickedCoords
-                  ? `ns-desktop click ${clickedCoords.x} ${clickedCoords.y}`
+                  ? `click ${clickedCoords.x} ${clickedCoords.y}`
                   : ""}
               </div>
             </div>

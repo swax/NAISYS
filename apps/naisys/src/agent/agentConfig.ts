@@ -62,6 +62,7 @@ export function createAgentConfig(
       mailEnabled: !!config.mailEnabled,
       chatEnabled: !!config.chatEnabled,
       webEnabled: !!config.webEnabled,
+      browserEnabled: !!config.browserEnabled,
       completeSessionEnabled: !!config.completeSessionEnabled,
       wakeOnMessage: !!config.wakeOnMessage,
       initialCommands: config.initialCommands ?? [],
