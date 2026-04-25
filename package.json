@@ -24,11 +24,11 @@
   "scripts": {
     "clean": "npx turbo clean && rm -rf .turbo",
     "build": "npx turbo build bundle",
-    "test": "npx turbo test",
-    "coverage:full": "npm run build && node scripts/run-coverage.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "prettier": "prettier --write .",
+    "test": "npx turbo test",
+    "coverage:full": "npm run build && node scripts/run-coverage.mjs",
     "updates:check": "npm-check-updates && npm-check-updates --workspaces",
     "updates:apply": "npm-check-updates -u && npm-check-updates --workspaces -u && npm install && npm audit fix",
     "release:check": "npm install && npm audit --omit=dev --audit-level=high && npm run build && npm run test",

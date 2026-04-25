@@ -41,6 +41,8 @@ export interface AgentYamlConfig {
   tokenMax?: number;
   debugPauseSeconds?: number;
   spendLimitDollars?: number;
+  mailEnabled?: boolean;
+  chatEnabled?: boolean;
   webEnabled?: boolean;
   wakeOnMessage?: boolean;
 }
@@ -114,6 +116,8 @@ agentPrompt: |
   ${config.agentPrompt ?? `You are \${agent.username} a \${agent.title} for testing.`}
 tokenMax: ${config.tokenMax ?? 50000}
 ${debugPauseLine}spendLimitDollars: ${config.spendLimitDollars ?? 10.0}
+mailEnabled: ${config.mailEnabled ?? false}
+chatEnabled: ${config.chatEnabled ?? false}
 webEnabled: ${config.webEnabled ?? false}
 wakeOnMessage: ${config.wakeOnMessage ?? false}
 `.trim();
