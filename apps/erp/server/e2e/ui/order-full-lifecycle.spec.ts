@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { getTestCredentials } from "../auth-helper";
+import { loginAsTestUser } from "../auth-helper";
 import { createOrderWithRevision } from "./helpers/order-setup";
 
 test.describe.serial("Full order lifecycle with operations (UI)", () => {
@@ -13,13 +13,7 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-
-    const creds = getTestCredentials(test.info().workerIndex);
-    const res = await page.request.post(
-      "http://localhost:3302/erp/api/auth/login",
-      { data: creds },
-    );
-    expect(res.status()).toBe(200);
+    await loginAsTestUser(page.request, test.info().workerIndex);
   });
 
   test.afterAll(async () => {

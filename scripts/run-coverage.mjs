@@ -13,7 +13,13 @@
  * (whole-app coverage, not loaded-source coverage).
  */
 import { spawnSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "fs";
 import { resolve } from "path";
 
 const repoRoot = resolve(import.meta.dirname, "..");
@@ -75,8 +81,9 @@ const reportCode = run("npx", [
   "--exclude=packages/common-browser/**",
 ]);
 
+const coverageRunSucceeded = failures.length === 0 && reportCode === 0;
 const summaryPath = resolve(reportDir, "coverage-summary.json");
-if (existsSync(summaryPath)) {
+if (coverageRunSucceeded && existsSync(summaryPath)) {
   const summary = JSON.parse(readFileSync(summaryPath, "utf-8"));
   const totals = new Map();
 
@@ -113,7 +120,39 @@ if (existsSync(summaryPath)) {
       "       Playwright UI tests is not measured. Unloaded source files\n" +
       "       count as 0% in the denominator (--all).",
     );
+
+    // Write a checked-in snapshot. Git history of this file is the coverage
+    // progress log. No timestamp — keeps unchanged runs as no-op diffs.
+    const formatCount = (value) => value.toLocaleString("en-US");
+    const total = summary.total.statements;
+    const totalPct = total.total
+      ? `${(100 * total.covered / total.total).toFixed(2)}%`
+      : "-";
+    const lines = [
+      "# Coverage",
+      "",
+      "Statement coverage from `npm run coverage:full`. This file is",
+      "regenerated on every coverage run; commit it to log progress.",
+      "",
+      "Scope: Node.js processes only. Chromium-side client code (apps/*/client)",
+      "is not measured. Unloaded source files count as 0% in the denominator.",
+      "",
+      `**Total: ${formatCount(total.covered)} / ${formatCount(total.total)} statements (${totalPct})**`,
+      "",
+      "| Workspace | Covered | Total | % |",
+      "| --- | ---: | ---: | ---: |",
+    ];
+    for (const [name, t] of sorted) {
+      const pct = t.total ? `${(100 * t.covered / t.total).toFixed(2)}%` : "-";
+      lines.push(
+        `| ${name} | ${formatCount(t.covered)} | ${formatCount(t.total)} | ${pct} |`,
+      );
+    }
+    lines.push("");
+    writeFileSync(resolve(repoRoot, "COVERAGE.md"), lines.join("\n"));
   }
+} else if (!coverageRunSucceeded) {
+  console.log("\nSkipping COVERAGE.md update because coverage run failed.");
 }
 
 if (failures.length > 0) {

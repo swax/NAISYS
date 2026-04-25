@@ -32,7 +32,7 @@ export default function authRoutes(fastify: FastifyInstance) {
   app.post("/login", {
     config: {
       rateLimit: {
-        max: 5,
+        max: Number(process.env.AUTH_LOGIN_RATE_LIMIT) || 5,
         timeWindow: "1 minute",
       },
     },

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { getTestCredentials } from "../auth-helper";
+import { loginAsTestUser } from "../auth-helper";
 import { createOrderWithRevision } from "./helpers/order-setup";
 
 test.describe.serial("Order lifecycle (UI)", () => {
@@ -11,14 +11,8 @@ test.describe.serial("Order lifecycle (UI)", () => {
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-
     // Login via API to set session cookie
-    const creds = getTestCredentials(test.info().workerIndex);
-    const res = await page.request.post(
-      "http://localhost:3302/erp/api/auth/login",
-      { data: creds },
-    );
-    expect(res.status()).toBe(200);
+    await loginAsTestUser(page.request, test.info().workerIndex);
   });
 
   test.afterAll(async () => {
