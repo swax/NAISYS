@@ -6,6 +6,8 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 export interface SupervisorApiClient {
   get: <T>(path: string) => Promise<T>;
   post: <T>(path: string, body?: Record<string, unknown>) => Promise<T>;
+  put: <T>(path: string, body?: Record<string, unknown>) => Promise<T>;
+  del: <T>(path: string) => Promise<T>;
   /** POST multipart/form-data and parse JSON response */
   postMultipart: <T>(path: string, formData: FormData) => Promise<T>;
   /** Fetch a path relative to the host root (not the API prefix), with auth cookie */
@@ -59,6 +61,9 @@ export function createSupervisorApiClient(
     get: <T>(path: string) => apiRequest<T>("GET", path),
     post: <T>(path: string, body?: Record<string, unknown>) =>
       apiRequest<T>("POST", path, body),
+    put: <T>(path: string, body?: Record<string, unknown>) =>
+      apiRequest<T>("PUT", path, body),
+    del: <T>(path: string) => apiRequest<T>("DELETE", path),
     postMultipart: async <T>(
       path: string,
       formData: FormData,
@@ -78,15 +83,15 @@ export function createSupervisorApiClient(
   };
 }
 
-export async function loginAsSuperAdmin(
-  naisys: NaisysTestProcess,
+export async function loginAs(
   baseUrl: string,
+  username: string,
+  password: string,
 ): Promise<SupervisorApiClient> {
-  const password = extractGeneratedSuperAdminPassword(naisys.getFullOutput());
   const response = await fetch(`${baseUrl}/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username: "superadmin", password }),
+    body: JSON.stringify({ username, password }),
   });
   await parseJsonResponse<{ user: AuthUser }>(response);
 
@@ -95,6 +100,14 @@ export async function loginAsSuperAdmin(
     throw new Error("Login response did not include a session cookie");
   }
   return createSupervisorApiClient(baseUrl, cookie);
+}
+
+export async function loginAsSuperAdmin(
+  naisys: NaisysTestProcess,
+  baseUrl: string,
+): Promise<SupervisorApiClient> {
+  const password = extractGeneratedSuperAdminPassword(naisys.getFullOutput());
+  return loginAs(baseUrl, "superadmin", password);
 }
 
 export async function waitFor<T>(

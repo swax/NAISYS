@@ -35,60 +35,7 @@ Defer tests that:
 - require live LLM providers
 - require fragile timing unless the workflow is core product behavior
 
-## 1. Supervisor Admin Configuration Workflow
-
-**Priority: highest**
-
-**Why it should move coverage**
-
-The new supervisor operator E2E covers the operator path well. The admin side is
-still a wide surface: users, permissions, agent config import/export/revisions,
-models, variables, host assignment, archive/unarchive, and spend reset. One API
-workflow can hit a lot of `apps/supervisor/server` and some hub broadcast code.
-
-**Workflow**
-
-1. Boot integrated hub + supervisor with two agents.
-2. Login as `superadmin`.
-3. Create a supervisor user with limited permissions.
-4. Assert the user cannot perform a privileged action.
-5. Grant the needed permission and assert the same action now succeeds.
-6. Create or update a model through supervisor model routes.
-7. Create or update a variable through supervisor variable routes.
-8. Export an agent config.
-9. Import an edited agent config.
-10. Read config revision history.
-11. Set and clear a lead agent.
-12. Disable, enable, archive, unarchive, and reset spend for an agent.
-13. Create a restricted host, assign an agent, unassign it, and delete the host
-    after it is offline.
-
-**Coverage targets**
-
-- `apps/supervisor/server/src/routes/users.ts`
-- `apps/supervisor/server/src/routes/user*` equivalent service paths
-- `apps/supervisor/server/src/routes/models.ts`
-- `apps/supervisor/server/src/routes/variables.ts`
-- `apps/supervisor/server/src/routes/agentConfig.ts`
-- `apps/supervisor/server/src/routes/agentLifecycle.ts`
-- `apps/supervisor/server/src/routes/hosts.ts`
-- `apps/supervisor/server/src/services/userService.ts`
-- `apps/supervisor/server/src/services/modelService.ts`
-- `apps/supervisor/server/src/services/variableService.ts`
-- `apps/supervisor/server/src/services/agentConfigService.ts`
-- `apps/supervisor/server/src/services/hostService.ts`
-- `apps/hub/src/handlers/hubModelsService.ts`
-- `apps/hub/src/handlers/hubConfigService.ts`
-- `apps/hub/src/handlers/hubHostService.ts`
-
-**Best home**
-
-`apps/naisys/src/__tests__/e2e/supervisor-admin.e2e.test.ts`
-
-Extract a `supervisorApiHelper.ts` before adding this. The operator test already
-has login, cookie, request, and polling helpers inline.
-
-## 2. Multi-Host Agent Placement and Failover
+## 1. Multi-Host Agent Placement and Failover
 
 **Priority: high**
 
@@ -135,7 +82,7 @@ management from the supervisor perspective.
 
 This will need careful ports and cleanup. Keep it API-first and avoid UI.
 
-## 3. ERP Execution With Attachments, Comments, Labor, and Audit
+## 2. ERP Execution With Attachments, Comments, Labor, and Audit
 
 **Priority: high**
 
@@ -187,7 +134,7 @@ Use API for setup and assertions. Use Playwright UI only if the UI itself is the
 behavior under test, because browser-side client coverage is not currently
 counted.
 
-## 4. ERP Revision Diff and Dependency Workflow
+## 3. ERP Revision Diff and Dependency Workflow
 
 **Priority: medium-high**
 
@@ -227,7 +174,7 @@ business rules matter more than the UI.
 
 `apps/erp/server/e2e/api/revision-diff-dependencies-api.spec.ts`
 
-## 5. NAISYS CLI Session and Workspace Workflow
+## 4. NAISYS CLI Session and Workspace Workflow
 
 **Priority: medium-high**
 
@@ -275,7 +222,7 @@ Before writing this, add helpers to `e2eTestHelper.ts` like `runCommand`,
 `startAgent`, `switchAgent`, and `expectPrompt`. That will reduce flake and make
 future CLI E2Es cheaper.
 
-## 6. Supervisor Auth to ERP Auth Bridge
+## 5. Supervisor Auth to ERP Auth Bridge
 
 **Priority: medium**
 
@@ -318,7 +265,7 @@ Either:
 Prefer the NAISYS integrated-process test if the goal is cross-workspace
 coverage.
 
-## 7. Models and Variables Propagation
+## 6. Models and Variables Propagation
 
 **Priority: medium**
 
@@ -356,7 +303,7 @@ low UI risk.
 
 `apps/naisys/src/__tests__/e2e/models-variables-propagation.e2e.test.ts`
 
-## 8. Hub Access Key Rotation and Reconnect
+## 7. Hub Access Key Rotation and Reconnect
 
 **Priority: medium**
 
@@ -391,14 +338,11 @@ important and hard to cover with pure unit tests.
 
 ## Suggested Order
 
-1. **Supervisor Admin Configuration Workflow**
-   - Broadly exercises supervisor server gaps.
-   - Reuses the operator API style.
-2. **ERP Execution With Attachments, Comments, Labor, and Audit**
+1. **ERP Execution With Attachments, Comments, Labor, and Audit**
    - Good next ERP server jump without duplicating order lifecycle.
-3. **Multi-Host Agent Placement and Failover**
+2. **Multi-Host Agent Placement and Failover**
    - More complex, but probably the most valuable distributed-system test.
-4. **NAISYS CLI Session and Workspace Workflow**
+3. **NAISYS CLI Session and Workspace Workflow**
    - Directly attacks the lowest coverage workspace.
 
 ## Measuring Each Addition
