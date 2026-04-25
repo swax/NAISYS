@@ -199,6 +199,28 @@ export const startHub: StartHub = async (
       logService.disableConsole();
     }
 
+    // Hosted mode: parent process owns signal handling
+    if (startupType === "standalone") {
+      let shuttingDown = false;
+      const handleShutdown = async (signal: "SIGINT" | "SIGTERM") => {
+        if (shuttingDown) {
+          console.log("[Hub] Force exit");
+          process.exit(1);
+        }
+        shuttingDown = true;
+        logService.log(`[Hub] Shutting down (${signal})...`);
+        try {
+          await io.close();
+          await fastify.close();
+        } catch (err) {
+          console.error("[Hub] Error during shutdown:", err);
+        }
+        process.exit(0);
+      };
+      process.on("SIGTERM", () => void handleShutdown("SIGTERM"));
+      process.on("SIGINT", () => void handleShutdown("SIGINT"));
+    }
+
     return { serverPort };
   } catch (err) {
     console.error("[Hub] Failed to start hub server:", err);

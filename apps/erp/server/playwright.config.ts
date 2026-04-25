@@ -29,6 +29,9 @@ export default defineConfig({
         NAISYS_FOLDER: testNaisysFolder,
         SUPERVISOR_AUTH: "false",
         SERVER_PORT: "3302",
+        ...(process.env.NODE_V8_COVERAGE
+          ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }
+          : {}),
       },
       reuseExistingServer: !process.env.CI,
     },

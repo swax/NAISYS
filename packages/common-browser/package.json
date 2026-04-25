@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Shared React/Mantine components and utilities for NAISYS client apps",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "clean": "npx rimraf dist",

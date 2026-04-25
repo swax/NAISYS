@@ -186,15 +186,17 @@ for (const userId of startupUserIds) {
 }
 
 let shuttingDown = false;
-process.on("SIGINT", () => {
+const handleShutdown = (signal: "SIGINT" | "SIGTERM") => {
   if (shuttingDown) {
     console.log("\nForce exit");
     process.exit(1);
   }
   shuttingDown = true;
-  console.log("\n[NAISYS] Shutting down...");
-  agentManager.stopAll("SIGINT").catch(() => {});
-});
+  console.log(`\n[NAISYS] Shutting down (${signal})...`);
+  agentManager.stopAll(signal).catch(() => {});
+};
+process.on("SIGINT", () => handleShutdown("SIGINT"));
+process.on("SIGTERM", () => handleShutdown("SIGTERM"));
 
 await agentManager.waitForAllAgentsToComplete();
 
