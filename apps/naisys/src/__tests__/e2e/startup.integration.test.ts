@@ -1,3 +1,16 @@
+/**
+ * NAISYS startup integration E2E.
+ *
+ *  1. Create a fresh test directory with an .env and an agent.yaml
+ *     (username: ryan).
+ *  2. Spawn naisys pointed at the agent yaml; wait for AGENT STARTED and
+ *     the prompt.
+ *  3. Run `ns-users` and wait until ryan appears in the output.
+ *  4. Send `exit` and wait for AGENT EXITED (no prompt after exit).
+ *  5. Wait for the process to exit; assert exit code 0 and that the
+ *     captured output contains the expected startup/agent/exit markers.
+ */
+
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NaisysTestProcess } from "./e2eTestHelper.js";
@@ -10,14 +23,6 @@ import {
   spawnNaisys,
   waitForExit,
 } from "./e2eTestHelper.js";
-
-/**
- * E2E integration test for naisys startup flow.
- *
- * Creates a fresh environment with .env and agent.yaml,
- * spawns naisys, runs ns-mail users command, validates output,
- * and exits cleanly.
- */
 
 vi.setConfig({ testTimeout: 60000 });
 

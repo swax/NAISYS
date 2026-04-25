@@ -1,3 +1,21 @@
+/**
+ * Cross-hub mail E2E.
+ *
+ *  1. Set up hub directory + two host directories with their own .envs and
+ *     create alex/bob agent yamls in the hub directory.
+ *  2. Start the hub server and capture its access key.
+ *  3. Spawn HOST-A naisys client connected to the hub via --hub.
+ *  4. Start alex on HOST-A — only HOST-A is connected so the hub routes alex
+ *     there.
+ *  5. Spawn HOST-B naisys client connected to the same hub.
+ *  6. Start bob on HOST-B — HOST-A already has admin+alex so the hub routes
+ *     bob to the least-loaded HOST-B.
+ *  7. Wait for heartbeat sync, then send mail from alex (HOST-A) → bob
+ *     (HOST-B) through the hub.
+ *  8. Read bob's inbox on HOST-B and assert the mail subject + body
+ *     propagated end-to-end.
+ */
+
 import { sleep } from "@naisys/common";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -14,21 +32,6 @@ import {
   spawnHub,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-
-/**
- * E2E test for cross-hub mail functionality.
- *
- * Creates a multi-process environment with:
- * - Hub server with alex and bob agent configs
- * - Host A (naisys client) connected to hub via --hub flag, running alex
- * - Host B (naisys client) connected to hub via --hub flag, running bob
- *
- * Tests that:
- * 1. Both hosts connect to the hub
- * 2. Agents are started on their respective hosts via ns-agent start
- * 3. Alex can send mail to bob through the hub
- * 4. Bob receives the mail
- */
 
 vi.setConfig({ testTimeout: 180000 });
 

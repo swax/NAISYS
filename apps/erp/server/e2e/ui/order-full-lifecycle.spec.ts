@@ -1,3 +1,25 @@
+/**
+ * Full order lifecycle with operations E2E (UI).
+ *
+ * Design-time:
+ *  1. Login and create an order with an initial revision.
+ *  2. Add an operation to the revision.
+ *  3. Add a step to that operation.
+ *  4. Add a required field to that step.
+ *  5. Approve the revision.
+ *
+ * Runtime:
+ *  6. Cut an order run from the approved revision; assert released
+ *     status.
+ *  7. Start the order run; assert started status.
+ *  8. Open the operation run from the sidebar and start it; assert
+ *     in_progress.
+ *  9. Fill the required field, blur to trigger save, then complete the
+ *     step (scoped to the step card to avoid the op Complete button).
+ * 10. Complete the operation run; assert "Completed by" appears.
+ * 11. Close the order run; assert closed status.
+ */
+
 import { test, expect, type Page } from "@playwright/test";
 
 import { loginAsTestUser } from "../auth-helper";

@@ -1,3 +1,19 @@
+/**
+ * Basic mail between two agents E2E.
+ *
+ *  1. Create two agent yamls (alex, bob) in the test directory so they
+ *     auto-start as lead agents.
+ *  2. Spawn naisys in the requested mode (standalone or integrated-hub).
+ *  3. In integrated-hub mode only admin starts automatically, so manually
+ *     start alex and bob and switch the CLI back to alex.
+ *  4. Send mail from alex → bob via the CLI.
+ *  5. Switch the CLI to bob and trigger a prompt cycle.
+ *  6. Assert the mail notification (subject, from, to, body) appears in
+ *     bob's output.
+ *
+ * Run twice: once standalone, once with --integrated-hub.
+ */
+
 import { appendFileSync } from "fs";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -11,15 +27,6 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-
-/**
- * E2E tests for basic mail between two agents.
- *
- * Tests both standalone (no hub) and integrated-hub modes.
- * Creates two agent yamls directly in the test directory so they
- * auto-start as lead agents. Sends mail from alex to bob,
- * switches to bob, and validates the mail notification appears.
- */
 
 vi.setConfig({ testTimeout: 120000 });
 

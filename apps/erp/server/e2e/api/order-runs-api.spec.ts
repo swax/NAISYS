@@ -1,3 +1,27 @@
+/**
+ * Order Runs API happy path E2E.
+ *
+ *  1. Create a parent order + initial revision via the API helpers.
+ *  2. Create the first order run against that revision; assert runNo=1
+ *     and the released-state actions/links.
+ *  3. List and fetch runs by runNo; assert collection metadata and the
+ *     released status.
+ *  4. Update the released run (priority + release note); assert actions
+ *     are still returned.
+ *  5. Start the run (released → started); assert the audit trail entry
+ *     and the started-state action set (no start/delete).
+ *  6. Try to delete a started run; assert 409 conflict.
+ *  7. Close the run (started → closed); assert the audit entry and that
+ *     only the reopen action remains.
+ *  8. Try to start and cancel the closed run; assert 409 on both.
+ *  9. Create a second run, then cancel it; assert cancelled status and
+ *     reopen-only actions.
+ * 10. Filter runs by status and priority; assert each item matches.
+ * 11. Try to delete the order while revisions exist; assert 409.
+ * 12. Create a fresh draft revision with an order run, then try to
+ *     delete the draft; assert 409 (blocked by existing order runs).
+ */
+
 import { type APIRequestContext } from "@playwright/test";
 
 import { test, expect } from "../fixtures";

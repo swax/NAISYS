@@ -1,3 +1,26 @@
+/**
+ * Supervisor operator workflow E2E.
+ *
+ *  1. Boot integrated hub + supervisor with two agents (operatorbot,
+ *     peerbot) and login to the supervisor API as superadmin.
+ *  2. List agents and hosts; assert both agents exist and the host is
+ *     online.
+ *  3. Start operatorbot via the supervisor API and wait for it to become
+ *     active.
+ *  4. Wait for a run session to appear, then fetch its logs and assert the
+ *     logs response shape.
+ *  5. Run a shell command in the run session, then pause and resume the
+ *     session.
+ *  6. Send chat from operatorbot → peerbot via API; assert the conversation
+ *     and message appear in peerbot's chat data.
+ *  7. Send mail from operatorbot → peerbot via API; assert the message
+ *     appears in peerbot's mail data.
+ *  8. Fetch the costs histogram and host-scoped runs; assert they include
+ *     operatorbot activity.
+ *  9. Archive peerbot's chat and mail via API; assert archivedCount ≥ 1.
+ * 10. Stop operatorbot via API.
+ */
+
 import { sleep } from "@naisys/common";
 import type {
   AgentDetailResponse,

@@ -1,3 +1,25 @@
+/**
+ * Order Revisions API happy path E2E.
+ *
+ *  1. Create a parent order via the API helpers.
+ *  2. List its revisions and assert the collection is empty.
+ *  3. Create the first revision; assert revNo=1 and draft-state actions.
+ *  4. Update the draft revision; assert actions are still returned.
+ *  5. Approve the revision; assert audit entry, approved-state actions,
+ *     and that the update action is disabled (not removed).
+ *  6. Try to update and delete the approved revision; assert 409 on both.
+ *  7. Mark the approved revision as obsolete; assert no further actions.
+ *  8. Create a second revision; assert revNo auto-increments to 2.
+ *  9. List revisions including obsolete; assert ordering by revNo desc.
+ * 10. Filter revisions by status=draft; assert only the draft is returned.
+ * 11. Fetch a single revision by revNo; assert it carries self/collection/
+ *     parent links.
+ * 12. Delete the draft revision; assert 204 and only the obsolete one
+ *     remains.
+ * 13. Try to delete the order while the obsolete revision still exists;
+ *     assert 409.
+ */
+
 import { type APIRequestContext } from "@playwright/test";
 
 import { test, expect } from "../fixtures";
