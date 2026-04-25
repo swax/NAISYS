@@ -115,16 +115,8 @@ HUB_ACCESS_KEY=${hubAccessKey}
 
     // --- Start alex on Host A ---
     // Only Host A is connected, so hub routes alex here
-    hostA.flushOutput();
-    hostA.sendCommand('ns-agent start alex "cross hub mail test"');
-    await hostA.waitForOutput("started", 15000);
-    await hostA.waitForPrompt();
-
-    // --- Switch to alex on Host A ---
-    hostA.flushOutput();
-    hostA.sendCommand("ns-agent switch alex");
-    await hostA.waitForOutput("alex@", 15000);
-    await hostA.waitForPrompt();
+    await hostA.startAgent("alex", "cross hub mail test");
+    await hostA.switchAgent("alex");
 
     // --- Start Host B (admin starts automatically) ---
     createClientEnvFile(hostBDir, "HOST-B", hubAccessKey);
@@ -135,16 +127,8 @@ HUB_ACCESS_KEY=${hubAccessKey}
     // --- Start bob on Host B ---
     // Host A has admin+alex (2 agents), Host B has admin (1 agent)
     // Hub routes bob to Host B (least loaded)
-    hostB.flushOutput();
-    hostB.sendCommand('ns-agent start bob "cross hub mail test"');
-    await hostB.waitForOutput("started", 15000);
-    await hostB.waitForPrompt();
-
-    // --- Switch to bob on Host B ---
-    hostB.flushOutput();
-    hostB.sendCommand("ns-agent switch bob");
-    await hostB.waitForOutput("bob@", 15000);
-    await hostB.waitForPrompt();
+    await hostB.startAgent("bob", "cross hub mail test");
+    await hostB.switchAgent("bob");
 
     // --- Wait for heartbeat sync ---
     await sleep(3000);
@@ -153,49 +137,33 @@ HUB_ACCESS_KEY=${hubAccessKey}
     const testSubject = "Cross Hub Test";
     const testMessage = "Hello Bob from HOST-A!";
 
-    hostA.flushOutput();
-    hostA.sendCommand(`ns-mail send "bob" "${testSubject}" "${testMessage}"`);
-    await hostA.waitForOutput("Mail sent", 15000);
-    await hostA.waitForPrompt();
-
-    const alexOutput = hostA.flushOutput();
+    const alexOutput = await hostA.sendMail("bob", testSubject, testMessage);
     expect(alexOutput).toContain("Mail sent");
 
     // --- Wait for mail to propagate through hub ---
     await sleep(3000);
 
     // --- Verify bob received mail ---
-    hostB.flushOutput();
-    hostB.sendCommand("ns-mail inbox");
-    await hostB.waitForOutput("alex", 15000);
-    await hostB.waitForPrompt();
-
-    let bobOutput = hostB.flushOutput();
-    expect(bobOutput).toContain("alex");
-    expect(bobOutput).toContain(testSubject);
+    const inboxOutput = await hostB.runCommand("ns-mail inbox", {
+      waitFor: "alex",
+      timeoutMs: 15000,
+    });
+    expect(inboxOutput).toContain("alex");
+    expect(inboxOutput).toContain(testSubject);
 
     // Extract message ID from list output (integer ID column)
     // Format: "* | 123 | alex | Cross Hub Test | <date>"
-    const idMatch = bobOutput.match(/\|\s*(\d+)\s*\|\s*alex/i);
+    const idMatch = inboxOutput.match(/\|\s*(\d+)\s*\|\s*alex/i);
     expect(idMatch).not.toBeNull();
     const messageId = idMatch![1];
 
     // --- Read the mail ---
-    hostB.flushOutput();
-    hostB.sendCommand(`ns-mail read ${messageId}`);
-    await hostB.waitForOutput(testMessage, 10000);
-    await hostB.waitForPrompt();
-
-    bobOutput = hostB.flushOutput();
-    expect(bobOutput).toContain(testMessage);
+    const readOutput = await hostB.readMail(messageId);
+    expect(readOutput).toContain(testMessage);
 
     // --- Log errors for debugging ---
-    if (hostA.stderr.length > 0) {
-      console.log("Host A stderr:", hostA.stderr.join(""));
-    }
-    if (hostB.stderr.length > 0) {
-      console.log("Host B stderr:", hostB.stderr.join(""));
-    }
+    hostA.dumpStderrIfAny("Host A");
+    hostB.dumpStderrIfAny("Host B");
     if (hub?.stderr && hub.stderr.length > 0) {
       console.log("Hub stderr:", hub.stderr.join(""));
     }

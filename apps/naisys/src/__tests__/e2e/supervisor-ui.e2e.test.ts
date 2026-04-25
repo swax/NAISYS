@@ -128,12 +128,7 @@ SERVER_PORT=${SERVER_PORT}
       .waitFor({ timeout: 30000 });
 
     // --- Verify via CLI: switch to uibot ---
-    naisys.flushOutput();
-    naisys.sendCommand("ns-agent switch uibot");
-    await naisys.waitForOutput("uibot@", 15000);
-    await naisys.waitForPrompt();
-
-    const switchOutput = naisys.flushOutput();
+    const switchOutput = await naisys.switchAgent("uibot");
     expect(switchOutput).toContain("uibot@");
   });
 });

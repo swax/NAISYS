@@ -63,38 +63,16 @@ describe("Basic Mail E2E", () => {
 
     if (manualStart) {
       // In integrated-hub mode, only admin starts. Start agents manually.
-      naisys.flushOutput();
-      naisys.sendCommand('ns-agent start alex "mail test"');
-      await naisys.waitForOutput("started", 15000);
-      await naisys.waitForPrompt();
-
-      naisys.flushOutput();
-      naisys.sendCommand('ns-agent start bob "mail test"');
-      await naisys.waitForOutput("started", 15000);
-      await naisys.waitForPrompt();
-
-      naisys.flushOutput();
-      naisys.sendCommand("ns-agent switch alex");
-      await naisys.waitForOutput("alex@", 15000);
-      await naisys.waitForPrompt();
+      await naisys.startAgent("alex", "mail test");
+      await naisys.startAgent("bob", "mail test");
+      await naisys.switchAgent("alex");
     }
 
-    // Send mail from alex to bob
-    naisys.flushOutput();
-    naisys.sendCommand('ns-mail send "bob" "test" "hi from alex"');
-    await naisys.waitForOutput("Mail sent", 10000);
-    await naisys.waitForPrompt();
-
-    // Switch to bob
-    naisys.flushOutput();
-    naisys.sendCommand("ns-agent switch bob");
-    await naisys.waitForOutput("bob@", 15000);
-    await naisys.waitForPrompt();
+    await naisys.sendMail("bob", "test", "hi from alex");
+    await naisys.switchAgent("bob");
 
     // Trigger a prompt cycle to process any pending notifications
-    naisys.flushOutput();
-    naisys.sendNewLine();
-    await naisys.waitForPrompt();
+    await naisys.pressEnter();
 
     // Verify the mail notification appeared somewhere in the full output
     const fullOutput = naisys.getFullOutput();
@@ -104,9 +82,7 @@ describe("Basic Mail E2E", () => {
     expect(fullOutput).toContain("To: bob");
     expect(fullOutput).toContain("hi from alex");
 
-    if (naisys.stderr.length > 0) {
-      console.log("stderr:", naisys.stderr.join(""));
-    }
+    naisys.dumpStderrIfAny();
   }
 
   test("standalone: send mail from alex to bob", async () => {

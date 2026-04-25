@@ -9,7 +9,6 @@ new tests are already reinventing helpers that should be shared.
 
 This doc covers:
 
-- E2E process helpers for the repeated `flush -> send -> wait -> prompt` flow
 - Supervisor API helpers invented inline by the new supervisor e2e test
 - ERP API and UI helpers for HATEOAS/status assertions and authenticated pages
 - Testing real pure functions instead of copied production implementations
@@ -20,13 +19,11 @@ This doc covers:
 
 In rough priority order:
 
-1. Add E2E process methods like `runCommand`, `startAgent`, `switchAgent`,
-   `sendMail`, and `readMail` to `e2eTestHelper.ts`.
-2. Extract supervisor API e2e helpers from the new operator test before a second
+1. Extract supervisor API e2e helpers from the new operator test before a second
    supervisor API test copies them.
-3. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
-4. Stop testing copied production functions in `costTracker.test.ts`.
-5. Replace duplicated ERP OpenAPI route lists with production route registration.
+2. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
+3. Stop testing copied production functions in `costTracker.test.ts`.
+4. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## Test Real Pure Functions
 
@@ -56,47 +53,6 @@ Fix:
   pattern.
 - Convert the many period-boundary examples into `test.each` cases so adding a
   new boundary costs one row, not a full test body.
-
-## E2E Process Command Driver
-
-`apps/naisys/src/__tests__/e2e/e2eTestHelper.ts` already owns process spawning,
-output buffering, and prompt waiting. The tests still repeat this sequence:
-
-```ts
-proc.flushOutput();
-proc.sendCommand(command);
-await proc.waitForOutput(expected, timeout);
-await proc.waitForPrompt();
-const output = proc.flushOutput();
-```
-
-It appears throughout `basic-mail.e2e.test.ts` and `crosshub-mail.e2e.test.ts`.
-Add higher-level methods on `NaisysTestProcess`:
-
-```ts
-await naisys.runCommand('ns-agent start alex "mail test"', {
-  waitFor: "started",
-  timeoutMs: 15_000,
-});
-
-await naisys.startAgent("alex", "mail test");
-await naisys.switchAgent("bob");
-await naisys.sendMail("bob", "test", "hi from alex");
-```
-
-Recommended additions:
-
-- `runCommand(command, { waitFor, timeoutMs, flush = true })`
-- `pressEnter({ waitForPrompt = true })`
-- `startAgent(username, reason)`
-- `switchAgent(username)`
-- `sendMail(to, subject, body)`
-- `readMail(messageId)`
-- `dumpStderrOnFailure(label?)` or a cleanup hook that prints stderr only when a
-  test fails
-
-These should live in the existing process object rather than a separate wrapper;
-call sites already have `NaisysTestProcess`.
 
 ## Supervisor API E2E Helpers
 

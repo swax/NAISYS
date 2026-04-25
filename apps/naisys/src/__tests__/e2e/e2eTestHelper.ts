@@ -9,6 +9,17 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+export interface RunCommandOptions {
+  /** Substring to wait for in output before waiting for prompt */
+  waitFor?: string;
+  /** Timeout for waitFor and the prompt wait */
+  timeoutMs?: number;
+  /** Flush output before sending (default: true) */
+  flush?: boolean;
+  /** Wait for a prompt after the command completes (default: true) */
+  waitForPrompt?: boolean;
+}
+
 export interface NaisysTestProcess {
   process: ChildProcess;
   stdout: string[];
@@ -25,11 +36,31 @@ export interface NaisysTestProcess {
   ) => Promise<void>;
   /** Wait for one prompt to appear since last flush */
   waitForPrompt: (timeoutMs?: number) => Promise<void>;
+  /**
+   * Flush, send command, optionally wait for a substring, then wait for prompt.
+   * Returns the output captured between the flush and the prompt.
+   */
+  runCommand: (
+    command: string,
+    options?: RunCommandOptions,
+  ) => Promise<string>;
+  /** Press enter (blank line) and wait for the next prompt */
+  pressEnter: (options?: { waitForPrompt?: boolean }) => Promise<string>;
+  /** Run `ns-agent start <username> "<reason>"` and wait for "started" */
+  startAgent: (username: string, reason: string) => Promise<string>;
+  /** Run `ns-agent switch <username>` and wait for the new prompt */
+  switchAgent: (username: string) => Promise<string>;
+  /** Run `ns-mail send "<to>" "<subject>" "<body>"` and wait for "Mail sent" */
+  sendMail: (to: string, subject: string, body: string) => Promise<string>;
+  /** Run `ns-mail read <messageId>` and return the output */
+  readMail: (messageId: string | number) => Promise<string>;
   getFullOutput: () => string;
   /** Returns output since last flush and resets the flush position */
   flushOutput: () => string;
   /** Log the full output to console for debugging */
   dumpOutput: () => void;
+  /** Print stderr to console with an optional label, only if non-empty */
+  dumpStderrIfAny: (label?: string) => void;
   cleanup: () => Promise<void>;
 }
 
@@ -385,6 +416,70 @@ export function spawnNaisys(
     }
   };
 
+  const dumpStderrIfAny = (label?: string) => {
+    if (stderr.length > 0) {
+      const prefix = label ? `${label} stderr:` : "stderr:";
+      console.log(prefix, stderr.join(""));
+    }
+  };
+
+  const runCommand = async (
+    command: string,
+    options: RunCommandOptions = {},
+  ): Promise<string> => {
+    const {
+      waitFor,
+      timeoutMs = 10000,
+      flush = true,
+      waitForPrompt: shouldWaitForPrompt = true,
+    } = options;
+
+    if (flush) {
+      flushOutput();
+    }
+    sendCommand(command);
+    if (waitFor !== undefined) {
+      await waitForOutput(waitFor, timeoutMs);
+    }
+    if (shouldWaitForPrompt) {
+      await waitForPrompt(timeoutMs);
+    }
+    return flushOutput();
+  };
+
+  const pressEnter = async (
+    options: { waitForPrompt?: boolean } = {},
+  ): Promise<string> => {
+    const { waitForPrompt: shouldWaitForPrompt = true } = options;
+    flushOutput();
+    sendNewLine();
+    if (shouldWaitForPrompt) {
+      await waitForPrompt();
+    }
+    return flushOutput();
+  };
+
+  const startAgent = (username: string, reason: string) =>
+    runCommand(`ns-agent start ${username} "${reason}"`, {
+      waitFor: "started",
+      timeoutMs: 15000,
+    });
+
+  const switchAgent = (username: string) =>
+    runCommand(`ns-agent switch ${username}`, {
+      waitFor: `${username}@`,
+      timeoutMs: 15000,
+    });
+
+  const sendMail = (to: string, subject: string, body: string) =>
+    runCommand(`ns-mail send "${to}" "${subject}" "${body}"`, {
+      waitFor: "Mail sent",
+      timeoutMs: 15000,
+    });
+
+  const readMail = (messageId: string | number) =>
+    runCommand(`ns-mail read ${messageId}`, { timeoutMs: 10000 });
+
   const cleanup = async (): Promise<void> => {
     // Close stdin first
     proc.stdin?.end();
@@ -419,9 +514,16 @@ export function spawnNaisys(
     waitForOutput,
     waitForOutputCount,
     waitForPrompt,
+    runCommand,
+    pressEnter,
+    startAgent,
+    switchAgent,
+    sendMail,
+    readMail,
     getFullOutput,
     flushOutput,
     dumpOutput,
+    dumpStderrIfAny,
     cleanup,
   };
 }
