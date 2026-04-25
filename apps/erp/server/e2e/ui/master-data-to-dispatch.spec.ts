@@ -1,3 +1,26 @@
+/**
+ * ERP master data → dispatch workflow E2E (UI).
+ *
+ *  1. Login and create a work center.
+ *  2. Create an item, then add a required custom field to it.
+ *  3. From the item detail, create an item instance (lot) with a quantity.
+ *  4. Create an order that produces the item; assert the order detail
+ *     links to the item.
+ *  5. Add a revision to the order.
+ *  6. Add an operation to the revision and edit it to assign the work
+ *     center.
+ *  7. Approve the revision.
+ *  8. Cut an order run from the approved revision; assert it lands in
+ *     released state.
+ *  9. Open the dispatch open queue, search by order key, and assert the
+ *     operation appears.
+ * 10. Start the order run, then start and complete the operation run.
+ * 11. Open the dispatch ready-to-close queue and assert the run appears.
+ * 12. Complete the order run via the modal that mints a new item
+ *     instance (filling the required field); assert closed status and
+ *     a link to the produced instance.
+ */
+
 import { test, expect, type Page } from "@playwright/test";
 
 import { loginAsTestUser } from "../auth-helper";

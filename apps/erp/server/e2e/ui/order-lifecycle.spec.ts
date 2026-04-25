@@ -1,3 +1,15 @@
+/**
+ * Order lifecycle E2E (UI) — minimal happy path with no operations.
+ *
+ *  1. Login and create an order with an initial revision.
+ *  2. Approve the revision (accepting the confirm() dialog).
+ *  3. Cut an order run from the approved revision; assert released
+ *     status on the run detail.
+ *  4. Start the order run; assert started status.
+ *  5. Close the order run; assert closed status and that the Start /
+ *     Close buttons are gone.
+ */
+
 import { test, expect, type Page } from "@playwright/test";
 
 import { loginAsTestUser } from "../auth-helper";

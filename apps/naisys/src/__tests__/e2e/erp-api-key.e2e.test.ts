@@ -1,3 +1,18 @@
+/**
+ * ERP API key authentication E2E.
+ *
+ *  1. Set up an .env and a single agent yaml (testbot).
+ *  2. Spawn naisys with --integrated-hub --supervisor --erp so the hub,
+ *     supervisor, and ERP plugin all run in-process.
+ *  3. Wait for the implicit admin agent to start (registers an API key for
+ *     each agent in the hub database).
+ *  4. Start testbot via the CLI and switch to its prompt.
+ *  5. From the testbot shell, curl /erp/api/auth/me using the
+ *     $NAISYS_API_KEY variable in the Authorization header.
+ *  6. Assert the response is JSON containing the auto-provisioned testbot
+ *     user identity, proving the ERP accepted the API key.
+ */
+
 import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -11,21 +26,6 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-
-/**
- * E2E test for ERP API key authentication.
- *
- * Creates a single NAISYS instance with:
- * - Integrated hub (--integrated-hub)
- * - Supervisor web server (--supervisor)
- * - ERP plugin (--erp)
- *
- * Tests that:
- * 1. Agent is registered with an API key in the hub database
- * 2. $api_key variable in shell commands is replaced with the actual key
- * 3. ERP API accepts the API key and auto-provisions a local user
- * 4. /erp/api/auth/me returns the correct agent identity
- */
 
 vi.setConfig({ testTimeout: 120000 });
 

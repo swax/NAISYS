@@ -1,3 +1,22 @@
+/**
+ * Supervisor UI E2E.
+ *
+ *  1. Set up an .env and a single agent yaml (uibot).
+ *  2. Spawn naisys with --integrated-hub --supervisor and wait for the
+ *     admin agent to start.
+ *  3. Capture the superadmin password printed during startup.
+ *  4. Launch headless Chromium via Playwright and navigate to the
+ *     supervisor web UI.
+ *  5. Login as superadmin with the captured password and wait for the
+ *     post-login navigation to complete.
+ *  6. Click uibot in the sidebar, wait for the agent detail page to load,
+ *     and poll until the Start button becomes enabled.
+ *  7. Click Start and wait for the "Agent Started" notification.
+ *  8. Switch to uibot via the NAISYS CLI and assert the prompt shows
+ *     uibot@, confirming the UI-triggered start actually started the
+ *     agent.
+ */
+
 import { sleep } from "@naisys/common";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -12,15 +31,6 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-
-/**
- * E2E test for the Supervisor UI.
- *
- * Spawns NAISYS with --integrated-hub --supervisor, logs into
- * the supervisor web UI via Playwright, starts an agent through
- * the UI, then verifies it is running by switching to it via
- * the ns-agent switch CLI command.
- */
 
 vi.setConfig({ testTimeout: 120000 });
 
