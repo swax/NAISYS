@@ -4,12 +4,13 @@
  * The reason we don't slide the window is that we don't want to the llm to get stuck sending off a query
  * only for the window to close again, and the llm cache to *expire* creating a cycle of constant cache misses
  */
-export function calculatePeriodBoundaries(hours: number): {
+export function calculatePeriodBoundaries(
+  hours: number,
+  now: Date = new Date(),
+): {
   periodStart: Date;
   periodEnd: Date;
 } {
-  const now = new Date();
-
   // Get midnight of current day in local time
   const midnight = new Date(now);
   midnight.setHours(0, 0, 0, 0);

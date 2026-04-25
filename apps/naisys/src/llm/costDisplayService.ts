@@ -6,7 +6,8 @@ import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ModelService } from "../services/modelService.js";
 import type { OutputService } from "../utils/output.js";
-import type { CostTracker, LlmModelCosts } from "./costTracker.js";
+import { calculateModelCacheSavings } from "./cacheSavings.js";
+import type { CostTracker } from "./costTracker.js";
 
 export function createCostDisplayService(
   { globalConfig }: GlobalConfig,
@@ -182,61 +183,6 @@ export function createCostDisplayService(
         );
       }
     }
-  }
-
-  function calculateModelCacheSavings(
-    modelData: {
-      model: string;
-      inputTokens: number;
-      outputTokens: number;
-      cacheWriteTokens: number;
-      cacheReadTokens: number;
-    },
-    model: LlmModelCosts,
-  ) {
-    const cacheWriteTokens = modelData.cacheWriteTokens || 0;
-    const cacheReadTokens = modelData.cacheReadTokens || 0;
-    const totalCacheTokens = cacheWriteTokens + cacheReadTokens;
-
-    if (totalCacheTokens === 0 || !model.inputCost) {
-      return null;
-    }
-
-    // Calculate what these cache tokens would have cost at regular input rate
-    const cacheSavingsAmount =
-      (cacheWriteTokens * (model.inputCost - (model.cacheWriteCost || 0))) /
-        1_000_000 +
-      (cacheReadTokens * (model.inputCost - (model.cacheReadCost || 0))) /
-        1_000_000;
-
-    // Calculate actual cache cost from tokens
-    const actualCacheSpend =
-      (cacheWriteTokens * (model.cacheWriteCost || 0)) / 1_000_000 +
-      (cacheReadTokens * (model.cacheReadCost || 0)) / 1_000_000;
-
-    // Calculate total cost for this model from tokens
-    const inputTokens = modelData.inputTokens || 0;
-    const outputTokens = modelData.outputTokens || 0;
-    const inputCost = (inputTokens * model.inputCost) / 1_000_000;
-    const outputCost = (outputTokens * model.outputCost) / 1_000_000;
-    const modelTotalCost = inputCost + outputCost + actualCacheSpend;
-
-    const costWithoutCaching = modelTotalCost + cacheSavingsAmount;
-    const savingsPercent =
-      cacheSavingsAmount > 0
-        ? (cacheSavingsAmount / costWithoutCaching) * 100
-        : 0;
-
-    return {
-      savingsAmount: cacheSavingsAmount,
-      costWithoutCaching,
-      savingsPercent,
-      totalCacheTokens,
-      totalCost: modelTotalCost,
-      inputCost,
-      outputCost,
-      actualCacheSpend,
-    };
   }
 
   /** ns-cost [reset]: Show cost breakdown or reset cost tracking data */

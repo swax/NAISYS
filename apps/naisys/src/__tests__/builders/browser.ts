@@ -1,7 +1,7 @@
 import { type Mock, vi } from "vitest";
 
-import { createBrowserService } from "../../features/browser.js";
 import type { BrowserService } from "../../features/browser.js";
+import { createBrowserService } from "../../features/browser.js";
 import {
   createMockContextManager,
   createMockGlobalConfig,
