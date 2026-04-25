@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "declaration": true,
     "declarationMap": true,
+    "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,

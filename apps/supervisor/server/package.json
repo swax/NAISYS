@@ -48,12 +48,12 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
-    "@naisys/supervisor-shared": "3.0.0",
     "@naisys/common": "3.0.0",
     "@naisys/common-node": "3.0.0",
     "@naisys/hub-database": "3.0.0",
     "@naisys/hub-protocol": "3.0.0",
     "@naisys/supervisor-database": "3.0.0",
+    "@naisys/supervisor-shared": "3.0.0",
     "@scalar/fastify-api-reference": "^1.48.7",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
@@ -70,6 +70,7 @@
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"

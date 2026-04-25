@@ -257,6 +257,7 @@ async function startServer(wizardRan?: boolean) {
     console.error("[ERP] Failed to start:", err);
     process.exit(1);
   }
+  return fastify;
 }
 
 // Start server if this file is run directly
@@ -293,5 +294,22 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     expandNaisysFolder();
   }
   wizardRan = (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
-  void startServer(wizardRan);
+  const fastify = await startServer(wizardRan);
+  let shuttingDown = false;
+  const handleShutdown = async (signal: "SIGINT" | "SIGTERM") => {
+    if (shuttingDown) {
+      console.log("[ERP] Force exit");
+      process.exit(1);
+    }
+    shuttingDown = true;
+    console.log(`[ERP] Shutting down (${signal})...`);
+    try {
+      await fastify.close();
+    } catch (err) {
+      console.error("[ERP] Error during fastify.close():", err);
+    }
+    process.exit(0);
+  };
+  process.on("SIGTERM", () => void handleShutdown("SIGTERM"));
+  process.on("SIGINT", () => void handleShutdown("SIGINT"));
 }
