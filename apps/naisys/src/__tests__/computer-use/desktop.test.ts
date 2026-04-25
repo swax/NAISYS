@@ -59,7 +59,7 @@ describe("desktop focus commands", () => {
     await expect(
       desktopService.handleCommand("focus 0 0 690 388"),
     ).resolves.toBe(
-      "Desktop focus set from screenshot (0, 0, 690x388) -> native (0, 0, 1920x1080).",
+      "Focused on (0, 0, 690x388). That 690x388 region is now shown as scaled 1380x776. Use 'ns-desktop focus clear' to return to the full desktop.",
     );
     expect(output.commentAndLog).toHaveBeenCalledWith(
       "Focus changes can increase next-turn cost because computer-use context has to be refreshed.",
@@ -371,9 +371,7 @@ describe("desktop focus commands", () => {
 
     expect(helpText).toContain("Desktop Status");
     expect(helpText).toContain("Native Screen: 1920x1080");
-    expect(helpText).toContain(
-      "Viewport: focus (100, 50, 1600x900) within 1920x1080",
-    );
+    expect(helpText).toContain("Viewport: (100, 50, 1600x900)");
     expect(helpText).toContain("LLM View:");
     expect(helpText).toContain("Model Coordinates: scaled pixel space");
     expect(helpText).toContain("Manual Focus Args: current screenshot pixels");

@@ -125,7 +125,7 @@ affordance the operator has to work around:
 ns-desktop focus X Y W H   ← args in scaled-screenshot pixels
 ```
 
-`mapScreenshotRectToScreen` maps those args to an absolute-screen rect
+`scaledRectToNativeRect` maps those args to an absolute native rect
 and calls `setFocus`, which stores the new viewport. `getConfig()` then
 returns the focused viewport, with `scaledWidth/Height` recomputed for
 it (usually ≤ target, so the scaled screenshot is 1:1 with the viewport
