@@ -20,9 +20,9 @@ import type { OutputService } from "../utils/output.js";
 import type { ComputerService } from "./computerService.js";
 import {
   checkActionBounds,
-  describeDesktopViewport,
   formatDesktopAction,
   formatDesktopActions,
+  isDesktopFocused,
   mapCoordinateBetweenSpaces,
 } from "./computerService.js";
 
@@ -52,6 +52,10 @@ export function createDesktopService(
     middle: "middle_click",
     double: "double_click",
   };
+  // The briefing returned when focus was last set; replayed on no-args
+  // `ns-desktop focus` so the LLM sees the same "where am I" story it got
+  // at focus time. Cleared by `ns-desktop focus clear`.
+  let lastFocusResponse: string | null = null;
 
   function getFocusChangeCostNote(): string {
     if (shellModel.apiType === LlmApiType.Anthropic) {
@@ -76,11 +80,11 @@ export function createDesktopService(
   }
 
   /**
-   * Map a point from scaled-screenshot coord space (what the user sees) to
-   * viewport-local coord space (native pixels, 0..viewport.width, 0..viewport.height).
-   * The result is NOT an absolute screen coord — add viewport.x/y for that.
+   * Map a point from scaled space to viewport space (native pixels,
+   * 0..viewport.width, 0..viewport.height — relative to the viewport origin,
+   * NOT the full display). Add viewport.x/y to get an absolute native coord.
    */
-  function mapScreenshotPointToViewportLocal(
+  function scaledPointToViewportPoint(
     x: number,
     y: number,
     state: VisibleDesktopState,
@@ -95,19 +99,19 @@ export function createDesktopService(
   }
 
   /**
-   * Map a rect from scaled-screenshot coord space to absolute screen coord
-   * space (native pixels, relative to the full display origin). Used by
-   * focus, which takes absolute screen rects.
+   * Map a rect from scaled space to native space (absolute native pixels,
+   * relative to the full display origin). Used by focus, which takes
+   * absolute native rects.
    */
-  function mapScreenshotRectToScreen(
+  function scaledRectToNativeRect(
     x: number,
     y: number,
     width: number,
     height: number,
     state: VisibleDesktopState,
   ): { x: number; y: number; width: number; height: number } {
-    const [startX, startY] = mapScreenshotPointToViewportLocal(x, y, state);
-    const [endX, endY] = mapScreenshotPointToViewportLocal(
+    const [startX, startY] = scaledPointToViewportPoint(x, y, state);
+    const [endX, endY] = scaledPointToViewportPoint(
       x + width,
       y + height,
       state,
@@ -165,17 +169,20 @@ export function createDesktopService(
     if (!desktopConfig) {
       return "Desktop Status\n  State: unavailable";
     }
-    const { scaleFactor, scaledWidth, scaledHeight } = desktopConfig;
+    const { scaleFactor, scaledWidth, scaledHeight, viewport } = desktopConfig;
     const modelCoordSpace =
       shellModel.supportsComputerUse && shellModel.apiType === LlmApiType.Google
         ? "0..999 normalized grid"
         : `scaled pixel space (${scaledWidth}x${scaledHeight})`;
+    const viewportDesc = isDesktopFocused(desktopConfig)
+      ? `(${viewport.x}, ${viewport.y}, ${viewport.width}x${viewport.height})`
+      : "same as native screen";
 
     return [
       "Desktop Status",
       `  Platform: ${desktopConfig.desktopPlatform}`,
       `  Native Screen: ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`,
-      `  Viewport: ${describeDesktopViewport(desktopConfig)}`,
+      `  Viewport: ${viewportDesc}`,
       `  LLM View: ${scaledWidth}x${scaledHeight}`,
       `  Model Coordinates: ${modelCoordSpace}`,
       `  Scale Factor: ${scaleFactor.toFixed(4)}`,
@@ -240,7 +247,7 @@ export function createDesktopService(
     const viewportNative = await computerService.captureViewportScreenshot();
     const viewportNativePath = path.join(
       outDir,
-      `screenshot-${timestamp}-viewport-native.png`,
+      `screenshot-${timestamp}-viewport.png`,
     );
     fs.writeFileSync(
       viewportNativePath,
@@ -252,30 +259,30 @@ export function createDesktopService(
     const scaledPath = path.join(outDir, `screenshot-${timestamp}-scaled.png`);
     fs.copyFileSync(scaled.filepath, scaledPath);
 
-    const desktopConfig = computerService.getConfig();
-    const viewportLine = desktopConfig
-      ? `\nViewport: ${describeDesktopViewport(desktopConfig)}`
-      : "";
-    const clickLine = desktopConfig
-      ? `\nManual Click Coords: scaled screenshot ${desktopConfig.scaledWidth}x${desktopConfig.scaledHeight}`
-      : "";
-
-    return `Full: ${fullPath}\nViewport Native: ${viewportNativePath}\nScaled: ${scaledPath}${viewportLine}${clickLine}`;
+    return `Full: ${fullPath}\nViewport: ${viewportNativePath}\nScaled: ${scaledPath}`;
   }
 
   function handleFocusCommand(
     argv: string[],
     usageError: (sub: DesktopSubcommand) => string,
   ): string {
-    const desktopConfig = computerService.getConfig();
     if (!argv[1]) {
-      return `Desktop focus: ${describeDesktopViewport(desktopConfig!)}`;
+      const { desktopConfig } = requireVisibleDesktopState();
+      if (!isDesktopFocused(desktopConfig)) {
+        return `Focus not active. Scaled desktop: ${desktopConfig.scaledWidth}x${desktopConfig.scaledHeight}.`;
+      }
+      return (
+        lastFocusResponse ??
+        `Focus active. Scaled view: ${desktopConfig.scaledWidth}x${desktopConfig.scaledHeight}. Use 'ns-desktop focus clear' to return to the full desktop.`
+      );
     }
 
     if (argv[1].toLowerCase() === "clear") {
       computerService.setFocus(undefined);
       output.commentAndLog(getFocusChangeCostNote());
-      return `Desktop focus cleared. Using ${describeDesktopViewport(desktopConfig!)}`;
+      lastFocusResponse = null;
+      const { desktopConfig } = requireVisibleDesktopState();
+      return `Focus cleared. Now viewing full scaled desktop ${desktopConfig.scaledWidth}x${desktopConfig.scaledHeight}.`;
     }
 
     const x = Number(argv[1]);
@@ -303,11 +310,11 @@ export function createDesktopService(
       throw `Focus rect (${x}, ${y}, ${width}, ${height}) is outside the current screenshot bounds ${state.desktopConfig.scaledWidth}x${state.desktopConfig.scaledHeight}.`;
     }
 
-    const viewport = computerService.setFocus(
-      mapScreenshotRectToScreen(x, y, width, height, state),
-    );
+    computerService.setFocus(scaledRectToNativeRect(x, y, width, height, state));
     output.commentAndLog(getFocusChangeCostNote());
-    return `Desktop focus set from screenshot (${x}, ${y}, ${width}x${height}) -> native (${viewport!.x}, ${viewport!.y}, ${viewport!.width}x${viewport!.height}).`;
+    const { desktopConfig: newConfig } = requireVisibleDesktopState();
+    lastFocusResponse = `Focused on (${x}, ${y}, ${width}x${height}). That ${width}x${height} region is now shown as scaled ${newConfig.scaledWidth}x${newConfig.scaledHeight}. Use 'ns-desktop focus clear' to return to the full desktop.`;
+    return lastFocusResponse;
   }
 
   async function handleKeyCommand(

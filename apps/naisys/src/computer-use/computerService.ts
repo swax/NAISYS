@@ -510,15 +510,6 @@ export function isDesktopFocused(desktopConfig: DesktopConfig): boolean {
   );
 }
 
-export function describeDesktopViewport(desktopConfig: DesktopConfig): string {
-  const { viewport } = desktopConfig;
-  if (!isDesktopFocused(desktopConfig)) {
-    return `full desktop ${viewport.width}x${viewport.height}`;
-  }
-
-  return `focus (${viewport.x}, ${viewport.y}, ${viewport.width}x${viewport.height}) within ${desktopConfig.nativeDisplayWidth}x${desktopConfig.nativeDisplayHeight}`;
-}
-
 // --- Service factory ---
 
 export async function createComputerService({ agentConfig }: AgentConfig) {
