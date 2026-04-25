@@ -1,15 +1,8 @@
-import { test, expect } from "@playwright/test";
-import { getTestCredentials } from "../auth-helper";
+import { test, expect } from "../fixtures";
 
 test("orders page renders with title and create button", async ({
-  page,
-}, testInfo) => {
-  // Login via page's request context so cookies are shared
-  const creds = getTestCredentials(testInfo.workerIndex);
-  await page.request.post("http://localhost:3302/erp/api/auth/login", {
-    data: creds,
-  });
-
+  authedPage: page,
+}) => {
   await page.goto("/erp/orders");
 
   // Verify the page title renders
