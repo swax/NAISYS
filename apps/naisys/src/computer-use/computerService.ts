@@ -29,6 +29,15 @@ type DesktopBackend = typeof windowsDesktop & {
 type Platform = { backend: DesktopBackend; name: string };
 
 /**
+ * Default duration (seconds) for the `wait` action when a vendor doesn't
+ * supply one. Anthropic's wait carries `duration` (sometimes), OpenAI's wait
+ * has no duration field, and Google's `wait_5_seconds` is a fixed-duration
+ * function — extractors plug this in so downstream code can treat
+ * `wait.duration` as required.
+ */
+export const WAIT_DEFAULT_SECONDS = 5;
+
+/**
  * Closed set of `action` discriminator values understood by `DesktopSubAction`.
  * Provider-boundary extractors check incoming action names against this set
  * to flag unknown actions (e.g., a new tool action Anthropic ships) as a
@@ -74,24 +83,31 @@ function detectPlatform(): Platform | null {
 // --- Screenshot cleanup ---
 
 const SCREENSHOT_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
-const SCREENSHOT_DIR = path.join(
-  process.env.NAISYS_FOLDER || "",
-  "tmp",
-  "naisys",
-  "screenshots",
-);
+
+// Resolved lazily: NAISYS_FOLDER is set by dotenv and tilde-expanded by
+// expandNaisysFolder() during startup, after this module's imports run.
+function getScreenshotDir(): string {
+  return path.join(
+    process.env.NAISYS_FOLDER || "",
+    "tmp",
+    "naisys",
+    "screenshots",
+  );
+}
+
 let cleanupStarted = false;
 
 function startScreenshotCleanup() {
   if (cleanupStarted) return;
   cleanupStarted = true;
-  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+  const dir = getScreenshotDir();
+  fs.mkdirSync(dir, { recursive: true });
 
   const clean = () => {
     try {
       const now = Date.now();
-      for (const file of fs.readdirSync(SCREENSHOT_DIR)) {
-        const filepath = path.join(SCREENSHOT_DIR, file);
+      for (const file of fs.readdirSync(dir)) {
+        const filepath = path.join(dir, file);
         const stat = fs.statSync(filepath);
         if (stat.isFile() && now - stat.mtimeMs > SCREENSHOT_MAX_AGE_MS) {
           fs.unlinkSync(filepath);
@@ -117,7 +133,10 @@ async function captureScreenshot(
   height: number;
   filepath: string;
 }> {
-  const filepath = path.join(SCREENSHOT_DIR, `${username}-${Date.now()}.png`);
+  const filepath = path.join(
+    getScreenshotDir(),
+    `${username}-${Date.now()}.png`,
+  );
 
   platform.backend.captureScreenshot(filepath);
 
@@ -286,7 +305,9 @@ async function executeSingleAction(
     case "screenshot":
       break; // no-op, screenshot is captured after
     case "wait":
-      await new Promise((r) => setTimeout(r, 5000));
+      await new Promise((r) =>
+        setTimeout(r, (action.duration ?? WAIT_DEFAULT_SECONDS) * 1000),
+      );
       break;
   }
 
@@ -486,7 +507,7 @@ function formatSingleAction(
     case "left_click_drag":
       return `Drag from ${fmtCoord(input.start_coordinate, desktopConfig)} to ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "wait":
-      return "Wait";
+      return `Wait ${input.duration ?? WAIT_DEFAULT_SECONDS}s`;
   }
 }
 

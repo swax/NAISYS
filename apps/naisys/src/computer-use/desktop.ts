@@ -11,11 +11,13 @@ import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type {
   DesktopAction,
+  DesktopActionInput,
   DesktopConfig,
 } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { getConfirmation } from "../utils/confirmation.js";
+import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import type { ComputerService } from "./computerService.js";
 import {
@@ -24,6 +26,7 @@ import {
   formatDesktopActions,
   isDesktopFocused,
   mapCoordinateBetweenSpaces,
+  WAIT_DEFAULT_SECONDS,
 } from "./computerService.js";
 
 export function createDesktopService(
@@ -34,6 +37,7 @@ export function createDesktopService(
   modelService: ModelService,
   shellWrapper: ShellWrapper,
   commandLoopState: CommandLoopStateService,
+  inputMode: InputModeService,
 ) {
   type DesktopRuntimeState = {
     desktopConfig: ReturnType<ComputerService["getConfig"]>;
@@ -49,13 +53,18 @@ export function createDesktopService(
   const actionByButton: Partial<
     Record<
       string,
-      "left_click" | "right_click" | "middle_click" | "double_click"
+      | "left_click"
+      | "right_click"
+      | "middle_click"
+      | "double_click"
+      | "triple_click"
     >
   > = {
     left: "left_click",
     right: "right_click",
     middle: "middle_click",
     double: "double_click",
+    triple: "triple_click",
   };
   // The briefing returned when focus was last set; replayed on no-args
   // `ns-desktop focus` so the LLM sees the same "where am I" story it got
@@ -82,6 +91,18 @@ export function createDesktopService(
       throw "Desktop mode is not enabled or failed to initialize.";
     }
     return { desktopConfig };
+  }
+
+  function throwIfOutOfBounds(
+    input: DesktopActionInput,
+    state: VisibleDesktopState,
+  ): void {
+    const error = checkActionBounds(
+      input,
+      state.desktopConfig.scaledWidth,
+      state.desktopConfig.scaledHeight,
+    );
+    if (error) throw `${error}.`;
   }
 
   /**
@@ -139,18 +160,40 @@ export function createDesktopService(
     "key",
     "click",
     "type",
+    "move",
+    "scroll",
+    "drag",
+    "wait",
   ]);
 
   function formatCommandHelp(): string {
-    const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
-    for (const [name, s] of Object.entries(desktopCmd.subcommands!)) {
+    const allEntries = Object.entries(desktopCmd.subcommands!);
+    const visible: typeof allEntries = [];
+    const hidden: typeof allEntries = [];
+    for (const entry of allEntries) {
       if (
         shellModel.supportsComputerUse &&
-        TOOLING_REDUNDANT_SUBCOMMANDS.has(name)
+        TOOLING_REDUNDANT_SUBCOMMANDS.has(entry[0])
       ) {
-        continue;
+        hidden.push(entry);
+      } else {
+        visible.push(entry);
       }
-      lines.push(`  ${s.usage.padEnd(40)}${s.description}`);
+    }
+    const showHidden = inputMode.isDebug() && hidden.length > 0;
+    const usageWidth = Math.max(
+      ...visible.map(([, s]) => s.usage.length),
+      ...(showHidden ? hidden.map(([, s]) => s.usage.length) : []),
+    );
+    const lines = [formatDesktopStatus(), "", `${desktopCmd.name} <command>`];
+    for (const [, s] of visible) {
+      lines.push(`  ${s.usage.padEnd(usageWidth)}  ${s.description}`);
+    }
+    if (showHidden) {
+      lines.push("", "Hidden because model supports computer use:");
+      for (const [, s] of hidden) {
+        lines.push(`  ${s.usage.padEnd(usageWidth)}  ${s.description}`);
+      }
     }
     return lines.join("\n");
   }
@@ -368,18 +411,18 @@ export function createDesktopService(
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       throw usageError("click");
     }
-    if (x < 0 || y < 0 || x >= state.desktopConfig.scaledWidth || y >= state.desktopConfig.scaledHeight) {
-      throw `Click (${x}, ${y}) is outside the current screenshot bounds ${state.desktopConfig.scaledWidth}x${state.desktopConfig.scaledHeight}.`;
-    }
     const button = (argv[3] || "left").toLowerCase();
     const action = actionByButton[button];
     if (!action) {
-      throw `Unknown button "${button}". Use left, right, middle, or double.`;
+      throw `Unknown button "${button}". Use left, right, middle, double, or triple.`;
     }
 
-    await computerService.executeAction({
+    const input: DesktopActionInput = {
       actions: [{ action, coordinate: [x, y] }],
-    });
+    };
+    throwIfOutOfBounds(input, state);
+
+    await computerService.executeAction(input);
     return `Clicked (${button}) at screenshot (${x}, ${y})`;
   }
 
@@ -395,6 +438,121 @@ export function createDesktopService(
       actions: [{ action: "type", text }],
     });
     return `Typed: ${text}`;
+  }
+
+  async function handleMoveCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const x = Number(argv[1]);
+    const y = Number(argv[2]);
+    const state = requireVisibleDesktopState();
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw usageError("move");
+    }
+
+    const input: DesktopActionInput = {
+      actions: [{ action: "mouse_move", coordinate: [x, y] }],
+    };
+    throwIfOutOfBounds(input, state);
+
+    await computerService.executeAction(input);
+    return `Moved mouse to screenshot (${x}, ${y})`;
+  }
+
+  async function handleScrollCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const x = Number(argv[1]);
+    const y = Number(argv[2]);
+    const direction = (argv[3] || "").toLowerCase();
+    const amount = Number(argv[4]);
+    const state = requireVisibleDesktopState();
+
+    if (
+      !Number.isFinite(x) ||
+      !Number.isFinite(y) ||
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
+      throw usageError("scroll");
+    }
+    if (
+      direction !== "up" &&
+      direction !== "down" &&
+      direction !== "left" &&
+      direction !== "right"
+    ) {
+      throw `Unknown scroll direction "${argv[3]}". Use up, down, left, or right.`;
+    }
+
+    const input: DesktopActionInput = {
+      actions: [
+        {
+          action: "scroll",
+          coordinate: [x, y],
+          scroll_direction: direction,
+          scroll_amount: amount,
+        },
+      ],
+    };
+    throwIfOutOfBounds(input, state);
+
+    await computerService.executeAction(input);
+    return `Scrolled ${direction} by ${amount} at screenshot (${x}, ${y})`;
+  }
+
+  async function handleDragCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    const x1 = Number(argv[1]);
+    const y1 = Number(argv[2]);
+    const x2 = Number(argv[3]);
+    const y2 = Number(argv[4]);
+    const state = requireVisibleDesktopState();
+
+    if (
+      !Number.isFinite(x1) ||
+      !Number.isFinite(y1) ||
+      !Number.isFinite(x2) ||
+      !Number.isFinite(y2)
+    ) {
+      throw usageError("drag");
+    }
+
+    const input: DesktopActionInput = {
+      actions: [
+        {
+          action: "left_click_drag",
+          start_coordinate: [x1, y1],
+          coordinate: [x2, y2],
+        },
+      ],
+    };
+    throwIfOutOfBounds(input, state);
+
+    await computerService.executeAction(input);
+    return `Dragged from (${x1}, ${y1}) to (${x2}, ${y2})`;
+  }
+
+  async function handleWaitCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    let duration: number | undefined;
+    if (argv[1] !== undefined) {
+      duration = Number(argv[1]);
+      if (!Number.isFinite(duration) || duration <= 0) {
+        throw usageError("wait");
+      }
+    }
+    await computerService.executeAction({
+      actions: [duration !== undefined ? { action: "wait", duration } : { action: "wait" }],
+    });
+    return `Waited ${duration ?? WAIT_DEFAULT_SECONDS}s`;
   }
 
   /** Handle ns-desktop commands */
@@ -445,6 +603,22 @@ export function createDesktopService(
 
       case "type": {
         return handleTypeCommand(argv, usageError);
+      }
+
+      case "move": {
+        return handleMoveCommand(argv, usageError);
+      }
+
+      case "scroll": {
+        return handleScrollCommand(argv, usageError);
+      }
+
+      case "drag": {
+        return handleDragCommand(argv, usageError);
+      }
+
+      case "wait": {
+        return handleWaitCommand(argv, usageError);
       }
 
       default: {
@@ -578,8 +752,8 @@ export function createDesktopService(
     const scaledMP = ((scaledWidth * scaledHeight) / 1_000_000).toFixed(2);
 
     const howToInteract = shellModel.supportsComputerUse
-      ? `Use native computer-use actions for clicking, typing, and keypresses; use \`${desktopCmd.name}\` for screenshots, focus, and hold-key (see \`${desktopCmd.name} help\`).`
-      : `Use \`${desktopCmd.name}\` commands to interact (see \`${desktopCmd.name} help\`). The shell is still available alongside.`;
+      ? `Use native computer-use tooling for clicking, typing, and keypresses; use \`${desktopCmd.name}\` for screenshots, focus, and hold-key (see \`${desktopCmd.name} help\`).`
+      : `Use \`${desktopCmd.name}\` commands to interact (see \`${desktopCmd.name} help\`). The shell is still available to run text commands.`;
 
     contextManager.append(
       `Desktop Access Enabled: ${desktopPlatform} desktop, screen resolution ${scaledWidth}x${scaledHeight}. ${howToInteract}` +
@@ -592,7 +766,7 @@ export function createDesktopService(
 
     if (!shellModel.supportsComputerUse) {
       output.errorAndLog(
-        `Model '${agentConfig.agentConfig().shellModel}' does not explicitly support computer use through tooling, so position based actions like clicking may be very unreliable`,
+        `Model '${agentConfig.agentConfig().shellModel}' does not explicitly support computer use through tooling, so position based actions like clicking may be unreliable`,
       );
     }
 

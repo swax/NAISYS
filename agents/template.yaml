@@ -59,12 +59,13 @@ shellModel: claude4sonnet
 # Show chat commands to the agent. Chat encourages more concise communication.
 #chatEnabled: true
 
-# Allow agent to browse the web with Lynx, a text based browser.
+# Allow agent to browse the web with a context-optimized text browser built on Lynx.
+# Javascript not supported. Requires `lynx` on the host (e.g. `apt install lynx`).
 #webEnabled: true
 
-# Allow agent to browse the web with a real headless Chromium browser via Playwright.
-# Works on JS-heavy SPAs, supports selector-based clicks, and can capture screenshots on demand.
-# Requires a one-time host setup: `npx playwright install chromium`.
+# Allow agent to browse the web with a real headless Chromium browser via Playwright. 
+# Vision-capable models see screenshots; others fall back to a text/selector mode. 
+# Requires `npx playwright install chromium` on the host
 #browserEnabled: true
 
 # Allow the agent to end its session. Once ended, it can only be restarted explicitly or via
@@ -98,6 +99,6 @@ shellModel: claude4sonnet
 # Each turn the agent sees the latest version without old versions taking up context space.
 #workspacesEnabled: true
 
-# Allow the agent to operate the desktop GUI. Requires a model with supportsComputerUse.
-# Ideal screen resolution <= 1MP to avoid downscaling.
+# Allow the agent to operate the desktop GUI. Requires a vision-capable model;
+# computer-use models are ideal. Screens over 1.1MP will be downscaled.
 #controlDesktop: true
