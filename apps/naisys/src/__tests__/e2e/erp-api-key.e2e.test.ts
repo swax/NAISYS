@@ -79,25 +79,14 @@ SERVER_PORT=${SERVER_PORT}
     await naisys.waitForPrompt();
 
     // --- Start and switch to testbot (integrated-hub only starts admin) ---
-    naisys.flushOutput();
-    naisys.sendCommand('ns-agent start testbot "erp api key test"');
-    await naisys.waitForOutput("started", 15000);
-    await naisys.waitForPrompt();
-
-    naisys.flushOutput();
-    naisys.sendCommand("ns-agent switch testbot");
-    await naisys.waitForOutput("testbot@", 15000);
-    await naisys.waitForPrompt();
+    await naisys.startAgent("testbot", "erp api key test");
+    await naisys.switchAgent("testbot");
 
     // --- Send curl command using $api_key variable ---
-    naisys.flushOutput();
-    naisys.sendCommand(
+    const output = await naisys.runCommand(
       `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me`,
+      { waitFor: "testbot", timeoutMs: 30000 },
     );
-    await naisys.waitForOutput("testbot", 30000);
-    await naisys.waitForPrompt();
-
-    const output = naisys.flushOutput();
 
     // Verify ERP returned the auto-provisioned agent user
     expect(output).toContain("testbot");
@@ -107,8 +96,6 @@ SERVER_PORT=${SERVER_PORT}
     expect(jsonMatch).not.toBeNull();
 
     // --- Log errors for debugging ---
-    if (naisys.stderr.length > 0) {
-      console.log("NAISYS stderr:", naisys.stderr.join(""));
-    }
+    naisys.dumpStderrIfAny("NAISYS");
   });
 });

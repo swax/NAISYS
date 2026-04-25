@@ -55,20 +55,14 @@ describe("NAISYS Startup E2E", () => {
     await naisys.waitForOutput("AGENT STARTED", 30000);
     await naisys.waitForPrompt();
 
-    // Send ns-users command
-    naisys.flushOutput();
-    naisys.sendCommand("ns-users");
+    // Send ns-users command and wait for the agent user to appear
+    await naisys.runCommand("ns-users", { waitFor: "ryan" });
 
-    // Wait for ns-users output showing the agent user
-    await naisys.waitForOutput("ryan", 10000);
-    await naisys.waitForPrompt();
-
-    // Send exit command
-    naisys.flushOutput();
-    naisys.sendCommand("exit");
-
-    // Wait for clean exit
-    await naisys.waitForOutput("AGENT EXITED", 10000);
+    // Send exit command and wait for clean exit (no prompt after exit)
+    await naisys.runCommand("exit", {
+      waitFor: "AGENT EXITED",
+      waitForPrompt: false,
+    });
 
     // Wait for process to exit
     const exitCode = await waitForExit(naisys.process);
@@ -85,9 +79,6 @@ describe("NAISYS Startup E2E", () => {
     // Check exit code (0 = success)
     expect(exitCode).toBe(0);
 
-    // Log any stderr for debugging
-    if (naisys.stderr.length > 0) {
-      console.log("stderr:", naisys.stderr.join(""));
-    }
+    naisys.dumpStderrIfAny();
   });
 });
