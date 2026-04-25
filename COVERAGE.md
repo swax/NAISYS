@@ -6,11 +6,11 @@ regenerated on every coverage run; commit it to log progress.
 Scope: Node.js processes only. Chromium-side client code (apps/*/client)
 is not measured. Unloaded source files count as 0% in the denominator.
 
-**Total: 35,907 / 53,604 statements (66.99%)**
+**Total: 36,831 / 53,604 statements (68.71%)**
 
 | Workspace | Covered | Total | % |
 | --- | ---: | ---: | ---: |
-| apps/erp/server | 11,040 | 15,689 | 70.37% |
+| apps/erp/server | 11,964 | 15,689 | 76.26% |
 | apps/erp/shared | 2,051 | 2,053 | 99.90% |
 | apps/hub | 3,257 | 4,140 | 78.67% |
 | apps/naisys | 8,296 | 17,470 | 47.49% |

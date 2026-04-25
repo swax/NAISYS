@@ -35,59 +35,7 @@ Defer tests that:
 - require live LLM providers
 - require fragile timing unless the workflow is core product behavior
 
-## 1. ERP Execution With Attachments, Comments, Labor, and Audit
-
-**Priority: high**
-
-**Why it should move coverage**
-
-The new master-data-to-dispatch flow is a strong server-coverage test. The next
-ERP test should not repeat simple order lifecycle. It should exercise the
-runtime side around step fields, attachments, comments, labor tickets, and audit
-history.
-
-**Workflow**
-
-1. Login as ERP test user.
-2. Create item, item field, work center, order, revision, operation, step, and
-   required step field.
-3. Add an operation dependency.
-4. Add an operation field reference.
-5. Approve the revision.
-6. Cut and start an order run.
-7. Start the operation run.
-8. Fill a step-run field value.
-9. Upload an attachment to that step-run field.
-10. Add an operation-run comment.
-11. Create a labor ticket against the operation run.
-12. Complete the step and operation.
-13. Complete the order run into an item instance.
-14. Fetch audit entries and assert the workflow produced expected events.
-15. Fetch inventory or item instance views and assert the produced instance.
-
-**Coverage targets**
-
-- `apps/erp/server/src/routes/step-run-fields.ts`
-- `apps/erp/server/src/routes/step-field-attachments.ts`
-- `apps/erp/server/src/routes/operation-run-comments.ts`
-- `apps/erp/server/src/routes/labor-tickets.ts`
-- `apps/erp/server/src/routes/audit.ts`
-- `apps/erp/server/src/routes/inventory.ts`
-- `apps/erp/server/src/services/field-value-service.ts`
-- `apps/erp/server/src/services/attachment-service.ts`
-- `apps/erp/server/src/services/operation-run-comment-service.ts`
-- `apps/erp/server/src/services/labor-ticket-service.ts`
-- `apps/erp/server/src/audit.ts`
-
-**Best home**
-
-`apps/erp/server/e2e/api/runtime-audit-api.spec.ts`
-
-Use API for setup and assertions. Use Playwright UI only if the UI itself is the
-behavior under test, because browser-side client coverage is not currently
-counted.
-
-## 2. ERP Revision Diff and Dependency Workflow
+## 1. ERP Revision Diff and Dependency Workflow
 
 **Priority: medium-high**
 
@@ -127,7 +75,7 @@ business rules matter more than the UI.
 
 `apps/erp/server/e2e/api/revision-diff-dependencies-api.spec.ts`
 
-## 3. NAISYS CLI Session and Workspace Workflow
+## 2. NAISYS CLI Session and Workspace Workflow
 
 **Priority: medium-high**
 
@@ -175,7 +123,7 @@ Before writing this, add helpers to `e2eTestHelper.ts` like `runCommand`,
 `startAgent`, `switchAgent`, and `expectPrompt`. That will reduce flake and make
 future CLI E2Es cheaper.
 
-## 4. Supervisor Auth to ERP Auth Bridge
+## 3. Supervisor Auth to ERP Auth Bridge
 
 **Priority: medium**
 
@@ -218,7 +166,7 @@ Either:
 Prefer the NAISYS integrated-process test if the goal is cross-workspace
 coverage.
 
-## 5. Models and Variables Propagation
+## 4. Models and Variables Propagation
 
 **Priority: medium**
 
@@ -256,7 +204,7 @@ low UI risk.
 
 `apps/naisys/src/__tests__/e2e/models-variables-propagation.e2e.test.ts`
 
-## 6. Hub Access Key Rotation and Reconnect
+## 5. Hub Access Key Rotation and Reconnect
 
 **Priority: medium**
 
@@ -291,9 +239,7 @@ important and hard to cover with pure unit tests.
 
 ## Suggested Order
 
-1. **ERP Execution With Attachments, Comments, Labor, and Audit**
-   - Good next ERP server jump without duplicating order lifecycle.
-2. **NAISYS CLI Session and Workspace Workflow**
+1. **NAISYS CLI Session and Workspace Workflow**
    - Directly attacks the lowest coverage workspace.
 
 ## Measuring Each Addition
