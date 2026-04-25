@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { formatContextWithComputerUse } from "../../../computer-use/vendors/google-computer-use.js";
+import {
+  extractDesktopActions,
+  formatContextWithComputerUse,
+} from "../../../computer-use/vendors/google-computer-use.js";
 import type { LlmMessage } from "../../../llm/llmDtos.js";
 import type { DesktopConfig } from "../../../llm/vendors/vendorTypes.js";
 
@@ -118,5 +121,49 @@ describe("google computer use context formatting", () => {
       x: 500,
       y: 500,
     });
+  });
+});
+
+describe("google computer use action extraction", () => {
+  test("known function names produce typed desktop actions", () => {
+    const actions = extractDesktopActions(
+      [
+        {
+          functionCall: {
+            name: "click_at",
+            id: "call-1",
+            args: { x: 500, y: 500 },
+          },
+        },
+      ],
+      1000,
+      1000,
+    );
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].validationError).toBeUndefined();
+    expect(actions[0].input.actions[0]).toMatchObject({
+      action: "left_click",
+    });
+  });
+
+  test("unknown function names are surfaced as validationError", () => {
+    const actions = extractDesktopActions(
+      [
+        {
+          functionCall: {
+            name: "pinch_zoom",
+            id: "call-pinch",
+            args: { scale: 2 },
+          },
+        },
+      ],
+      1000,
+      1000,
+    );
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].validationError).toMatch(/pinch_zoom/);
+    expect(actions[0].input.actions).toEqual([]);
   });
 });

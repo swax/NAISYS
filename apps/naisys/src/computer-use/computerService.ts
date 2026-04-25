@@ -12,7 +12,10 @@ import sharp from "sharp";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type {
   DesktopAction,
+  DesktopActionInput,
   DesktopConfig,
+  DesktopCoord,
+  DesktopSubAction,
   DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
 import * as macosDesktop from "./desktops/macosDesktop.js";
@@ -24,6 +27,28 @@ type DesktopBackend = typeof windowsDesktop & {
   checkDependencies?: () => void;
 };
 type Platform = { backend: DesktopBackend; name: string };
+
+/**
+ * Closed set of `action` discriminator values understood by `DesktopSubAction`.
+ * Provider-boundary extractors check incoming action names against this set
+ * to flag unknown actions (e.g., a new tool action Anthropic ships) as a
+ * `validationError` instead of silently no-op'ing during execute.
+ */
+export const KNOWN_DESKTOP_ACTION_TAGS = new Set<DesktopSubAction["action"]>([
+  "screenshot",
+  "wait",
+  "left_click",
+  "right_click",
+  "middle_click",
+  "double_click",
+  "triple_click",
+  "mouse_move",
+  "type",
+  "key",
+  "hold_key",
+  "scroll",
+  "left_click_drag",
+]);
 
 function detectPlatform(): Platform | null {
   if (process.platform === "win32")
@@ -165,10 +190,9 @@ async function cropScreenshotToViewport(
 }
 
 function translateScaledCoordinate(
-  coord: unknown,
+  coord: DesktopCoord,
   desktopConfig: DesktopConfig,
-): unknown {
-  if (!Array.isArray(coord)) return coord;
+): DesktopCoord {
   const { scaledWidth, scaledHeight, viewport } = desktopConfig;
   // scaled → viewport-local → screen (single multiply/add per axis)
   return [
@@ -182,89 +206,87 @@ function translateScaledCoordinate(
  * absolute screen space. Handles both `coordinate` and `start_coordinate`.
  */
 function translateScaledActionToScreen(
-  action: Record<string, unknown>,
+  action: DesktopSubAction,
   desktopConfig: DesktopConfig,
-): Record<string, unknown> {
-  const translated = { ...action };
-
+): DesktopSubAction {
+  if (action.action === "left_click_drag") {
+    return {
+      ...action,
+      start_coordinate: translateScaledCoordinate(
+        action.start_coordinate,
+        desktopConfig,
+      ),
+      coordinate: translateScaledCoordinate(action.coordinate, desktopConfig),
+    };
+  }
   if ("coordinate" in action) {
-    translated.coordinate = translateScaledCoordinate(
-      action.coordinate,
-      desktopConfig,
-    );
+    return {
+      ...action,
+      coordinate: translateScaledCoordinate(action.coordinate, desktopConfig),
+    };
   }
-  if ("start_coordinate" in action) {
-    translated.start_coordinate = translateScaledCoordinate(
-      action.start_coordinate,
-      desktopConfig,
-    );
-  }
-
-  return translated;
+  return action;
 }
 
 // --- Action execution ---
 
 async function executeSingleAction(
-  action: Record<string, unknown>,
+  action: DesktopSubAction,
   platform: Platform,
 ): Promise<void> {
   const { backend } = platform;
-  const coord = action.coordinate as number[] | undefined;
 
   switch (action.action) {
     case "left_click":
-      backend.mouseClick(coord![0], coord![1], "left");
+      backend.mouseClick(action.coordinate[0], action.coordinate[1], "left");
       break;
     case "right_click":
-      backend.mouseClick(coord![0], coord![1], "right");
+      backend.mouseClick(action.coordinate[0], action.coordinate[1], "right");
       break;
     case "middle_click":
-      backend.mouseClick(coord![0], coord![1], "middle");
+      backend.mouseClick(action.coordinate[0], action.coordinate[1], "middle");
       break;
     case "double_click":
-      backend.mouseDoubleClick(coord![0], coord![1]);
+      backend.mouseDoubleClick(action.coordinate[0], action.coordinate[1]);
       break;
     case "triple_click":
-      backend.mouseDoubleClick(coord![0], coord![1]);
-      backend.mouseClick(coord![0], coord![1], "left");
+      backend.mouseDoubleClick(action.coordinate[0], action.coordinate[1]);
+      backend.mouseClick(action.coordinate[0], action.coordinate[1], "left");
       break;
     case "type":
-      backend.typeText(action.text as string);
+      backend.typeText(action.text);
       break;
     case "key":
-      backend.pressKey(action.text as string);
+      backend.pressKey(action.text);
       break;
-    case "hold_key": {
-      // Anthropic's native hold_key uses `duration` in seconds (can be fractional).
-      // Our ns-desktop `hold` shell command also builds this action. Backends
-      // take integer milliseconds.
-      const durationSec = (action.duration as number) ?? 0;
-      backend.holdKey(action.text as string, Math.round(durationSec * 1000));
+    case "hold_key":
+      // Anthropic's native hold_key uses `duration` in seconds (can be
+      // fractional). Backends take integer milliseconds.
+      backend.holdKey(action.text, Math.round(action.duration * 1000));
       break;
-    }
     case "mouse_move":
-      backend.mouseMove(coord![0], coord![1]);
+      backend.mouseMove(action.coordinate[0], action.coordinate[1]);
       break;
-    case "left_click_drag": {
-      const startCoord = action.start_coordinate as number[];
-      backend.mouseDrag(startCoord[0], startCoord[1], coord![0], coord![1]);
+    case "left_click_drag":
+      backend.mouseDrag(
+        action.start_coordinate[0],
+        action.start_coordinate[1],
+        action.coordinate[0],
+        action.coordinate[1],
+      );
       break;
-    }
     case "scroll":
       backend.mouseScroll(
-        coord![0],
-        coord![1],
-        action.scroll_direction as string,
-        (action.scroll_amount as number) || 3,
+        action.coordinate[0],
+        action.coordinate[1],
+        action.scroll_direction,
+        action.scroll_amount,
       );
       break;
     case "screenshot":
       break; // no-op, screenshot is captured after
     case "wait":
       await new Promise((r) => setTimeout(r, 5000));
-      break;
-    default:
       break;
   }
 
@@ -274,7 +296,7 @@ async function executeSingleAction(
 
 /** Execute actions. All actions are stored as { actions: [...] } — single or batched. */
 async function executeAction(
-  action: DesktopAction["input"],
+  action: DesktopActionInput,
   platform: Platform,
   desktopConfig: DesktopConfig,
 ): Promise<void> {
@@ -332,21 +354,13 @@ export async function resizeScreenshot(
 
 /** Map a coordinate pair between two 2D spaces with independent X/Y scaling. */
 export function mapCoordinateBetweenSpaces(
-  coord: number[],
+  coord: DesktopCoord,
   sourceWidth: number,
   sourceHeight: number,
   targetWidth: number,
   targetHeight: number,
-): number[];
-export function mapCoordinateBetweenSpaces(
-  coord: unknown,
-  sourceWidth: number,
-  sourceHeight: number,
-  targetWidth: number,
-  targetHeight: number,
-): unknown {
+): DesktopCoord {
   if (
-    !Array.isArray(coord) ||
     sourceWidth <= 0 ||
     sourceHeight <= 0 ||
     targetWidth <= 0 ||
@@ -356,39 +370,51 @@ export function mapCoordinateBetweenSpaces(
   }
 
   return [
-    Math.round(((coord as number[])[0] / sourceWidth) * targetWidth),
-    Math.round(((coord as number[])[1] / sourceHeight) * targetHeight),
+    Math.round((coord[0] / sourceWidth) * targetWidth),
+    Math.round((coord[1] / sourceHeight) * targetHeight),
   ];
 }
 
 /** Map all action coordinates between two spaces, preserving non-coordinate fields. */
 export function mapActionBetweenSpaces(
-  input: Record<string, unknown>,
+  input: DesktopSubAction,
   sourceWidth: number,
   sourceHeight: number,
   targetWidth: number,
   targetHeight: number,
-): Record<string, unknown> {
-  const result = { ...input };
-  if ("coordinate" in result && Array.isArray(result.coordinate)) {
-    result.coordinate = mapCoordinateBetweenSpaces(
-      result.coordinate,
-      sourceWidth,
-      sourceHeight,
-      targetWidth,
-      targetHeight,
-    );
+): DesktopSubAction {
+  if (input.action === "left_click_drag") {
+    return {
+      ...input,
+      start_coordinate: mapCoordinateBetweenSpaces(
+        input.start_coordinate,
+        sourceWidth,
+        sourceHeight,
+        targetWidth,
+        targetHeight,
+      ),
+      coordinate: mapCoordinateBetweenSpaces(
+        input.coordinate,
+        sourceWidth,
+        sourceHeight,
+        targetWidth,
+        targetHeight,
+      ),
+    };
   }
-  if ("start_coordinate" in result && Array.isArray(result.start_coordinate)) {
-    result.start_coordinate = mapCoordinateBetweenSpaces(
-      result.start_coordinate,
-      sourceWidth,
-      sourceHeight,
-      targetWidth,
-      targetHeight,
-    );
+  if ("coordinate" in input) {
+    return {
+      ...input,
+      coordinate: mapCoordinateBetweenSpaces(
+        input.coordinate,
+        sourceWidth,
+        sourceHeight,
+        targetWidth,
+        targetHeight,
+      ),
+    };
   }
-  return result;
+  return input;
 }
 
 /**
@@ -396,30 +422,22 @@ export function mapActionBetweenSpaces(
  * Action coordinates are in scaled-pixel space (same space the model sees).
  */
 export function checkActionBounds(
-  input: DesktopAction["input"],
+  input: DesktopActionInput,
   scaledWidth: number,
   scaledHeight: number,
 ): string | undefined {
   for (const action of input.actions) {
-    const coord = action.coordinate as number[] | undefined;
-    if (
-      coord &&
-      (coord[0] >= scaledWidth ||
-        coord[1] >= scaledHeight ||
-        coord[0] < 0 ||
-        coord[1] < 0)
-    ) {
-      return `Coordinate (${coord[0]}, ${coord[1]}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
+    if ("coordinate" in action) {
+      const [cx, cy] = action.coordinate;
+      if (cx >= scaledWidth || cy >= scaledHeight || cx < 0 || cy < 0) {
+        return `Coordinate (${cx}, ${cy}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
+      }
     }
-    const startCoord = action.start_coordinate as number[] | undefined;
-    if (
-      startCoord &&
-      (startCoord[0] >= scaledWidth ||
-        startCoord[1] >= scaledHeight ||
-        startCoord[0] < 0 ||
-        startCoord[1] < 0)
-    ) {
-      return `Start coordinate (${startCoord[0]}, ${startCoord[1]}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
+    if (action.action === "left_click_drag") {
+      const [sx, sy] = action.start_coordinate;
+      if (sx >= scaledWidth || sy >= scaledHeight || sx < 0 || sy < 0) {
+        return `Start coordinate (${sx}, ${sy}) is outside the screen resolution ${scaledWidth}x${scaledHeight}`;
+      }
     }
   }
   return undefined;
@@ -431,34 +449,30 @@ export function checkActionBounds(
  * Format a coordinate pair. Coord is in scaled space; if desktopConfig is
  * supplied, also shows the absolute screen coord the click will land on.
  */
-function fmtCoord(coord: number[], desktopConfig?: DesktopConfig): string {
+function fmtCoord(coord: DesktopCoord, desktopConfig?: DesktopConfig): string {
   if (!desktopConfig) return `(${coord.join(", ")})`;
-  const screen = translateScaledCoordinate(coord, desktopConfig) as number[];
+  const screen = translateScaledCoordinate(coord, desktopConfig);
   return `(${coord.join(", ")}) → screen (${screen.join(", ")})`;
 }
 
 /** Format a single action for human-readable display */
 function formatSingleAction(
-  input: Record<string, unknown>,
+  input: DesktopSubAction,
   desktopConfig?: DesktopConfig,
 ): string {
-  const action = input.action;
-  const coordinate = input.coordinate as number[] | undefined;
-  const coord = coordinate ? fmtCoord(coordinate, desktopConfig) : "";
-
-  switch (action) {
+  switch (input.action) {
     case "screenshot":
       return "Take screenshot";
     case "left_click":
-      return `Left click at ${coord}`;
+      return `Left click at ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "right_click":
-      return `Right click at ${coord}`;
+      return `Right click at ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "double_click":
-      return `Double click at ${coord}`;
+      return `Double click at ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "triple_click":
-      return `Triple click at ${coord}`;
+      return `Triple click at ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "middle_click":
-      return `Middle click at ${coord}`;
+      return `Middle click at ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "type":
       return `Type "${input.text}"`;
     case "key":
@@ -466,24 +480,19 @@ function formatSingleAction(
     case "hold_key":
       return `Hold key "${input.text}" for ${input.duration}s`;
     case "mouse_move":
-      return `Move mouse to ${coord}`;
+      return `Move mouse to ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "scroll":
-      return `Scroll ${input.scroll_direction} by ${input.scroll_amount} at ${coord}`;
-    case "left_click_drag": {
-      const startCoord = input.start_coordinate as number[] | undefined;
-      const startStr = startCoord ? fmtCoord(startCoord, desktopConfig) : "";
-      return `Drag from ${startStr} to ${coord}`;
-    }
+      return `Scroll ${input.scroll_direction} by ${input.scroll_amount} at ${fmtCoord(input.coordinate, desktopConfig)}`;
+    case "left_click_drag":
+      return `Drag from ${fmtCoord(input.start_coordinate, desktopConfig)} to ${fmtCoord(input.coordinate, desktopConfig)}`;
     case "wait":
       return "Wait";
-    default:
-      return `${action} ${JSON.stringify(input)}`;
   }
 }
 
 /** Format a computer use action for human-readable display. Actions are always { actions: [...] }. */
 export function formatDesktopAction(
-  input: DesktopAction["input"],
+  input: DesktopActionInput,
   desktopConfig?: DesktopConfig,
 ): string {
   return input.actions
@@ -497,7 +506,11 @@ export function formatDesktopActions(
   desktopConfig?: DesktopConfig,
 ): string {
   return actions
-    .map((a) => formatDesktopAction(a.input, desktopConfig))
+    .map((a) =>
+      a.validationError
+        ? `Unsupported action — ${a.validationError}`
+        : formatDesktopAction(a.input, desktopConfig),
+    )
     .join(", then ");
 }
 
@@ -628,7 +641,7 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
    * scaled → viewport-local → screen — before dispatch to the platform
    * backend.
    */
-  async function execute(action: DesktopAction["input"]) {
+  async function execute(action: DesktopActionInput) {
     if (!platform) {
       throw new Error(
         "Desktop mode is not enabled or no display server detected.",

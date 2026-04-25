@@ -13,7 +13,9 @@ import type {
 import type {
   DesktopAction,
   DesktopConfig,
+  DesktopSubAction,
 } from "../../llm/vendors/vendorTypes.js";
+import { KNOWN_DESKTOP_ACTION_TAGS } from "../computerService.js";
 
 // --- Anthropic version config ---
 
@@ -71,16 +73,31 @@ export function prepareComputerUse(
 
 /**
  * Extract desktop actions from the response content. Coordinates are passed
- * through as-is in the API's scaled-pixel space.
+ * through as-is in the API's scaled-pixel space. The action discriminator
+ * is checked against the closed `DesktopSubAction` set; an unrecognized
+ * action name is surfaced as a `validationError` so confirmAndExecuteActions
+ * can reply to the model with a tool_result error instead of silently
+ * no-op'ing later. Field shapes (coordinate types, etc.) are trusted to
+ * the API contract — if a known action carries malformed fields, the
+ * existing try/catch around `executeAction` contains the explosion.
  */
 export function extractDesktopActions(content: any[]): DesktopAction[] {
   const actions: DesktopAction[] = [];
   for (const block of content) {
     if (block.type === "tool_use" && block.name === "computer") {
+      const tag = (block.input as { action?: unknown })?.action;
+      const isKnown =
+        typeof tag === "string" &&
+        KNOWN_DESKTOP_ACTION_TAGS.has(tag as DesktopSubAction["action"]);
       actions.push({
         id: block.id,
         name: block.name,
-        input: { actions: [block.input] },
+        input: { actions: [block.input as DesktopSubAction] },
+        ...(isKnown
+          ? {}
+          : {
+              validationError: `Unsupported computer-use action: ${typeof tag === "string" ? tag : "(no action field)"}`,
+            }),
       });
     }
   }

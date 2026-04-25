@@ -18,6 +18,7 @@ import type {
 } from "./llmDtos.js";
 import { ContentSource } from "./llmDtos.js";
 import { getImageContextBlockReason } from "./vendors/anthropic.js";
+import type { DesktopAction } from "./vendors/vendorTypes.js";
 
 const IMAGE_TOKENS_PER_MEGAPIXEL = 1000;
 const IMAGE_TOKEN_ESTIMATE = IMAGE_TOKENS_PER_MEGAPIXEL * TARGET_MEGAPIXELS;
@@ -163,11 +164,7 @@ export function createContextManager(
    *  protocol requires these for the model to see actions and rejections. */
   function appendDesktopRequest(
     text: string,
-    toolUseBlocks: Array<{
-      id: string;
-      name: string;
-      input: Record<string, unknown>;
-    }>,
+    toolUseBlocks: DesktopAction[],
     actionDesc: string,
   ) {
     const contentBlocks: ContentBlock[] = [];
@@ -179,7 +176,7 @@ export function createContextManager(
         type: "tool_use",
         id: block.id,
         name: block.name,
-        input: block.input,
+        input: block.input as unknown as Record<string, unknown>,
       } satisfies ToolUseBlock);
     }
 

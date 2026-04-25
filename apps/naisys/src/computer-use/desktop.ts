@@ -46,7 +46,12 @@ export function createDesktopService(
   const shellModel = modelService.getLlmModel(
     agentConfig.agentConfig().shellModel,
   );
-  const actionByButton: Record<string, string> = {
+  const actionByButton: Partial<
+    Record<
+      string,
+      "left_click" | "right_click" | "middle_click" | "double_click"
+    >
+  > = {
     left: "left_click",
     right: "right_click",
     middle: "middle_click",
@@ -461,8 +466,9 @@ export function createDesktopService(
     const actionsWithViewport = attachViewportToActions(actions, desktopConfig);
 
     for (const action of actionsWithViewport) {
-      const desc =
-        formatDesktopAction(action.input, desktopConfig) || action.name;
+      const desc = action.validationError
+        ? `Unsupported action — ${action.validationError}`
+        : formatDesktopAction(action.input, desktopConfig) || action.name;
       output.commentAndLog(`Desktop Action: ${desc}`);
     }
 
@@ -490,6 +496,13 @@ export function createDesktopService(
 
     if (approved) {
       for (const action of actionsWithViewport) {
+        if (action.validationError) {
+          contextManager.appendDesktopError(
+            action.id,
+            `${action.validationError}. Re-issue with a supported action shape.`,
+          );
+          continue;
+        }
         if (desktopConfig) {
           const boundsError = checkActionBounds(
             action.input,
