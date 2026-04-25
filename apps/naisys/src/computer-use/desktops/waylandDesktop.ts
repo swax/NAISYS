@@ -315,6 +315,14 @@ export function mouseScroll(
   direction: string,
   amount: number,
 ) {
+  if (direction === "left" || direction === "right") {
+    // ydotool exposes only REL_WHEEL (vertical); no HWHEEL primitive in either
+    // legacy click-button or modern `mousemove --wheel` modes. Reject rather
+    // than silently scrolling vertically.
+    throw new Error(
+      `Horizontal scroll (${direction}) is not supported on Wayland — ydotool lacks an HWHEEL primitive. Use up/down only.`,
+    );
+  }
   moveTo(x, y);
   if (detectYdotoolVersion() === "legacy") {
     // v0.1.x: click button 4=up, 5=down (same as X11 convention)

@@ -23,19 +23,26 @@ import * as waylandDesktop from "./desktops/waylandDesktop.js";
 import * as windowsDesktop from "./desktops/windowsDesktop.js";
 import * as x11Desktop from "./desktops/x11Desktop.js";
 
-type DesktopBackend = typeof windowsDesktop & {
-  checkDependencies?: () => void;
-};
+interface DesktopBackend {
+  captureScreenshot(tmpFile: string): void;
+  mouseClick(x: number, y: number, button: "left" | "right" | "middle"): void;
+  mouseDoubleClick(x: number, y: number): void;
+  mouseMove(x: number, y: number): void;
+  mouseDrag(startX: number, startY: number, endX: number, endY: number): void;
+  typeText(text: string): void;
+  pressKey(keyCombo: string): void;
+  holdKey(keyCombo: string, durationMs: number): void;
+  mouseScroll(x: number, y: number, direction: string, amount: number): void;
+  /** Optional: backends that have prerequisites verify them at init time. */
+  checkDependencies?(): void;
+}
 type Platform = { backend: DesktopBackend; name: string };
 
-/**
- * Default duration (seconds) for the `wait` action when a vendor doesn't
- * supply one. Anthropic's wait carries `duration` (sometimes), OpenAI's wait
- * has no duration field, and Google's `wait_5_seconds` is a fixed-duration
- * function — extractors plug this in so downstream code can treat
- * `wait.duration` as required.
- */
+/** Default seconds for `wait` when no duration is supplied. */
 export const WAIT_DEFAULT_SECONDS = 5;
+
+/** Cap for provider-supplied waits — the executor's setTimeout can't be interrupted. */
+export const MAX_WAIT_SECONDS = 30;
 
 /**
  * Closed set of `action` discriminator values understood by `DesktopSubAction`.
@@ -304,11 +311,14 @@ async function executeSingleAction(
       break;
     case "screenshot":
       break; // no-op, screenshot is captured after
-    case "wait":
-      await new Promise((r) =>
-        setTimeout(r, (action.duration ?? WAIT_DEFAULT_SECONDS) * 1000),
+    case "wait": {
+      const seconds = Math.min(
+        action.duration ?? WAIT_DEFAULT_SECONDS,
+        MAX_WAIT_SECONDS,
       );
+      await new Promise((r) => setTimeout(r, seconds * 1000));
       break;
+    }
   }
 
   // Pause to let UI update after action
