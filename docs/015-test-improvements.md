@@ -9,8 +9,6 @@ new tests are already reinventing helpers that should be shared.
 
 This doc covers:
 
-- Subject-under-test builders for constructor-heavy NAISYS unit tests
-- Browser and desktop test harnesses for repeated command-service setup
 - E2E process helpers for the repeated `flush -> send -> wait -> prompt` flow
 - Supervisor API helpers invented inline by the new supervisor e2e test
 - ERP API and UI helpers for HATEOAS/status assertions and authenticated pages
@@ -22,138 +20,13 @@ This doc covers:
 
 In rough priority order:
 
-1. Add service builders for `commandLoop`, `desktop`, and browser command tests.
-   These remove the most setup per new unit test.
-2. Add E2E process methods like `runCommand`, `startAgent`, `switchAgent`,
+1. Add E2E process methods like `runCommand`, `startAgent`, `switchAgent`,
    `sendMail`, and `readMail` to `e2eTestHelper.ts`.
-3. Extract supervisor API e2e helpers from the new operator test before a second
+2. Extract supervisor API e2e helpers from the new operator test before a second
    supervisor API test copies them.
-4. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
-5. Stop testing copied production functions in `costTracker.test.ts`.
-6. Replace duplicated ERP OpenAPI route lists with production route registration.
-
-## Subject-Under-Test Builders for Command Tests
-
-`apps/naisys/src/__tests__/mocks.ts` has many useful `createMock*` factories,
-but each call site still wires the full dependency graph by hand. The smallest
-tests pay the largest tax:
-
-- `commandLoop.test.ts:54-79` constructs about 20 mocks with a long
-  `createCommandLoop(...)` call to assert one fact about retry backoff.
-- `commandLoop.esc.test.ts:82-107` repeats the same wiring, varying only the
-  mocks whose behavior matters for the ESC assertion.
-
-The fix is already proven locally:
-`commandHandler.test.ts:26-60` defines `createPopFirstCommand()` once, and all
-five tests reuse it. Promote that pattern to a shared test builder:
-
-```ts
-// apps/naisys/src/__tests__/builders/commandLoop.ts
-export function buildCommandLoop(overrides?: {
-  promptBuilder?: Partial<PromptBuilder>;
-  llmService?: Partial<LLMService>;
-  commandHandler?: Partial<CommandHandler>;
-  modelService?: Partial<ModelService>;
-  desktopService?: Partial<DesktopService>;
-}) {
-  const mocks = {
-    promptBuilder: createMockPromptBuilder("test@test", "test@test:/workspace"),
-    llmService: { query: vi.fn(), ...overrides?.llmService } as LLMService,
-    commandHandler: {
-      processCommand: vi.fn(),
-      ...overrides?.commandHandler,
-    } as CommandHandler,
-    // ...
-  };
-
-  const commandLoop = createCommandLoop(/* wired from mocks */);
-  return { commandLoop, mocks };
-}
-```
-
-The two existing `commandLoop.*` tests would collapse from setup-heavy tests to
-input plus assertion. Returning a `mocks` bag keeps dependencies visible enough:
-tests can still assert on `mocks.promptBuilder.getInput` rather than reaching
-through hidden state.
-
-## Desktop Service Harness
-
-`apps/naisys/src/__tests__/computer-use/desktop.test.ts` repeatedly builds:
-
-- a `DesktopConfig`
-- a fake `computerService`
-- a fake agent config with `controlDesktop: true`
-- a fake model service with `supportsComputerUse`, `supportsVision`, and
-  `apiType`
-- the same `createDesktopService(...)` argument list
-
-That setup appears at `desktop.test.ts:15-59`, `:79-129`, `:152-202`,
-`:213-267`, `:275-319`, and `:331-375`. A focused harness would make new
-desktop tests much cheaper:
-
-```ts
-export function buildDesktopService(overrides?: {
-  config?: Partial<DesktopConfig>;
-  computerService?: Record<string, unknown>;
-  model?: {
-    supportsComputerUse?: boolean;
-    supportsVision?: boolean;
-    apiType?: LlmApiType;
-  };
-}) {
-  const desktopConfig = makeDesktopConfig(overrides?.config);
-  const computerService = makeComputerService(desktopConfig, overrides);
-  const contextManager = createMockContextManager();
-  const output = createMockOutputService();
-
-  const desktopService = createDesktopService(/* wired from these */);
-  return { desktopService, computerService, contextManager, output };
-}
-```
-
-Also add data builders:
-
-- `makeDesktopConfig(overrides?)`
-- `makeComputerService(config, overrides?)`
-- `makeComputerUseModel(overrides?)`
-
-This is higher value than shaving a few lines of `vi.mock("child_process")`
-boilerplate from the platform-specific keyboard tests.
-
-## Browser Service Harness
-
-`browser.test.ts` already has good local helpers:
-
-- `makeMockPage`
-- `mockLaunch`
-- `makeService`
-
-The next step is moving them into a reusable builder module and adding one more
-primitive for pagination-heavy tests. Pagination setup repeats at
-`browser.test.ts:335-364`, `:366-390`, `:392-416`, and `:467-491`.
-
-Recommended helpers:
-
-```ts
-export function buildBrowserService(overrides?: {
-  browserEnabled?: boolean;
-  supportsVision?: boolean;
-  globalConfig?: Partial<ReturnType<GlobalConfig["globalConfig"]>>;
-  page?: MockPageOverrides;
-}) {
-  // returns { service, page, ariaSnapshot, launchMock, contextManager, output }
-}
-
-export async function openPaginatedTextPage(service: BrowserService) {
-  await service.handleCommand("mode text");
-  const opened = await service.handleCommand("open https://example.com");
-  expect(opened).toContain("ns-browser more");
-}
-```
-
-Keep the helpers command-oriented. Do not hide the behavioral assertion in a
-large "does everything" helper; browser command tests are most readable when
-the test body still says `handleCommand("click 100 200")`.
+3. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
+4. Stop testing copied production functions in `costTracker.test.ts`.
+5. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## Test Real Pure Functions
 

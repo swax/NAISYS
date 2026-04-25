@@ -1,14 +1,22 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-
-import { createBrowserService } from "../../features/browser.js";
 import {
-  createMockContextManager,
-  createMockGlobalConfig,
-  createMockOutputService,
-} from "../mocks.js";
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
+
+import {
+  buildBrowserService,
+  makeMockPage,
+  mockLaunch,
+  openPaginatedTextPage,
+} from "../builders/browser.js";
 
 // Isolate browser screenshot writes to a per-run temp dir so tests don't
 // leak PNG files into the repo's working tree.
@@ -36,94 +44,13 @@ vi.mock("playwright-core", () => ({
   },
 }));
 
-function makeAgentConfig(browserEnabled: boolean) {
-  return {
-    agentConfig: () => ({ browserEnabled, shellModel: "shell-model" }) as any,
-  } as any;
-}
-
-function makeModelService(supportsVision = true) {
-  return {
-    getLlmModel: vi.fn(() => ({ supportsVision })),
-  } as any;
-}
-
-interface MockPageOverrides {
-  url?: string;
-  title?: string;
-  ariaSnapshot?: string | (() => Promise<string>);
-}
-
-function makeMockPage(overrides: MockPageOverrides = {}) {
-  const url = vi.fn(() => overrides.url ?? "https://example.com");
-  const title = vi.fn(() => Promise.resolve(overrides.title ?? "Example"));
-  const ariaSnapshot =
-    typeof overrides.ariaSnapshot === "function"
-      ? vi.fn(overrides.ariaSnapshot)
-      : vi.fn(() => Promise.resolve(overrides.ariaSnapshot ?? "- text"));
-  const locator = vi.fn(() => ({ ariaSnapshot }));
-  const goto = vi.fn(() => Promise.resolve(null));
-  const click = vi.fn(() => Promise.resolve());
-  const fill = vi.fn(() => Promise.resolve());
-  const goBack = vi.fn(() => Promise.resolve(null));
-  const goForward = vi.fn(() => Promise.resolve(null));
-  const reload = vi.fn(() => Promise.resolve(null));
-  const screenshot = vi.fn(() => Promise.resolve(Buffer.from("png-bytes")));
-  const close = vi.fn(() => Promise.resolve());
-  const isClosed = vi.fn(() => false);
-  const mouse = {
-    click: vi.fn(() => Promise.resolve()),
-    dblclick: vi.fn(() => Promise.resolve()),
-    wheel: vi.fn(() => Promise.resolve()),
-  };
-  const keyboard = {
-    type: vi.fn(() => Promise.resolve()),
-    press: vi.fn(() => Promise.resolve()),
-  };
-  const page = {
-    url,
-    title,
-    locator,
-    goto,
-    click,
-    fill,
-    goBack,
-    goForward,
-    reload,
-    screenshot,
-    close,
-    isClosed,
-    mouse,
-    keyboard,
-  };
-  return { page, ariaSnapshot };
-}
-
-function mockLaunch(page: ReturnType<typeof makeMockPage>["page"]) {
-  launchMock.mockResolvedValue({
-    newPage: vi.fn(() => Promise.resolve(page)),
-    isConnected: () => true,
-    close: vi.fn(() => Promise.resolve()),
-  });
-}
-
-function makeService(browserEnabled = true, supportsVision = true) {
-  return createBrowserService(
-    createMockGlobalConfig(),
-    makeAgentConfig(browserEnabled),
-    createMockContextManager(),
-    createMockOutputService(),
-    makeModelService(supportsVision),
-  );
-}
-
 beforeEach(() => {
   launchMock.mockReset();
 });
 
 describe("ns-browser help and gating", () => {
   test("help is available even when disabled, defaults to visual mode", async () => {
-    const svc = makeService(false);
+    const svc = buildBrowserService({ browserEnabled: false });
     const result = await svc.handleCommand("help");
     expect(result).toContain("ns-browser <command>");
     expect(result).toContain("current mode: visual");
@@ -133,7 +60,7 @@ describe("ns-browser help and gating", () => {
   });
 
   test("help in text mode shows selector commands", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await svc.handleCommand("mode text");
     const result = await svc.handleCommand("help");
     expect(result).toContain("current mode: text");
@@ -142,33 +69,33 @@ describe("ns-browser help and gating", () => {
   });
 
   test("defaults to text mode when shell model lacks vision support", async () => {
-    const svc = makeService(true, false);
+    const svc = buildBrowserService({ supportsVision: false });
     const result = await svc.handleCommand("help");
     expect(result).toContain("current mode: text");
     expect(result).toContain("Text mode commands");
   });
 
   test("returns disabled message when flag is off", async () => {
-    const svc = makeService(false);
+    const svc = buildBrowserService({ browserEnabled: false });
     const result = await svc.handleCommand("open https://example.com");
     expect(result).toContain("not enabled");
     expect(launchMock).not.toHaveBeenCalled();
   });
 
   test("unknown subcommand returns help", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     const result = await svc.handleCommand("flibbertigibbet");
     expect(result).toContain("Unknown ns-browser subcommand 'flibbertigibbet'");
   });
 
   test("missing url throws usage error", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.handleCommand("open")).rejects.toContain("Usage:");
     expect(launchMock).not.toHaveBeenCalled();
   });
 
   test("more without prior open returns helpful message", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     const result = await svc.handleCommand("more");
     expect(result).toContain("No paginated content available");
   });
@@ -176,18 +103,18 @@ describe("ns-browser help and gating", () => {
 
 describe("ns-browser mode switching", () => {
   test("`mode` with no arg returns current mode", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     expect(await svc.handleCommand("mode")).toBe("Current mode: visual");
   });
 
   test("`mode text` switches and clears pagination", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     expect(await svc.handleCommand("mode text")).toBe("Mode set to text.");
     expect(await svc.handleCommand("mode")).toBe("Current mode: text");
   });
 
   test("invalid mode arg throws", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.handleCommand("mode banana")).rejects.toContain(
       "Unknown mode",
     );
@@ -197,9 +124,9 @@ describe("ns-browser mode switching", () => {
 describe("ns-browser visual mode (default)", () => {
   test("open returns a screenshot and URL/title metadata", async () => {
     const { page } = makeMockPage({ title: "Example Domain" });
-    mockLaunch(page);
+    mockLaunch(launchMock, page);
 
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     const result = await svc.handleCommand("open https://example.com");
     expect(launchMock).toHaveBeenCalledWith({ headless: true });
     expect(page.goto).toHaveBeenCalledWith("https://example.com", {
@@ -213,8 +140,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("click <x> <y> calls page.mouse.click with coords", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("click 400 300");
     expect(page.mouse.click).toHaveBeenCalledWith(400, 300, { button: "left" });
@@ -223,8 +150,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("click double routes to dblclick", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await svc.handleCommand("click 100 200 double");
     expect(page.mouse.dblclick).toHaveBeenCalledWith(100, 200);
@@ -232,8 +159,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("click without coords throws visual usage error", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await expect(svc.handleCommand("click")).rejects.toContain(
       "Usage (visual mode)",
@@ -242,8 +169,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("scroll down calls page.mouse.wheel with positive deltaY", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("scroll down 500");
     expect(page.mouse.wheel).toHaveBeenCalledWith(0, 500);
@@ -252,8 +179,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("scroll up uses negative deltaY", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await svc.handleCommand("scroll up 200");
     expect(page.mouse.wheel).toHaveBeenCalledWith(0, -200);
@@ -261,8 +188,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("scroll with bad direction throws", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await expect(svc.handleCommand("scroll diagonal 100")).rejects.toContain(
       "Usage:",
@@ -271,8 +198,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("type calls page.keyboard.type", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand('type "hello world"');
     expect(page.keyboard.type).toHaveBeenCalledWith("hello world");
@@ -281,8 +208,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("key calls page.keyboard.press", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("key Enter");
     expect(page.keyboard.press).toHaveBeenCalledWith("Enter");
@@ -291,8 +218,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("key normalizes lowercase to Playwright case-sensitive form", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await svc.handleCommand("key enter");
     expect(page.keyboard.press).toHaveBeenCalledWith("Enter");
@@ -303,7 +230,7 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("click with bad args throws before launching Chromium", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.handleCommand("click foo bar")).rejects.toContain(
       "Usage (visual mode)",
     );
@@ -311,7 +238,7 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("click out-of-bounds coords throw before launching Chromium", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.handleCommand("click -1 100")).rejects.toContain(
       "outside the viewport bounds",
     );
@@ -325,7 +252,7 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("scroll with bad args throws before launching Chromium", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.handleCommand("scroll diagonal 100")).rejects.toContain(
       "Usage:",
     );
@@ -333,30 +260,15 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("visual open clears stale text-mode pagination", async () => {
-    // Force pagination by making webTokenMax tiny so text mode paginates.
-    const baseConfig = createMockGlobalConfig().globalConfig();
-    const globalConfig = {
-      globalConfig: () => ({ ...baseConfig, webTokenMax: 1 }),
-    } as any;
-
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
-    mockLaunch(page);
-    const svc = createBrowserService(
-      globalConfig,
-      makeAgentConfig(true),
-      createMockContextManager(),
-      createMockOutputService(),
-      makeModelService(),
-    );
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService({ webTokenMax: 1 });
 
-    // Build pagination state via text-mode open
-    await svc.handleCommand("mode text");
-    const textOpen = await svc.handleCommand("open https://example.com");
+    const textOpen = await openPaginatedTextPage(svc);
     expect(textOpen).toContain("ns-browser more");
 
-    // Switch to visual and re-open — `more` should no longer return chunks.
     await svc.handleCommand("mode visual");
     await svc.handleCommand("open https://example.com");
     const more = await svc.handleCommand("more");
@@ -364,25 +276,13 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("visual click clears stale text-mode pagination", async () => {
-    const baseConfig = createMockGlobalConfig().globalConfig();
-    const globalConfig = {
-      globalConfig: () => ({ ...baseConfig, webTokenMax: 1 }),
-    } as any;
-
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
-    mockLaunch(page);
-    const svc = createBrowserService(
-      globalConfig,
-      makeAgentConfig(true),
-      createMockContextManager(),
-      createMockOutputService(),
-      makeModelService(),
-    );
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService({ webTokenMax: 1 });
 
-    await svc.handleCommand("mode text");
-    await svc.handleCommand("open https://example.com");
+    await openPaginatedTextPage(svc);
     await svc.handleCommand("mode visual");
     await svc.handleCommand("click 100 200");
     const more = await svc.handleCommand("more");
@@ -390,25 +290,13 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("visual scroll clears stale text-mode pagination", async () => {
-    const baseConfig = createMockGlobalConfig().globalConfig();
-    const globalConfig = {
-      globalConfig: () => ({ ...baseConfig, webTokenMax: 1 }),
-    } as any;
-
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
-    mockLaunch(page);
-    const svc = createBrowserService(
-      globalConfig,
-      makeAgentConfig(true),
-      createMockContextManager(),
-      createMockOutputService(),
-      makeModelService(),
-    );
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService({ webTokenMax: 1 });
 
-    await svc.handleCommand("mode text");
-    await svc.handleCommand("open https://example.com");
+    await openPaginatedTextPage(svc);
     await svc.handleCommand("mode visual");
     await svc.handleCommand("scroll down 300");
     const more = await svc.handleCommand("more");
@@ -416,7 +304,7 @@ describe("ns-browser visual mode (default)", () => {
   });
 
   test("fill is rejected in visual mode", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(
       svc.handleCommand('fill "#email" "alice@example.com"'),
     ).rejects.toContain("only available in text mode");
@@ -424,8 +312,8 @@ describe("ns-browser visual mode (default)", () => {
 
   test("screenshot subcommand returns a confirmation string", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("screenshot");
     expect(result).toContain("Screenshot captured:");
@@ -439,8 +327,8 @@ describe("ns-browser text mode", () => {
       title: "Example Domain",
       ariaSnapshot: "- heading: Example",
     });
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("mode text");
     const result = await svc.handleCommand("open https://example.com");
     expect(ariaSnapshot).toHaveBeenCalled();
@@ -454,8 +342,8 @@ describe("ns-browser text mode", () => {
     const { page, ariaSnapshot } = makeMockPage();
     ariaSnapshot.mockResolvedValueOnce("- heading: Old");
     ariaSnapshot.mockResolvedValueOnce("- heading: New");
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("mode text");
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("click text=Submit");
@@ -465,25 +353,13 @@ describe("ns-browser text mode", () => {
   });
 
   test("fill clears pagination so stale `more` returns empty", async () => {
-    const baseConfig = createMockGlobalConfig().globalConfig();
-    const globalConfig = {
-      globalConfig: () => ({ ...baseConfig, webTokenMax: 1 }),
-    } as any;
-
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
-    mockLaunch(page);
-    const svc = createBrowserService(
-      globalConfig,
-      makeAgentConfig(true),
-      createMockContextManager(),
-      createMockOutputService(),
-      makeModelService(),
-    );
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService({ webTokenMax: 1 });
 
-    await svc.handleCommand("mode text");
-    const opened = await svc.handleCommand("open https://example.com");
+    const opened = await openPaginatedTextPage(svc);
     expect(opened).toContain("ns-browser more");
     const filled = await svc.handleCommand("fill #email alice@example.com");
     expect(filled).toContain("Filled: #email = alice@example.com");
@@ -492,7 +368,7 @@ describe("ns-browser text mode", () => {
   });
 
   test("scroll is rejected in text mode", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await svc.handleCommand("mode text");
     await expect(svc.handleCommand("scroll down 100")).rejects.toContain(
       "only available in visual mode",
@@ -503,8 +379,8 @@ describe("ns-browser text mode", () => {
 describe("ns-browser lifecycle", () => {
   test("close cleans up the page and clears pagination", async () => {
     const { page } = makeMockPage();
-    mockLaunch(page);
-    const svc = makeService(true);
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     const result = await svc.handleCommand("close");
     expect(page.close).toHaveBeenCalled();
@@ -516,19 +392,15 @@ describe("ns-browser lifecycle", () => {
   test("cleanup() closes the browser", async () => {
     const closeBrowser = vi.fn(() => Promise.resolve());
     const { page } = makeMockPage();
-    launchMock.mockResolvedValue({
-      newPage: vi.fn(() => Promise.resolve(page)),
-      isConnected: () => true,
-      close: closeBrowser,
-    });
-    const svc = makeService(true);
+    mockLaunch(launchMock, page, { closeBrowser });
+    const svc = buildBrowserService();
     await svc.handleCommand("open https://example.com");
     await svc.cleanup();
     expect(closeBrowser).toHaveBeenCalled();
   });
 
   test("cleanup() is a no-op if no browser was launched", async () => {
-    const svc = makeService(true);
+    const svc = buildBrowserService();
     await expect(svc.cleanup()).resolves.toBeUndefined();
     expect(launchMock).not.toHaveBeenCalled();
   });
