@@ -1,62 +1,21 @@
 import { LlmApiType } from "@naisys/common";
 import { describe, expect, test, vi } from "vitest";
 
-import { createDesktopService } from "../../computer-use/desktop.js";
-import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
-import {
-  createMockCommandLoopState,
-  createMockContextManager,
-  createMockInputMode,
-  createMockOutputService,
-} from "../mocks.js";
+import { buildDesktopService } from "../builders/desktop.js";
 
 describe("desktop focus commands", () => {
   test("maps screenshot focus coordinates into native desktop focus", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 3840,
-      nativeDisplayHeight: 2160,
-      viewport: { x: 0, y: 0, width: 3840, height: 2160 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.359375,
-      desktopPlatform: "Linux (X11)",
-    };
-
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      setFocus: vi.fn(() => ({ x: 0, y: 0, width: 1920, height: 1080 })),
-      executeAction: vi.fn(),
-      captureViewportScreenshot: vi.fn(),
-      captureScaledScreenshot: vi.fn(),
-      platformName: "Linux (X11)",
-      initError: undefined,
-    } as any;
-
-    const output = createMockOutputService();
-    const desktopService = createDesktopService(
-      computerService,
-      createMockContextManager(),
-      output,
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
-          supportsVision: true,
-          apiType: LlmApiType.OpenAI,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
-    );
+    const { desktopService, computerService, output } = buildDesktopService({
+      config: {
+        nativeDisplayWidth: 3840,
+        nativeDisplayHeight: 2160,
+        viewport: { x: 0, y: 0, width: 3840, height: 2160 },
+        scaleFactor: 0.359375,
+      },
+      computerService: {
+        setFocus: vi.fn(() => ({ x: 0, y: 0, width: 1920, height: 1080 })),
+      },
+    });
 
     await expect(
       desktopService.handleCommand("focus 0 0 690 388"),
@@ -76,57 +35,17 @@ describe("desktop focus commands", () => {
   });
 
   test("stamps every action with the viewport it was emitted against, including full-desktop", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 1920,
-      nativeDisplayHeight: 1080,
-      viewport: { x: 0, y: 0, width: 1920, height: 1080 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.71875,
-      desktopPlatform: "Linux (X11)",
-    };
-
-    const contextManager = createMockContextManager();
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      executeAction: vi.fn(async () => {}),
-      captureScaledScreenshot: vi.fn(() =>
-        Promise.resolve({
-          base64: "abc",
-          filepath: "/tmp/screenshot.png",
-        }),
-      ),
-      captureViewportScreenshot: vi.fn(),
-      captureFullScreenshot: vi.fn(),
-      setFocus: vi.fn(),
-      platformName: "Linux (X11)",
-      initError: undefined,
-    } as any;
-
-    const desktopService = createDesktopService(
-      computerService,
-      contextManager,
-      createMockOutputService(),
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
-          supportsVision: true,
-          apiType: LlmApiType.OpenAI,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
-    );
+    const { desktopService, contextManager } = buildDesktopService({
+      computerService: {
+        executeAction: vi.fn(async () => {}),
+        captureScaledScreenshot: vi.fn(() =>
+          Promise.resolve({
+            base64: "abc",
+            filepath: "/tmp/screenshot.png",
+          }),
+        ),
+      },
+    });
 
     await desktopService.confirmAndExecuteActions("", [
       {
@@ -149,57 +68,17 @@ describe("desktop focus commands", () => {
   });
 
   test("adds the scaled screenshot to context for non-computer-use models", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 1920,
-      nativeDisplayHeight: 1080,
-      viewport: { x: 0, y: 0, width: 1920, height: 1080 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.71875,
-      desktopPlatform: "Linux (X11)",
-    };
-
-    const contextManager = createMockContextManager();
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      captureScaledScreenshot: vi.fn(() =>
-        Promise.resolve({
-          base64: "abc123",
-          filepath: "/tmp/llm-view.png",
-        }),
-      ),
-      executeAction: vi.fn(),
-      captureViewportScreenshot: vi.fn(),
-      captureFullScreenshot: vi.fn(),
-      setFocus: vi.fn(),
-      platformName: "Linux (X11)",
-      initError: undefined,
-    } as any;
-
-    const desktopService = createDesktopService(
-      computerService,
-      contextManager,
-      createMockOutputService(),
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: false,
-          supportsVision: true,
-          apiType: LlmApiType.OpenAI,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
-    );
+    const { desktopService, contextManager } = buildDesktopService({
+      computerService: {
+        captureScaledScreenshot: vi.fn(() =>
+          Promise.resolve({
+            base64: "abc123",
+            filepath: "/tmp/llm-view.png",
+          }),
+        ),
+      },
+      model: { supportsComputerUse: false },
+    });
 
     await expect(desktopService.handleCommand("screenshot")).resolves.toBe("");
     expect(contextManager.appendImage).toHaveBeenCalledWith(
@@ -210,60 +89,19 @@ describe("desktop focus commands", () => {
   });
 
   test("forwards appendImage rejection reason from screenshot command", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 1920,
-      nativeDisplayHeight: 1080,
-      viewport: { x: 0, y: 0, width: 1920, height: 1080 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.71875,
-      desktopPlatform: "Linux (X11)",
-    };
-
-    const contextManager = createMockContextManager();
+    const { desktopService, contextManager } = buildDesktopService({
+      computerService: {
+        captureScaledScreenshot: vi.fn(() =>
+          Promise.resolve({
+            base64: "abc",
+            filepath: "/tmp/s.png",
+          }),
+        ),
+      },
+      model: { apiType: LlmApiType.Anthropic },
+    });
     (contextManager.appendImage as any).mockReturnValue(
       "Error: images are blocked",
-    );
-
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      captureScaledScreenshot: vi.fn(() =>
-        Promise.resolve({
-          base64: "abc",
-          filepath: "/tmp/s.png",
-        }),
-      ),
-      executeAction: vi.fn(),
-      captureViewportScreenshot: vi.fn(),
-      captureFullScreenshot: vi.fn(),
-      setFocus: vi.fn(),
-      platformName: "Linux (X11)",
-      initError: undefined,
-    } as any;
-
-    const desktopService = createDesktopService(
-      computerService,
-      contextManager,
-      createMockOutputService(),
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
-          supportsVision: true,
-          apiType: LlmApiType.Anthropic,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
     );
 
     await expect(desktopService.handleCommand("screenshot")).resolves.toBe(
@@ -272,51 +110,18 @@ describe("desktop focus commands", () => {
   });
 
   test("maps manual click coordinates from the current screenshot to viewport pixels", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 3840,
-      nativeDisplayHeight: 2160,
-      viewport: { x: 0, y: 0, width: 3840, height: 2160 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.359375,
-      desktopPlatform: "Windows (WSL)",
-    };
-
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      executeAction: vi.fn(async () => {}),
-      captureScaledScreenshot: vi.fn(),
-      captureViewportScreenshot: vi.fn(),
-      captureFullScreenshot: vi.fn(),
-      setFocus: vi.fn(),
-      platformName: "Windows (WSL)",
-      initError: undefined,
-    } as any;
-
-    const desktopService = createDesktopService(
-      computerService,
-      createMockContextManager(),
-      createMockOutputService(),
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: true,
-          supportsVision: true,
-          apiType: LlmApiType.OpenAI,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
-    );
+    const { desktopService, computerService } = buildDesktopService({
+      config: {
+        nativeDisplayWidth: 3840,
+        nativeDisplayHeight: 2160,
+        viewport: { x: 0, y: 0, width: 3840, height: 2160 },
+        scaleFactor: 0.359375,
+        desktopPlatform: "Windows (WSL)",
+      },
+      computerService: {
+        executeAction: vi.fn(async () => {}),
+      },
+    });
 
     await expect(desktopService.handleCommand("click 828 764")).resolves.toBe(
       "Clicked (left) at screenshot (828, 764)",
@@ -328,51 +133,13 @@ describe("desktop focus commands", () => {
   });
 
   test("shows desktop status before help output", async () => {
-    const desktopConfig: DesktopConfig = {
-      nativeDisplayWidth: 1920,
-      nativeDisplayHeight: 1080,
-      viewport: { x: 100, y: 50, width: 1600, height: 900 },
-      scaledWidth: 1380,
-      scaledHeight: 776,
-      scaleFactor: 0.8625,
-      desktopPlatform: "Linux (X11)",
-    };
-
-    const computerService = {
-      getConfig: vi.fn(() => desktopConfig),
-      executeAction: vi.fn(),
-      captureScaledScreenshot: vi.fn(),
-      captureViewportScreenshot: vi.fn(),
-      captureFullScreenshot: vi.fn(),
-      setFocus: vi.fn(),
-      platformName: "Linux (X11)",
-      initError: undefined,
-    } as any;
-
-    const desktopService = createDesktopService(
-      computerService,
-      createMockContextManager(),
-      createMockOutputService(),
-      {
-        agentConfig: () => ({
-          shellModel: "shell-model",
-          controlDesktop: true,
-          debugPauseSeconds: 0,
-        }),
-      } as any,
-      {
-        getLlmModel: vi.fn(() => ({
-          supportsComputerUse: false,
-          supportsVision: true,
-          apiType: LlmApiType.OpenAI,
-        })),
-      } as any,
-      {
-        getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
-      } as any,
-      createMockCommandLoopState() as any,
-      createMockInputMode() as any,
-    );
+    const { desktopService } = buildDesktopService({
+      config: {
+        viewport: { x: 100, y: 50, width: 1600, height: 900 },
+        scaleFactor: 0.8625,
+      },
+      model: { supportsComputerUse: false },
+    });
 
     const helpText = await desktopService.handleCommand("");
 
