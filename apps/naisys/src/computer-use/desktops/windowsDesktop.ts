@@ -45,7 +45,7 @@ public class NaisysInput {
   [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint uCode, uint uMapType);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
-  public const uint LEFTDOWN=2, LEFTUP=4, RIGHTDOWN=8, RIGHTUP=16, MIDDLEDOWN=32, MIDDLEUP=64, WHEEL=0x800;
+  public const uint LEFTDOWN=2, LEFTUP=4, RIGHTDOWN=8, RIGHTUP=16, MIDDLEDOWN=32, MIDDLEUP=64, WHEEL=0x800, HWHEEL=0x1000;
   public const uint KEYEVENTF_KEYUP=2, KEYEVENTF_EXTENDEDKEY=1;
 }
 "@
@@ -339,8 +339,12 @@ export function mouseScroll(
   direction: string,
   amount: number,
 ) {
-  const delta = direction === "up" ? 120 * amount : -120 * amount;
+  // mouse_event sign conventions: WHEEL +=up/-=down; HWHEEL +=right/-=left.
+  const isHorizontal = direction === "left" || direction === "right";
+  const event = isHorizontal ? "HWHEEL" : "WHEEL";
+  const positive = direction === "up" || direction === "right";
+  const delta = (positive ? 120 : -120) * amount;
   runPowerShell(
-    `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos($__s.Left+${x},$__s.Top+${y}); [NaisysInput]::mouse_event([NaisysInput]::WHEEL,0,0,${delta},[IntPtr]::Zero)`,
+    `${PS_INPUT_TYPE}; [NaisysInput]::SetCursorPos($__s.Left+${x},$__s.Top+${y}); [NaisysInput]::mouse_event([NaisysInput]::${event},0,0,${delta},[IntPtr]::Zero)`,
   );
 }

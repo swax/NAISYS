@@ -197,7 +197,15 @@ export function mouseScroll(
   direction: string,
   amount: number,
 ) {
-  const btn = direction === "up" ? "4" : "5";
+  // xdotool button convention: 4=up, 5=down, 6=left, 7=right
+  const btn =
+    direction === "up"
+      ? "4"
+      : direction === "down"
+        ? "5"
+        : direction === "left"
+          ? "6"
+          : "7";
   xdotool([
     "mousemove",
     String(x),

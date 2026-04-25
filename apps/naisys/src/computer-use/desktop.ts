@@ -5,7 +5,11 @@ import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
 import { desktopCmd } from "../command/commandDefs.js";
-import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type {
+  CommandResponse,
+  RegistrableCommand,
+} from "../command/commandRegistry.js";
+import { NextCommandAction, timedWait } from "../command/commandRegistry.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
@@ -538,25 +542,34 @@ export function createDesktopService(
     return `Dragged from (${x1}, ${y1}) to (${x2}, ${y2})`;
   }
 
-  async function handleWaitCommand(
+  function handleWaitCommand(
     argv: string[],
     usageError: (sub: DesktopSubcommand) => string,
-  ): Promise<string> {
-    let duration: number | undefined;
+  ): CommandResponse {
+    let duration = WAIT_DEFAULT_SECONDS;
     if (argv[1] !== undefined) {
-      duration = Number(argv[1]);
-      if (!Number.isFinite(duration) || duration <= 0) {
+      const parsed = Number(argv[1]);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
         throw usageError("wait");
       }
+      duration = parsed;
     }
-    await computerService.executeAction({
-      actions: [duration !== undefined ? { action: "wait", duration } : { action: "wait" }],
-    });
-    return `Waited ${duration ?? WAIT_DEFAULT_SECONDS}s`;
+    // Defer to the session loop's interruptible wait (same machinery as
+    // ns-session wait) so a long duration doesn't block the command loop and
+    // the agent can be woken by mail or other events.
+    return {
+      content: "",
+      nextCommandResponse: {
+        nextCommandAction: NextCommandAction.Continue,
+        wait: timedWait(duration),
+      },
+    };
   }
 
   /** Handle ns-desktop commands */
-  async function handleCommand(args: string): Promise<string> {
+  async function handleCommand(
+    args: string,
+  ): Promise<string | CommandResponse> {
     const argv = stringArgv(args);
     const subs = desktopCmd.subcommands!;
     const usageError = (sub: keyof typeof subs) =>

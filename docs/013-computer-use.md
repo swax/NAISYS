@@ -178,18 +178,22 @@ coords into `executeAction`, ComputerService translates.
 |---|---|
 | `screenshot` | Capture the scaled viewport and append to context |
 | `focus X Y W H` | Set focus (args in scaled pixels); `focus clear` resets |
-| `click X Y [button]` | Click at scaled-screenshot coords |
+| `click X Y [button]` | Click at scaled-screenshot coords (`left`/`right`/`middle`/`double`/`triple`) |
+| `move X Y` | Move the cursor without clicking |
+| `scroll X Y <dir> N` | Scroll N clicks at scaled-screenshot coords |
+| `drag X1 Y1 X2 Y2` | Press, drag, release |
 | `key <combo>` | Press a key (`ctrl+l`, `alt+tab`, …) |
 | `hold <combo> <ms>` | Hold a key for a duration |
 | `type <text>` | Type text |
+| `wait [seconds]` | Pause to let the UI settle (defaults to 5s) |
 | `dump` | Save full / viewport-native / scaled screenshots for debugging |
 
 For vendors with native computer-use tool support, the subcommands
-that duplicate the native tool (`screenshot`, `click`, `key`, `type`)
-are hidden from `ns-desktop help` — the model should use its native
-tool. `hold` stays visible because Anthropic is the only vendor that
-exposes it natively, and even there the shell gives finer timing
-control.
+that duplicate the native tool (`screenshot`, `click`, `move`, `scroll`,
+`drag`, `key`, `type`, `wait`) are hidden from `ns-desktop help` — the
+model should use its native tool. `hold` stays visible because
+Anthropic is the only vendor that exposes it natively, and even there
+the shell gives finer timing control.
 
 ## Screenshot pipeline
 
