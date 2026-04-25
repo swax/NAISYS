@@ -9,7 +9,6 @@ new tests are already reinventing helpers that should be shared.
 
 This doc covers:
 
-- Supervisor API helpers invented inline by the new supervisor e2e test
 - ERP API and UI helpers for HATEOAS/status assertions and authenticated pages
 - Testing real pure functions instead of copied production implementations
 - OpenAPI route registration drift and enum-sync helper scope
@@ -19,11 +18,9 @@ This doc covers:
 
 In rough priority order:
 
-1. Extract supervisor API e2e helpers from the new operator test before a second
-   supervisor API test copies them.
-2. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
-3. Stop testing copied production functions in `costTracker.test.ts`.
-4. Replace duplicated ERP OpenAPI route lists with production route registration.
+1. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
+2. Stop testing copied production functions in `costTracker.test.ts`.
+3. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## Test Real Pure Functions
 
@@ -53,42 +50,6 @@ Fix:
   pattern.
 - Convert the many period-boundary examples into `test.each` cases so adding a
   new boundary costs one row, not a full test body.
-
-## Supervisor API E2E Helpers
-
-The new `apps/naisys/src/__tests__/e2e/supervisor-operator.e2e.test.ts`
-defines generic helpers inline:
-
-- `parseJsonResponse<T>(response)`
-- login plus cookie extraction
-- `apiRequest<T>(cookie, method, path, body)`
-- `waitFor<T>(description, load, isReady, timeoutMs)`
-
-Move these next to `e2eTestHelper.ts` before another supervisor API e2e test
-copies them. The most important helper is `loginAsSuperAdmin(naisys)`: it should
-own the `superadmin user created. Password: ...` regex and the cookie handling.
-
-Suggested module:
-
-```ts
-// apps/naisys/src/__tests__/e2e/supervisorApiHelper.ts
-export async function loginAsSuperAdmin(naisys: NaisysTestProcess) {
-  const password = extractGeneratedSuperAdminPassword(naisys.getFullOutput());
-  // POST /supervisor/api/auth/login and return cookie/client
-}
-
-export function createSupervisorApiClient(cookie: string) {
-  return {
-    get: <T>(path: string) => apiRequest<T>(cookie, "GET", path),
-    post: <T>(path: string, body?: unknown) =>
-      apiRequest<T>(cookie, "POST", path, body),
-  };
-}
-```
-
-Keep polling generic, but keep domain waits named at call sites:
-`waitForAgentStatus(api, username, "running")` reads better than a generic
-`waitFor("agent running", ...)` repeated in every test.
 
 ## ERP API Test Client and Assertions
 
