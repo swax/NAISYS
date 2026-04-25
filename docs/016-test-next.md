@@ -35,56 +35,7 @@ Defer tests that:
 - require live LLM providers
 - require fragile timing unless the workflow is core product behavior
 
-## 1. Hub Attachments and Wake-on-Message
-
-**Priority: highest**
-
-**Why it should move coverage**
-
-This should hit `apps/naisys`, `apps/hub`, `apps/supervisor/server`, and
-attachment-related code that most current happy paths miss. It also exercises
-real cross-process event routing, which is exactly the kind of code coverage
-unit tests tend to leave behind.
-
-**Workflow**
-
-1. Start an integrated hub + supervisor with three agents:
-   - `sender`
-   - `receiver` with `wakeOnMessage: true`
-   - `observer`
-2. Start only `sender`; leave `receiver` stopped.
-3. Login to the supervisor API as `superadmin`.
-4. Send mail from `sender` to `receiver` with a small text attachment using
-   supervisor multipart mail.
-5. Assert through supervisor mail API that:
-   - the message exists
-   - the attachment metadata exists
-   - the download URL works
-6. Assert `receiver` wakes or starts because `wakeOnMessage` is enabled.
-7. Switch to `receiver` through the NAISYS CLI and read/archive the mail.
-8. Send chat with an attachment from `receiver` to `observer`.
-9. Assert the chat conversation and attachment are visible through supervisor.
-10. Archive mail and chat, then assert archived state through both APIs.
-
-**Coverage targets**
-
-- `apps/hub/src/handlers/hubAttachmentService.ts`
-- `apps/hub/src/handlers/hubMailService.ts`
-- `apps/hub/src/handlers/hubAgentService.ts`
-- `apps/naisys/src/mail/mail.ts`
-- `apps/naisys/src/mail/chat.ts`
-- `apps/naisys/src/services/attachmentService.ts`
-- `apps/naisys/src/utils/promptNotificationService.ts`
-- `apps/supervisor/server/src/routes/agentMail.ts`
-- `apps/supervisor/server/src/routes/agentChat.ts`
-- `apps/supervisor/server/src/routes/attachments.ts`
-- `apps/supervisor/server/src/services/attachmentProxyService.ts`
-
-**Best home**
-
-`apps/naisys/src/__tests__/e2e/hub-attachments-wake.e2e.test.ts`
-
-## 2. Supervisor Admin Configuration Workflow
+## 1. Supervisor Admin Configuration Workflow
 
 **Priority: highest**
 
@@ -137,7 +88,7 @@ workflow can hit a lot of `apps/supervisor/server` and some hub broadcast code.
 Extract a `supervisorApiHelper.ts` before adding this. The operator test already
 has login, cookie, request, and polling helpers inline.
 
-## 3. Multi-Host Agent Placement and Failover
+## 2. Multi-Host Agent Placement and Failover
 
 **Priority: high**
 
@@ -184,7 +135,7 @@ management from the supervisor perspective.
 
 This will need careful ports and cleanup. Keep it API-first and avoid UI.
 
-## 4. ERP Execution With Attachments, Comments, Labor, and Audit
+## 3. ERP Execution With Attachments, Comments, Labor, and Audit
 
 **Priority: high**
 
@@ -236,7 +187,7 @@ Use API for setup and assertions. Use Playwright UI only if the UI itself is the
 behavior under test, because browser-side client coverage is not currently
 counted.
 
-## 5. ERP Revision Diff and Dependency Workflow
+## 4. ERP Revision Diff and Dependency Workflow
 
 **Priority: medium-high**
 
@@ -276,7 +227,7 @@ business rules matter more than the UI.
 
 `apps/erp/server/e2e/api/revision-diff-dependencies-api.spec.ts`
 
-## 6. NAISYS CLI Session and Workspace Workflow
+## 5. NAISYS CLI Session and Workspace Workflow
 
 **Priority: medium-high**
 
@@ -324,7 +275,7 @@ Before writing this, add helpers to `e2eTestHelper.ts` like `runCommand`,
 `startAgent`, `switchAgent`, and `expectPrompt`. That will reduce flake and make
 future CLI E2Es cheaper.
 
-## 7. Supervisor Auth to ERP Auth Bridge
+## 6. Supervisor Auth to ERP Auth Bridge
 
 **Priority: medium**
 
@@ -367,7 +318,7 @@ Either:
 Prefer the NAISYS integrated-process test if the goal is cross-workspace
 coverage.
 
-## 8. Models and Variables Propagation
+## 7. Models and Variables Propagation
 
 **Priority: medium**
 
@@ -405,7 +356,7 @@ low UI risk.
 
 `apps/naisys/src/__tests__/e2e/models-variables-propagation.e2e.test.ts`
 
-## 9. Hub Access Key Rotation and Reconnect
+## 8. Hub Access Key Rotation and Reconnect
 
 **Priority: medium**
 
@@ -440,17 +391,14 @@ important and hard to cover with pure unit tests.
 
 ## Suggested Order
 
-1. **Hub Attachments and Wake-on-Message**
-   - Best cross-workspace return.
-   - Likely to move `apps/naisys`, `apps/hub`, and `apps/supervisor/server`.
-2. **Supervisor Admin Configuration Workflow**
+1. **Supervisor Admin Configuration Workflow**
    - Broadly exercises supervisor server gaps.
    - Reuses the operator API style.
-3. **ERP Execution With Attachments, Comments, Labor, and Audit**
+2. **ERP Execution With Attachments, Comments, Labor, and Audit**
    - Good next ERP server jump without duplicating order lifecycle.
-4. **Multi-Host Agent Placement and Failover**
+3. **Multi-Host Agent Placement and Failover**
    - More complex, but probably the most valuable distributed-system test.
-5. **NAISYS CLI Session and Workspace Workflow**
+4. **NAISYS CLI Session and Workspace Workflow**
    - Directly attacks the lowest coverage workspace.
 
 ## Measuring Each Addition
