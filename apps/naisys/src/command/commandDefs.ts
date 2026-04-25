@@ -81,13 +81,33 @@ export const desktopCmd: CommandDef = {
         "Hold a key (or chord) down for the given milliseconds — use when an app needs a real held key (e.g. game emulators where movement requires a held direction)",
     },
     click: {
-      usage: "click <x> <y> [left|right|middle|double]",
+      usage: "click <x> <y> [left|right|middle|double|triple]",
       description:
-        "Click at current screenshot coordinates (defaults to left). Use 'double' for double-click",
+        "Click at current screenshot coordinates (defaults to left). Use 'double' or 'triple' for multi-click",
     },
     type: {
       usage: 'type "<text>"',
       description: "Type text at the current cursor position",
+    },
+    move: {
+      usage: "move <x> <y>",
+      description:
+        "Move the mouse cursor to the given screenshot coordinates without clicking",
+    },
+    scroll: {
+      usage: "scroll <x> <y> <up|down|left|right> <amount>",
+      description:
+        "Scroll the wheel at the given screenshot coordinates by the given number of clicks",
+    },
+    drag: {
+      usage: "drag <x1> <y1> <x2> <y2>",
+      description:
+        "Press the left mouse button at (x1, y1), drag to (x2, y2), then release",
+    },
+    wait: {
+      usage: "wait [seconds]",
+      description:
+        "Pause to let the UI settle (animations, page loads). Defaults to 5 seconds",
     },
   },
 };

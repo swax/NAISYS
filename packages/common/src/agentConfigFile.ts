@@ -81,13 +81,15 @@ export const AgentConfigFileSchema = z.object({
   webEnabled: z
     .boolean()
     .optional()
-    .describe("Allow agent to browse the web with Lynx, a text based browser"),
+    .describe(
+      "Allow agent to browse the web with a context-optimized text browser built on Lynx. Javascript not supported. Requires `lynx` on the host (e.g. `apt install lynx`)",
+    ),
 
   browserEnabled: z
     .boolean()
     .optional()
     .describe(
-      "Allow agent to browse the web with a real headless Chromium browser via Playwright. Requires `npx playwright install chromium` on the host. Works on JS-heavy SPAs, supports selector-based clicks, and can capture screenshots on demand",
+      "Allow agent to browse the web with a real headless Chromium browser via Playwright. Vision-capable models see screenshots; others fall back to a text/selector mode. Requires `npx playwright install chromium` on the host",
     ),
 
   completeSessionEnabled: z
@@ -145,7 +147,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      `Allow the agent to operate the desktop GUI. Requires a model with supportsComputerUse. Ideal screen resolution <= ${TARGET_MEGAPIXELS}MP to avoid downscaling`,
+      `Allow the agent to operate the desktop GUI. Requires a vision-capable model; computer-use models are ideal. Screens over ${TARGET_MEGAPIXELS}MP will be downscaled.`,
     ),
 });
 

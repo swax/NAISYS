@@ -6,6 +6,7 @@ import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
 import {
   createMockCommandLoopState,
   createMockContextManager,
+  createMockInputMode,
   createMockOutputService,
 } from "../mocks.js";
 
@@ -54,6 +55,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     await expect(
@@ -123,6 +125,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     await desktopService.confirmAndExecuteActions("", [
@@ -195,6 +198,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     await expect(desktopService.handleCommand("screenshot")).resolves.toBe("");
@@ -259,6 +263,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     await expect(desktopService.handleCommand("screenshot")).resolves.toBe(
@@ -310,6 +315,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     await expect(desktopService.handleCommand("click 828 764")).resolves.toBe(
@@ -365,6 +371,7 @@ describe("desktop focus commands", () => {
         getCurrentPath: vi.fn(() => Promise.resolve("/tmp")),
       } as any,
       createMockCommandLoopState() as any,
+      createMockInputMode() as any,
     );
 
     const helpText = await desktopService.handleCommand("");

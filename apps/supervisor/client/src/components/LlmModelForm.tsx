@@ -219,7 +219,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
         />
         <Switch
           label="Supports Computer Use"
-          description="Model can control a computer via screenshots and actions"
+          description="Model has native tooling to control a computer via screenshots and actions. (Models without computer use, but have vision still have access to all the same computer use functionality through ns-desktop)"
           disabled={readOnly}
           {...form.getInputProps("supportsComputerUse", { type: "checkbox" })}
         />

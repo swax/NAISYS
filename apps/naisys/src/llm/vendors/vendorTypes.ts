@@ -16,7 +16,7 @@ export type DesktopScrollDirection = "up" | "down" | "left" | "right";
 
 export type DesktopSubAction =
   | { action: "screenshot" }
-  | { action: "wait" }
+  | { action: "wait"; duration?: number }
   | {
       action:
         | "left_click"

@@ -253,6 +253,15 @@ export function createLynxService(
           output += stderr;
         }
 
+        // The cmd is `timeout`/`wsl`, not lynx itself, so a missing lynx
+        // binary surfaces in stderr from timeout rather than as ENOENT here.
+        if (/lynx.*(?:not found|No such file or directory)/i.test(output)) {
+          reject(
+            "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro)",
+          );
+          return;
+        }
+
         if (output.includes("Exiting via interrupt")) {
           reject("Timed out loading URL: May be inaccessible");
         } else if (error && !output) {
