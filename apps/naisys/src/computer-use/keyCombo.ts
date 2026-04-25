@@ -121,6 +121,75 @@ export function canonicalizeKeyCombo(keyCombo: string): string {
     .join(" ");
 }
 
+/** Map a normalized key combo to Playwright's case-sensitive key syntax. */
+export function toPlaywrightKeyCombo(keyCombo: string): string {
+  return normalizeKeyCombo(keyCombo)
+    .map((chord) => {
+      const parts: string[] = [];
+      for (const mod of chord.modifiers) {
+        parts.push(toPlaywrightModifier(mod));
+      }
+      for (const key of chord.keys) {
+        parts.push(toPlaywrightKey(key));
+      }
+      return parts.join("+");
+    })
+    .join(" ");
+}
+
+function toPlaywrightModifier(mod: CanonicalModifier): string {
+  switch (mod) {
+    case "ctrl":
+      return "Control";
+    case "alt":
+      return "Alt";
+    case "shift":
+      return "Shift";
+    case "meta":
+      return "Meta";
+    case "fn":
+      return "Fn";
+  }
+}
+
+function toPlaywrightKey(key: string): string {
+  switch (key) {
+    case "enter":
+      return "Enter";
+    case "tab":
+      return "Tab";
+    case "escape":
+      return "Escape";
+    case "backspace":
+      return "Backspace";
+    case "delete":
+      return "Delete";
+    case "space":
+      return "Space";
+    case "up":
+      return "ArrowUp";
+    case "down":
+      return "ArrowDown";
+    case "left":
+      return "ArrowLeft";
+    case "right":
+      return "ArrowRight";
+    case "home":
+      return "Home";
+    case "end":
+      return "End";
+    case "pageup":
+      return "PageUp";
+    case "pagedown":
+      return "PageDown";
+    default:
+      if (/^f\d{1,2}$/i.test(key)) {
+        return key.toUpperCase();
+      }
+      return key;
+  }
+}
+
 export function toLinuxKeyToken(key: string): string {
   switch (key) {
     case "enter":

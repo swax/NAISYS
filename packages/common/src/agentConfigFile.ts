@@ -83,6 +83,13 @@ export const AgentConfigFileSchema = z.object({
     .optional()
     .describe("Allow agent to browse the web with Lynx, a text based browser"),
 
+  browserEnabled: z
+    .boolean()
+    .optional()
+    .describe(
+      "Allow agent to browse the web with a real headless Chromium browser via Playwright. Requires `npx playwright install chromium` on the host. Works on JS-heavy SPAs, supports selector-based clicks, and can capture screenshots on demand",
+    ),
+
   completeSessionEnabled: z
     .boolean()
     .optional()

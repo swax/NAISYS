@@ -92,6 +92,76 @@ export const desktopCmd: CommandDef = {
   },
 };
 
+export const browserCmd: CommandDef = {
+  name: "ns-browser",
+  description:
+    "A headless Chromium browser via Playwright — fills the niche between ns-lynx (text) and ns-desktop (full GUI) for vision models that need to interact with web pages. Use `ns-browser help` for mode-specific commands",
+  subcommands: {
+    open: {
+      usage: "open <url>",
+      description:
+        "Navigate to a URL. Visual mode returns a screenshot, text mode returns the accessibility tree",
+    },
+    back: {
+      usage: "back",
+      description: "Navigate back in history",
+    },
+    forward: {
+      usage: "forward",
+      description: "Navigate forward in history",
+    },
+    reload: {
+      usage: "reload",
+      description: "Reload the current page",
+    },
+    close: {
+      usage: "close",
+      description: "Close the current page to free memory",
+    },
+    mode: {
+      usage: "mode [visual|text]",
+      description:
+        "Switch between visual mode (screenshot + coord-based clicks, default) and text mode (accessibility tree + selectors). With no arg, prints the current mode",
+    },
+    screenshot: {
+      usage: "screenshot",
+      description:
+        "Capture a screenshot of the current page and add it to context (requires a vision-capable model)",
+    },
+    click: {
+      usage: "click <x> <y> [left|right|middle|double] | click \"<selector>\"",
+      description:
+        "Visual mode: click at screenshot coordinates. Text mode: click element by selector (e.g. text=Submit, #login, .btn)",
+    },
+    scroll: {
+      usage: "scroll <up|down|left|right> <pixels>",
+      description: "Visual mode only: scroll the viewport by the given pixels",
+    },
+    type: {
+      usage: 'type "<text>"',
+      description: "Type text into the focused element",
+    },
+    key: {
+      usage: "key <combo>",
+      description:
+        "Press a key combo (e.g. enter, tab, escape, ctrl+a). Useful for form submission and navigation",
+    },
+    fill: {
+      usage: 'fill "<selector>" "<text>"',
+      description:
+        "Text mode only: fill an input element matched by selector with the given text",
+    },
+    text: {
+      usage: "text",
+      description: "Dump the current page's accessibility tree (paginated)",
+    },
+    more: {
+      usage: "more",
+      description: "Show the next page of paginated content from `text`",
+    },
+  },
+};
+
 export const lynxCmd: CommandDef = {
   name: "ns-lynx",
   description:

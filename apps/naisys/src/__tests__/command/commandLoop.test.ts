@@ -11,6 +11,7 @@ import { createInputMode } from "../../utils/inputMode.js";
 import { createPromptNotificationService } from "../../utils/promptNotificationService.js";
 import {
   createMockAgentConfig,
+  createMockBrowserService,
   createMockChatService,
   createMockContextManager,
   createMockGlobalConfig,
@@ -57,6 +58,7 @@ describe("commandLoop wait behavior", () => {
       promptBuilder,
       createMockShellCommand(),
       createMockLynxService(),
+      createMockBrowserService(),
       createMockContextManager(),
       createMockWorkspacesFeature(),
       llmService,

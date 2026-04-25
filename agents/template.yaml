@@ -62,6 +62,11 @@ shellModel: claude4sonnet
 # Allow agent to browse the web with Lynx, a text based browser.
 #webEnabled: true
 
+# Allow agent to browse the web with a real headless Chromium browser via Playwright.
+# Works on JS-heavy SPAs, supports selector-based clicks, and can capture screenshots on demand.
+# Requires a one-time host setup: `npx playwright install chromium`.
+#browserEnabled: true
+
 # Allow the agent to end its session. Once ended, it can only be restarted explicitly or via
 # mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive.
 #completeSessionEnabled: true

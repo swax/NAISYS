@@ -6,6 +6,7 @@ import { vi } from "vitest";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import {
   agentConfigCmd,
+  browserCmd,
   chatCmd,
   genImgCmd,
   lynxCmd,
@@ -18,6 +19,7 @@ import type { CommandProtection } from "../command/commandProtection.js";
 import type { PromptBuilder } from "../command/promptBuilder.js";
 import type { ShellCommand } from "../command/shellCommand.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
+import type { BrowserService } from "../features/browser.js";
 import type { GenImg } from "../features/genImg.js";
 import type { LynxService } from "../features/lynx.js";
 import type { SessionService } from "../features/session.js";
@@ -149,6 +151,17 @@ export function createMockLynxService() {
   };
 
   return lynxService;
+}
+
+export function createMockBrowserService() {
+  const browserService: BrowserService = {
+    command: browserCmd,
+    handleCommand: vi.fn(() => Promise.resolve("")),
+    clear: vi.fn(),
+    cleanup: vi.fn(() => Promise.resolve()),
+  };
+
+  return browserService;
 }
 
 export function createMockSessionService() {
@@ -317,6 +330,7 @@ export function createMockAgentConfig(): AgentConfig {
       mailEnabled: true,
       chatEnabled: true,
       webEnabled: false,
+      browserEnabled: false,
       completeSessionEnabled: false,
       debugPauseSeconds: 0,
       wakeOnMessage: false,

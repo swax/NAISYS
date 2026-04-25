@@ -3,7 +3,6 @@
  */
 
 import { execFile } from "child_process";
-import * as crypto from "crypto";
 import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
@@ -14,6 +13,10 @@ import type { GlobalConfig } from "../globalConfig.js";
 import type { CostTracker } from "../llm/costTracker.js";
 import type { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
+import {
+  breakContentIntoPages,
+  createPaginationState,
+} from "./webPagination.js";
 
 export function createLynxService(
   { globalConfig }: GlobalConfig,
@@ -23,12 +26,7 @@ export function createLynxService(
   let debugMode = false;
 
   // Single pagination state since we only navigate one page at a time
-  let _currentPagination: {
-    url: string;
-    pages: string[];
-    currentPage: number;
-    contentHash: string;
-  } | null = null;
+  const pagination = createPaginationState();
 
   /** Links numbers are unique in the context so that `ns-lynx follow <linknum>` can be called on all previous output */
   const _globalLinkMap = new Map<number, string>();
@@ -181,7 +179,6 @@ export function createLynxService(
     // Get the token size of the output
     const contentTokenSize = utilities.getTokenCount(content);
     const linksTokenSize = utilities.getTokenCount(links);
-    const contentHash = createContentHash(originalContent);
 
     outputInDebugMode(
       `Content Token size: ${contentTokenSize}\n` +
@@ -189,26 +186,18 @@ export function createLynxService(
     );
 
     if (contentTokenSize > globalConfig().webTokenMax) {
-      const pages = breakContentIntoPages(content, globalConfig().webTokenMax);
-
-      // Set up pagination state
-      _currentPagination = {
-        url: url,
-        pages: pages,
-        currentPage: 1,
-        contentHash: contentHash,
-      };
-
-      // Get first page content
-      content = pages[0];
-
-      // Add pagination info if there are more pages
-      if (pages.length > 1) {
-        content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${pages.length} ---`;
+      const view = pagination.setContent(
+        url,
+        content,
+        globalConfig().webTokenMax,
+      );
+      content = view.content;
+      if (view.totalPages > 1) {
+        content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${view.totalPages} ---`;
       }
 
       output.comment(
-        `Content is ${contentTokenSize} tokens. Showing page 1 of ${pages.length}. Use 'ns-lynx more' for next page.`,
+        `Content is ${contentTokenSize} tokens. Showing page 1 of ${view.totalPages}. Use 'ns-lynx more' for next page.`,
       );
     } else {
       output.comment(
@@ -314,7 +303,7 @@ export function createLynxService(
     _globalLinkMap.clear();
     _globalUrlMap.clear();
     _nextGlobalLinkNum = 1;
-    _currentPagination = null;
+    pagination.clear();
   }
 
   function registerUrl(url: string) {
@@ -352,58 +341,22 @@ export function createLynxService(
     return globalLinks;
   }
 
-  // Helper functions for pagination
-  function createContentHash(content: string): string {
-    return crypto.createHash("md5").update(content).digest("hex");
-  }
-
-  function breakContentIntoPages(
-    content: string,
-    tokensPerPage: number,
-  ): string[] {
-    const totalTokens = utilities.getTokenCount(content);
-    const pages: string[] = [];
-
-    if (totalTokens <= tokensPerPage) {
-      pages.push(content);
-      return pages;
-    }
-
-    const charactersPerToken = content.length / totalTokens;
-    const charactersPerPage = Math.ceil(tokensPerPage * charactersPerToken);
-
-    let startIndex = 0;
-    while (startIndex < content.length) {
-      const endIndex = Math.min(startIndex + charactersPerPage, content.length);
-      pages.push(content.substring(startIndex, endIndex));
-      startIndex = endIndex;
-    }
-
-    return pages;
-  }
-
   function showMoreContent(): string {
-    if (!_currentPagination) {
+    if (!pagination.hasContent()) {
       return "No paginated content available. Open a URL first with 'ns-lynx open <url>'.";
     }
 
-    if (_currentPagination.currentPage >= _currentPagination.pages.length) {
-      return `Already at the last page (${_currentPagination.pages.length}) of content for ${_currentPagination.url}.`;
+    if (pagination.isAtLastPage()) {
+      return `Already at the last page (${pagination.getTotalPages()}) of content for ${pagination.getLastUrl()}.`;
     }
 
-    // Move to next page
-    _currentPagination.currentPage++;
-
-    let pageContent =
-      _currentPagination.pages[_currentPagination.currentPage - 1];
-
-    // Add pagination info
-    if (_currentPagination.currentPage < _currentPagination.pages.length) {
-      pageContent += `\n\n--- More content available. Use 'ns-lynx more' to view page ${_currentPagination.currentPage + 1} of ${_currentPagination.pages.length} ---`;
+    const view = pagination.next()!;
+    let pageContent = view.content;
+    if (view.pageNum < view.totalPages) {
+      pageContent += `\n\n--- More content available. Use 'ns-lynx more' to view page ${view.pageNum + 1} of ${view.totalPages} ---`;
     }
 
-    let result = `URL: ${_currentPagination.url} (Page ${_currentPagination.currentPage} of ${_currentPagination.pages.length})\n\n${pageContent}`;
-
+    const result = `URL: ${view.url} (Page ${view.pageNum} of ${view.totalPages})\n\n${pageContent}`;
     return storeMapSetLinks(result, "");
   }
 

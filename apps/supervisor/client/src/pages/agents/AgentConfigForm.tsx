@@ -64,6 +64,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.mailEnabled) result.mailEnabled = true;
   if (values.chatEnabled) result.chatEnabled = true;
   if (values.webEnabled) result.webEnabled = true;
+  if (values.browserEnabled) result.browserEnabled = true;
   if (values.completeSessionEnabled) result.completeSessionEnabled = true;
   if (values.wakeOnMessage) result.wakeOnMessage = true;
   if (values.workspacesEnabled) result.workspacesEnabled = true;
@@ -95,6 +96,7 @@ interface FormValues {
   mailEnabled: boolean;
   chatEnabled: boolean;
   webEnabled: boolean;
+  browserEnabled: boolean;
   completeSessionEnabled: boolean;
   wakeOnMessage: boolean;
   workspacesEnabled: boolean;
@@ -188,6 +190,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       mailEnabled: config.mailEnabled ?? false,
       chatEnabled: config.chatEnabled ?? false,
       webEnabled: config.webEnabled ?? false,
+      browserEnabled: config.browserEnabled ?? false,
       completeSessionEnabled: config.completeSessionEnabled ?? false,
       wakeOnMessage: config.wakeOnMessage ?? false,
       workspacesEnabled: config.workspacesEnabled ?? false,
@@ -408,6 +411,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Web Enabled"
           description={desc("webEnabled")}
           {...form.getInputProps("webEnabled", { type: "checkbox" })}
+        />
+        <Switch
+          label="Browser Enabled"
+          description={desc("browserEnabled")}
+          {...form.getInputProps("browserEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Complete Session Enabled"

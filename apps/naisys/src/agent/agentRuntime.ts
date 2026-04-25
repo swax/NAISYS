@@ -9,6 +9,7 @@ import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createComputerService } from "../computer-use/computerService.js";
 import { createDesktopService } from "../computer-use/desktop.js";
+import { createBrowserService } from "../features/browser.js";
 import { createGenImg } from "../features/genImg.js";
 import { createListenService } from "../features/listen.js";
 import { createLookService } from "../features/look.js";
@@ -211,6 +212,13 @@ export async function createAgentRuntime(
     hubClient,
   );
   const lynxService = createLynxService(globalConfig, costTracker, output);
+  const browserService = createBrowserService(
+    globalConfig,
+    agentConfig,
+    contextManager,
+    output,
+    modelService,
+  );
   // Command components
   const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(
@@ -270,6 +278,7 @@ export async function createAgentRuntime(
   const commandRegistry = createCommandRegistry(inputMode, [
     commentCommand,
     lynxService,
+    browserService,
     genimg,
     desktopService,
     lookService,
@@ -305,6 +314,7 @@ export async function createAgentRuntime(
     promptBuilder,
     shellCommand,
     lynxService,
+    browserService,
     contextManager,
     workspaces,
     llmService,
@@ -355,6 +365,7 @@ export async function createAgentRuntime(
       costTracker.cleanup();
       mailService.cleanup();
       chatService.cleanup();
+      void browserService.cleanup();
     },
   };
 }

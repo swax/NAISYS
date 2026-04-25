@@ -47,6 +47,7 @@ export const ConfigSummary: React.FC<{
   if (config.mailEnabled) features.push("Mail");
   if (config.chatEnabled) features.push("Chat");
   if (config.webEnabled) features.push("Web");
+  if (config.browserEnabled) features.push("Browser");
   if (config.completeSessionEnabled) features.push("Complete Session");
   if (config.wakeOnMessage) features.push("Wake On Message");
   if (config.workspacesEnabled) features.push("Workspaces");
