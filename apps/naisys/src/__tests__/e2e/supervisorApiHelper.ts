@@ -6,6 +6,10 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 export interface SupervisorApiClient {
   get: <T>(path: string) => Promise<T>;
   post: <T>(path: string, body?: Record<string, unknown>) => Promise<T>;
+  /** POST multipart/form-data and parse JSON response */
+  postMultipart: <T>(path: string, formData: FormData) => Promise<T>;
+  /** Fetch a path relative to the host root (not the API prefix), with auth cookie */
+  fetchFromHost: (pathFromRoot: string, init?: RequestInit) => Promise<Response>;
 }
 
 export async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -32,6 +36,10 @@ export function createSupervisorApiClient(
   baseUrl: string,
   cookie: string,
 ): SupervisorApiClient {
+  // baseUrl looks like http://host:port/supervisor/api — derive the host root
+  // for endpoints that already include the API prefix (e.g. attachment download URLs).
+  const hostRoot = new URL(baseUrl).origin;
+
   async function apiRequest<T>(
     method: string,
     path: string,
@@ -51,6 +59,22 @@ export function createSupervisorApiClient(
     get: <T>(path: string) => apiRequest<T>("GET", path),
     post: <T>(path: string, body?: Record<string, unknown>) =>
       apiRequest<T>("POST", path, body),
+    postMultipart: async <T>(
+      path: string,
+      formData: FormData,
+    ): Promise<T> => {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: "POST",
+        headers: { cookie },
+        body: formData,
+      });
+      return parseJsonResponse<T>(response);
+    },
+    fetchFromHost: (pathFromRoot: string, init: RequestInit = {}) =>
+      fetch(`${hostRoot}${pathFromRoot}`, {
+        ...init,
+        headers: { ...(init.headers ?? {}), cookie },
+      }),
   };
 }
 
