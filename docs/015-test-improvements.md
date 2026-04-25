@@ -10,15 +10,9 @@ new tests are already reinventing helpers that should be shared.
 This doc covers:
 
 - Testing real pure functions instead of copied production implementations
-- OpenAPI route registration drift and enum-sync helper scope
+- Enum-sync helper scope
 - Remaining ERP UI page-action helpers
 - Feedback on the existing suggestions, including what to keep, revise, or defer
-
-## Highest-Leverage Changes
-
-In rough priority order:
-
-1. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## ERP UI Page Actions
 
@@ -46,31 +40,6 @@ need the same shape.
 The e2e folder is still not included by `apps/erp/server/tsconfig.json`, so
 interface drift in helpers may not be caught by `tsc`. Adding a dedicated
 `tsconfig.e2e.json` would close that gap.
-
-## OpenAPI Spec Generation
-
-The current ERP OpenAPI test hand-maintains a route list in
-`apps/erp/server/src/tests/openapi-spec.test.ts:80-144`. Production route
-registration lives in `apps/erp/server/src/erpRoutes.ts:36-122`.
-
-The existing suggestion to avoid dynamic route discovery is right: reflecting
-over whatever Fastify happened to register can make the test tautological. But
-the current manual list duplicates production wiring and can drift. It already
-appears to omit the second `stepFieldAttachmentRoutes` registration that
-production has for `/sets/:setIndex/...`.
-
-Better target:
-
-- Keep a minimal test app helper that registers cookie, multipart, swagger, and
-  Zod compilers.
-- Register production `erpRoutes`, not `erpPlugin` and not a copied route list.
-  `erpPlugin` does DB/migration/server work; `erpRoutes` is the schema route
-  graph.
-- Add a few explicit path assertions for critical routes if you still want the
-  test to prove important routes exist.
-
-Supervisor already does the simpler version by registering `apiRoutes` directly.
-ERP should follow that pattern.
 
 ## Mock Factory Overrides
 
