@@ -35,54 +35,7 @@ Defer tests that:
 - require live LLM providers
 - require fragile timing unless the workflow is core product behavior
 
-## 1. Multi-Host Agent Placement and Failover
-
-**Priority: high**
-
-**Why it should move coverage**
-
-Host registration, assignment, least-loaded routing, status broadcasts, and
-disconnect handling are central to the hub/supervisor/NAISYS boundary. Existing
-mail tests prove cross-hub communication, but they do not fully exercise host
-management from the supervisor perspective.
-
-**Workflow**
-
-1. Start a standalone hub.
-2. Start a supervisor connected to that hub.
-3. Start two NAISYS clients with distinct `NAISYS_HOSTNAME` values.
-4. Seed three agents.
-5. Use supervisor host APIs to inspect both hosts.
-6. Restrict one host.
-7. Assign one agent to the restricted host.
-8. Start agents and assert placement:
-   - assigned agent starts on the assigned host
-   - unassigned agent starts on an available unrestricted host
-9. Stop one NAISYS client.
-10. Assert supervisor marks the host offline.
-11. Attempt an action that should fail or route elsewhere.
-12. Restart the client and assert status recovers.
-
-**Coverage targets**
-
-- `apps/hub/src/services/hostRegistrar.ts`
-- `apps/hub/src/services/naisysServer.ts`
-- `apps/hub/src/handlers/hubHostService.ts`
-- `apps/hub/src/handlers/hubAgentService.ts`
-- `apps/naisys/src/hub/hubClient.ts`
-- `apps/naisys/src/services/hostService.ts`
-- `apps/naisys/src/services/heartbeatService.ts`
-- `apps/supervisor/server/src/services/agentHostStatusService.ts`
-- `apps/supervisor/server/src/routes/hosts.ts`
-- `apps/supervisor/server/src/routes/agentLifecycle.ts`
-
-**Best home**
-
-`apps/naisys/src/__tests__/e2e/multi-host-placement.e2e.test.ts`
-
-This will need careful ports and cleanup. Keep it API-first and avoid UI.
-
-## 2. ERP Execution With Attachments, Comments, Labor, and Audit
+## 1. ERP Execution With Attachments, Comments, Labor, and Audit
 
 **Priority: high**
 
@@ -134,7 +87,7 @@ Use API for setup and assertions. Use Playwright UI only if the UI itself is the
 behavior under test, because browser-side client coverage is not currently
 counted.
 
-## 3. ERP Revision Diff and Dependency Workflow
+## 2. ERP Revision Diff and Dependency Workflow
 
 **Priority: medium-high**
 
@@ -174,7 +127,7 @@ business rules matter more than the UI.
 
 `apps/erp/server/e2e/api/revision-diff-dependencies-api.spec.ts`
 
-## 4. NAISYS CLI Session and Workspace Workflow
+## 3. NAISYS CLI Session and Workspace Workflow
 
 **Priority: medium-high**
 
@@ -222,7 +175,7 @@ Before writing this, add helpers to `e2eTestHelper.ts` like `runCommand`,
 `startAgent`, `switchAgent`, and `expectPrompt`. That will reduce flake and make
 future CLI E2Es cheaper.
 
-## 5. Supervisor Auth to ERP Auth Bridge
+## 4. Supervisor Auth to ERP Auth Bridge
 
 **Priority: medium**
 
@@ -265,7 +218,7 @@ Either:
 Prefer the NAISYS integrated-process test if the goal is cross-workspace
 coverage.
 
-## 6. Models and Variables Propagation
+## 5. Models and Variables Propagation
 
 **Priority: medium**
 
@@ -303,7 +256,7 @@ low UI risk.
 
 `apps/naisys/src/__tests__/e2e/models-variables-propagation.e2e.test.ts`
 
-## 7. Hub Access Key Rotation and Reconnect
+## 6. Hub Access Key Rotation and Reconnect
 
 **Priority: medium**
 
@@ -340,9 +293,7 @@ important and hard to cover with pure unit tests.
 
 1. **ERP Execution With Attachments, Comments, Labor, and Audit**
    - Good next ERP server jump without duplicating order lifecycle.
-2. **Multi-Host Agent Placement and Failover**
-   - More complex, but probably the most valuable distributed-system test.
-3. **NAISYS CLI Session and Workspace Workflow**
+2. **NAISYS CLI Session and Workspace Workflow**
    - Directly attacks the lowest coverage workspace.
 
 ## Measuring Each Addition
