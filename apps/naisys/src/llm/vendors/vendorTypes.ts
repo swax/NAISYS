@@ -10,14 +10,56 @@ export type QuerySources =
   | "look"
   | "listen";
 
-export type DesktopActionInput = Record<string, unknown> & {
-  actions: Record<string, unknown>[];
-};
+export type DesktopCoord = [number, number];
+
+export type DesktopScrollDirection = "up" | "down" | "left" | "right";
+
+export type DesktopSubAction =
+  | { action: "screenshot" }
+  | { action: "wait" }
+  | {
+      action:
+        | "left_click"
+        | "right_click"
+        | "middle_click"
+        | "double_click"
+        | "triple_click"
+        | "mouse_move";
+      coordinate: DesktopCoord;
+    }
+  | { action: "type"; text: string }
+  | { action: "key"; text: string }
+  | { action: "hold_key"; text: string; duration: number }
+  | {
+      action: "scroll";
+      coordinate: DesktopCoord;
+      scroll_direction: DesktopScrollDirection;
+      scroll_amount: number;
+    }
+  | {
+      action: "left_click_drag";
+      start_coordinate: DesktopCoord;
+      coordinate: DesktopCoord;
+    };
+
+export interface DesktopActionInput {
+  actions: DesktopSubAction[];
+  /** Stamped by attachViewportToActions; replay paths derive their coord frame from this. */
+  viewport?: DesktopViewport;
+  /** Gemini 3 Flash thoughtSignature; replayed back through context. */
+  thoughtSignature?: string;
+}
 
 export interface DesktopAction {
   id: string;
   name: string;
   input: DesktopActionInput;
+  /**
+   * Set by provider-boundary validators when the raw payload didn't match
+   * `DesktopSubAction`. confirmAndExecuteActions short-circuits on this and
+   * surfaces the message back to the model as a tool_result error.
+   */
+  validationError?: string;
 }
 
 export interface DesktopViewport {

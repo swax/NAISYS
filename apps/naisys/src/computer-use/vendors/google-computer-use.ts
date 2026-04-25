@@ -9,7 +9,10 @@
 import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
 import type {
   DesktopAction,
+  DesktopActionInput,
   DesktopConfig,
+  DesktopScrollDirection,
+  DesktopSubAction,
   DesktopViewport,
 } from "../../llm/vendors/vendorTypes.js";
 import {
@@ -39,16 +42,7 @@ const GOOGLE_CU_ACTIONS = new Set([
   "navigate",
 ]);
 
-function isCoordinatePair(value: unknown): value is [number, number] {
-  return (
-    Array.isArray(value) &&
-    value.length >= 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
-}
-
-export function isGoogleComputerUseAction(name: string): boolean {
+function isGoogleComputerUseAction(name: string): boolean {
   return GOOGLE_CU_ACTIONS.has(name);
 }
 
@@ -59,7 +53,7 @@ function convertGoogleActionToInternal(
   args: Record<string, unknown>,
   scaledWidth: number,
   scaledHeight: number,
-): Record<string, unknown>[] {
+): DesktopSubAction[] {
   const denormalize = (x: number, y: number) =>
     mapCoordinateBetweenSpaces(
       [x, y],
@@ -85,7 +79,7 @@ function convertGoogleActionToInternal(
         },
       ];
     case "type_text_at": {
-      const actions: Record<string, unknown>[] = [];
+      const actions: DesktopSubAction[] = [];
       actions.push({
         action: "left_click",
         coordinate: denormalize(args.x as number, args.y as number),
@@ -110,7 +104,7 @@ function convertGoogleActionToInternal(
             Math.round(scaledWidth / 2),
             Math.round(scaledHeight / 2),
           ],
-          scroll_direction: args.direction as string,
+          scroll_direction: args.direction as DesktopScrollDirection,
           scroll_amount: 3,
         },
       ];
@@ -121,7 +115,7 @@ function convertGoogleActionToInternal(
         {
           action: "scroll",
           coordinate: denormalize(args.x as number, args.y as number),
-          scroll_direction: args.direction as string,
+          scroll_direction: args.direction as DesktopScrollDirection,
           scroll_amount: amount,
         },
       ];
@@ -144,7 +138,7 @@ function convertGoogleActionToInternal(
     case "go_forward":
       return [{ action: "key", text: "alt+right" }];
     case "navigate": {
-      const actions: Record<string, unknown>[] = [];
+      const actions: DesktopSubAction[] = [];
       actions.push({ action: "key", text: "ctrl+l" });
       actions.push({ action: "type", text: args.url as string });
       actions.push({ action: "key", text: "enter" });
@@ -162,7 +156,7 @@ function convertGoogleActionToInternal(
 
 function reconstructGoogleArgs(
   googleFuncName: string,
-  internalActions: Record<string, unknown>[],
+  internalActions: DesktopSubAction[],
   scaledWidth: number,
   scaledHeight: number,
 ): Record<string, unknown> {
@@ -174,23 +168,13 @@ function reconstructGoogleArgs(
       NORMALIZED_MAX,
       NORMALIZED_MAX,
     );
-  const getCoord = (
-    a: Record<string, unknown> | undefined,
-    key: "coordinate" | "start_coordinate" = "coordinate",
-  ) => {
-    const coord = a?.[key];
-    return isCoordinatePair(coord) ? coord : undefined;
-  };
 
   switch (googleFuncName) {
-    case "click_at": {
-      const coord = getCoord(internalActions[0]);
-      const [x, y] = normalize(coord![0], coord![1]);
-      return { x, y };
-    }
+    case "click_at":
     case "hover_at": {
-      const coord = getCoord(internalActions[0]);
-      const [x, y] = normalize(coord![0], coord![1]);
+      const a = internalActions[0];
+      if (a?.action !== "left_click" && a?.action !== "mouse_move") return {};
+      const [x, y] = normalize(a.coordinate[0], a.coordinate[1]);
       return { x, y };
     }
     case "type_text_at": {
@@ -198,61 +182,59 @@ function reconstructGoogleArgs(
         (a) => a.action === "left_click",
       );
       const typeAction = internalActions.find((a) => a.action === "type");
-      const coord = getCoord(clickAction!);
+      if (clickAction?.action !== "left_click") return {};
       const hasClear = internalActions.some(
-        (a) =>
-          a.action === "key" &&
-          canonicalizeKeyCombo((a.text as string) || "") === "ctrl+a",
+        (a) => a.action === "key" && canonicalizeKeyCombo(a.text) === "ctrl+a",
       );
       const hasEnter = internalActions.some(
-        (a) =>
-          a.action === "key" &&
-          canonicalizeKeyCombo((a.text as string) || "") === "enter",
+        (a) => a.action === "key" && canonicalizeKeyCombo(a.text) === "enter",
       );
-      const [x, y] = normalize(coord![0], coord![1]);
+      const [x, y] = normalize(
+        clickAction.coordinate[0],
+        clickAction.coordinate[1],
+      );
       return {
         x,
         y,
-        text: (typeAction?.text as string) || "",
+        text: typeAction?.action === "type" ? typeAction.text : "",
         press_enter: hasEnter,
         clear_before_typing: hasClear,
       };
     }
-    case "key_combination":
-      return { keys: (internalActions[0]?.text as string) || "" };
-    case "scroll_document":
-      return {
-        direction: (internalActions[0]?.scroll_direction as string) || "down",
-      };
+    case "key_combination": {
+      const a = internalActions[0];
+      return { keys: a?.action === "key" ? a.text : "" };
+    }
+    case "scroll_document": {
+      const a = internalActions[0];
+      return { direction: a?.action === "scroll" ? a.scroll_direction : "down" };
+    }
     case "scroll_at": {
-      const coord = getCoord(internalActions[0]);
-      const amount = (internalActions[0]?.scroll_amount as number) || 3;
-      const [x, y] = normalize(coord![0], coord![1]);
+      const a = internalActions[0];
+      if (a?.action !== "scroll") return {};
+      const [x, y] = normalize(a.coordinate[0], a.coordinate[1]);
       return {
         x,
         y,
-        direction: (internalActions[0]?.scroll_direction as string) || "down",
-        magnitude: amount * 200,
+        direction: a.scroll_direction,
+        magnitude: a.scroll_amount * 200,
       };
     }
     case "drag_and_drop": {
-      const startCoord = getCoord(internalActions[0], "start_coordinate")!;
-      const endCoord = getCoord(internalActions[0]);
-      const [x, y] = normalize(startCoord[0], startCoord[1]);
+      const a = internalActions[0];
+      if (a?.action !== "left_click_drag") return {};
+      const [x, y] = normalize(a.start_coordinate[0], a.start_coordinate[1]);
       const [destination_x, destination_y] = normalize(
-        endCoord![0],
-        endCoord![1],
+        a.coordinate[0],
+        a.coordinate[1],
       );
-      return {
-        x,
-        y,
-        destination_x,
-        destination_y,
-      };
+      return { x, y, destination_x, destination_y };
     }
     case "navigate": {
       const typeAction = internalActions.find((a) => a.action === "type");
-      return { url: (typeAction?.text as string) || "" };
+      return {
+        url: typeAction?.action === "type" ? typeAction.text : "",
+      };
     }
     case "go_back":
     case "go_forward":
@@ -273,7 +255,7 @@ function reconstructGoogleArgs(
  * only for malformed/legacy input that lacks a stamp.
  */
 function getReplayScaledDimensions(
-  input: Record<string, unknown>,
+  input: DesktopActionInput,
   desktopConfig: DesktopConfig,
 ): { scaledWidth: number; scaledHeight: number } {
   const stamped = input.viewport as Partial<DesktopViewport> | undefined;
@@ -317,16 +299,6 @@ export function extractDesktopActions(
     const fc = part?.functionCall;
     if (!fc || typeof fc !== "object") continue;
     const name = fc.name as string;
-    if (!isGoogleComputerUseAction(name)) continue;
-
-    const args = (fc.args || {}) as Record<string, unknown>;
-    const internalActions = convertGoogleActionToInternal(
-      name,
-      args,
-      scaledWidth,
-      scaledHeight,
-    );
-
     const id =
       (fc.id as string) ||
       `google-cu-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -335,6 +307,31 @@ export function extractDesktopActions(
     // Gemini 3 Flash requires it when replaying function_call parts in context.
     // It flows through ToolUseBlock.input (Record<string, unknown>) untouched.
     const thoughtSignature = part.thoughtSignature ?? part.thought_signature;
+
+    // Unknown Google function names used to be silently skipped, which let
+    // the model retry the same unsupported call indefinitely. Surface as a
+    // validationError-bearing DesktopAction so the model gets feedback in
+    // the next turn's tool_result.
+    if (!isGoogleComputerUseAction(name)) {
+      actions.push({
+        id,
+        name,
+        input: {
+          actions: [],
+          ...(thoughtSignature ? { thoughtSignature } : {}),
+        },
+        validationError: `Unsupported Google computer-use function: ${name}`,
+      });
+      continue;
+    }
+
+    const args = (fc.args || {}) as Record<string, unknown>;
+    const internalActions = convertGoogleActionToInternal(
+      name,
+      args,
+      scaledWidth,
+      scaledHeight,
+    );
 
     actions.push({
       id,
@@ -384,17 +381,17 @@ export function formatContextWithComputerUse(
           parts.push({ text: block.text });
         } else if (block.type === "tool_use") {
           toolUseIdToName.set(block.id, block.name);
+          const input = block.input as unknown as DesktopActionInput;
           const { scaledWidth, scaledHeight } = getReplayScaledDimensions(
-            block.input,
+            input,
             desktopConfig,
           );
           const googleArgs = reconstructGoogleArgs(
             block.name,
-            (block.input as { actions: Record<string, unknown>[] }).actions,
+            input.actions,
             scaledWidth,
             scaledHeight,
           );
-          const inputObj = block.input as Record<string, unknown>;
           parts.push({
             functionCall: {
               name: block.name,
@@ -403,8 +400,8 @@ export function formatContextWithComputerUse(
             },
             // thoughtSignature lives at the Part level, not inside functionCall.
             // Gemini 3 Flash requires it when replaying function_call parts.
-            ...(inputObj.thoughtSignature
-              ? { thoughtSignature: inputObj.thoughtSignature }
+            ...(input.thoughtSignature
+              ? { thoughtSignature: input.thoughtSignature }
               : {}),
           });
         }

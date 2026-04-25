@@ -14,7 +14,6 @@ import {
 import {
   extractDesktopActions,
   formatContextWithComputerUse,
-  isGoogleComputerUseAction,
 } from "../../computer-use/vendors/google-computer-use.js";
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
@@ -171,23 +170,27 @@ export async function sendWithGoogle(
   // so we can capture thoughtSignature which lives at the Part level
   const responseParts: Part[] = result.candidates?.[0]?.content?.parts || [];
 
+  // Dispatch by "is this the console tool?" rather than "is this a known
+  // desktop action?". Anything that isn't the console tool flows into the
+  // desktop extractor, which then routes known computer-use names to typed
+  // actions and unknown names to a validationError-bearing DesktopAction.
+  // This catches new Google computer-use functions we haven't mapped yet,
+  // instead of silently dropping them in the console path.
+  const consoleToolName = tools.consoleToolGoogle.name;
+
   const desktopActions = desktopConfig
     ? extractDesktopActions(
         responseParts.filter(
-          (p) =>
-            p.functionCall && isGoogleComputerUseAction(p.functionCall.name!),
+          (p) => p.functionCall && p.functionCall.name !== consoleToolName,
         ),
         desktopConfig.scaledWidth,
         desktopConfig.scaledHeight,
       )
     : [];
 
-  // Extract console commands (non-computer-use function calls)
+  // Extract console commands (only the declared console tool)
   const consoleFunctionCalls = responseParts
-    .filter(
-      (p) =>
-        p.functionCall && !isGoogleComputerUseAction(p.functionCall.name!),
-    )
+    .filter((p) => p.functionCall && p.functionCall.name === consoleToolName)
     .map((p) => p.functionCall!);
   const consoleCommands = chatConfig.config!.tools
     ? tools.getCommandsFromGoogleToolUse(consoleFunctionCalls)

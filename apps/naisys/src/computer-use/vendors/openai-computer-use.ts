@@ -8,7 +8,13 @@
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 
 import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
-import type { DesktopAction } from "../../llm/vendors/vendorTypes.js";
+import type {
+  DesktopAction,
+  DesktopActionInput,
+  DesktopCoord,
+  DesktopScrollDirection,
+  DesktopSubAction,
+} from "../../llm/vendors/vendorTypes.js";
 
 // --- Action format conversion ---
 
@@ -17,7 +23,7 @@ import type { DesktopAction } from "../../llm/vendors/vendorTypes.js";
  *  than the SDK's ComputerAction union so `any` is used to avoid extensive narrowing. */
 function convertOpenAiActionToInternal(
   action: Record<string, any>,
-): Record<string, unknown> {
+): DesktopSubAction {
   switch (action.type) {
     case "click": {
       const button = action.button || "left";
@@ -32,15 +38,19 @@ function convertOpenAiActionToInternal(
     case "double_click":
       return { action: "double_click", coordinate: [action.x, action.y] };
     case "drag": {
-      // TODO: OpenAI supports multi-point drag paths but the internal format
-      // only stores start + end. Intermediate waypoints are lost here.
-      const path = action.path || [];
-      const start = path[0] || [0, 0];
-      const end = path[path.length - 1] || [0, 0];
+      // OpenAI's drag path is `{x, y}[]`; the internal format uses [x, y]
+      // tuples. Also accept legacy tuple arrays in case cached history
+      // carries the old shape. Multi-point paths collapse to start + end —
+      // intermediate waypoints are lost.
+      const path = (action.path || []) as Array<
+        { x: number; y: number } | DesktopCoord
+      >;
+      const toCoord = (p: { x: number; y: number } | DesktopCoord | undefined): DesktopCoord =>
+        Array.isArray(p) ? [p[0], p[1]] : p ? [p.x, p.y] : [0, 0];
       return {
         action: "left_click_drag",
-        start_coordinate: start,
-        coordinate: end,
+        start_coordinate: toCoord(path[0]),
+        coordinate: toCoord(path[path.length - 1]),
       };
     }
     case "move":
@@ -49,7 +59,7 @@ function convertOpenAiActionToInternal(
       // OpenAI follows Playwright/web convention: positive scrollY = down
       const scrollY = action.scroll_y || 0;
       const scrollX = action.scroll_x || 0;
-      let direction: string;
+      let direction: DesktopScrollDirection;
       let amount: number;
       if (Math.abs(scrollY) >= Math.abs(scrollX)) {
         direction = scrollY > 0 ? "down" : "up";
@@ -74,67 +84,93 @@ function convertOpenAiActionToInternal(
     case "screenshot":
       return { action: "screenshot" };
     default:
-      return { action: action.type };
+      throw new Error(
+        `Unsupported OpenAI computer-use action type: ${action.type}`,
+      );
   }
 }
 
 /** Convert an internal action back to OpenAI format (for context reconstruction) */
 function convertInternalActionToOpenAi(
-  input: Record<string, unknown>,
+  input: DesktopSubAction,
 ): Record<string, unknown> {
-  const coord = input.coordinate as number[] | undefined;
   switch (input.action) {
     case "left_click":
-      return { type: "click", x: coord?.[0], y: coord?.[1], button: "left" };
+      return {
+        type: "click",
+        x: input.coordinate[0],
+        y: input.coordinate[1],
+        button: "left",
+      };
     case "right_click":
-      return { type: "click", x: coord?.[0], y: coord?.[1], button: "right" };
+      return {
+        type: "click",
+        x: input.coordinate[0],
+        y: input.coordinate[1],
+        button: "right",
+      };
     case "middle_click":
       return {
         type: "click",
-        x: coord?.[0],
-        y: coord?.[1],
+        x: input.coordinate[0],
+        y: input.coordinate[1],
         button: "middle",
       };
     case "double_click":
-      return { type: "double_click", x: coord?.[0], y: coord?.[1] };
+      return {
+        type: "double_click",
+        x: input.coordinate[0],
+        y: input.coordinate[1],
+      };
     case "triple_click":
-      return { type: "double_click", x: coord?.[0], y: coord?.[1] };
-    case "left_click_drag": {
-      const startCoord = input.start_coordinate as number[] | undefined;
-      return { type: "drag", path: [startCoord, coord] };
-    }
+      return {
+        type: "double_click",
+        x: input.coordinate[0],
+        y: input.coordinate[1],
+      };
+    case "left_click_drag":
+      return {
+        type: "drag",
+        path: [
+          { x: input.start_coordinate[0], y: input.start_coordinate[1] },
+          { x: input.coordinate[0], y: input.coordinate[1] },
+        ],
+      };
     case "mouse_move":
-      return { type: "move", x: coord?.[0], y: coord?.[1] };
+      return {
+        type: "move",
+        x: input.coordinate[0],
+        y: input.coordinate[1],
+      };
     case "scroll": {
-      const dir = input.scroll_direction as string;
-      const amt = (input.scroll_amount as number) || 3;
       let scrollX = 0;
       let scrollY = 0;
-      if (dir === "down") scrollY = 120 * amt;
-      else if (dir === "up") scrollY = -120 * amt;
-      else if (dir === "right") scrollX = 120 * amt;
-      else if (dir === "left") scrollX = -120 * amt;
+      const amt = input.scroll_amount;
+      if (input.scroll_direction === "down") scrollY = 120 * amt;
+      else if (input.scroll_direction === "up") scrollY = -120 * amt;
+      else if (input.scroll_direction === "right") scrollX = 120 * amt;
+      else if (input.scroll_direction === "left") scrollX = -120 * amt;
       return {
         type: "scroll",
-        x: coord?.[0],
-        y: coord?.[1],
+        x: input.coordinate[0],
+        y: input.coordinate[1],
         scroll_x: scrollX,
         scroll_y: scrollY,
       };
     }
     case "key":
-      return {
-        type: "keypress",
-        keys: (input.text as string)?.split("+") || [],
-      };
+      return { type: "keypress", keys: input.text.split("+") };
+    case "hold_key":
+      // OpenAI has no hold_key equivalent; replay as a plain keypress.
+      // The hold duration is dropped, but the keystroke is preserved so the
+      // session history remains coherent.
+      return { type: "keypress", keys: input.text.split("+") };
     case "type":
       return { type: "type", text: input.text };
     case "wait":
       return { type: "wait" };
     case "screenshot":
       return { type: "screenshot" };
-    default:
-      return { type: input.action };
   }
 }
 
@@ -156,12 +192,25 @@ export function extractDesktopActions(
       // ResponseComputerToolCall shape consistently; read loosely.
       const rawActions =
         (item as unknown as { actions?: Record<string, any>[] }).actions || [];
-      const internalActions = rawActions.map(convertOpenAiActionToInternal);
-      actions.push({
-        id: item.call_id,
-        name: "computer",
-        input: { actions: internalActions },
-      });
+      // convertOpenAiActionToInternal throws on unknown action types — catch
+      // here so a single unsupported action is contained to one tool_use
+      // turn (validationError → tool_result error) rather than killing the
+      // whole LLM query downstream.
+      try {
+        const internalActions = rawActions.map(convertOpenAiActionToInternal);
+        actions.push({
+          id: item.call_id,
+          name: "computer",
+          input: { actions: internalActions },
+        });
+      } catch (e) {
+        actions.push({
+          id: item.call_id,
+          name: "computer",
+          input: { actions: [] },
+          validationError: e instanceof Error ? e.message : String(e),
+        });
+      }
     }
   }
   return actions;
@@ -213,14 +262,11 @@ export function formatInputWithComputerUse<Part>(
       // Emit tool_use blocks as computer_call items
       for (const block of content) {
         if (block.type === "tool_use" && block.name === "computer") {
-          const actionsToConvert = block.input.actions as Record<
-            string,
-            unknown
-          >[];
+          const input = block.input as unknown as DesktopActionInput;
           items.push({
             type: "computer_call",
             call_id: block.id,
-            actions: actionsToConvert.map(convertInternalActionToOpenAi),
+            actions: input.actions.map(convertInternalActionToOpenAi),
             status: "completed",
           });
         }
