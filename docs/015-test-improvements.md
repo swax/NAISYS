@@ -9,18 +9,17 @@ new tests are already reinventing helpers that should be shared.
 
 This doc covers:
 
-- ERP API and UI helpers for HATEOAS/status assertions and authenticated pages
 - Testing real pure functions instead of copied production implementations
 - OpenAPI route registration drift and enum-sync helper scope
+- Remaining ERP UI page-action helpers
 - Feedback on the existing suggestions, including what to keep, revise, or defer
 
 ## Highest-Leverage Changes
 
 In rough priority order:
 
-1. Promote ERP login to a Playwright fixture and add ERP API assertion helpers.
-2. Stop testing copied production functions in `costTracker.test.ts`.
-3. Replace duplicated ERP OpenAPI route lists with production route registration.
+1. Stop testing copied production functions in `costTracker.test.ts`.
+2. Replace duplicated ERP OpenAPI route lists with production route registration.
 
 ## Test Real Pure Functions
 
@@ -51,89 +50,15 @@ Fix:
 - Convert the many period-boundary examples into `test.each` cases so adding a
   new boundary costs one row, not a full test body.
 
-## ERP API Test Client and Assertions
+## ERP UI Page Actions
 
-The Playwright API specs repeat base URLs, response parsing, status assertions,
-HATEOAS assertions, conflict response checks, audit lookup checks, and domain
-setup. Examples:
-
-- `order-runs-api.spec.ts:23-45` creates an order and revision
-- `order-runs-api.spec.ts:153-162`, `:193-212`, `:263-270`, and `:272-298`
-  repeat conflict assertions
-- `order-runs-api.spec.ts:121-135` and `:173-187` repeat audit entry checks
-- `order-revisions-api.spec.ts:47-66` creates a revision and checks actions
-- `order-revisions-api.spec.ts:117-135` and `:211-219` repeat conflict checks
-
-Create `apps/erp/server/e2e/api/helpers/erp-api-client.ts`:
-
-```ts
-export async function expectJson<T>(res: APIResponse, status: number) {
-  expect(res.status()).toBe(status);
-  return (await res.json()) as T;
-}
-
-export async function expectConflict(res: APIResponse, message?: string) {
-  const body = await expectJson<{ message: string; error: string }>(res, 409);
-  expect(body.error).toBe("Conflict");
-  if (message) expect(body.message).toContain(message);
-  return body;
-}
-
-export function expectActions(
-  body: { _actions?: { rel: string }[] },
-  rels: string[],
-) {
-  expect(body._actions).toEqual(
-    expect.arrayContaining(rels.map((rel) => expect.objectContaining({ rel }))),
-  );
-}
-```
-
-Domain setup helpers should be small and composable:
-
-- `createOrder(api, overrides?)`
-- `createRevision(api, orderKey, overrides?)`
-- `createOrderWithRevision(api, overrides?)`
-- `createOrderRun(api, orderKey, data)`
-- `expectAuditEntry(api, { entityType, entityId, action, field, oldValue, newValue })`
-
-This is a good place to standardize the API base URL too. `auth-helper.ts`
-already has `const API = "http://localhost:3302/erp/api"`; export it or expose
-an `erpApiPath(path)` helper so each spec stops redeclaring it.
-
-## ERP UI Fixtures and Page Actions
-
-[014](014-test-infrastructure.md#shared-ui-login-helper) already recommended
-consolidating ERP UI login. The new
-`apps/erp/server/e2e/ui/master-data-to-dispatch.spec.ts` imports
-`getTestCredentials` but still POSTs to `/auth/login` inline. Existing UI specs
-also repeat the same `beforeAll` login shape.
-
-Next step: promote authentication to a Playwright fixture:
-
-```ts
-export const test = base.extend<{ authedPage: Page }>({
-  authedPage: async ({ browser }, use, testInfo) => {
-    const page = await browser.newPage();
-    await loginAsTestUser(page.request, testInfo.workerIndex);
-    await use(page);
-    await page.close();
-  },
-});
-```
-
-Then UI tests can focus on workflow steps instead of setup.
-
-The existing `createOrderWithRevision` helper is a good start, but it has an
-interface drift issue: `order-lifecycle.spec.ts` passes `orderName`, while
-`order-setup.ts` only declares `uniqueKey` and `orderDesc`. The e2e folder is
-not included by `apps/erp/server/tsconfig.json`, so this kind of drift may not
-be caught by `tsc`. Add type-check coverage for Playwright specs or a dedicated
-`tsconfig.e2e.json`.
+The fixture and API/domain helpers are in place
+(`e2e/fixtures.ts`, `e2e/api/helpers/erp-api-client.ts`,
+`e2e/api/helpers/order-fixtures.ts`). Remaining UI work: extract page-action
+helpers so spec bodies focus on workflow, not Playwright primitives.
 
 Good UI page-action helpers:
 
-- `createOrderWithRevision(page, opts)`
 - `approveRevision(page)`
 - `cutOrderRun(page, opts?)`
 - `expectRunStatus(page, status)`
@@ -147,6 +72,10 @@ Be conservative with generic helpers like `createMasterDataEntity`. They are
 tempting, but a helper with `{ route, key, description, extraFields }` can become
 an untyped mini-framework. Prefer named page actions until at least two specs
 need the same shape.
+
+The e2e folder is still not included by `apps/erp/server/tsconfig.json`, so
+interface drift in helpers may not be caught by `tsc`. Adding a dedicated
+`tsconfig.e2e.json` would close that gap.
 
 ## OpenAPI Spec Generation
 

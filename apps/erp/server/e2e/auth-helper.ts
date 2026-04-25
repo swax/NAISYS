@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 
-const API = "http://localhost:3302/erp/api";
+export const ERP_API_BASE = "http://localhost:3302/erp/api";
 const TEST_PASSWORD = "testpass123";
 
 export function getTestCredentials(workerIndex: number) {
@@ -15,7 +15,7 @@ export async function loginAsTestUser(
   workerIndex: number,
 ) {
   const { username, password } = getTestCredentials(workerIndex);
-  const res = await request.post(`${API}/auth/login`, {
+  const res = await request.post(`${ERP_API_BASE}/auth/login`, {
     data: { username, password },
   });
   if (res.status() !== 200) {

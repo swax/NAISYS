@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+
 import { loginAsTestUser } from "../auth-helper";
 
 test.describe.serial("ERP master data to dispatch workflow (UI)", () => {

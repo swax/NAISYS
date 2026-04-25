@@ -1,17 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
+
 import { loginAsTestUser } from "../auth-helper";
 import { createOrderWithRevision } from "./helpers/order-setup";
 
 test.describe.serial("Order lifecycle (UI)", () => {
   const uniqueKey = `e2e-lifecycle-${Date.now()}`;
-  const orderName = "Lifecycle Test Order";
   const orderDesc = "End-to-end lifecycle test";
 
   let page: Page;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
-    // Login via API to set session cookie
     await loginAsTestUser(page.request, test.info().workerIndex);
   });
 
@@ -20,7 +19,7 @@ test.describe.serial("Order lifecycle (UI)", () => {
   });
 
   test("create order with revision", async () => {
-    await createOrderWithRevision(page, { uniqueKey, orderName, orderDesc });
+    await createOrderWithRevision(page, { uniqueKey, orderDesc });
   });
 
   test("approve the revision", async () => {
