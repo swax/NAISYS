@@ -36,6 +36,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   extractAccessKey,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -59,14 +60,18 @@ describe("Multi-Host Agent Placement and Failover E2E", () => {
   let hostA: NaisysTestProcess | null = null;
   let hostB: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4413;
-  const HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
-  const API_BASE = `http://localhost:${SERVER_PORT}/supervisor/api`;
   const SUPERVISOR_HOST = "HOST-INTEGRATED";
+  let SERVER_PORT: number;
+  let HUB_URL: string;
+  let API_BASE: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     testDir = getTestDir("multi_host_placement");
     setupTestDir(testDir);
+
+    SERVER_PORT = await getFreePort();
+    HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
+    API_BASE = `http://localhost:${SERVER_PORT}/supervisor/api`;
 
     integratedDir = join(testDir, "integrated");
     hostADir = join(testDir, "hostA");

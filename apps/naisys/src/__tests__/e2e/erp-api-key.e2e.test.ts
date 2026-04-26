@@ -22,6 +22,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -33,11 +34,12 @@ describe("ERP API Key Auth E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4402;
+  let SERVER_PORT: number;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     testDir = getTestDir("erp_api_key");
     setupTestDir(testDir);
+    SERVER_PORT = await getFreePort();
   });
 
   afterEach(async () => {

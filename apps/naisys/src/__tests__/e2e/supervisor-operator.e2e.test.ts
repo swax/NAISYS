@@ -49,6 +49,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -61,13 +62,15 @@ describe("Supervisor Operator E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4411;
   const HOSTNAME = "TEST-SUPERVISOR-OPERATOR";
-  const API_BASE = `http://localhost:${SERVER_PORT}/supervisor/api`;
+  let SERVER_PORT: number;
+  let API_BASE: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     testDir = getTestDir("supervisor_operator");
     setupTestDir(testDir);
+    SERVER_PORT = await getFreePort();
+    API_BASE = `http://localhost:${SERVER_PORT}/supervisor/api`;
   });
 
   afterEach(async () => {

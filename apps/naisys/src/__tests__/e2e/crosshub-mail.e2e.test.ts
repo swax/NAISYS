@@ -27,6 +27,7 @@ import {
   createAgentYaml,
   createHubEnvFile,
   extractAccessKey,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnHub,
@@ -45,12 +46,15 @@ describe("Cross-Hub Mail E2E", () => {
   let hostA: NaisysTestProcess | null = null;
   let hostB: NaisysTestProcess | null = null;
 
-  const SERVER_PORT = 4401;
-  const HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
+  let SERVER_PORT: number;
+  let HUB_URL: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     testDir = getTestDir("crosshub_mail");
     setupTestDir(testDir);
+
+    SERVER_PORT = await getFreePort();
+    HUB_URL = `http://localhost:${SERVER_PORT}/hub`;
 
     hubDir = join(testDir, "hub");
     hostADir = join(testDir, "hostA");

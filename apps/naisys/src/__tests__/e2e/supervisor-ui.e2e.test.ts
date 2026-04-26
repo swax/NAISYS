@@ -28,6 +28,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   dumpClientCoverage,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -41,11 +42,12 @@ describe("Supervisor UI E2E", () => {
   let browser: Browser | null = null;
   let page: Page | null = null;
 
-  const SERVER_PORT = 4404;
+  let SERVER_PORT: number;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     testDir = getTestDir("supervisor_ui");
     setupTestDir(testDir);
+    SERVER_PORT = await getFreePort();
   });
 
   afterEach(async () => {
