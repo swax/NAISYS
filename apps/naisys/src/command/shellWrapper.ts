@@ -54,6 +54,10 @@ export function createShellWrapper(
   const _commandDelimiter = `__COMMAND_END_${crypto.randomBytes(8).toString("hex")}__`;
 
   let _wrapperSuspended = false;
+  /** Set when a caller (e.g. ns-pty) flags the command as likely to receive
+   *  sensitive input (passwords, keys). While set, callers redact input lines
+   *  in logs/context. Cleared on command completion via resetCommand. */
+  let _secureContinuation = false;
 
   const _queuedOutput: {
     rawDataStr: Buffer;
@@ -313,7 +317,10 @@ export function createShellWrapper(
     }
   }
 
-  async function executeCommand(command: string) {
+  async function executeCommand(
+    command: string,
+    options?: { inlineDelimiter?: boolean; secure?: boolean },
+  ) {
     if (_wrapperSuspended) {
       throw "Use continueCommand to send input to a shell command in process";
     }
@@ -322,6 +329,10 @@ export function createShellWrapper(
     _currentCommandText = command;
 
     await ensureOpen();
+
+    if (options?.secure) {
+      _secureContinuation = true;
+    }
 
     if (_currentPath && command.split("\n").length > 1) {
       command = putMultilineCommandInAScript(command);
@@ -335,7 +346,13 @@ export function createShellWrapper(
         return;
       }
 
-      const commandWithDelimiter = `${command}\n${platformConfig.echoDelimiter(_commandDelimiter)}\n`;
+      // Inline delimiter (cmd ; echo "...") for PTY-wrapping commands.
+      // The default \n form leaves the delimiter line sitting in the shell's
+      // stdin pipe, where a long-running child that inherited stdin (e.g.
+      // `script -qfc`) will read it before bash gets to. Same-line form keeps
+      // the entire compound command in bash's parser buffer instead.
+      const separator = options?.inlineDelimiter ? " ; " : "\n";
+      const commandWithDelimiter = `${command}${separator}${platformConfig.echoDelimiter(_commandDelimiter)}\n`;
       _shellInputLines = command.split("\n").map((l) => l.trim());
       _process.stdin.write(commandWithDelimiter);
 
@@ -517,6 +534,7 @@ export function createShellWrapper(
     _writeWatermark = 0;
     _currentCommandText = undefined;
     _shellInputLines = [];
+    _secureContinuation = false;
 
     resetTerminal();
 
@@ -628,6 +646,10 @@ ${command.trim()}`;
     return _wrapperSuspended;
   }
 
+  function isSecureContinuation() {
+    return _secureContinuation;
+  }
+
   function getCommandElapsedTimeString() {
     if (!_startCommandTime) {
       return 0;
@@ -700,6 +722,7 @@ ${command.trim()}`;
     resolvePaths,
     terminate,
     isShellSuspended,
+    isSecureContinuation,
     getCommandElapsedTimeString,
     getCurrentCommandName,
   };

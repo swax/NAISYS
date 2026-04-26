@@ -75,6 +75,7 @@ export function createMockShellCommand() {
   const shellCommand: ShellCommand = {
     handleCommand: vi.fn(() => Promise.resolve({ response: "", exitApp: false })),
     isShellSuspended: vi.fn(() => false),
+    isSecureContinuation: vi.fn(() => false),
     getCommandElapsedTimeString: vi.fn(() => ""),
     getCurrentCommandName: vi.fn(() => ""),
   };
@@ -90,6 +91,7 @@ export function createMockShellWrapper() {
     resolvePaths: vi.fn((paths: string[]) => Promise.resolve(paths)),
     terminate: vi.fn(() => Promise.resolve()),
     isShellSuspended: vi.fn(() => false),
+    isSecureContinuation: vi.fn(() => false),
     getCommandElapsedTimeString: vi.fn(() => ""),
     getCurrentCommandName: vi.fn(() => ""),
   };

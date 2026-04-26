@@ -320,6 +320,13 @@ export const usersCmd: CommandDef = {
     "Display relevant users: superiors, peers, subordinates, and top-level agents. Optionally specify a username for their perspective",
 };
 
+export const ptyCmd: CommandDef = {
+  name: "ns-pty",
+  usage: "<command...>",
+  description:
+    "Run a command in a pseudo-terminal so it sees stdin/stdout as a TTY. Use for commands that need an interactive prompt (sudo, ssh, passwd). Linux only",
+};
+
 export const workspaceCmd: CommandDef = {
   name: "ns-workspace",
   description:

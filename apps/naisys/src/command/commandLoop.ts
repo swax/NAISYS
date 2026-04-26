@@ -185,6 +185,11 @@ export function createCommandLoop(
     }
 
     preemptiveCompactTimeout = setTimeout(() => {
+      // Skip if paused — clearTimeout in setPaused can miss a callback already in flight.
+      if (paused) {
+        return;
+      }
+
       let remainingSeconds = 0;
       if (currentWait) {
         const elapsed = Math.round((Date.now() - currentWait.startTime) / 1000);
@@ -358,9 +363,17 @@ export function createCommandLoop(
         commandList.length === 0 || commandList[0].trim().length === 0;
 
       // readline echoed the prompt+input to stdout; mirror it to the log
-      // so supervisor UI viewers see debug-mode activity
+      // so supervisor UI viewers see debug-mode activity. Redact when the
+      // suspended shell is in a secure continuation (e.g. ns-pty password
+      // prompt) so credentials don't end up in the persisted log.
       if (!blankDebugInput) {
-        output.logOnly(prompt + commandList[0]);
+        const baseCmd = commandList[0].trim().split(/\s+/)[0];
+        const isSecure =
+          shellCommand.isShellSuspended() &&
+          shellCommand.isSecureContinuation() &&
+          baseCmd !== "wait" &&
+          baseCmd !== "kill";
+        output.logOnly(prompt + (isSecure ? "******" : commandList[0]));
       }
     }
     // LLM command prompt
@@ -517,6 +530,7 @@ export function createCommandLoop(
       let queryCancelled = false;
       try {
         commandLoopState.setState("LlmQuerying");
+        const wasPausedBeforeQuery = paused;
         const queryResult = await llmService.query(
           shellModel,
           systemMessage,
@@ -530,7 +544,19 @@ export function createCommandLoop(
         clearPromptMessage(workingMsg);
 
         contextManager.setMessagesTokenCount(queryResult.messagesTokenCount);
-        schedulePreemptiveCompact();
+
+        if (paused) {
+          // Pause arrived mid-query — drop the response so the agent
+          // honors the pause. If we were already paused at start, this
+          // is a bypassPauseOnce response and is kept.
+          if (!wasPausedBeforeQuery) {
+            inputMode.setDebug();
+            return { outcome: "skip", llmErrorCount, wait: indefiniteWait() };
+          }
+          // Either way, no compact timer while paused.
+        } else {
+          schedulePreemptiveCompact();
+        }
 
         // Desktop actions: return for confirmation and execution
         if (queryResult.desktopActions?.length) {
@@ -755,9 +781,7 @@ export function createCommandLoop(
       return false;
     }
     paused = next;
-    // No LLM query is coming while paused, so the cache we'd be racing
-    // is irrelevant. Letting the timer fire would queue a contextCommand
-    // that drains as a surprise compact on resume.
+    // Paused → no upcoming query, drop the pending compact.
     if (next) {
       clearTimeout(preemptiveCompactTimeout);
     }

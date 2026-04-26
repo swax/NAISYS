@@ -14,9 +14,7 @@ export enum LlmApiType {
 
 // --- Model schemas ---
 
-/** Minimum cache TTL we accept for an LLM model. Provider TTLs are typically
- *  >= 5 minutes; lower values are almost always user error or misconfiguration
- *  and would defeat preemptive compaction. */
+/** Provider TTLs are typically >= 5 min; lower values are user error and defeat preemptive compaction. */
 export const MIN_CACHE_TTL_SECONDS = 300;
 
 export const LlmModelSchema = z
