@@ -11,6 +11,7 @@ export default [
       "**/dist/**",
       "**/node_modules/**",
       "**/generated/**",
+      "**/coverage/**",
       "**/*.d.ts",
     ],
   },
