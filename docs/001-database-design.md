@@ -19,6 +19,13 @@ hard to get any other way:
   switching the `provider` and re-running migrations. Larger
   multi-machine deployments with many concurrent agents are the obvious
   reason to graduate to Postgres later.
+- **Field deploys are just `npm install`.** Add a column → `prisma
+  migrate dev` writes a versioned migration file → commit and publish.
+  On the next app start, `migrationHelper.ts` checks the on-disk DB
+  version and runs any pending migrations automatically — no manual
+  SQL, no separate ops step, no hand-written upgrade tooling for
+  installs in the field. See [Migrations](#migrations-versioned-automatic-fast-path)
+  below for the mechanics.
 - **Static typing.** The generated client knows every column, relation,
   and enum. Adding a field to `schema.prisma` and re-running
   `prisma generate` immediately surfaces every call site that needs to be

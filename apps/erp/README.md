@@ -4,7 +4,23 @@
 
 NAISYS ERP is an AI-first order and task-management system. It is optimized for agent consumption: a HATEOAS REST API makes every endpoint discoverable at runtime, slim responses and batch endpoints keep payloads small, and disabled actions carry a reason so agents know *why* they can't act.
 
-Ships as its own package with a dedicated database — see [doc 006](../../docs/006-erp-orders.md) for the design. Run standalone with `npx naisys_erp`, or co-hosted with the supervisor via `npx naisys --supervisor --erp` (cross-app auth enabled with `--supervisor-auth`).
+Ships as its own package with a dedicated database — see [doc 006](../../docs/006-erp-orders.md) for the design. To run standalone:
+
+```bash
+npm install @naisys/erp
+npx naisys-erp
+```
+
+For the co-hosted stack, run `npx naisys --integrated-hub --supervisor --erp` from an install that includes `naisys`, `@naisys/hub`, `@naisys/supervisor`, and `@naisys/erp`. Cross-app auth is enabled automatically.
+
+## Configuration
+
+Standalone ERP reads configuration from `.env`:
+
+- `NAISYS_FOLDER` - persistent data folder for the ERP database and logs
+- `SERVER_PORT` - HTTP port; defaults to `3302`
+- `SUPERVISOR_AUTH` - set to `true` to use supervisor users, sessions, and agent API keys when running alongside supervisor
+- `PUBLIC_READ` - optional read-only public access mode
 
 ## Features
 
@@ -43,7 +59,7 @@ Ships as its own package with a dedicated database — see [doc 006](../../docs/
 
 ### Auth & infrastructure
 
-- ERP-specific auth, with optional `--supervisor-auth` mode for cross-app sessions when co-hosted
+- ERP-specific auth, with supervisor auth enabled automatically for cross-app sessions when co-hosted
 - Rate limits, secure cookies, security headers
 - Prisma-migrated SQLite; migration detection shared with hub
 - General audit table via `field-updated-by/at`

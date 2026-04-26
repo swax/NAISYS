@@ -17,7 +17,7 @@ Publish all packages with a beta dist-tag. Version is auto-derived from the root
 
 ```bash
 # Publishes as 3.0.0-beta.1
-npm run release:beta 1
+./release/publish-beta.sh 1
 ```
 
 This temporarily bumps all versions to the beta tag, publishes, then reverts. Automatically deprecates the previous beta number. Install with:
@@ -31,7 +31,7 @@ npm install -g naisys@beta @naisys/hub@beta @naisys/supervisor@beta @naisys/erp@
 Publish all packages as a stable release using the current version in `package.json`.
 
 ```bash
-npm run release:publish
+./release/publish-release.sh
 ```
 
 ### Deprecate Beta
