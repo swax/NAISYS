@@ -391,6 +391,15 @@ export const talkCmd: CommandDef = {
   isDebug: true,
 };
 
+export const cmdCmd: CommandDef = {
+  name: "ns-cmd",
+  aliases: ["!"],
+  usage: "<command>",
+  description:
+    "Run a command as if the LLM had typed it (input and output are added to context). Shortcut: !<command>",
+  isDebug: true,
+};
+
 export const pauseCmd: CommandDef = {
   name: "ns-pause",
   description:
