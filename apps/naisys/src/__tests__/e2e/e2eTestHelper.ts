@@ -1,10 +1,35 @@
 import { sleep } from "@naisys/common";
 import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
+import { randomUUID } from "crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
+import type { Page } from "playwright";
 import { fileURLToPath } from "url";
+
+/**
+ * Dump the browser's `window.__coverage__` (set by vite-plugin-istanbul
+ * when the client is built with COVERAGE=1) to a JSON file the root
+ * coverage script merges in. The destination directory comes from
+ * `COVERAGE_CLIENT_RAW_DIR` (set by `scripts/run-coverage.mjs`). No-op
+ * when the page wasn't instrumented or the env var isn't set.
+ */
+export async function dumpClientCoverage(page: Page): Promise<void> {
+  const outDir = process.env.COVERAGE_CLIENT_RAW_DIR;
+  if (!outDir) return;
+
+  const coverage = await page.evaluate(
+    () => (globalThis as { __coverage__?: unknown }).__coverage__ ?? null,
+  );
+  if (!coverage) return;
+
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(
+    resolve(outDir, `${randomUUID()}.json`),
+    JSON.stringify(coverage),
+  );
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
