@@ -114,7 +114,11 @@ export function createCommandHandler(
           }
         }
       } else {
-        const exitApp = await shellCommand.handleCommand(input);
+        const { response, exitApp } = await shellCommand.handleCommand(input);
+
+        if (response !== undefined) {
+          contextManager.append(response);
+        }
 
         nextCommandAction = exitApp
           ? NextCommandAction.ExitApplication
