@@ -70,7 +70,7 @@ import type { users, costs, context_log, mail_messages } from "@naisys/hub-datab
 ## Notes
 
 - The database path is configured dynamically at runtime
-- All date fields use ISO string format
+- Prisma `DateTime` fields are exposed as JavaScript `Date` values by the generated client; API/protocol layers serialize them as ISO strings where needed
 - The Prisma Client is generated to `src/generated/prisma/`
 - Foreign key constraints are enabled at runtime
 

@@ -54,7 +54,7 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
     console.warn(
       `[ERP] Warning: ${agentCount} agent user(s) found but supervisor auth is disabled. ` +
         `Agent API key lookups and authentication will not work. ` +
-        `Start with --supervisor-auth to enable.`,
+        `Set SUPERVISOR_AUTH=true to enable.`,
     );
   }
 }

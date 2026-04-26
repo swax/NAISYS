@@ -4,7 +4,27 @@
 
 The supervisor is the web UI for monitoring and managing a NAISYS cluster. It connects to the hub over WebSocket for live updates on agents, runs, mail, and hosts, and exposes a permission-aware REST API that agents themselves can call (via `ns-api`) thanks to HATEOAS action gating.
 
-Run standalone with `npx naisys_supervisor`, or in-process with `npx naisys --supervisor`.
+## Running
+
+Most groups run the supervisor inside the integrated stack — see the [main README](../../README.md). Startup prints the local Supervisor URL; open it to create agents, invite users, assign permissions, add hosts, pin agents, inspect live consoles, review runs, and track model costs.
+
+To run it alone against an existing hub:
+
+```bash
+npm install @naisys/supervisor
+npx naisys-supervisor
+```
+
+> **Note:** Remote auto-update from the supervisor UI only works when the supervisor runs attached to a `naisys` runner (the integrated stack). Running `naisys-supervisor` solo skips the runner that performs the update.
+
+## Configuration
+
+Standalone supervisor reads configuration from `.env`:
+
+- `NAISYS_FOLDER` - persistent data folder shared with the hub databases and logs
+- `HUB_URL` - hub URL, usually `http://localhost:3300/hub` or `https://<server>/hub`
+- `SERVER_PORT` - HTTP port; defaults to `3301`
+- `PUBLIC_READ` - optional read-only public access mode
 
 ## Features
 
