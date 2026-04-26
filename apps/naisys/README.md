@@ -48,7 +48,7 @@ spendLimitDollars: 5.00
 
 All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../docs/003-revise-commands.md)).
 
-- `ns-help`, `ns-hubs`, `ns-hosts`, `ns-users` — cluster discovery
+- `ns-help`, `ns-users` — registry-driven help and relevant-user directory
 - `ns-agent` — start/stop/peek/local subagents; `peek` works across the cluster
 - `ns-mail` — flat (non-thread) mail model ([doc 002](../../docs/002-revised-llmail-plan.md)), `@host` addressing, short-id threads, archive-all, from-title, gap detection/recovery, markdown, cross-machine delivery through the hub
 - `ns-chat` — shorter-form conversation service layered on mail
@@ -57,16 +57,26 @@ All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../
 - `ns-genimg` — image generation (vendor-agnostic model registry)
 - `ns-look` — load images into LLM context
 - `ns-listen` — audio listening with optional transcription
-- `ns-talk` — spoken input; auto-switches back to LLM mode after talk, indefinite wait support
 - `ns-desktop` — screenshot / click / key / focus / hold, usable from the console without tool calls, runs on any model with image input (not just models with native computer use); see the [XFCE/VNC host setup guide](../../guides/xfce-computer-use.md) and [doc 013](../../docs/013-computer-use.md) for the coord-space / focus / vendor design
 - `ns-session` — consolidated pause/compact/wait
 - `ns-workspace` — cache-friendly per-agent file list
-- `ns-agent-command` — agent can modify its own config at runtime
+- `ns-pty` — run a command in a pseudo-terminal so it sees stdin/stdout as a TTY (sudo, ssh, passwd); Linux only
 - `ns-comment` — agent comment/thinking capture
-- `ns-admin-pw` — reset the supervisor superadmin password
-- `ns-api` / `ns-db` / `ns-claude` — call the NAISYS REST API or query the DB directly (handy for Claude Code agents)
 - Custom `ns-*` commands with env-var expansion defined per agent
-- `exit all` / `stop all` — shut down all agents and the app together
+
+### Debug commands
+
+Available only at the local debug prompt; not exposed to the LLM.
+
+- `ns-cmd <command>` (shortcut `!<command>`) — run a command as if the LLM had typed it so input and output land in the LLM context
+- `ns-talk` (shortcut `@<message>`) — send a message to the agent
+- `ns-context` — print the current LLM context
+- `ns-pause [on|off]` — toggle the loop's pause state locally (reproduces the remote pause)
+- `ns-cost` — show token usage and cost tracking
+- `ns-config` — view or update agent config (update only lasts for the current session)
+- `ns-host` — list all known hosts and their status
+- `ns-hub` — show hub connection status
+- `exit` / `exit all` — exit the current agent, or shut down all agents and end the application
 
 ### LLM and model support
 

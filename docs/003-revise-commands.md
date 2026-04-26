@@ -27,7 +27,8 @@ Additional commands introduced or normalized under the `ns-` prefix:
 - `ns-chat` — lightweight team chat (separate from `ns-mail`)
 - `ns-users` — relevant-user directory
 - `ns-workspace` — pinned-file workspace
-- `ns-config`, `ns-host`, `ns-hub`, `ns-pause` — debug/operator commands
+- `ns-pty` — run a command in a pseudo-terminal for tools that require a TTY (sudo, ssh, passwd); Linux only
+- `ns-config`, `ns-host`, `ns-hub`, `ns-pause`, `ns-cmd` — debug/operator commands (`ns-cmd` / `!<command>` runs the rest of the line as if the LLM had typed it)
 - `ns-help` — built-in, auto-populated from the registry
 
 ### Reasons
@@ -74,7 +75,8 @@ Registry is assembled in `agentRuntime.ts`. Registered commands include:
 - `ns-workspace` — pinned-file workspace (`workspaces`)
 - `ns-users` — relevant-user directory (`userDisplayService`)
 - `ns-config` — view/update agent config (`agentConfig`)
-- `ns-context`, `ns-talk`, `ns-pause`, `exit` — debug commands (`createDebugCommands`)
+- `ns-pty` — pseudo-terminal command runner (`ptyService`)
+- `ns-context`, `ns-talk`, `ns-pause`, `ns-cmd`, `exit` — debug commands (`createDebugCommands`)
 - `ns-hub`, `ns-host` — hub/host status, registered when a hub client is present
 
 ### Commands Outside the Registry

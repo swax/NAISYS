@@ -43,117 +43,181 @@ export function createCommandHandler(
 
     let nextCommandAction = NextCommandAction.Continue;
 
-    while (processNextLLMpromptBlock && commandList.length) {
-      const { input, splitResult } = await popFirstCommand(commandList);
+    // ns-cmd / ! interception flips us to LLM mode for one iteration; the
+    // outer try/finally restores debug mode on every exit path so triggerLlm
+    // and other downstream mode logic see the correct starting state.
+    let interceptedToLlm = false;
 
-      if (splitResult == "inputInPrompt") {
-        continue;
-      } else if (splitResult == "inputPromptMismatch" || !input.trim()) {
-        break;
-      }
+    try {
+      while (processNextLLMpromptBlock && commandList.length) {
+        const popped = await popFirstCommand(commandList);
+        const { splitResult } = popped;
+        let input = popped.input;
 
-      // First line is special because we want to append the output to the context without a line break
-      if (inputMode.isLLM()) {
-        const displayInput = redactIfSecure(input);
-        if (firstLine) {
-          firstLine = false;
-          contextManager.append(displayInput, ContentSource.LlmPromptResponse);
-          output.write(prompt + chalk[OutputColor.llm](displayInput));
-        } else {
-          // Check if multiple commands are disabled
-          if (!firstCommand && !agentConfig().multipleCommandsEnabled) {
-            output.errorAndLog(
-              `Multiple commands disabled. Blocked command: ${displayInput}`,
+        if (splitResult == "inputInPrompt") {
+          continue;
+        } else if (splitResult == "inputPromptMismatch" || !input.trim()) {
+          break;
+        }
+
+        const prefixed = applyDebugPrefixes(input);
+        input = prefixed.input;
+        if (prefixed.interceptedToLlm) {
+          interceptedToLlm = true;
+        }
+
+        // First line is special because we want to append the output to the context without a line break
+        if (inputMode.isLLM()) {
+          const displayInput = redactIfSecure(input);
+          if (firstLine) {
+            firstLine = false;
+            contextManager.append(
+              displayInput,
+              ContentSource.LlmPromptResponse,
             );
-            break;
+            output.write(prompt + chalk[OutputColor.llm](displayInput));
+          } else {
+            // Check if multiple commands are disabled
+            if (!firstCommand && !agentConfig().multipleCommandsEnabled) {
+              output.errorAndLog(
+                `Multiple commands disabled. Blocked command: ${displayInput}`,
+              );
+              break;
+            }
+            output.commentAndLog(
+              `Continuing with next command from same LLM response...`,
+            );
+            contextManager.append(displayInput, ContentSource.LLM);
           }
-          output.commentAndLog(
-            `Continuing with next command from same LLM response...`,
-          );
-          contextManager.append(displayInput, ContentSource.LLM);
+
+          // Skip write protection for internal NAISYS commands
+          const commandName = stringArgv(input)[0];
+          if (!commandRegistry.get(commandName)) {
+            const { commandAllowed, rejectReason } =
+              await commandProtection.validateCommand(input);
+
+            if (!commandAllowed) {
+              output.errorAndLog(`Write Protection Triggered`);
+              contextManager.append(rejectReason || "Unknown");
+              break;
+            }
+          }
         }
 
-        // Skip write protection for internal NAISYS commands
-        const commandName = stringArgv(input)[0];
-        if (!commandRegistry.get(commandName)) {
-          const { commandAllowed, rejectReason } =
-            await commandProtection.validateCommand(input);
+        const argv = stringArgv(input);
+        const command = argv[0];
+        // cmdArgs is everything after the command name
+        const cmdArgs = input.slice(command.length).trim();
 
-          if (!commandAllowed) {
-            output.errorAndLog(`Write Protection Triggered`);
-            contextManager.append(rejectReason || "Unknown");
-            break;
+        // Restore Executing after commandProtection may have shifted state
+        // to Confirming/LlmQuerying; the actual command is the next hold.
+        commandLoopState.setState("Executing");
+
+        // Check command registry first
+        const registeredCommand = commandRegistry.get(command);
+        if (registeredCommand) {
+          const expandedArgs = await expandShellArgs(cmdArgs);
+
+          const response = await registeredCommand.handleCommand(expandedArgs);
+
+          // Handle string or CommandResponse
+          if (typeof response === "string") {
+            contextManager.append(response);
+          } else {
+            contextManager.append(response.content);
+
+            // If command provides a next command response, return it directly
+            if (response.nextCommandResponse) {
+              return response.nextCommandResponse;
+            }
           }
-        }
-      }
-
-      const argv = stringArgv(input);
-      const command = argv[0];
-      // cmdArgs is everything after the command name
-      const cmdArgs = input.slice(command.length).trim();
-
-      // Restore Executing after commandProtection may have shifted state
-      // to Confirming/LlmQuerying; the actual command is the next hold.
-      commandLoopState.setState("Executing");
-
-      // Check command registry first
-      const registeredCommand = commandRegistry.get(command);
-      if (registeredCommand) {
-        const expandedArgs = await expandShellArgs(cmdArgs);
-
-        const response = await registeredCommand.handleCommand(expandedArgs);
-
-        // Handle string or CommandResponse
-        if (typeof response === "string") {
-          contextManager.append(response);
         } else {
-          contextManager.append(response.content);
+          const { response, exitApp } = await shellCommand.handleCommand(input);
 
-          // If command provides a next command response, return it directly
-          if (response.nextCommandResponse) {
-            return response.nextCommandResponse;
+          if (response !== undefined) {
+            contextManager.append(response);
           }
-        }
-      } else {
-        const { response, exitApp } = await shellCommand.handleCommand(input);
 
-        if (response !== undefined) {
-          contextManager.append(response);
+          nextCommandAction = exitApp
+            ? NextCommandAction.ExitApplication
+            : NextCommandAction.Continue;
         }
 
-        nextCommandAction = exitApp
-          ? NextCommandAction.ExitApplication
-          : NextCommandAction.Continue;
-      }
+        if (command != "ns-comment" && firstCommand) {
+          firstCommand = false;
+        }
 
-      if (command != "ns-comment" && firstCommand) {
-        firstCommand = false;
-      }
+        // After the first real command, check if we've exceeded the token limit.
+        // Break early so the LLM can re-evaluate and decide to compact.
+        if (
+          !firstCommand &&
+          commandList.length > 0 &&
+          contextManager.getTokenCount() > agentConfig().tokenMax
+        ) {
+          output.errorAndLog(
+            `Token limit exceeded mid-response, breaking to allow session compaction`,
+          );
+          break;
+        }
+      } // End loop processing LLM response
 
-      // After the first real command, check if we've exceeded the token limit.
-      // Break early so the LLM can re-evaluate and decide to compact.
-      if (
-        !firstCommand &&
-        commandList.length > 0 &&
-        contextManager.getTokenCount() > agentConfig().tokenMax
-      ) {
+      // display unprocessed lines to aid in debugging
+      if (commandList.length) {
         output.errorAndLog(
-          `Token limit exceeded mid-response, breaking to allow session compaction`,
+          `Unprocessed LLM commands:\n${commandList.map((c, i) => `${i + 1}: ${c}`).join("\n")}`,
         );
-        break;
       }
-    } // End loop processing LLM response
 
-    // display unprocessed lines to aid in debugging
-    if (commandList.length) {
-      output.errorAndLog(
-        `Unprocessed LLM commands:\n${commandList.map((c, i) => `${i + 1}: ${c}`).join("\n")}`,
-      );
+      return {
+        nextCommandAction,
+      };
+    } finally {
+      if (interceptedToLlm) {
+        inputMode.setDebug();
+      }
+    }
+  }
+
+  /**
+   * Apply debug-mode prefix conventions to the raw input line:
+   *   - `@msg`        → `@ msg`        (single-char alias of ns-talk needs a space)
+   *   - `ns-cmd <x>`  → `<x>` in LLM mode  (run as if the LLM had typed it)
+   *   - `! <x>` / `!<x>` → `<x>` in LLM mode  (shorthand for ns-cmd)
+   *
+   * Side effect: switches inputMode to LLM when an ns-cmd/! prefix is
+   * stripped. The caller owns restoring debug mode (see processCommand's
+   * try/finally) so any triggerLlm/mode logic downstream stays consistent.
+   *
+   * No-op outside debug mode — these prefixes are admin-facing and shouldn't
+   * rewrite stray LLM output that happens to start with `@` or `!`.
+   */
+  function applyDebugPrefixes(input: string): {
+    input: string;
+    interceptedToLlm: boolean;
+  } {
+    if (!inputMode.isDebug()) {
+      return { input, interceptedToLlm: false };
     }
 
-    return {
-      nextCommandAction,
-    };
+    if (input.length > 1 && input.startsWith("@") && input[1] !== " ") {
+      input = "@ " + input.slice(1);
+    }
+
+    let stripped: string | undefined;
+    if (input.startsWith("ns-cmd ")) {
+      stripped = input.slice("ns-cmd ".length).trim();
+    } else if (input.startsWith("! ")) {
+      stripped = input.slice("! ".length).trim();
+    } else if (input.length > 1 && input.startsWith("!")) {
+      stripped = input.slice(1).trim();
+    }
+
+    if (stripped) {
+      inputMode.setLLM();
+      return { input: stripped, interceptedToLlm: true };
+    }
+
+    return { input, interceptedToLlm: false };
   }
 
   type SplitResult =

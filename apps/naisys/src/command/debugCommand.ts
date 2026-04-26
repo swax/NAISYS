@@ -5,7 +5,13 @@ import type { ContextManager } from "../llm/contextManager.js";
 import type { LlmRole } from "../llm/llmDtos.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
-import { contextCmd, exitCmd, pauseCmd, talkCmd } from "./commandDefs.js";
+import {
+  cmdCmd,
+  contextCmd,
+  exitCmd,
+  pauseCmd,
+  talkCmd,
+} from "./commandDefs.js";
 import type { CommandResponse, RegistrableCommand } from "./commandRegistry.js";
 import { NextCommandAction } from "./commandRegistry.js";
 
@@ -104,6 +110,16 @@ export function createDebugCommands(
     },
   };
 
+  // Stub handler — the ns-cmd / ! prefix is intercepted in commandHandler so
+  // the rest of the line runs in LLM mode. This handler only fires when the
+  // user enters the bare command with no args.
+  const nsCmd: RegistrableCommand = {
+    command: cmdCmd,
+    handleCommand: () => {
+      return "Usage: ns-cmd <command> (or !<command>) — runs the command as if the LLM had typed it.";
+    },
+  };
+
   const nsExit: RegistrableCommand = {
     command: exitCmd,
     handleCommand: async (cmdArgs): Promise<CommandResponse> => {
@@ -129,5 +145,5 @@ export function createDebugCommands(
     },
   };
 
-  return [nsContext, nsTalk, nsPause, nsExit];
+  return [nsContext, nsTalk, nsPause, nsCmd, nsExit];
 }
