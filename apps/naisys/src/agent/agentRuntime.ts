@@ -14,6 +14,7 @@ import { createGenImg } from "../features/genImg.js";
 import { createListenService } from "../features/listen.js";
 import { createLookService } from "../features/look.js";
 import { createLynxService } from "../features/lynx.js";
+import { createPtyService } from "../features/pty.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
@@ -58,12 +59,12 @@ export async function createAgentRuntime(
   promptNotification: PromptNotificationService,
 ) {
   /*
-   * Simple form of dependency injection
-   * actually a bit better than the previous module system as this implicitly prevents cirucular dependencies
-   * We can also see from this why modern dependency injection frameworks exist
+   * Per-agent composition root. Keep this as linear hand-wiring rather than a
+   * DI container: construction order is dependency order, which keeps cycles
+   * visible and makes late-binding choices explicit.
    */
 
-  // Base services
+  // Agent-local foundation: config, run identity, attachments, logs, output.
   const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
 
   const runService = await createRunService(
@@ -84,7 +85,7 @@ export async function createAgentRuntime(
   );
   const output = createOutputService(logService);
 
-  // Shell and workspaces (needed by contextManager)
+  // Shell surface and workspace context.
   const shellWrapper = createShellWrapper(
     globalConfig,
     agentConfig,
@@ -94,7 +95,7 @@ export async function createAgentRuntime(
   );
   const workspaces = createWorkspacesFeature(shellWrapper);
 
-  // LLM
+  // Loop state, prompt context, cost tracking, and model access.
   const inputMode = createInputMode();
   const commandLoopState = createCommandLoopState(() => {
     // Immediate heartbeat so supervisors see state transitions within
@@ -143,7 +144,7 @@ export async function createAgentRuntime(
     computerService,
   );
 
-  // Features
+  // Agent-facing feature commands.
   const lookService = createLookService(
     agentConfig,
     modelService,
@@ -220,7 +221,7 @@ export async function createAgentRuntime(
     output,
     modelService,
   );
-  // Command components
+  // Command dispatch and main loop.
   const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(
     globalConfig,
@@ -239,6 +240,7 @@ export async function createAgentRuntime(
     shellWrapper,
     inputMode,
   );
+  const ptyService = createPtyService(shellWrapper);
   const sessionService = createSessionService(
     globalConfig,
     agentConfig,
@@ -289,6 +291,7 @@ export async function createAgentRuntime(
     costDisplayService,
     sessionService,
     workspaces,
+    ptyService,
     userDisplayService,
     ...debugCommands,
     agentConfig,

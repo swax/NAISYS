@@ -16,6 +16,7 @@ export function createShellCommand(
 ) {
   const platformConfig = getPlatformConfig();
   const isShellSuspended = () => shellWrapper.isShellSuspended();
+  const isSecureContinuation = () => shellWrapper.isSecureContinuation();
   const getCommandElapsedTimeString = () =>
     shellWrapper.getCommandElapsedTimeString();
   const getCurrentCommandName = () => shellWrapper.getCurrentCommandName();
@@ -86,6 +87,7 @@ export function createShellCommand(
 
   return {
     isShellSuspended,
+    isSecureContinuation,
     getCommandElapsedTimeString,
     getCurrentCommandName,
     handleCommand,

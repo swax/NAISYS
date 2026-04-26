@@ -54,22 +54,23 @@ export function createCommandHandler(
 
       // First line is special because we want to append the output to the context without a line break
       if (inputMode.isLLM()) {
+        const displayInput = redactIfSecure(input);
         if (firstLine) {
           firstLine = false;
-          contextManager.append(input, ContentSource.LlmPromptResponse);
-          output.write(prompt + chalk[OutputColor.llm](input));
+          contextManager.append(displayInput, ContentSource.LlmPromptResponse);
+          output.write(prompt + chalk[OutputColor.llm](displayInput));
         } else {
           // Check if multiple commands are disabled
           if (!firstCommand && !agentConfig().multipleCommandsEnabled) {
             output.errorAndLog(
-              `Multiple commands disabled. Blocked command: ${input}`,
+              `Multiple commands disabled. Blocked command: ${displayInput}`,
             );
             break;
           }
           output.commentAndLog(
             `Continuing with next command from same LLM response...`,
           );
-          contextManager.append(input, ContentSource.LLM);
+          contextManager.append(displayInput, ContentSource.LLM);
         }
 
         // Skip write protection for internal NAISYS commands
@@ -301,6 +302,24 @@ export function createCommandHandler(
         return `"${escaped}"`;
       })
       .join(" ");
+  }
+
+  /** Mask input lines while a secure-flagged command (e.g. ns-pty) is mid-flight,
+   *  so passwords typed into the suspended shell don't leak into the LLM context,
+   *  the persisted log, or the supervisor UI mirror. wait/kill stay visible since
+   *  they're control verbs, not credentials. */
+  function redactIfSecure(input: string): string {
+    if (
+      !shellWrapper.isShellSuspended() ||
+      !shellWrapper.isSecureContinuation()
+    ) {
+      return input;
+    }
+    const baseCmd = input.trim().split(/\s+/)[0];
+    if (baseCmd === "wait" || baseCmd === "kill") {
+      return input;
+    }
+    return "******";
   }
 
   return {

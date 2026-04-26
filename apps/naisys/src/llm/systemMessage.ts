@@ -20,6 +20,7 @@ import {
   lookCmd,
   lynxCmd,
   mailCmd,
+  ptyCmd,
   sessionCmd,
   subagentCmd,
   usersCmd,
@@ -76,6 +77,11 @@ export function createSystemMessage(
   let workspaceStr = "";
   if (agentConfig().workspacesEnabled) {
     workspaceStr = `\n  ${workspaceCmd.name}: ${workspaceCmd.description}`;
+  }
+
+  let ptyStr = "";
+  if (platformConfig.platform === "linux") {
+    ptyStr = `\n  ${ptyCmd.name} ${ptyCmd.usage}: ${ptyCmd.description}`;
   }
 
   // Build ns-session command help based on enabled features
@@ -158,7 +164,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
   ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
