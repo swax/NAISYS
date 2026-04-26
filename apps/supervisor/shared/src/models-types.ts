@@ -1,4 +1,4 @@
-import { HateoasActionSchema } from "@naisys/common";
+import { HateoasActionSchema, MIN_CACHE_TTL_SECONDS } from "@naisys/common";
 import { z } from "zod";
 
 const ModelOptionSchema = z.object({
@@ -18,7 +18,7 @@ export const LlmModelDetailSchema = z.object({
   outputCost: z.number(),
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
-  cacheTtlSeconds: z.number().int().positive().optional(),
+  cacheTtlSeconds: z.number().int().min(MIN_CACHE_TTL_SECONDS).optional(),
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
   supportsComputerUse: z.boolean().optional(),
@@ -66,7 +66,7 @@ export const SaveLlmModelRequestSchema = z.object({
     outputCost: z.number().default(0),
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
-    cacheTtlSeconds: z.number().int().positive().optional(),
+    cacheTtlSeconds: z.number().int().min(MIN_CACHE_TTL_SECONDS).optional(),
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
     supportsComputerUse: z.boolean().optional(),

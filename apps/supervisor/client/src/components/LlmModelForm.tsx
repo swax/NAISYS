@@ -9,7 +9,11 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { LlmApiType, LlmModelSchema } from "@naisys/common";
+import {
+  LlmApiType,
+  LlmModelSchema,
+  MIN_CACHE_TTL_SECONDS,
+} from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import { IconCheck, IconX } from "@tabler/icons-react";
 
@@ -196,9 +200,9 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
         />
         <NumberInput
           label="Cache TTL (seconds)"
-          description="How long the provider caches prompt context"
+          description={`How long the provider caches prompt context (minimum ${MIN_CACHE_TTL_SECONDS})`}
           disabled={readOnly}
-          min={1}
+          min={MIN_CACHE_TTL_SECONDS}
           {...form.getInputProps("cacheTtlSeconds")}
         />
 

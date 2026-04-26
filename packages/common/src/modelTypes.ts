@@ -14,6 +14,11 @@ export enum LlmApiType {
 
 // --- Model schemas ---
 
+/** Minimum cache TTL we accept for an LLM model. Provider TTLs are typically
+ *  >= 5 minutes; lower values are almost always user error or misconfiguration
+ *  and would defeat preemptive compaction. */
+export const MIN_CACHE_TTL_SECONDS = 300;
+
 export const LlmModelSchema = z
   .object({
     key: z.string().min(1),
@@ -27,7 +32,7 @@ export const LlmModelSchema = z
     outputCost: z.number().default(0),
     cacheWriteCost: z.number().optional(),
     cacheReadCost: z.number().optional(),
-    cacheTtlSeconds: z.number().int().positive().optional(),
+    cacheTtlSeconds: z.number().int().min(MIN_CACHE_TTL_SECONDS).optional(),
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
     supportsComputerUse: z.boolean().optional(),
@@ -82,7 +87,7 @@ const LlmMetaSchema = z.object({
   outputCost: z.number().default(0),
   cacheWriteCost: z.number().optional(),
   cacheReadCost: z.number().optional(),
-  cacheTtlSeconds: z.number().int().positive().optional(),
+  cacheTtlSeconds: z.number().int().min(MIN_CACHE_TTL_SECONDS).optional(),
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
   supportsComputerUse: z.boolean().optional(),
