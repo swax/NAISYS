@@ -755,6 +755,12 @@ export function createCommandLoop(
       return false;
     }
     paused = next;
+    // No LLM query is coming while paused, so the cache we'd be racing
+    // is irrelevant. Letting the timer fire would queue a contextCommand
+    // that drains as a surprise compact on resume.
+    if (next) {
+      clearTimeout(preemptiveCompactTimeout);
+    }
     // Wakes the indefinite wait, renders the comment, and bounces to debug
     // for operator review (via the nonCommand drain rule).
     promptNotification.notify({
