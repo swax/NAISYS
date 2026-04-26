@@ -14,8 +14,15 @@ import type { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import type { OutputService } from "../utils/output.js";
+import { createOutputBuffer } from "./outputBuffer.js";
 
 type ShellEvent = "stdout" | "stderr" | "exit";
+
+// Bound shell output memory at ~4MB (head + tail). Sized well above the
+// downstream token-truncation limit in shellCommand.ts so it only kicks in
+// for true runaway output (e.g. `cat /dev/urandom`), not normal commands.
+const OUTPUT_HEAD_MAX = 2_000_000;
+const OUTPUT_TAIL_MAX = 2_000_000;
 
 export function createShellWrapper(
   { globalConfig }: GlobalConfig,
@@ -28,7 +35,7 @@ export function createShellWrapper(
 
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
-  let _commandOutput = "";
+  const _commandOutput = createOutputBuffer(OUTPUT_HEAD_MAX, OUTPUT_TAIL_MAX);
   let _currentPath: string | undefined;
 
   let _terminal: xterm.Terminal | undefined;
@@ -227,7 +234,7 @@ export function createShellWrapper(
       let finalOutput =
         _currentBufferType == "alternate"
           ? _getTerminalActiveBuffer()
-          : filterPowerShellNoise(_commandOutput).trim();
+          : filterPowerShellNoise(_commandOutput.get()).trim();
 
       if (
         finalOutput.endsWith(platformConfig.commandNotFoundSuffix) ||
@@ -270,10 +277,8 @@ export function createShellWrapper(
     // If we're in alternate mode, just write the data to the terminal
     // When the buffer changes back to normal, the output will be copied back to the command output
     if (_currentBufferType == "normal") {
-      _commandOutput += dataStr;
+      _commandOutput.append(dataStr);
     }
-
-    // TODO: get token size of buffer, if too big, switch it front/middle/back
 
     // Implement flow control to prevent xterm buffer overflow
     _writeWatermark += rawDataStr.length;
@@ -300,7 +305,7 @@ export function createShellWrapper(
 
     if (endDelimiterHit) {
       // Filter PowerShell noise from complete output (not during streaming due to chunking)
-      const finalOutput = filterPowerShellNoise(_commandOutput).trim();
+      const finalOutput = filterPowerShellNoise(_commandOutput.get()).trim();
 
       resetCommand();
 
@@ -453,9 +458,9 @@ export function createShellWrapper(
     let outputWithInstruction =
       _currentBufferType == "alternate"
         ? _getTerminalActiveBuffer()
-        : filterPowerShellNoise(_commandOutput).trim();
+        : filterPowerShellNoise(_commandOutput.get()).trim();
 
-    _commandOutput = "";
+    _commandOutput.reset();
 
     // Don't clear the alternate buffer, it's a special terminal full screen mode that the
     // LLM might want to see updates too
@@ -508,7 +513,7 @@ export function createShellWrapper(
   }
 
   function resetCommand() {
-    _commandOutput = "";
+    _commandOutput.reset();
     _writeWatermark = 0;
     _currentCommandText = undefined;
     _shellInputLines = [];
@@ -535,7 +540,7 @@ export function createShellWrapper(
       // so it shows up when the command is resolved
       if (_currentBufferType == "alternate" && buffer.type == "normal") {
         output.comment("NAISYS: BUFFER CHANGE BACK TO NORMAL");
-        _commandOutput += "\n" + _getTerminalActiveBuffer() + "\n";
+        _commandOutput.append("\n" + _getTerminalActiveBuffer() + "\n");
       }
 
       _currentBufferType = buffer.type;
