@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import istanbul from "vite-plugin-istanbul";
 
 /** Disable Zod v4 JIT (uses `new Function`) to comply with CSP script-src 'self'. */
 function zodJitless(): Plugin {
@@ -29,8 +30,23 @@ function zodJitless(): Plugin {
   };
 }
 
+const coverageMode = process.env.COVERAGE === "1";
+
 export default defineConfig({
-  plugins: [zodJitless(), react()],
+  plugins: [
+    zodJitless(),
+    react(),
+    ...(coverageMode
+      ? [
+          istanbul({
+            include: "src/**/*",
+            extension: [".ts", ".tsx"],
+            requireEnv: false,
+            forceBuildInstrument: true,
+          }),
+        ]
+      : []),
+  ],
   base: "/supervisor/",
   server: {
     port: 2201,

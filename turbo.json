@@ -1,6 +1,10 @@
 {
   "$schema": "https://v2-9-6.turborepo.dev/schema.json",
-  "globalPassThroughEnv": ["NODE_V8_COVERAGE"],
+  "globalPassThroughEnv": [
+    "NODE_V8_COVERAGE",
+    "COVERAGE",
+    "COVERAGE_CLIENT_RAW_DIR"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

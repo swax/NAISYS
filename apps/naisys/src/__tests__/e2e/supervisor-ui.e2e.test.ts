@@ -27,6 +27,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  dumpClientCoverage,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -38,6 +39,7 @@ describe("Supervisor UI E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
   let browser: Browser | null = null;
+  let page: Page | null = null;
 
   const SERVER_PORT = 4404;
 
@@ -47,6 +49,10 @@ describe("Supervisor UI E2E", () => {
   });
 
   afterEach(async () => {
+    if (page) {
+      await dumpClientCoverage(page);
+      page = null;
+    }
     if (browser) {
       await browser.close();
       browser = null;
@@ -97,7 +103,7 @@ SERVER_PORT=${SERVER_PORT}
 
     // --- Launch Playwright ---
     browser = await chromium.launch({ headless: true });
-    const page: Page = await browser.newPage();
+    page = await browser.newPage();
 
     // --- Login ---
     await page.goto(`http://localhost:${SERVER_PORT}/supervisor/`);

@@ -2,12 +2,13 @@
 /**
  * Merged coverage runner.
  *
- * Scope: Node.js processes only.
- *  - Includes: vitest workers, spawned hub/naisys/erp child processes, and the
- *    Playwright-managed erp server.
- *  - Excludes: code executing inside Chromium during Playwright UI tests
- *    (apps/erp/client, apps/supervisor/client) — browser-side coverage would
- *    require Playwright's page.coverage API and is not wired up here.
+ * Scope:
+ *  - Node.js processes (vitest workers, spawned hub/naisys/erp child
+ *    processes, the Playwright-managed erp server) via c8 + V8 coverage.
+ *  - Supervisor + erp client React code running in Chromium during
+ *    Playwright UI tests, via vite-plugin-istanbul. Tests dump
+ *    `window.__coverage__` to `coverage/client-raw/` and we merge those
+ *    numbers into the per-workspace summary below.
  *
  * Mode: --all, so unloaded source files count as 0% in the denominator
  * (whole-app coverage, not loaded-source coverage).
@@ -16,23 +17,29 @@ import { spawnSync } from "child_process";
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "fs";
+import libCoverage from "istanbul-lib-coverage";
 import { resolve } from "path";
 
 const repoRoot = resolve(import.meta.dirname, "..");
 const rawDir = resolve(repoRoot, "coverage", "raw");
+const clientRawDir = resolve(repoRoot, "coverage", "client-raw");
 const reportDir = resolve(repoRoot, "coverage", "merged");
 
 rmSync(rawDir, { recursive: true, force: true });
+rmSync(clientRawDir, { recursive: true, force: true });
 rmSync(reportDir, { recursive: true, force: true });
 mkdirSync(rawDir, { recursive: true });
 
 const env = {
   ...process.env,
   NODE_V8_COVERAGE: rawDir,
+  COVERAGE: "1",
+  COVERAGE_CLIENT_RAW_DIR: clientRawDir,
 };
 
 const run = (cmd, args, cwd = repoRoot) => {
@@ -46,9 +53,26 @@ const run = (cmd, args, cwd = repoRoot) => {
   return result.status ?? 1;
 };
 
+const failures = [];
+
+// Rebuild the supervisor + erp client bundles with COVERAGE=1 so that
+// vite-plugin-istanbul instruments the React code served to Chromium
+// during Playwright tests. --force bypasses turbo's build cache, since
+// the env var change isn't yet part of the cache key.
+const clientBuildCode = run("npx", [
+  "turbo",
+  "build",
+  "bundle",
+  "--filter=@naisys/supervisor",
+  "--filter=@naisys/erp",
+  "--force",
+]);
+if (clientBuildCode !== 0) {
+  failures.push({ phase: "turbo build (instrumented)", code: clientBuildCode });
+}
+
 // Defer to turbo: any workspace with a `test` script runs.
 // New test scripts get picked up automatically.
-const failures = [];
 const testCode = run("npx", ["turbo", "test"]);
 if (testCode !== 0) {
   failures.push({ phase: "turbo test", code: testCode });
@@ -101,6 +125,38 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
     totals.set(workspace, t);
   }
 
+  // Merge browser-side coverage from vite-plugin-istanbul dumps. Each
+  // Playwright test writes window.__coverage__ to coverage/client-raw/.
+  if (existsSync(clientRawDir)) {
+    const map = libCoverage.createCoverageMap({});
+    for (const file of readdirSync(clientRawDir)) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const data = JSON.parse(
+          readFileSync(resolve(clientRawDir, file), "utf-8"),
+        );
+        map.merge(data);
+      } catch (err) {
+        console.warn(
+          `Skipping unreadable client coverage file ${file}: ${err.message}`,
+        );
+      }
+    }
+    for (const filePath of map.files()) {
+      const rel = filePath.startsWith(repoRoot + "/")
+        ? filePath.slice(repoRoot.length + 1)
+        : filePath;
+      const idx = rel.indexOf("/src/");
+      if (idx < 0) continue;
+      const workspace = rel.slice(0, idx);
+      const fileSummary = map.fileCoverageFor(filePath).toSummary();
+      const t = totals.get(workspace) ?? { covered: 0, total: 0 };
+      t.covered += fileSummary.statements.covered;
+      t.total += fileSummary.statements.total;
+      totals.set(workspace, t);
+    }
+  }
+
   const sorted = [...totals.entries()].sort(([a], [b]) => a.localeCompare(b));
   if (sorted.length > 0) {
     const nameWidth = Math.max(...sorted.map(([n]) => n.length), 9);
@@ -116,17 +172,24 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       console.log(name.padEnd(nameWidth) + " | " + ratio.padEnd(20) + " | " + pct);
     }
     console.log(
-      "\nScope: Node.js processes only — Chromium-side client code from\n" +
-      "       Playwright UI tests is not measured. Unloaded source files\n" +
-      "       count as 0% in the denominator (--all).",
+      "\nScope: Node.js processes via c8, plus the supervisor client React\n" +
+      "       code via vite-plugin-istanbul (Playwright dumps window.__coverage__).\n" +
+      "       For the client, only files actually loaded during a Playwright\n" +
+      "       test contribute to the denominator. Other workspaces use --all,\n" +
+      "       so unloaded files count as 0%.",
     );
 
     // Write a checked-in snapshot. Git history of this file is the coverage
     // progress log. No timestamp — keeps unchanged runs as no-op diffs.
     const formatCount = (value) => value.toLocaleString("en-US");
-    const total = summary.total.statements;
-    const totalPct = total.total
-      ? `${(100 * total.covered / total.total).toFixed(2)}%`
+    let totalCovered = 0;
+    let totalAll = 0;
+    for (const t of totals.values()) {
+      totalCovered += t.covered;
+      totalAll += t.total;
+    }
+    const totalPct = totalAll
+      ? `${(100 * totalCovered / totalAll).toFixed(2)}%`
       : "-";
     const lines = [
       "# Coverage",
@@ -134,10 +197,13 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       "Statement coverage from `npm run coverage:full`. This file is",
       "regenerated on every coverage run; commit it to log progress.",
       "",
-      "Scope: Node.js processes only. Chromium-side client code (apps/*/client)",
-      "is not measured. Unloaded source files count as 0% in the denominator.",
+      "Scope: Node.js processes via c8 (vitest, hub/naisys/erp child processes,",
+      "Playwright-managed erp server) plus the supervisor + erp client React",
+      "code via vite-plugin-istanbul. Unloaded files count as 0% for everything",
+      "except `apps/supervisor/client` and `apps/erp/client`, where only",
+      "modules loaded during a Playwright test contribute to the denominator.",
       "",
-      `**Total: ${formatCount(total.covered)} / ${formatCount(total.total)} statements (${totalPct})**`,
+      `**Total: ${formatCount(totalCovered)} / ${formatCount(totalAll)} statements (${totalPct})**`,
       "",
       "| Workspace | Covered | Total | % |",
       "| --- | ---: | ---: | ---: |",
