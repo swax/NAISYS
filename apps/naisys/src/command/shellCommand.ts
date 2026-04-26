@@ -1,14 +1,17 @@
 import type { GlobalConfig } from "../globalConfig.js";
-import type { ContextManager } from "../llm/contextManager.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import type { ShellWrapper } from "./shellWrapper.js";
 
+export interface ShellCommandResult {
+  response?: string;
+  exitApp: boolean;
+}
+
 export function createShellCommand(
   { globalConfig }: GlobalConfig,
   shellWrapper: ShellWrapper,
-  contextManager: ContextManager,
   inputMode: InputModeService,
 ) {
   const platformConfig = getPlatformConfig();
@@ -17,7 +20,7 @@ export function createShellCommand(
     shellWrapper.getCommandElapsedTimeString();
   const getCurrentCommandName = () => shellWrapper.getCurrentCommandName();
 
-  async function handleCommand(input: string): Promise<boolean> {
+  async function handleCommand(input: string): Promise<ShellCommandResult> {
     const cmdParams = input.split(" ");
     let response: string;
 
@@ -39,7 +42,7 @@ export function createShellCommand(
         // Only the debug user is allowed to exit the shell
         else if (inputMode.isDebug()) {
           await shellWrapper.terminate();
-          return true;
+          return { exitApp: true };
         }
       }
 
@@ -78,10 +81,7 @@ export function createShellCommand(
       response += "\n" + platformConfig.invalidCommandMessage;
     }
 
-    // TODO: move this into the command handler to remove the context manager dependency
-    contextManager.append(response);
-
-    return false;
+    return { response, exitApp: false };
   }
 
   return {

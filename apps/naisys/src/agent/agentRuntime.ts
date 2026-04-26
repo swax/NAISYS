@@ -237,7 +237,6 @@ export async function createAgentRuntime(
   const shellCommand = createShellCommand(
     globalConfig,
     shellWrapper,
-    contextManager,
     inputMode,
   );
   const sessionService = createSessionService(
