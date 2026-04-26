@@ -3,6 +3,7 @@ import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { createServer } from "net";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import type { Page } from "playwright";
@@ -29,6 +30,28 @@ export async function dumpClientCoverage(page: Page): Promise<void> {
     resolve(outDir, `${randomUUID()}.json`),
     JSON.stringify(coverage),
   );
+}
+
+/**
+ * Ask the OS for a free TCP port. Avoids hard-coded port collisions
+ * between e2e tests; each test should call this in beforeEach.
+ */
+export async function getFreePort(): Promise<number> {
+  return new Promise((resolveFn, rejectFn) => {
+    const srv = createServer();
+    srv.unref();
+    srv.on("error", rejectFn);
+    srv.listen(0, () => {
+      const addr = srv.address();
+      if (addr && typeof addr === "object") {
+        const port = addr.port;
+        srv.close(() => resolveFn(port));
+      } else {
+        srv.close();
+        rejectFn(new Error("Could not allocate a free port"));
+      }
+    });
+  });
 }
 
 const __filename = fileURLToPath(import.meta.url);

@@ -4,13 +4,13 @@
 
 Ports are grouped by doubled thousands digits to avoid collisions with common services:
 
-| Range  | Purpose     |
-| ------ | ----------- |
-| `22xx` | Dev clients |
-| `33xx` | Servers     |
-| `44xx` | E2E tests   |
+| Range  | Purpose                                  |
+| ------ | ---------------------------------------- |
+| `22xx` | Dev clients                              |
+| `33xx` | Servers                                  |
 
-Within each range, ports are assigned sequentially.
+Within each range, ports are assigned sequentially. E2E tests no longer
+use a fixed range; see "E2E Test Ports" below.
 
 ## Unified Server Port
 
@@ -35,16 +35,12 @@ When running NAISYS with `--integrated-hub --supervisor --erp`, all servers shar
 
 ## E2E Test Ports
 
-Tests use the `44xx` range so they never collide with dev servers.
-
-| Port | Test File                 | Service      |
-| ---- | ------------------------- | ------------ |
-| 4401 | crosshub-mail.e2e.test.ts | Hub instance |
-| 4402 | erp-api-key.e2e.test.ts   | Hub instance |
-| 4403 | basic-mail.e2e.test.ts    | Hub instance |
-| 4404 | supervisor-ui.e2e.test.ts | Hub instance |
-
-Each test file picks unique ports within the `44xx` range. When adding a new e2e test, pick the next unused port.
+E2E tests allocate a free OS-assigned port at runtime via `getFreePort()`
+in `apps/naisys/src/__tests__/e2e/e2eTestHelper.ts`. Each test calls it
+in `beforeEach` and stores the result in a `let SERVER_PORT: number`,
+deriving any URLs it needs after that. There is no static port table to
+keep in sync, and tests never collide regardless of how they are
+scheduled.
 
 ## External Services (not managed by us)
 

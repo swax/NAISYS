@@ -23,6 +23,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   createEnvFile,
+  getFreePort,
   getTestDir,
   setupTestDir,
   spawnNaisys,
@@ -33,8 +34,6 @@ vi.setConfig({ testTimeout: 120000 });
 describe("Basic Mail E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
-
-  const SERVER_PORT = 4403;
 
   beforeEach(() => {
     testDir = getTestDir("basic_mail");
@@ -99,7 +98,8 @@ describe("Basic Mail E2E", () => {
 
   test("integrated-hub: send mail from alex to bob", async () => {
     createEnvFile(testDir);
-    appendFileSync(join(testDir, ".env"), `\nSERVER_PORT=${SERVER_PORT}`);
+    const serverPort = await getFreePort();
+    appendFileSync(join(testDir, ".env"), `\nSERVER_PORT=${serverPort}`);
     await runMailTest(["--integrated-hub"], true);
   });
 });
