@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   deleteAllSessionsForUser: vi.fn(),
   deletePasskeyCredential: vi.fn(),
   listPasskeyCredentialsForUser: vi.fn(),
+  renamePasskeyDeviceLabel: vi.fn(),
   userHasPasskey: vi.fn(),
   issueRegistrationLink: vi.fn(),
   requireStepUp: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock("@naisys/supervisor-database", () => ({
   deleteAllSessionsForUser: mocks.deleteAllSessionsForUser,
   deletePasskeyCredential: mocks.deletePasskeyCredential,
   listPasskeyCredentialsForUser: mocks.listPasskeyCredentialsForUser,
+  renamePasskeyDeviceLabel: mocks.renamePasskeyDeviceLabel,
   userHasPasskey: mocks.userHasPasskey,
 }));
 
@@ -105,6 +107,12 @@ const adminUser: AuthUser = {
   permissions: ["supervisor_admin"],
 };
 
+const limitedUser: AuthUser = {
+  id: 8,
+  username: "limited",
+  permissions: [],
+};
+
 async function buildApp(supervisorUser?: AuthUser): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   app.setValidatorCompiler(validatorCompiler);
@@ -154,6 +162,7 @@ beforeEach(() => {
     },
   ]);
   mocks.deletePasskeyCredential.mockResolvedValue(true);
+  mocks.renamePasskeyDeviceLabel.mockResolvedValue(true);
   mocks.userHasPasskey.mockResolvedValue(false);
   mocks.deleteAllSessionsForUser.mockResolvedValue(undefined);
   mocks.deleteAllPasskeyCredentialsForUser.mockResolvedValue(2);
@@ -245,6 +254,121 @@ describe("passkey user routes", () => {
       });
       expect(response.body).not.toContain("not-returned-to-client");
       expect(mocks.listPasskeyCredentialsForUser).toHaveBeenCalledWith(7);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("renames a self passkey without step-up", async () => {
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/passkeys/10/rename",
+        payload: { deviceLabel: "YubiKey 5C" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        success: true,
+        message: "Passkey renamed",
+      });
+      expect(mocks.renamePasskeyDeviceLabel).toHaveBeenCalledWith(
+        10,
+        7,
+        "YubiKey 5C",
+      );
+      expect(mocks.requireStepUp).not.toHaveBeenCalled();
+      expect(mocks.authCacheClear).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("admin can rename another user's passkey", async () => {
+    mocks.getUserByUsername.mockResolvedValue({
+      id: 42,
+      username: "target",
+      uuid: "target-uuid",
+      isAgent: false,
+    });
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/target/passkeys/11/rename",
+        payload: { deviceLabel: "Recovery key" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mocks.renamePasskeyDeviceLabel).toHaveBeenCalledWith(
+        11,
+        42,
+        "Recovery key",
+      );
+      expect(mocks.requireStepUp).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("forbids non-admin users from renaming another user's passkey", async () => {
+    const app = await buildApp(limitedUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/passkeys/10/rename",
+        payload: { deviceLabel: "Unauthorized edit" },
+      });
+
+      expect(response.statusCode).toBe(403);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Permission 'supervisor_admin' required",
+      });
+      expect(mocks.getUserByUsername).not.toHaveBeenCalled();
+      expect(mocks.renamePasskeyDeviceLabel).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("rename returns 404 when the passkey does not belong to the target user", async () => {
+    mocks.renamePasskeyDeviceLabel.mockResolvedValue(false);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/passkeys/99/rename",
+        payload: { deviceLabel: "Missing key" },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Passkey not found",
+      });
+      expect(mocks.renamePasskeyDeviceLabel).toHaveBeenCalledWith(
+        99,
+        7,
+        "Missing key",
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("rename rejects labels longer than 64 characters before updating", async () => {
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/passkeys/10/rename",
+        payload: { deviceLabel: "x".repeat(65) },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(mocks.renamePasskeyDeviceLabel).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
