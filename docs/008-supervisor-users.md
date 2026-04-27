@@ -378,14 +378,17 @@ Wipes every passkey for the user, revokes all of their sessions, and issues a fr
 
 Response: `{ username, registrationUrl, expiresAt }`.
 
-#### List / Delete Passkeys
+#### List / Delete / Rename Passkeys
 
 ```
 GET  /supervisor/api/users/:username/passkeys
 POST /supervisor/api/users/:username/passkeys/:id/delete
+POST /supervisor/api/users/:username/passkeys/:id/rename
 ```
 
-`GET` returns each credential's `id`, `deviceLabel`, `createdAt`, and `lastUsedAt`. `POST .../delete` (POST not DELETE so the step-up body fits) removes a single passkey; both endpoints accept admin or self. After deletion, all sessions for the target user are revoked except the actor's own — and even the actor's session is dropped if the deletion left them with no passkey.
+`GET` returns each credential's `id`, `deviceLabel`, `createdAt`, and `lastUsedAt`. `POST .../delete` (POST not DELETE so the step-up body fits) removes a single passkey; after deletion all sessions for the target user are revoked except the actor's own — and even the actor's session is dropped if the deletion left them with no passkey. `POST .../rename` updates the device label only (`{ deviceLabel: string }`, max 64 chars) and skips step-up since label changes have no security impact. All three endpoints accept admin or self.
+
+The browser never tells the page which authenticator was actually used at registration (no fingerprinting allowed by WebAuthn), so the auto-derived label is just a UA sniff (`"Windows"`, `"Mac"`, etc.). The rename endpoint exists so users can fix it after the fact — or the create flow can prompt for a label first (the user-detail page surfaces a "Device label" input in its "Add passkey" modal).
 
 #### Delete User
 
@@ -625,7 +628,8 @@ Clicking a row navigates to `/users/:username` (resolved from the `item` link te
 - **Edit username**: inline edit (gated by `_actions.update`).
 - **Permissions list**: each entry has a revoke button rendered from its `_actions.revoke`.
 - **Grant permission**: dropdown of not-yet-granted permissions + button (gated by `_actions.grant-permission`). The dropdown options are fed by `GET /permissions` and filtered against the current `permissions[]`.
-- **Passkeys list**: per-credential delete buttons; each delete runs the step-up dance.
+- **Passkeys list**: per-credential rename (inline pencil → text input → save) and delete buttons. Delete runs the step-up dance; rename is a plain metadata update.
+- **Add passkey on this device**: opens a modal that prompts for a device label first, then runs the WebAuthn registration ceremony. Useful when a previous "Add" auto-named the credential after the OS (`"Windows"`, etc.) instead of the actual authenticator.
 - **Issue Registration Link**: gated by `_actions.issue-registration`. Triggers step-up, then surfaces the URL alongside a QR code (suppressed for loopback URLs — see [doc 007](./007-web-auth.md)).
 - **Reset Passkeys**: admin-only on other users (`_actions.reset-passkeys`); same surfacing.
 - **Delete**: delete button gated by `_actions.delete` (omitted for self).
@@ -724,6 +728,7 @@ rotateUserApiKey(username)      → POST /users/:username/rotate-key
 | POST   | `/supervisor/api/users/:username/reset-passkeys`      | Wipe passkeys + issue link (admin recovery) | `supervisor_admin` (not self) + step-up         |
 | GET    | `/supervisor/api/users/:username/passkeys`            | List a user's registered passkeys           | admin or self                                   |
 | POST   | `/supervisor/api/users/:username/passkeys/:id/delete` | Delete a single passkey                     | admin or self + step-up                         |
+| POST   | `/supervisor/api/users/:username/passkeys/:id/rename` | Rename a passkey's device label             | admin or self                                   |
 | GET    | `/supervisor/api/schemas/`                            | List all supervisor schema names            | (authenticated)                                 |
 | GET    | `/supervisor/api/schemas/:name`                       | Get a single JSON Schema                    | (authenticated)                                 |
 

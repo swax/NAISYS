@@ -42,6 +42,7 @@ export {
   listPasskeyCredentialIdsForUser,
   listPasskeyCredentialsForUser,
   lookupRegistrationToken,
+  renamePasskeyDeviceLabel,
   updatePasskeyCounter,
   userHasPasskey,
 } from "./passkeyService.js";

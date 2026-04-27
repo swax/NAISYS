@@ -6,6 +6,7 @@ import {
   deletePasskeyCredential,
   listPasskeyCredentialsForUser,
   type Permission,
+  renamePasskeyDeviceLabel,
   userHasPasskey,
 } from "@naisys/supervisor-database";
 import {
@@ -15,10 +16,12 @@ import {
   ErrorResponseSchema,
   GrantPermissionSchema,
   PasskeyCredentialListSchema,
+  PasskeyRenameRequestSchema,
   PermissionEnum,
   RegistrationTokenResponseSchema,
   StepUpAssertionBodySchema,
   UpdateUserSchema,
+  UserActionResultSchema,
 } from "@naisys/supervisor-shared";
 import type {
   FastifyInstance,
@@ -726,6 +729,61 @@ export default function userRoutes(
 
       authCache.clear();
       return { success: true, message: "Passkey removed" };
+    },
+  );
+
+  // RENAME PASSKEY (admin or self) — pure metadata change, no step-up needed.
+  // The browser doesn't tell us which authenticator was actually used at
+  // registration (no fingerprinting), so the auto-derived label is just a UA
+  // sniff. This lets the user fix it after the fact.
+  app.post<{
+    Params: z.infer<typeof passkeyParams>;
+    Body: z.infer<typeof PasskeyRenameRequestSchema>;
+  }>(
+    "/:username/passkeys/:id/rename",
+    {
+      preHandler: async (request, reply) => {
+        if (!request.supervisorUser) {
+          sendUnauthorized(reply, "Authentication required");
+          return;
+        }
+        const isAdmin =
+          request.supervisorUser.permissions.includes("supervisor_admin");
+        const isSelf =
+          request.params.username === request.supervisorUser.username;
+        if (!isAdmin && !isSelf) {
+          sendForbidden(reply, "Permission 'supervisor_admin' required");
+          return;
+        }
+      },
+      schema: {
+        description: "Rename one of a user's registered passkeys",
+        tags: ["Users"],
+        params: passkeyParams,
+        body: PasskeyRenameRequestSchema,
+        response: {
+          200: UserActionResultSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          429: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      const renamed = await renamePasskeyDeviceLabel(
+        request.params.id,
+        targetUser.id,
+        request.body.deviceLabel,
+      );
+      if (!renamed) return notFound(reply, "Passkey not found");
+
+      return { success: true, message: "Passkey renamed" };
     },
   );
 

@@ -3,6 +3,7 @@ import {
   CreateAgentConfigRequestSchema,
   CreateUserSchema,
   GrantPermissionSchema,
+  PasskeyRenameRequestSchema,
   SaveImageModelRequestSchema,
   SaveLlmModelRequestSchema,
   SaveVariableRequestSchema,
@@ -28,6 +29,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   SaveLlmModel: SaveLlmModelRequestSchema,
   SaveImageModel: SaveImageModelRequestSchema,
   SaveVariable: SaveVariableRequestSchema,
+  PasskeyRename: PasskeyRenameRequestSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population

@@ -28,7 +28,12 @@ import {
   type UserDetailResponse,
 } from "@naisys/supervisor-shared";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
-import { IconInfoCircle } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconInfoCircle,
+  IconPencil,
+  IconX,
+} from "@tabler/icons-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -45,6 +50,7 @@ import {
   issueRegistrationLink,
   listUserPasskeys,
   passkeyRegister,
+  renameUserPasskey,
   resetUserPasskeys,
 } from "../../lib/apiAuth";
 import {
@@ -91,6 +97,16 @@ export const UserDetail: React.FC = () => {
   const [passkeysLoading, setPasskeysLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [
+    addPasskeyOpened,
+    { open: openAddPasskey, close: closeAddPasskey },
+  ] = useDisclosure();
+  const [newPasskeyLabel, setNewPasskeyLabel] = useState("");
+  const [renamingPasskeyId, setRenamingPasskeyId] = useState<number | null>(
+    null,
+  );
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
   const [issuedLink, setIssuedLink] =
     useState<RegistrationTokenResponse | null>(null);
 
@@ -215,11 +231,21 @@ export const UserDetail: React.FC = () => {
     }
   };
 
+  const startAddPasskey = () => {
+    setNewPasskeyLabel("");
+    setPasskeyError("");
+    openAddPasskey();
+  };
+
   const handleAddPasskey = async () => {
+    const label = newPasskeyLabel.trim();
     setRegistering(true);
     setPasskeyError("");
     try {
-      await passkeyRegister({});
+      // Pass undefined when blank so the client falls back to its UA-based
+      // default; the user can rename afterward via the inline pencil.
+      await passkeyRegister({ deviceLabel: label || undefined });
+      closeAddPasskey();
       void fetchPasskeys();
     } catch (err) {
       setPasskeyError(
@@ -227,6 +253,34 @@ export const UserDetail: React.FC = () => {
       );
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const startRenamePasskey = (id: number, current: string) => {
+    setRenamingPasskeyId(id);
+    setRenameDraft(current);
+    setPasskeyError("");
+  };
+
+  const cancelRenamePasskey = () => {
+    setRenamingPasskeyId(null);
+    setRenameDraft("");
+  };
+
+  const saveRenamePasskey = async (id: number) => {
+    if (!routeUsername) return;
+    setRenameSaving(true);
+    try {
+      await renameUserPasskey(routeUsername, id, renameDraft.trim());
+      setRenamingPasskeyId(null);
+      setRenameDraft("");
+      void fetchPasskeys();
+    } catch (err) {
+      setPasskeyError(
+        err instanceof Error ? err.message : "Failed to rename passkey",
+      );
+    } finally {
+      setRenameSaving(false);
     }
   };
 
@@ -417,8 +471,7 @@ export const UserDetail: React.FC = () => {
               {isSelf && passkeys.length > 0 && (
                 <Button
                   variant="outline"
-                  onClick={handleAddPasskey}
-                  loading={registering}
+                  onClick={startAddPasskey}
                   disabled={!supportsWebAuthn}
                 >
                   Add passkey on this device
@@ -525,7 +578,59 @@ export const UserDetail: React.FC = () => {
                 {passkeys.map((p) => (
                   <Table.Tr key={p.id}>
                     <Table.Td>
-                      {p.deviceLabel || <Text c="dimmed">(unlabeled)</Text>}
+                      {renamingPasskeyId === p.id ? (
+                        <Group gap="xs" wrap="nowrap">
+                          <TextInput
+                            size="xs"
+                            value={renameDraft}
+                            onChange={(e) =>
+                              setRenameDraft(e.currentTarget.value)
+                            }
+                            disabled={renameSaving}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") void saveRenamePasskey(p.id);
+                              else if (e.key === "Escape") cancelRenamePasskey();
+                            }}
+                            style={{ flex: 1 }}
+                          />
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="green"
+                            onClick={() => void saveRenamePasskey(p.id)}
+                            loading={renameSaving}
+                            aria-label="Save label"
+                          >
+                            <IconCheck size={14} />
+                          </ActionIcon>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            onClick={cancelRenamePasskey}
+                            disabled={renameSaving}
+                            aria-label="Cancel"
+                          >
+                            <IconX size={14} />
+                          </ActionIcon>
+                        </Group>
+                      ) : (
+                        <Group gap="xs" wrap="nowrap">
+                          {p.deviceLabel || (
+                            <Text c="dimmed">(unlabeled)</Text>
+                          )}
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            onClick={() =>
+                              startRenamePasskey(p.id, p.deviceLabel)
+                            }
+                            aria-label="Rename"
+                          >
+                            <IconPencil size={14} />
+                          </ActionIcon>
+                        </Group>
+                      )}
                     </Table.Td>
                     <Table.Td>
                       {new Date(p.createdAt).toLocaleDateString()}
@@ -649,6 +754,59 @@ export const UserDetail: React.FC = () => {
             </Button>
           </Group>
         </Stack>
+      </Modal>
+
+      <Modal
+        opened={addPasskeyOpened}
+        onClose={() => {
+          if (!registering) closeAddPasskey();
+        }}
+        title="Add passkey"
+        centered
+        closeOnClickOutside={!registering}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleAddPasskey();
+          }}
+        >
+          <Stack>
+            <Text size="sm" c="dimmed">
+              Pick a label that will help you tell this credential apart from
+              your others (e.g. <Code>YubiKey 5C</Code>, <Code>iPhone</Code>,{" "}
+              <Code>Touch ID</Code>). The label is purely for display — leave
+              blank to auto-fill from this device's user-agent.
+            </Text>
+            <TextInput
+              label="Device label"
+              placeholder="e.g. YubiKey 5C"
+              value={newPasskeyLabel}
+              onChange={(e) => setNewPasskeyLabel(e.currentTarget.value)}
+              maxLength={64}
+              disabled={registering}
+              autoFocus
+            />
+            {passkeyError && (
+              <Text c="red" size="sm">
+                {passkeyError}
+              </Text>
+            )}
+            <Group justify="flex-end">
+              <Button
+                variant="subtle"
+                type="button"
+                onClick={closeAddPasskey}
+                disabled={registering}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={registering}>
+                Register
+              </Button>
+            </Group>
+          </Stack>
+        </form>
       </Modal>
     </Container>
   );

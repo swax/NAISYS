@@ -95,6 +95,13 @@ export const PasskeyCredentialListSchema = z.object({
 });
 export type PasskeyCredentialList = z.infer<typeof PasskeyCredentialListSchema>;
 
+export const PasskeyRenameRequestSchema = z
+  .object({
+    deviceLabel: z.string().max(64),
+  })
+  .strict();
+export type PasskeyRenameRequest = z.infer<typeof PasskeyRenameRequestSchema>;
+
 export const RegistrationTokenResponseSchema = z.object({
   username: z.string(),
   registrationUrl: z.string(),

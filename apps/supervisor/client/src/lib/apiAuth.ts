@@ -114,6 +114,17 @@ export const deleteUserPasskey = async (
   );
 };
 
+export const renameUserPasskey = async (
+  username: string,
+  id: number,
+  deviceLabel: string,
+): Promise<UserActionResult> => {
+  return await api.post<{ deviceLabel: string }, UserActionResult>(
+    apiEndpoints.userPasskeyRename(username, id),
+    { deviceLabel },
+  );
+};
+
 /**
  * Run the step-up dance: ask the server for an assertion challenge scoped to
  * the *current* user's credentials, drive the WebAuthn prompt, and return the
