@@ -8,7 +8,9 @@ import {
   Tooltip,
   UnstyledButton,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import {
   IconApi,
   IconLogout,
@@ -24,18 +26,34 @@ import { navTabs } from "./navTabs";
 
 interface AppHeaderProps {
   onBurgerClick: () => void;
-  onLoginOpen: () => void;
   hasErp: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onBurgerClick,
-  onLoginOpen,
   hasErp,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated, hasPermission, logout } = useSession();
+  const { user, isAuthenticated, hasPermission, logout, loginWithPasskey } =
+    useSession();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const passkeySupported = browserSupportsWebAuthn();
+
+  const handleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await loginWithPasskey();
+    } catch (error) {
+      notifications.show({
+        title: "Sign-in failed",
+        message: error instanceof Error ? error.message : "Sign-in failed",
+        color: "red",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   const [isPwa, setIsPwa] = useState(
     () =>
@@ -223,14 +241,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </Menu.Dropdown>
         </Menu>
       ) : (
-        <Button
-          size="xs"
-          variant="subtle"
-          onClick={onLoginOpen}
-          style={{ flexShrink: 0 }}
+        <Tooltip
+          label="This browser doesn't support passkeys"
+          disabled={passkeySupported}
         >
-          Login
-        </Button>
+          <Button
+            size="xs"
+            variant="subtle"
+            onClick={handleLogin}
+            loading={isLoggingIn}
+            disabled={!passkeySupported}
+            style={{ flexShrink: 0 }}
+          >
+            Sign in with passkey
+          </Button>
+        </Tooltip>
       )}
     </Group>
   );

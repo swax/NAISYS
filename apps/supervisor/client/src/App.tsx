@@ -16,7 +16,6 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import { LoginDialog } from "./components/LoginDialog";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
 import { RouteErrorPage } from "./components/RouteErrorPage";
@@ -47,6 +46,7 @@ import { ModelCalculator } from "./pages/models/ModelCalculator";
 import { ModelIndex } from "./pages/models/ModelIndex";
 import { ModelPage } from "./pages/models/ModelPage";
 import { ModelsLayout } from "./pages/models/ModelsLayout";
+import { RegisterPage } from "./pages/RegisterPage";
 import { AgentRuns } from "./pages/runs/AgentRuns";
 import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
@@ -60,7 +60,6 @@ const AppContent: React.FC = () => {
   useBoomGuard("root");
   useSocketReconnect();
   const [opened, { toggle, close }] = useDisclosure();
-  const [loginOpen, { open: openLogin, close: closeLogin }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
   const [publicRead, setPublicRead] = React.useState(false);
   const [permissions, setPermissions] = React.useState<Permission[]>([]);
@@ -87,6 +86,16 @@ const AppContent: React.FC = () => {
     return null;
   }
 
+  // Allow the passkey registration page to render without an authenticated
+  // session — operators arrive there from a one-time invite link.
+  const path = window.location.pathname;
+  const basenameStripped = path.startsWith(ROUTER_BASENAME)
+    ? path.slice(ROUTER_BASENAME.length)
+    : path;
+  if (basenameStripped.startsWith("/register")) {
+    return <Outlet context={{ permissions: [] }} />;
+  }
+
   // Show full-page login when not authenticated and public read is disabled
   if (!isAuthenticated && !publicRead) {
     return <LoginPage />;
@@ -105,11 +114,7 @@ const AppContent: React.FC = () => {
           padding={0}
         >
           <AppShell.Header>
-            <AppHeader
-              onBurgerClick={toggle}
-              onLoginOpen={openLogin}
-              hasErp={hasErp}
-            />
+            <AppHeader onBurgerClick={toggle} hasErp={hasErp} />
           </AppShell.Header>
 
           <AppShell.Navbar p="md">
@@ -139,7 +144,6 @@ const AppContent: React.FC = () => {
               <Outlet context={{ permissions }} />
             </Box>
           </AppShell.Main>
-          <LoginDialog opened={loginOpen} onClose={closeLogin} />
         </AppShell>
       </HostDataProvider>
     </AgentDataProvider>
@@ -255,6 +259,11 @@ const router = createBrowserRouter(
       <Route
         path="/users/:username"
         element={<UserDetail />}
+        errorElement={<RouteErrorPage />}
+      />
+      <Route
+        path="/register"
+        element={<RegisterPage />}
         errorElement={<RouteErrorPage />}
       />
       <Route path="/" element={<Navigate to="/agents" replace />} />

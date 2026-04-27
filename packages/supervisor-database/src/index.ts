@@ -15,15 +15,36 @@ export type {
   SessionUser,
 } from "./sessionService.js";
 export {
-  authenticateAndCreateSession,
+  createSessionForUser,
   createSupervisorDatabaseClient,
+  deleteAllSessionsForUser,
   deleteSession,
   ensureSuperAdmin,
   findSession,
   findUserByApiKey,
-  lookupUsername,
-  updateUserPassword,
+  getSupervisorDb,
 } from "./sessionService.js";
+// Re-export Passkey / Registration Service
+export type {
+  ConsumeAndStoreInput,
+  ConsumeAndStoreResult,
+  PasskeyCredentialRecord,
+  PasskeyCredentialSummary,
+} from "./passkeyService.js";
+export {
+  consumeTokenAndStoreCredential,
+  createPasskeyCredential,
+  deleteAllPasskeyCredentialsForUser,
+  deletePasskeyCredential,
+  findPasskeyCredentialByCredentialId,
+  hasActiveRegistrationToken,
+  issueRegistrationToken,
+  listPasskeyCredentialIdsForUser,
+  listPasskeyCredentialsForUser,
+  lookupRegistrationToken,
+  updatePasskeyCounter,
+  userHasPasskey,
+} from "./passkeyService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
 export { PrismaClient } from "./generated/prisma/client.js";

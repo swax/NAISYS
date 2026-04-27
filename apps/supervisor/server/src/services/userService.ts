@@ -5,16 +5,12 @@ import {
   rotateAgentApiKeyByUuid,
 } from "@naisys/hub-database";
 import type { Permission } from "@naisys/supervisor-database";
-import { updateUserPassword } from "@naisys/supervisor-database";
-import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 
 import supervisorDb from "../database/supervisorDb.js";
 
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
 export { hashToken };
-
-const SALT_ROUNDS = 10;
 
 export async function getUserByUsername(username: string) {
   return supervisorDb.user.findUnique({ where: { username } });
@@ -74,18 +70,18 @@ export async function getUserById(id: number) {
   });
 }
 
-export async function createUserWithPassword(data: {
-  username: string;
-  password: string;
-}) {
+/**
+ * Create a passkey-based user. The user has no credentials yet — call
+ * issueRegistrationToken on the returned id so the operator can set up their
+ * first passkey.
+ */
+export async function createPasskeyUser(data: { username: string }) {
   assertUrlSafeKey(data.username, "Username");
-  const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
   const uuid = randomUUID();
   const user = await supervisorDb.user.create({
     data: {
       username: data.username,
       uuid,
-      passwordHash,
       isAgent: false,
       apiKey: randomBytes(32).toString("hex"),
     },
@@ -94,28 +90,18 @@ export async function createUserWithPassword(data: {
   return user;
 }
 
-export async function updateUser(
-  id: number,
-  data: { username?: string; password?: string },
-) {
+export async function updateUser(id: number, data: { username?: string }) {
   const updateData: Record<string, unknown> = {};
   if (data.username !== undefined) {
     assertUrlSafeKey(data.username, "Username");
     updateData.username = data.username;
   }
 
-  const updated = await supervisorDb.user.update({
+  return supervisorDb.user.update({
     where: { id },
     data: updateData,
     include: { permissions: true },
   });
-
-  if (data.password !== undefined) {
-    const newHash = await bcrypt.hash(data.password, SALT_ROUNDS);
-    await updateUserPassword(updated.username, newHash);
-  }
-
-  return updated;
 }
 
 export async function deleteUser(id: number) {

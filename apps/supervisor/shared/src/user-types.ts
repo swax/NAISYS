@@ -41,7 +41,12 @@ const urlSafeUsername = z
 export const CreateUserSchema = z
   .object({
     username: urlSafeUsername,
-    password: z.string().min(6),
+    /**
+     * Step-up passkey assertion authorizing this admin action — required
+     * when the calling admin already has a passkey on file.
+     * Pass-through; simplewebauthn validates the structure.
+     */
+    stepUpAssertion: z.any().optional(),
   })
   .strict();
 
@@ -50,7 +55,6 @@ export type CreateUser = z.infer<typeof CreateUserSchema>;
 export const UpdateUserSchema = z
   .object({
     username: urlSafeUsername.optional(),
-    password: z.string().min(6).optional(),
   })
   .strict();
 
@@ -63,14 +67,6 @@ export const GrantPermissionSchema = z
   .strict();
 
 export type GrantPermission = z.infer<typeof GrantPermissionSchema>;
-
-export const ChangePasswordSchema = z
-  .object({
-    password: z.string().min(6),
-  })
-  .strict();
-
-export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
 
 export const CreateAgentUserSchema = z
   .object({
@@ -135,5 +131,7 @@ export const CreateUserResponseSchema = z.object({
   message: z.string(),
   id: z.number(),
   username: z.string(),
+  registrationUrl: z.string(),
+  registrationExpiresAt: z.string(),
 });
 export type CreateUserResponse = z.infer<typeof CreateUserResponseSchema>;

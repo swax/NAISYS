@@ -1,13 +1,14 @@
 import {
   ActionIcon,
+  Alert,
   Button,
   Card,
   Code,
   Container,
+  CopyButton,
   Group,
   Loader,
   Modal,
-  PasswordInput,
   Select,
   Stack,
   Table,
@@ -20,10 +21,13 @@ import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
 import {
+  type PasskeyCredential,
   type Permission,
   PermissionDescriptions,
+  type RegistrationTokenResponse,
   type UserDetailResponse,
 } from "@naisys/supervisor-shared";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -34,8 +38,15 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
+import { useSession } from "../../contexts/SessionContext";
 import {
-  changePassword,
+  deleteUserPasskey,
+  issueRegistrationLink,
+  listUserPasskeys,
+  passkeyRegister,
+  resetUserPasskeys,
+} from "../../lib/apiAuth";
+import {
   deleteUser,
   getUser,
   grantPermission,
@@ -47,6 +58,7 @@ import {
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useSession();
   const [user, setUser] = useState<UserDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
@@ -56,11 +68,17 @@ export const UserDetail: React.FC = () => {
   const [grantPerm, setGrantPerm] = useState<Permission | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
-  const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
-  const [newPassword, setNewPassword] = useState("");
-  const [pwSaving, setPwSaving] = useState(false);
-  const [pwError, setPwError] = useState("");
   const { permissions: allPermissions } = useOutletContext<AppOutletContext>();
+
+  const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([]);
+  const [passkeysLoading, setPasskeysLoading] = useState(false);
+  const [passkeyError, setPasskeyError] = useState("");
+  const [registering, setRegistering] = useState(false);
+  const [issuedLink, setIssuedLink] = useState<RegistrationTokenResponse | null>(
+    null,
+  );
+
+  const isSelf = currentUser?.username === routeUsername;
 
   const fetchUser = useCallback(async () => {
     if (!routeUsername) return;
@@ -76,9 +94,26 @@ export const UserDetail: React.FC = () => {
     }
   }, [routeUsername]);
 
+  const fetchPasskeys = useCallback(async () => {
+    if (!routeUsername) return;
+    setPasskeysLoading(true);
+    setPasskeyError("");
+    try {
+      const result = await listUserPasskeys(routeUsername);
+      setPasskeys(result.credentials);
+    } catch (err) {
+      setPasskeyError(
+        err instanceof Error ? err.message : "Failed to load passkeys",
+      );
+    } finally {
+      setPasskeysLoading(false);
+    }
+  }, [routeUsername]);
+
   useEffect(() => {
     void fetchUser();
-  }, [fetchUser]);
+    void fetchPasskeys();
+  }, [fetchUser, fetchPasskeys]);
 
   const handleDelete = async () => {
     if (!routeUsername) return;
@@ -124,23 +159,6 @@ export const UserDetail: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!newPassword) return;
-    setPwSaving(true);
-    setPwError("");
-    try {
-      await changePassword(newPassword);
-      closePw();
-      setNewPassword("");
-    } catch (err) {
-      setPwError(
-        err instanceof Error ? err.message : "Failed to change password",
-      );
-    } finally {
-      setPwSaving(false);
-    }
-  };
-
   const handleGrantPermission = async () => {
     if (!routeUsername || !grantPerm) return;
     try {
@@ -181,6 +199,71 @@ export const UserDetail: React.FC = () => {
     }
   };
 
+  const handleAddPasskey = async () => {
+    setRegistering(true);
+    setPasskeyError("");
+    try {
+      await passkeyRegister({});
+      void fetchPasskeys();
+    } catch (err) {
+      setPasskeyError(
+        err instanceof Error ? err.message : "Failed to register passkey",
+      );
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleDeletePasskey = async (id: number) => {
+    if (!routeUsername) return;
+    if (
+      passkeys.length === 1 &&
+      isSelf &&
+      !confirm(
+        "This is your only passkey. After removing it you'll have no way to sign in until an admin issues a new registration link. Continue?",
+      )
+    )
+      return;
+    if (
+      passkeys.length > 1 &&
+      !confirm("Remove this passkey? It can't be recovered.")
+    )
+      return;
+    try {
+      await deleteUserPasskey(routeUsername, id);
+      void fetchPasskeys();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to remove passkey");
+    }
+  };
+
+  const handleIssueRegistrationLink = async () => {
+    if (!routeUsername) return;
+    try {
+      const result = await issueRegistrationLink(routeUsername);
+      setIssuedLink(result);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to issue link");
+    }
+  };
+
+  const handleResetPasskeys = async () => {
+    if (!routeUsername) return;
+    if (
+      !confirm(
+        `Wipe all passkeys for ${routeUsername} and issue a new registration link? Use this when the user has lost all their devices.`,
+      )
+    )
+      return;
+    try {
+      const result = await resetUserPasskeys(routeUsername);
+      setIssuedLink(result);
+      void fetchPasskeys();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to reset passkeys");
+    }
+  };
+
   if (loading) {
     return (
       <Container size="md" py="xl" w="100%">
@@ -202,6 +285,10 @@ export const UserDetail: React.FC = () => {
   const grantablePermissions = allPermissions.filter(
     (p) => !user.permissions?.some((up) => up.permission === p),
   );
+
+  const canIssueRegistration = hasAction(user._actions, "issue-registration");
+  const canResetPasskeys = hasAction(user._actions, "reset-passkeys");
+  const supportsWebAuthn = browserSupportsWebAuthn();
 
   return (
     <Container size="md" py="xl" w="100%">
@@ -231,18 +318,6 @@ export const UserDetail: React.FC = () => {
           <Button variant="subtle" onClick={() => navigate("/users")}>
             Back
           </Button>
-          {hasAction(user._actions, "change-password") && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setNewPassword("");
-                setPwError("");
-                openPw();
-              }}
-            >
-              Change Password
-            </Button>
-          )}
           {hasAction(user._actions, "update") && (
             <Button
               onClick={() => {
@@ -310,7 +385,7 @@ export const UserDetail: React.FC = () => {
               ) : (
                 <Code>
                   {
-                    "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+                    "••••••••••••••••"
                   }
                 </Code>
               )}
@@ -318,6 +393,130 @@ export const UserDetail: React.FC = () => {
           )}
         </Stack>
       </Card>
+
+      {!user.isAgent && (
+        <>
+          <Group justify="space-between" mb="sm" align="center">
+            <Title order={3}>Passkeys</Title>
+            <Group gap="xs">
+              {/* First-passkey enrollment must go through a registration
+                  link — server rejects authenticated-no-token register when
+                  the caller has zero passkeys. Hide the button to match. */}
+              {isSelf && passkeys.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handleAddPasskey}
+                  loading={registering}
+                  disabled={!supportsWebAuthn}
+                >
+                  Add passkey on this device
+                </Button>
+              )}
+              {/* Self-issuance is server-rejected for zero-passkey callers
+                  (an admin must bootstrap the first credential). Hide the
+                  button rather than letting it 403. */}
+              {canIssueRegistration &&
+                !(isSelf && passkeys.length === 0) && (
+                  <Button variant="light" onClick={handleIssueRegistrationLink}>
+                    {isSelf
+                      ? "Issue registration link for new device"
+                      : "Issue registration link"}
+                  </Button>
+                )}
+              {canResetPasskeys && (
+                <Button color="red" variant="outline" onClick={handleResetPasskeys}>
+                  Reset all passkeys
+                </Button>
+              )}
+            </Group>
+          </Group>
+
+          {passkeyError && (
+            <Alert color="red" variant="light" mb="md">
+              {passkeyError}
+            </Alert>
+          )}
+
+          {issuedLink && (
+            <Alert color="blue" variant="light" mb="md">
+              <Stack gap="xs">
+                <Text size="sm">
+                  Registration link for <b>{issuedLink.username}</b> (expires{" "}
+                  {new Date(issuedLink.expiresAt).toLocaleString()}):
+                </Text>
+                <Code
+                  block
+                  style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
+                >
+                  {issuedLink.registrationUrl}
+                </Code>
+                <Group>
+                  <CopyButton value={issuedLink.registrationUrl}>
+                    {({ copied, copy }) => (
+                      <Button size="xs" variant="light" onClick={copy}>
+                        {copied ? "Copied" : "Copy"}
+                      </Button>
+                    )}
+                  </CopyButton>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => setIssuedLink(null)}
+                  >
+                    Dismiss
+                  </Button>
+                </Group>
+              </Stack>
+            </Alert>
+          )}
+
+          {passkeysLoading ? (
+            <Loader size="sm" />
+          ) : passkeys.length > 0 ? (
+            <Table striped withTableBorder mb="lg">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Device</Table.Th>
+                  <Table.Th>Registered</Table.Th>
+                  <Table.Th>Last used</Table.Th>
+                  <Table.Th></Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {passkeys.map((p) => (
+                  <Table.Tr key={p.id}>
+                    <Table.Td>
+                      {p.deviceLabel || <Text c="dimmed">(unlabeled)</Text>}
+                    </Table.Td>
+                    <Table.Td>
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </Table.Td>
+                    <Table.Td>
+                      {p.lastUsedAt
+                        ? new Date(p.lastUsedAt).toLocaleString()
+                        : "—"}
+                    </Table.Td>
+                    <Table.Td>
+                      <Button
+                        size="xs"
+                        color="red"
+                        variant="subtle"
+                        onClick={() => handleDeletePasskey(p.id)}
+                      >
+                        Remove
+                      </Button>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          ) : (
+            <Text c="dimmed" mb="lg">
+              No passkeys registered yet.
+            </Text>
+          )}
+        </>
+      )}
 
       <Title order={3} mb="sm">
         Permissions
@@ -407,29 +606,6 @@ export const UserDetail: React.FC = () => {
               Cancel
             </Button>
             <Button onClick={handleUpdate} loading={saving}>
-              Save
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Modal opened={pwOpened} onClose={closePw} title="Change Password">
-        <Stack>
-          <PasswordInput
-            label="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.currentTarget.value)}
-          />
-          {pwError && (
-            <Text c="red" size="sm">
-              {pwError}
-            </Text>
-          )}
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={closePw}>
-              Cancel
-            </Button>
-            <Button onClick={handleChangePassword} loading={pwSaving}>
               Save
             </Button>
           </Group>

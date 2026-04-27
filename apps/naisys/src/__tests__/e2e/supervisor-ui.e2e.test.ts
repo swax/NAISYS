@@ -4,15 +4,12 @@
  *  1. Set up an .env and a single agent yaml (uibot).
  *  2. Spawn naisys with --integrated-hub --supervisor and wait for the
  *     admin agent to start.
- *  3. Capture the superadmin password printed during startup.
- *  4. Launch headless Chromium via Playwright and navigate to the
- *     supervisor web UI.
- *  5. Login as superadmin with the captured password and wait for the
- *     post-login navigation to complete.
- *  6. Click uibot in the sidebar, wait for the agent detail page to load,
+ *  3. Launch headless Chromium via Playwright with a virtual authenticator.
+ *  4. Register the bootstrap superadmin passkey from the printed one-time URL.
+ *  5. Click uibot in the sidebar, wait for the agent detail page to load,
  *     and poll until the Start button becomes enabled.
- *  7. Click Start and wait for the "Agent Started" notification.
- *  8. Switch to uibot via the NAISYS CLI and assert the prompt shows
+ *  6. Click Start and wait for the "Agent Started" notification.
+ *  7. Switch to uibot via the NAISYS CLI and assert the prompt shows
  *     uibot@, confirming the UI-triggered start actually started the
  *     agent.
  */
@@ -33,6 +30,7 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
+import { registerSuperAdminPasskeyViaUi } from "./supervisorApiHelper.js";
 
 vi.setConfig({ testTimeout: 120000 });
 
@@ -95,28 +93,12 @@ SERVER_PORT=${SERVER_PORT}
     await naisys.waitForOutput("AGENT STARTED", 60000);
     await naisys.waitForPrompt();
 
-    // --- Capture admin password from startup output ---
-    const fullOutput = naisys.getFullOutput();
-    const passwordMatch = fullOutput.match(
-      /superadmin user created\. Password: (\S+)/,
-    );
-    expect(passwordMatch).not.toBeNull();
-    const adminPassword = passwordMatch![1];
-
     // --- Launch Playwright ---
     browser = await chromium.launch({ headless: true });
     page = await browser.newPage();
 
-    // --- Login ---
-    await page.goto(`http://localhost:${SERVER_PORT}/supervisor/`);
-    await page.getByLabel("Username").fill("superadmin");
-    await page.getByLabel("Password").fill(adminPassword);
-    await page.getByRole("button", { name: "Login" }).click();
-
-    // Wait for post-login navigation (Login button disappears once authenticated)
-    await page
-      .getByRole("button", { name: "Login" })
-      .waitFor({ state: "hidden", timeout: 15000 });
+    // --- Register bootstrap passkey and enter the app ---
+    await registerSuperAdminPasskeyViaUi(naisys, page);
 
     // Wait for sidebar to load with agent list
     await page.getByText("uibot").first().waitFor({ timeout: 15000 });

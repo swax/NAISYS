@@ -1,45 +1,33 @@
-import { Alert, Button, Center, Stack, Text, TextInput } from "@mantine/core";
+import { Alert, Button, Center, Stack, Text } from "@mantine/core";
 import naisysLogo from "@naisys/common/assets/naisys-logo.webp";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import React from "react";
 
 import { useSession } from "../contexts/SessionContext";
 
 export const LoginPage: React.FC = () => {
-  const { login } = useSession();
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
+  const { loginWithPasskey } = useSession();
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const supported = browserSupportsWebAuthn();
 
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      setErrorMessage("Please enter both username and password");
-      return;
-    }
-
     setIsLoading(true);
     setErrorMessage("");
-
     try {
-      await login(username, password);
+      await loginWithPasskey();
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "An error occurred",
+        error instanceof Error ? error.message : "Sign-in failed",
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter") {
-      void handleLogin();
-    }
-  };
-
   return (
     <Center style={{ minHeight: "100vh" }}>
-      <Stack align="center" gap="lg" w={320}>
+      <Stack align="center" gap="lg" w={360}>
         <img
           src={naisysLogo}
           alt="NAISYS"
@@ -49,37 +37,29 @@ export const LoginPage: React.FC = () => {
           NAISYS Supervisor
         </Text>
         <Stack gap="md" w="100%">
+          {!supported && (
+            <Alert color="yellow" variant="light">
+              This browser doesn't support passkeys. Use a modern Chrome,
+              Safari, Firefox, or Edge build.
+            </Alert>
+          )}
           {errorMessage && (
             <Alert color="red" variant="light">
               {errorMessage}
             </Alert>
           )}
-          <TextInput
-            label="Username"
-            placeholder="Enter your username"
-            value={username}
-            onChange={(event) => setUsername(event.currentTarget.value)}
-            onKeyDown={handleKeyDown}
-            data-autofocus
-            disabled={isLoading}
-          />
-          <TextInput
-            label="Password"
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-          />
           <Button
             fullWidth
+            size="md"
             onClick={handleLogin}
             loading={isLoading}
-            disabled={!username.trim() || !password.trim()}
+            disabled={!supported}
           >
-            Login
+            Sign in with passkey
           </Button>
+          <Text size="xs" c="dimmed" ta="center">
+            Don't have a passkey yet? Ask an admin for a registration link.
+          </Text>
         </Stack>
       </Stack>
     </Center>

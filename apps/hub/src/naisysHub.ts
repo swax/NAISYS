@@ -1,10 +1,10 @@
-import type { StartHub } from "@naisys/common";
+import type { BootstrapSupervisor, StartHub } from "@naisys/common";
 import {
   createDualLogger,
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
-  promptSuperAdminPassword,
+  promptResetSuperAdminPasskey,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -174,18 +174,23 @@ export const startHub: StartHub = async (
       // Don't import the whole fastify web server module tree unless needed
       // Use variable to avoid compile-time type dependency on @naisys/supervisor (allows parallel builds)
       const supervisorModule = "@naisys/supervisor";
-      const { supervisorPlugin } = (await import(supervisorModule)) as {
+      const { supervisorPlugin, bootstrapSupervisor } = (await import(
+        supervisorModule
+      )) as {
         supervisorPlugin: any;
+        bootstrapSupervisor: BootstrapSupervisor;
       };
-      const superAdminPassword = wizardRan
-        ? await promptSuperAdminPassword("Supervisor Setup")
-        : undefined;
+      const resetSuperAdminPasskey = wizardRan
+        ? await promptResetSuperAdminPasskey("Supervisor Setup")
+        : false;
+
+      // Bootstrap before plugin register so the operator prompt isn't bounded by pluginTimeout and doesn't interleave with hub connection logs.
+      await bootstrapSupervisor({ resetSuperAdminPasskey });
 
       await fastify.register(supervisorPlugin, {
         plugins,
         serverPort,
         hosted: true,
-        superAdminPassword,
       });
     }
 

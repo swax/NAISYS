@@ -61,7 +61,8 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
 
 /**
  * Sync superadmin from supervisor into ERP DB and ensure permissions.
- * For supervisor auth mode.
+ * For supervisor auth mode. The supervisor uses passkey-only auth, so the
+ * mirrored ERP row stores a sentinel passwordHash that can never match.
  */
 export async function ensureSupervisorSuperAdmin(): Promise<void> {
   const result = await ensureSuperAdmin();
@@ -71,12 +72,11 @@ export async function ensureSupervisorSuperAdmin(): Promise<void> {
     create: {
       uuid: result.user.uuid,
       username: result.user.username,
-      passwordHash: result.user.passwordHash,
+      passwordHash: "!sso-passkey-only",
       apiKey: result.user.apiKey,
     },
     update: {
       username: result.user.username,
-      passwordHash: result.user.passwordHash,
       apiKey: result.user.apiKey,
     },
   });

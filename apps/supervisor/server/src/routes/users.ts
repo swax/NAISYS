@@ -1,11 +1,23 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
-import type { Permission } from "@naisys/supervisor-database";
+import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
 import {
-  ChangePasswordSchema,
+  deleteAllPasskeyCredentialsForUser,
+  deleteAllSessionsForUser,
+  deletePasskeyCredential,
+  listPasskeyCredentialsForUser,
+  type Permission,
+  userHasPasskey,
+} from "@naisys/supervisor-database";
+import {
   CreateAgentUserSchema,
+  CreateUserResponseSchema,
   CreateUserSchema,
+  ErrorResponseSchema,
   GrantPermissionSchema,
+  PasskeyCredentialListSchema,
   PermissionEnum,
+  RegistrationTokenResponseSchema,
+  StepUpAssertionBodySchema,
   UpdateUserSchema,
 } from "@naisys/supervisor-shared";
 import type {
@@ -18,7 +30,13 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { authCache, requirePermission } from "../auth-middleware.js";
-import { conflict, notFound } from "../error-helpers.js";
+import {
+  conflict,
+  forbidden,
+  notFound,
+  sendForbidden,
+  sendUnauthorized,
+} from "../error-helpers.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -31,6 +49,8 @@ import {
   getHubAgentById,
   getHubAgentByUuid,
 } from "../services/agentService.js";
+import { issueRegistrationLink } from "../services/passkeyService.js";
+import { requireStepUp } from "../services/stepUpService.js";
 import * as userService from "../services/userService.js";
 
 function userItemLinks(
@@ -61,7 +81,7 @@ function userActions(
   const adminGate = permGate(isAdmin, "supervisor_admin");
   const actions: HateoasAction[] = [];
 
-  // Admins can edit any user (username + password)
+  // Admins can edit any user (username only)
   actions.push({
     rel: "update",
     href,
@@ -71,18 +91,6 @@ function userActions(
     body: { username: "" },
     ...adminGate,
   });
-
-  // Any authenticated user can change their own password
-  if (isSelf) {
-    actions.push({
-      rel: "change-password",
-      href: `${API_PREFIX}/users/me/password`,
-      method: "POST",
-      title: "Change Password",
-      schema: `${API_PREFIX}/schemas/ChangePassword`,
-      body: { password: "" },
-    });
-  }
 
   actions.push({
     rel: "grant-permission",
@@ -101,6 +109,30 @@ function userActions(
     title: "Rotate API Key",
     ...adminGate,
   });
+
+  // Admin or self can issue a new registration token (admin to onboard / reset
+  // someone, self to add another passkey from a new device). Hide it from
+  // viewers who match neither so the UI reflects what the endpoint enforces.
+  if (isSelf || isAdmin) {
+    actions.push({
+      rel: "issue-registration",
+      href: `${href}/registration-token`,
+      method: "POST",
+      title: "Issue Registration Link",
+    });
+  }
+
+  // Admin-only "wipe all passkeys" reset path. Always available alongside the
+  // registration link issue so that a lost-device case can be recovered.
+  if (!isSelf) {
+    actions.push({
+      rel: "reset-passkeys",
+      href: `${href}/reset-passkeys`,
+      method: "POST",
+      title: "Reset Passkeys",
+      ...adminGate,
+    });
+  }
 
   // Delete: admin-only AND not self (can't delete yourself)
   if (!isSelf) {
@@ -192,22 +224,14 @@ export default function userRoutes(
     reply: FastifyReply,
   ) => {
     if (!request.supervisorUser) {
-      reply.status(401).send({
-        statusCode: 401,
-        error: "Unauthorized",
-        message: "Authentication required",
-      });
+      sendUnauthorized(reply, "Authentication required");
       return;
     }
     const isAdmin =
       request.supervisorUser.permissions.includes("supervisor_admin");
     const isSelf = request.params.username === request.supervisorUser.username;
     if (!isAdmin && !isSelf) {
-      reply.status(403).send({
-        statusCode: 403,
-        error: "Forbidden",
-        message: "Permission 'supervisor_admin' required",
-      });
+      sendForbidden(reply, "Permission 'supervisor_admin' required");
       return;
     }
   };
@@ -242,7 +266,7 @@ export default function userRoutes(
           method: "POST",
           title: "Create User",
           schema: `${API_PREFIX}/schemas/CreateUser`,
-          body: { username: "", password: "" },
+          body: { username: "" },
           ...adminGate,
         },
         {
@@ -271,56 +295,48 @@ export default function userRoutes(
     },
   );
 
-  // CHANGE OWN PASSWORD (must be registered before /:username routes)
-  app.post(
-    "/me/password",
-    {
-      schema: {
-        description: "Change the current user's password",
-        tags: ["Users"],
-        body: ChangePasswordSchema,
-        security: [{ cookieAuth: [] }],
-      },
-    },
-    async (request, reply) => {
-      if (!request.supervisorUser) {
-        reply.status(401).send({
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "Authentication required",
-        });
-        return;
-      }
-
-      await userService.updateUser(request.supervisorUser.id, {
-        password: request.body.password,
-      });
-      authCache.clear();
-      return { success: true, message: "Password changed" };
-    },
-  );
-
-  // CREATE USER
+  // CREATE USER (returns a registration link instead of accepting a password)
   app.post(
     "/",
     {
       preHandler: adminPreHandler,
       schema: {
-        description: "Create a new user",
+        description:
+          "Create a new user. Returns a one-time registration URL the new user must open to enroll a passkey.",
         tags: ["Users"],
         body: CreateUserSchema,
+        response: {
+          201: CreateUserResponseSchema,
+          401: ErrorResponseSchema,
+          409: ErrorResponseSchema,
+          412: ErrorResponseSchema,
+        },
         security: [{ cookieAuth: [] }],
       },
     },
     async (request, reply) => {
+      const stepUp = await requireStepUp(request, reply, request.body);
+      if (!stepUp.ok) {
+        reply.code(stepUp.status);
+        return { success: false as const, message: stepUp.message };
+      }
       try {
-        const user = await userService.createUserWithPassword(request.body);
+        const user = await userService.createPasskeyUser({
+          username: request.body.username,
+        });
+        const link = await issueRegistrationLink({
+          userId: user.id,
+          protocol: request.protocol,
+          hostHeader: request.headers.host,
+        });
         reply.code(201);
         return {
           success: true,
           message: "User created",
           id: user.id,
           username: user.username,
+          registrationUrl: link.url,
+          registrationExpiresAt: link.expiresAt.toISOString(),
         };
       } catch (err: unknown) {
         if (err instanceof Error && err.message.includes("Unique constraint")) {
@@ -415,11 +431,11 @@ export default function userRoutes(
     },
   );
 
-  // UPDATE USER (admin can update any field; non-admin can only change own password)
+  // UPDATE USER (admin only — username only)
   app.put(
     "/:username",
     {
-      preHandler: [requireAdminOrSelf],
+      preHandler: adminPreHandler,
       schema: {
         description: "Update a user",
         tags: ["Users"],
@@ -436,14 +452,8 @@ export default function userRoutes(
         return notFound(reply, "User not found");
       }
 
-      const isAdmin =
-        request.supervisorUser!.permissions.includes("supervisor_admin");
-
-      // Non-admins can only change their own password
-      const body = isAdmin ? request.body : { password: request.body.password };
-
       try {
-        await userService.updateUser(targetUser.id, body);
+        await userService.updateUser(targetUser.id, request.body);
         authCache.clear();
         return { success: true, message: "User updated" };
       } catch (err: unknown) {
@@ -584,6 +594,250 @@ export default function userRoutes(
       await userService.revokePermission(targetUser.id, permission);
       authCache.clear();
       return { success: true, message: "Permission revoked" };
+    },
+  );
+
+  // LIST PASSKEYS
+  app.get(
+    "/:username/passkeys",
+    {
+      preHandler: [requireAdminOrSelf],
+      schema: {
+        description: "List a user's registered passkeys",
+        tags: ["Users"],
+        params: usernameParams,
+        response: {
+          200: PasskeyCredentialListSchema,
+          404: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      const credentials = await listPasskeyCredentialsForUser(targetUser.id);
+      return {
+        credentials: credentials.map((c) => ({
+          id: c.id,
+          deviceLabel: c.deviceLabel,
+          createdAt: c.createdAt.toISOString(),
+          lastUsedAt: c.lastUsedAt ? c.lastUsedAt.toISOString() : null,
+        })),
+      };
+    },
+  );
+
+  // DELETE PASSKEY (admin or self) — POST not DELETE so we can carry the
+  // step-up assertion in the body (some HTTP intermediaries strip DELETE
+  // bodies, and we don't want to depend on header-encoded blobs).
+  //
+  // Step-up is required here specifically to close a session-hijack chain:
+  // without it, an attacker holding a stolen cookie could drain a victim's
+  // passkeys, and once the victim has zero credentials left, requireStepUp
+  // bypasses for all subsequent admin actions on the attacker's session,
+  // letting them mint a registration link and enroll their own passkey.
+  const passkeyParams = z.object({
+    username: z.string(),
+    id: z.coerce.number().int(),
+  });
+  app.post<{
+    Params: z.infer<typeof passkeyParams>;
+    Body: z.infer<typeof StepUpAssertionBodySchema>;
+  }>(
+    "/:username/passkeys/:id/delete",
+    {
+      preHandler: async (request, reply) => {
+        if (!request.supervisorUser) {
+          sendUnauthorized(reply, "Authentication required");
+          return;
+        }
+        const isAdmin =
+          request.supervisorUser.permissions.includes("supervisor_admin");
+        const isSelf =
+          request.params.username === request.supervisorUser.username;
+        if (!isAdmin && !isSelf) {
+          sendForbidden(reply, "Permission 'supervisor_admin' required");
+          return;
+        }
+      },
+      schema: {
+        description: "Delete one of a user's registered passkeys",
+        tags: ["Users"],
+        params: passkeyParams,
+        body: StepUpAssertionBodySchema,
+        response: {
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          412: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const stepUp = await requireStepUp(request, reply, request.body);
+      if (!stepUp.ok) {
+        reply.code(stepUp.status);
+        return { success: false as const, message: stepUp.message };
+      }
+
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      const removed = await deletePasskeyCredential(
+        request.params.id,
+        targetUser.id,
+      );
+      if (!removed) return notFound(reply, "Passkey not found");
+
+      // Two cleanup modes depending on what's left:
+      //   - Last passkey gone: kill every session, including the actor's.
+      //     The account has no credentials behind it anymore, so leaving
+      //     any cookie alive is exactly the bypass we're trying to close.
+      //   - Still has at least one passkey: kill all sessions except the
+      //     self-actor's current cookie, preserving the prune workflow's UX.
+      //     Any non-actor session (i.e. attacker on another device) is
+      //     evicted, and step-up still gates further sensitive actions.
+      const stillHasPasskey = await userHasPasskey(targetUser.id);
+      const actingOnSelf = targetUser.id === request.supervisorUser?.id;
+      const cookieToken = request.cookies?.[SESSION_COOKIE_NAME];
+      const preserveActorSession = stillHasPasskey && actingOnSelf;
+      await deleteAllSessionsForUser(
+        targetUser.id,
+        preserveActorSession && cookieToken ? hashToken(cookieToken) : undefined,
+      );
+
+      // If the actor just invalidated their own session (last-passkey case),
+      // tell the browser to drop the now-dead cookie so it doesn't keep
+      // presenting it on subsequent requests. Server-side it was already
+      // gone after deleteAllSessionsForUser; this is purely UX cleanup.
+      if (actingOnSelf && !preserveActorSession) {
+        reply.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
+      }
+
+      authCache.clear();
+      return { success: true, message: "Passkey removed" };
+    },
+  );
+
+  // ISSUE REGISTRATION TOKEN (admin to invite/reset, or self to add a device)
+  //
+  // Self-issuance is blocked when the caller has zero passkeys: otherwise a
+  // stolen session for a zero-passkey user could mint a token here (step-up
+  // bypasses with no passkey to verify against) and use it to enroll the
+  // attacker's own passkey. First enrollment must come through an admin or
+  // the bootstrap setup wizard, never a self-issued link.
+  app.post(
+    "/:username/registration-token",
+    {
+      preHandler: [requireAdminOrSelf],
+      schema: {
+        description:
+          "Issue a one-time registration token for the user. Any prior unused tokens are revoked.",
+        tags: ["Users"],
+        params: usernameParams,
+        body: StepUpAssertionBodySchema,
+        response: {
+          200: RegistrationTokenResponseSchema,
+          401: ErrorResponseSchema,
+          403: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          412: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const callerId = request.supervisorUser!.id;
+      const isSelf = request.params.username === request.supervisorUser!.username;
+      if (isSelf && !(await userHasPasskey(callerId))) {
+        return forbidden(
+          reply,
+          "First passkey enrollment requires an admin-issued registration link.",
+        );
+      }
+      const stepUp = await requireStepUp(request, reply, request.body);
+      if (!stepUp.ok) {
+        reply.code(stepUp.status);
+        return { success: false as const, message: stepUp.message };
+      }
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      const link = await issueRegistrationLink({
+        userId: targetUser.id,
+        protocol: request.protocol,
+        hostHeader: request.headers.host,
+      });
+
+      return {
+        username: targetUser.username,
+        registrationUrl: link.url,
+        expiresAt: link.expiresAt.toISOString(),
+      };
+    },
+  );
+
+  // RESET PASSKEYS (admin: wipes all passkeys + issues a fresh registration link)
+  app.post(
+    "/:username/reset-passkeys",
+    {
+      preHandler: adminPreHandler,
+      schema: {
+        description:
+          "Wipe all of a user's passkeys and issue a fresh registration token. Use when a user has lost all their devices.",
+        tags: ["Users"],
+        params: usernameParams,
+        body: StepUpAssertionBodySchema,
+        response: {
+          200: RegistrationTokenResponseSchema,
+          401: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          409: ErrorResponseSchema,
+          412: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const stepUp = await requireStepUp(request, reply, request.body);
+      if (!stepUp.ok) {
+        reply.code(stepUp.status);
+        return { success: false as const, message: stepUp.message };
+      }
+      if (request.params.username === request.supervisorUser!.username) {
+        return conflict(reply, "Use 'Issue Registration Link' on yourself instead");
+      }
+
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      await deleteAllPasskeyCredentialsForUser(targetUser.id);
+      // Recovery is the canonical "this user has lost access" action — kill
+      // any browser sessions that might still be carrying a session cookie
+      // from the prior credentials.
+      await deleteAllSessionsForUser(targetUser.id);
+      const link = await issueRegistrationLink({
+        userId: targetUser.id,
+        protocol: request.protocol,
+        hostHeader: request.headers.host,
+      });
+
+      authCache.clear();
+      return {
+        username: targetUser.username,
+        registrationUrl: link.url,
+        expiresAt: link.expiresAt.toISOString(),
+      };
     },
   );
 }
