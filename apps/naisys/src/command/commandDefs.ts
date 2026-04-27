@@ -78,7 +78,7 @@ export const desktopCmd: CommandDef = {
     hold: {
       usage: "hold <combo> <ms>",
       description:
-        "Hold a key (or chord) down for the given milliseconds — use when an app needs a real held key (e.g. game emulators where movement requires a held direction)",
+        "Hold a key (or chord) down for the given milliseconds - default key press is 100ms",
     },
     click: {
       usage: "click <x> <y> [left|right|middle|double|triple]",
@@ -115,7 +115,7 @@ export const desktopCmd: CommandDef = {
 export const browserCmd: CommandDef = {
   name: "ns-browser",
   description:
-    "A headless Chromium browser via Playwright — fills the niche between ns-lynx (text) and ns-desktop (full GUI) for vision models that need to interact with web pages. Use `ns-browser help` for mode-specific commands",
+    "A headless browser that has both text based and visual modes",
   subcommands: {
     open: {
       usage: "open <url>",
@@ -141,7 +141,7 @@ export const browserCmd: CommandDef = {
     mode: {
       usage: "mode [visual|text]",
       description:
-        "Switch between visual mode (screenshot + coord-based clicks, default) and text mode (accessibility tree + selectors). With no arg, prints the current mode",
+        "Switch between visual mode (screenshot + coord-based clicks, default) and text mode (accessibility tree + selectors)",
     },
     screenshot: {
       usage: "screenshot",
@@ -324,7 +324,7 @@ export const ptyCmd: CommandDef = {
   name: "ns-pty",
   usage: "<command...>",
   description:
-    "Run a command in a pseudo-terminal so it sees stdin/stdout as a TTY. Use for commands that need an interactive prompt (sudo, ssh, passwd). Linux only",
+    "Run a command in a pseudo-terminal. Use for commands that need an interactive prompt (sudo, ssh, passwd). Linux only",
 };
 
 export const workspaceCmd: CommandDef = {
