@@ -29,6 +29,7 @@ import {
 } from "@naisys/supervisor-shared";
 import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useState } from "react";
 import {
   Link,
@@ -54,6 +55,22 @@ import {
   rotateUserApiKey,
   updateUser,
 } from "../../lib/apiUsers";
+
+// True when the registration URL points at a loopback address. Phones can't
+// reach localhost on the operator's machine, so the QR would be misleading.
+function isLoopbackRegistrationUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return (
+      host === "localhost" ||
+      host === "::1" ||
+      host === "0.0.0.0" ||
+      /^127\./.test(host)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
@@ -442,27 +459,51 @@ export const UserDetail: React.FC = () => {
                   Registration link for <b>{issuedLink.username}</b> (expires{" "}
                   {new Date(issuedLink.expiresAt).toLocaleString()}):
                 </Text>
-                <Code
-                  block
-                  style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
-                >
-                  {issuedLink.registrationUrl}
-                </Code>
-                <Group>
-                  <CopyButton value={issuedLink.registrationUrl}>
-                    {({ copied, copy }) => (
-                      <Button size="xs" variant="light" onClick={copy}>
-                        {copied ? "Copied" : "Copy"}
+                <Group align="flex-start" wrap="nowrap">
+                  {!isLoopbackRegistrationUrl(issuedLink.registrationUrl) && (
+                    <div style={{ background: "white", padding: 8 }}>
+                      <QRCodeSVG
+                        value={issuedLink.registrationUrl}
+                        size={160}
+                        level="M"
+                      />
+                    </div>
+                  )}
+                  <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
+                    <Code
+                      block
+                      style={{
+                        wordBreak: "break-all",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {issuedLink.registrationUrl}
+                    </Code>
+                    <Group>
+                      <CopyButton value={issuedLink.registrationUrl}>
+                        {({ copied, copy }) => (
+                          <Button size="xs" variant="light" onClick={copy}>
+                            {copied ? "Copied" : "Copy"}
+                          </Button>
+                        )}
+                      </CopyButton>
+                      <Button
+                        size="xs"
+                        variant="subtle"
+                        onClick={() => setIssuedLink(null)}
+                      >
+                        Dismiss
                       </Button>
+                    </Group>
+                    {isLoopbackRegistrationUrl(issuedLink.registrationUrl) && (
+                      <Text size="xs" c="dimmed">
+                        QR hidden — link points to localhost and won't be
+                        reachable from another device. Set{" "}
+                        <Code>SUPERVISOR_WEBAUTHN_ORIGIN</Code> to a
+                        LAN-reachable URL to enable QR enrollment from phones.
+                      </Text>
                     )}
-                  </CopyButton>
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    onClick={() => setIssuedLink(null)}
-                  >
-                    Dismiss
-                  </Button>
+                  </Stack>
                 </Group>
               </Stack>
             </Alert>
