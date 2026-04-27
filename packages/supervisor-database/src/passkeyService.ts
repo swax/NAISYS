@@ -130,6 +130,24 @@ export async function deletePasskeyCredential(
   return result.count > 0;
 }
 
+/**
+ * Rename a credential's device label. Scoped by `userId` so a caller can't
+ * rename someone else's passkey by guessing its id; returns false if the
+ * (id, userId) pair didn't match anything.
+ */
+export async function renamePasskeyDeviceLabel(
+  id: number,
+  userId: number,
+  deviceLabel: string,
+): Promise<boolean> {
+  const db = getSupervisorDb();
+  const result = await db.passkeyCredential.updateMany({
+    where: { id, userId },
+    data: { deviceLabel },
+  });
+  return result.count > 0;
+}
+
 export async function deleteAllPasskeyCredentialsForUser(
   userId: number,
 ): Promise<number> {

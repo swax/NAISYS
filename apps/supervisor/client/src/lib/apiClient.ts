@@ -199,6 +199,8 @@ export const apiEndpoints = {
   userPasskeys: (username: string) => `/users/${username}/passkeys`,
   userPasskeyDelete: (username: string, id: number) =>
     `/users/${username}/passkeys/${id}/delete`,
+  userPasskeyRename: (username: string, id: number) =>
+    `/users/${username}/passkeys/${id}/rename`,
   userRegistrationToken: (username: string) =>
     `/users/${username}/registration-token`,
   userResetPasskeys: (username: string) => `/users/${username}/reset-passkeys`,
