@@ -94,6 +94,21 @@ export async function promptSuperAdminPassword(title: string): Promise<string> {
   return generated;
 }
 
+/**
+ * Ask the operator (during --setup) whether to wipe the existing superadmin
+ * passkey and start fresh. Defaults to "no" so re-running --setup to tweak
+ * env vars doesn't accidentally lock the operator out.
+ */
+export async function promptResetSuperAdminPasskey(
+  title: string,
+): Promise<boolean> {
+  console.log(`\n  === ${title} ===\n`);
+  const answer = await askQuestion(
+    `  Reset ${SUPER_ADMIN_USERNAME} passkey and issue a new registration link? (y/N) `,
+  );
+  return Boolean(answer && answer.toLowerCase().startsWith("y"));
+}
+
 /** Parse a .env file into key-value pairs */
 export function parseEnvFile(filePath: string): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};

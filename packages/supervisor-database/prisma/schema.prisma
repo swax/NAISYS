@@ -19,17 +19,18 @@ enum Permission {
 }
 
 model User {
-  id               Int              @id @default(autoincrement())
-  username         String           @unique
-  uuid             String           @default("")
-  isAgent          Boolean          @default(false) @map("is_agent")
-  passwordHash     String           @default("") @map("password_hash")
-  createdAt        DateTime         @default(now()) @map("created_at")
-  apiKey           String?          @unique @map("api_key")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  permissions      UserPermission[] @relation("UserPermissions")
-  grantedPermissions UserPermission[] @relation("GrantedByPermissions")
-  sessions         Session[]
+  id                  Int                 @id @default(autoincrement())
+  username            String              @unique
+  uuid                String              @default("")
+  isAgent             Boolean             @default(false) @map("is_agent")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  apiKey              String?             @unique @map("api_key")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  permissions         UserPermission[]    @relation("UserPermissions")
+  grantedPermissions  UserPermission[]    @relation("GrantedByPermissions")
+  sessions            Session[]
+  passkeyCredentials  PasskeyCredential[]
+  registrationTokens  RegistrationToken[]
 
   @@map("users")
 }
@@ -56,6 +57,33 @@ model UserPermission {
 
   @@unique([userId, permission])
   @@map("user_permissions")
+}
+
+model PasskeyCredential {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  credentialId String    @unique @map("credential_id")
+  publicKey    String    @map("public_key")
+  counter      Int       @default(0)
+  transports   String    @default("")
+  deviceLabel  String    @default("") @map("device_label")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("passkey_credentials")
+}
+
+model RegistrationToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("registration_tokens")
 }
 
 model SchemaVersion {

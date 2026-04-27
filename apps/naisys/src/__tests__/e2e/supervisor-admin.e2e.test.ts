@@ -26,6 +26,7 @@ import type {
   ImportAgentConfigResponse,
   ModelsResponse,
   UpdateAgentConfigResponse,
+  UserDetailResponse,
 } from "@naisys/supervisor-shared";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -40,7 +41,10 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-import { loginAs, loginAsSuperAdmin } from "./supervisorApiHelper.js";
+import {
+  createSupervisorApiKeyClient,
+  loginAsSuperAdmin,
+} from "./supervisorApiHelper.js";
 
 vi.setConfig({ testTimeout: 150000 });
 
@@ -52,6 +56,8 @@ interface SuccessResponse {
 interface CreateUserResponse extends SuccessResponse {
   id: number;
   username: string;
+  registrationUrl: string;
+  registrationExpiresAt: string;
 }
 
 describe("Supervisor Admin E2E", () => {
@@ -115,15 +121,21 @@ SERVER_PORT=${SERVER_PORT}
 
     // ---- Step 2: create a limited user (no permissions) ----
     const limitedUsername = "limitedbot";
-    const limitedPassword = "LimitedPass123!";
     const created = await admin.post<CreateUserResponse>("/users", {
       username: limitedUsername,
-      password: limitedPassword,
     });
     expect(created.success).toBe(true);
     expect(created.username).toBe(limitedUsername);
+    expect(created.registrationUrl).toContain("/supervisor/register?token=");
 
-    const limited = await loginAs(API_BASE, limitedUsername, limitedPassword);
+    const limitedDetail = await admin.get<UserDetailResponse>(
+      `/users/${limitedUsername}`,
+    );
+    expect(limitedDetail.apiKey).toEqual(expect.any(String));
+    const limited = createSupervisorApiKeyClient(
+      API_BASE,
+      limitedDetail.apiKey!,
+    );
 
     // ---- Step 2 cont.: privileged action without permission must 403 ----
     await expect(

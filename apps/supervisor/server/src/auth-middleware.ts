@@ -9,6 +9,7 @@ import type { Permission } from "@naisys/supervisor-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
+import { sendForbidden, sendUnauthorized } from "./error-helpers.js";
 import {
   createUserForAgent,
   getUserByUuid,
@@ -28,7 +29,13 @@ declare module "fastify" {
   }
 }
 
-const PUBLIC_PREFIXES = ["/supervisor/api/auth/login"];
+const PUBLIC_PREFIXES = [
+  "/supervisor/api/auth/passkey/login-options",
+  "/supervisor/api/auth/passkey/login-verify",
+  "/supervisor/api/auth/passkey/register-options",
+  "/supervisor/api/auth/passkey/register-verify",
+  "/supervisor/api/auth/registration-token/lookup",
+];
 
 export const authCache = new AuthCache<SupervisorUser>();
 
@@ -137,11 +144,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
     if (publicRead && request.method === "GET") return; // Public read mode
 
-    reply.status(401).send({
-      statusCode: 401,
-      error: "Unauthorized",
-      message: "Authentication required",
-    });
+    sendUnauthorized(reply, "Authentication required");
   });
 }
 
@@ -159,20 +162,12 @@ export function hasPermission(
 export function requirePermission(permission: Permission) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.supervisorUser) {
-      reply.status(401).send({
-        statusCode: 401,
-        error: "Unauthorized",
-        message: "Authentication required",
-      });
+      sendUnauthorized(reply, "Authentication required");
       return;
     }
 
     if (!hasPermission(request.supervisorUser, permission)) {
-      reply.status(403).send({
-        statusCode: 403,
-        error: "Forbidden",
-        message: `Permission '${permission}' required`,
-      });
+      sendForbidden(reply, `Permission '${permission}' required`);
       return;
     }
   };

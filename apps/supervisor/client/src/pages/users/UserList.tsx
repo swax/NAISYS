@@ -1,11 +1,12 @@
 import {
   Button,
+  Code,
   Container,
+  CopyButton,
   Group,
   Loader,
   Modal,
   Pagination,
-  PasswordInput,
   Select,
   Stack,
   Table,
@@ -16,6 +17,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import type {
+  CreateUserResponse,
   UserListItem,
   UserListResponse,
 } from "@naisys/supervisor-shared";
@@ -45,9 +47,11 @@ export const UserList: React.FC = () => {
   const [createOpened, { open: openCreate, close: closeCreate }] =
     useDisclosure();
   const [newUsername, setNewUsername] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [createdLink, setCreatedLink] = useState<CreateUserResponse | null>(
+    null,
+  );
 
   const [agentOpened, { open: openAgent, close: closeAgent }] = useDisclosure();
   const [availableAgents, setAvailableAgents] = useState<
@@ -78,11 +82,9 @@ export const UserList: React.FC = () => {
     setCreating(true);
     setCreateError("");
     try {
-      await createUser({ username: newUsername, password: newPassword });
-      closeCreate();
-      void navigate(`/users/${newUsername}`);
-      setNewUsername("");
-      setNewPassword("");
+      const result = await createUser({ username: newUsername });
+      setCreatedLink(result);
+      void fetchData();
     } catch (err) {
       setCreateError(
         err instanceof Error ? err.message : "Failed to create user",
@@ -90,6 +92,13 @@ export const UserList: React.FC = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleCloseCreate = () => {
+    closeCreate();
+    setNewUsername("");
+    setCreatedLink(null);
+    setCreateError("");
   };
 
   const handleOpenAgentModal = async () => {
@@ -241,37 +250,73 @@ export const UserList: React.FC = () => {
         </Text>
       )}
 
-      <Modal opened={createOpened} onClose={closeCreate} title="Create User">
+      <Modal
+        opened={createOpened}
+        onClose={handleCloseCreate}
+        title="Create User"
+      >
         <Stack>
-          <TextInput
-            label="Username"
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.currentTarget.value)}
-            required
-          />
-          <PasswordInput
-            label="Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.currentTarget.value)}
-            required
-          />
-          {createError && (
-            <Text c="red" size="sm">
-              {createError}
-            </Text>
+          {!createdLink && (
+            <>
+              <TextInput
+                label="Username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.currentTarget.value)}
+                required
+              />
+              {createError && (
+                <Text c="red" size="sm">
+                  {createError}
+                </Text>
+              )}
+              <Group justify="flex-end">
+                <Button variant="subtle" onClick={handleCloseCreate}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  loading={creating}
+                  disabled={!newUsername}
+                >
+                  Create
+                </Button>
+              </Group>
+            </>
           )}
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={closeCreate}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreate}
-              loading={creating}
-              disabled={!newUsername || !newPassword}
-            >
-              Create
-            </Button>
-          </Group>
+          {createdLink && (
+            <>
+              <Text size="sm">
+                User <b>{createdLink.username}</b> created. Send this one-time
+                registration link so they can enroll a passkey:
+              </Text>
+              <Code
+                block
+                style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}
+              >
+                {createdLink.registrationUrl}
+              </Code>
+              <Text size="xs" c="dimmed">
+                Expires{" "}
+                {new Date(createdLink.registrationExpiresAt).toLocaleString()}
+              </Text>
+              <Group justify="flex-end">
+                <CopyButton value={createdLink.registrationUrl}>
+                  {({ copied, copy }) => (
+                    <Button variant="light" onClick={copy}>
+                      {copied ? "Copied" : "Copy link"}
+                    </Button>
+                  )}
+                </CopyButton>
+                <Button
+                  onClick={() => {
+                    void navigate(`/users/${createdLink.username}`);
+                  }}
+                >
+                  Open user
+                </Button>
+              </Group>
+            </>
+          )}
         </Stack>
       </Modal>
 

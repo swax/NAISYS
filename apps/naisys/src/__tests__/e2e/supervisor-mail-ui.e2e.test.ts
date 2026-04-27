@@ -8,7 +8,7 @@
  *       - beta  -> alpha "Status update" + attachment status.txt
  *       - gamma -> alpha "RE: Status update"
  *       - beta  -> alpha "Lunch?"
- *  3. Launch headless Chromium and login via the UI as superadmin.
+ *  3. Launch headless Chromium and register the bootstrap superadmin passkey.
  *  4. Navigate to /supervisor/agents/alpha/mail. Assert the conversation
  *     list shows two participant-grouped conversations (alpha+beta and
  *     alpha+gamma) and one auto-selects (URL switches to /mail/with/...).
@@ -45,7 +45,11 @@ import {
   setupTestDir,
   spawnNaisys,
 } from "./e2eTestHelper.js";
-import { loginAsSuperAdmin, waitFor } from "./supervisorApiHelper.js";
+import {
+  loginAsSuperAdmin,
+  registerSuperAdminPasskeyViaUi,
+  waitFor,
+} from "./supervisorApiHelper.js";
 
 vi.setConfig({ testTimeout: 180000 });
 
@@ -175,14 +179,7 @@ SERVER_PORT=${SERVER_PORT}
       (r) => (r.data?.mail.length ?? 0) >= 3,
     );
 
-    // ---- Step 3: login via the UI as superadmin ----
-    const fullOutput = naisys.getFullOutput();
-    const passwordMatch = fullOutput.match(
-      /superadmin user created\. Password: (\S+)/,
-    );
-    expect(passwordMatch).not.toBeNull();
-    const adminPassword = passwordMatch![1];
-
+    // ---- Step 3: register bootstrap passkey and enter the UI as superadmin ----
     browser = await chromium.launch({ headless: true });
     page = await browser.newPage();
 
@@ -191,13 +188,7 @@ SERVER_PORT=${SERVER_PORT}
       void dialog.accept();
     });
 
-    await page.goto(`${APP_BASE}/`);
-    await page.getByLabel("Username").fill("superadmin");
-    await page.getByLabel("Password").fill(adminPassword);
-    await page.getByRole("button", { name: "Login" }).click();
-    await page
-      .getByRole("button", { name: "Login" })
-      .waitFor({ state: "hidden", timeout: 15000 });
+    await registerSuperAdminPasskeyViaUi(naisys, page);
 
     // ---- Step 4: open alpha's mail page; default mode groups by participants ----
     await page.goto(`${APP_BASE}/agents/alpha/mail`);

@@ -1,6 +1,5 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import bcrypt from "bcryptjs";
 import { randomBytes, randomUUID } from "crypto";
 import { existsSync } from "fs";
 
@@ -13,11 +12,15 @@ const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export interface SessionUser {
   userId: number;
   username: string;
-  passwordHash: string;
   uuid: string;
 }
 
 let supervisorDb: PrismaClient | null = null;
+
+export function getSupervisorDb(): PrismaClient {
+  if (!supervisorDb) throw new Error("Supervisor DB not initialized");
+  return supervisorDb;
+}
 
 /**
  * Initialize supervisor sessions by connecting to supervisor.db.
@@ -56,30 +59,7 @@ export async function findSession(
   return {
     userId: session.user.id,
     username: session.user.username,
-    passwordHash: session.user.passwordHash,
     uuid: session.user.uuid,
-  };
-}
-
-/**
- * Look up a session user by username.
- */
-export async function lookupUsername(
-  username: string,
-): Promise<SessionUser | null> {
-  if (!supervisorDb) return null;
-
-  const user = await supervisorDb.user.findUnique({
-    where: { username },
-  });
-
-  if (!user) return null;
-
-  return {
-    userId: user.id,
-    username: user.username,
-    passwordHash: user.passwordHash,
-    uuid: user.uuid,
   };
 }
 
@@ -106,51 +86,34 @@ export interface AuthResult {
 }
 
 /**
- * Authenticate a user by username/password and create a session.
- * Returns null if credentials are invalid or DB is not initialized.
+ * Create a session for a user. Returns the session token (plaintext) and expiry.
+ * Caller is responsible for setting it as a cookie.
  */
-export async function authenticateAndCreateSession(
-  username: string,
-  password: string,
-): Promise<AuthResult | null> {
-  const user = await lookupUsername(username);
-  if (!user) return null;
+export async function createSessionForUser(
+  userId: number,
+): Promise<AuthResult> {
+  if (!supervisorDb) throw new Error("Supervisor DB not initialized");
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return null;
+  const dbUser = await supervisorDb.user.findUnique({ where: { id: userId } });
+  if (!dbUser) throw new Error(`User ${userId} not found`);
 
   const token = randomUUID();
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
 
-  const dbUser = await supervisorDb!.user.findUnique({
-    where: { username },
+  await supervisorDb.session.create({
+    data: { userId, tokenHash, expiresAt },
   });
 
-  await supervisorDb!.session.create({
-    data: {
-      userId: dbUser!.id,
-      tokenHash,
-      expiresAt,
+  return {
+    token,
+    expiresAt,
+    user: {
+      userId: dbUser.id,
+      username: dbUser.username,
+      uuid: dbUser.uuid,
     },
-  });
-
-  return { token, user, expiresAt };
-}
-
-/**
- * Update a user's password hash. No-op if not initialized.
- */
-export async function updateUserPassword(
-  username: string,
-  passwordHash: string,
-): Promise<void> {
-  if (!supervisorDb) return;
-
-  await supervisorDb.user.update({
-    where: { username },
-    data: { passwordHash },
-  });
+  };
 }
 
 /**
@@ -164,25 +127,45 @@ export async function deleteSession(tokenHash: string): Promise<void> {
   });
 }
 
+/**
+ * Revoke every active session for a user. Used after admin recovery actions
+ * (passkey reset, credential deletion) so a compromised browser cookie can't
+ * outlive the credential it was minted from.
+ *
+ * Pass `exceptTokenHash` when the action is initiated by the user themselves
+ * — keeps the actor's own browser logged in while booting any other devices,
+ * which is the common "I'm pruning credentials, log my other tabs out" UX.
+ */
+export async function deleteAllSessionsForUser(
+  userId: number,
+  exceptTokenHash?: string,
+): Promise<void> {
+  if (!supervisorDb) return;
+
+  await supervisorDb.session.deleteMany({
+    where: exceptTokenHash
+      ? { userId, NOT: { tokenHash: exceptTokenHash } }
+      : { userId },
+  });
+}
+
 export interface EnsureSuperAdminResult {
-  /** The randomly generated password — set only when a new superadmin was created without a supplied password (bootstrap fallback) */
-  generatedPassword?: string;
   user: {
+    id: number;
     uuid: string;
     username: string;
-    passwordHash: string;
     apiKey: string | null;
   };
+  /** True when the superadmin user record was just created (i.e. first-time bootstrap) */
+  created: boolean;
 }
 
 /**
  * Ensure a "superadmin" user exists in the supervisor database.
- * If a password is supplied, it is used on create and updates the existing one if present.
- * If no password is supplied, the existing record is returned as-is, or a random one is generated on create.
+ * Creates the user record without any credentials — the caller is expected to
+ * issue a registration token so the operator can register a passkey.
  */
-export async function ensureSuperAdmin(
-  password?: string,
-): Promise<EnsureSuperAdminResult> {
+export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
   if (!supervisorDb) throw new Error("Supervisor DB not initialized");
 
   const existing = await supervisorDb.user.findUnique({
@@ -190,38 +173,22 @@ export async function ensureSuperAdmin(
   });
 
   if (existing) {
-    if (password) {
-      const passwordHash = await bcrypt.hash(password, 10);
-      await supervisorDb.user.update({
-        where: { id: existing.id },
-        data: { passwordHash },
-      });
-      return {
-        user: {
-          uuid: existing.uuid,
-          username: existing.username,
-          passwordHash,
-          apiKey: existing.apiKey,
-        },
-      };
-    }
     return {
+      created: false,
       user: {
+        id: existing.id,
         uuid: existing.uuid,
         username: existing.username,
-        passwordHash: existing.passwordHash,
         apiKey: existing.apiKey,
       },
     };
   }
 
   const uuid = randomUUID();
-  const suppliedPassword = password || randomUUID().slice(0, 8);
-  const passwordHash = await bcrypt.hash(suppliedPassword, 10);
   const apiKey = randomBytes(32).toString("hex");
 
   const user = await supervisorDb.user.create({
-    data: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
+    data: { uuid, username: SUPER_ADMIN_USERNAME, apiKey },
   });
 
   await supervisorDb.userPermission.create({
@@ -229,7 +196,7 @@ export async function ensureSuperAdmin(
   });
 
   return {
-    generatedPassword: password ? undefined : suppliedPassword,
-    user: { uuid, username: SUPER_ADMIN_USERNAME, passwordHash, apiKey },
+    created: true,
+    user: { id: user.id, uuid, username: SUPER_ADMIN_USERNAME, apiKey },
   };
 }

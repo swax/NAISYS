@@ -2,11 +2,12 @@ import "dotenv/config";
 import "./schema-registry.js";
 
 import {
+  askQuestion,
   createFileLogger,
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
-  promptSuperAdminPassword,
+  promptResetSuperAdminPasskey,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -20,18 +21,22 @@ import { fastifyRateLimit as rateLimit } from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
 import swagger from "@fastify/swagger";
 import {
+  type BootstrapSupervisor,
   commonErrorHandler,
   MAX_ATTACHMENT_SIZE,
   registerLenientJsonParser,
   registerSecurityHeaders,
   type StartServer,
-  SUPER_ADMIN_USERNAME,
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
   createSupervisorDatabaseClient,
+  deleteAllPasskeyCredentialsForUser,
   deploySupervisorMigrations,
   ensureSuperAdmin,
+  hasActiveRegistrationToken,
+  issueRegistrationToken,
+  userHasPasskey,
 } from "@naisys/supervisor-database";
 import { PermissionEnum } from "@naisys/supervisor-shared";
 import type { FastifyPluginAsync } from "fastify";
@@ -63,24 +68,10 @@ interface SupervisorPluginOptions {
   plugins?: "erp"[];
   serverPort?: number;
   hosted?: boolean;
-  /** If provided, used when creating or updating the superadmin. Prompt in the caller (not here) to avoid Fastify's plugin-registration timeout. */
-  superAdminPassword?: string;
 }
 
-/**
- * Fastify plugin that registers Supervisor routes, services, and static files.
- * Can be used standalone or registered inside another Fastify app (e.g. hub).
- */
-export const supervisorPlugin: FastifyPluginAsync<
-  SupervisorPluginOptions
-> = async (fastify, opts) => {
-  if (opts.hosted) {
-    process.env.NODE_ENV = "production";
-  }
-
-  const isProd = process.env.NODE_ENV === "production";
-
-  // Auto-migrate supervisor database
+/** DB init + superadmin setup + passkey-registration prompt. Runs before the plugin so the operator-input wait isn't bounded by pluginTimeout and the prompt doesn't interleave with hub connection logs. */
+export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
   await deploySupervisorMigrations();
 
   if (!(await createSupervisorDatabaseClient())) {
@@ -99,13 +90,56 @@ export const supervisorPlugin: FastifyPluginAsync<
   // Populate in-memory user lookup for username ↔ id resolution
   await refreshUserLookup();
 
-  const superAdminResult = await ensureSuperAdmin(opts.superAdminPassword);
-  if (superAdminResult.generatedPassword) {
-    console.log(
-      `\n  ${SUPER_ADMIN_USERNAME} user created. Password: ${superAdminResult.generatedPassword}`,
-    );
-    console.log(`  Change it via the web UI or with --setup.\n`);
+  const superAdminResult = await ensureSuperAdmin();
+
+  if (opts.resetSuperAdminPasskey) {
+    await deleteAllPasskeyCredentialsForUser(superAdminResult.user.id);
   }
+
+  // Issue a fresh registration token if the superadmin has no way in:
+  //  - Just created (first-run bootstrap), or
+  //  - Operator asked to reset (--setup), or
+  //  - Has no passkeys AND no unexpired token (recovery / failed prior setup).
+  const needsToken =
+    opts.resetSuperAdminPasskey ||
+    superAdminResult.created ||
+    (!(await userHasPasskey(superAdminResult.user.id)) &&
+      !(await hasActiveRegistrationToken(superAdminResult.user.id)));
+
+  if (!needsToken) return;
+
+  const { token } = await issueRegistrationToken(superAdminResult.user.id);
+  // Prefer the configured WebAuthn origin so the printed URL is one the
+  // browser will actually accept; fall back to a localhost guess otherwise.
+  const overrideOrigin = process.env.SUPERVISOR_WEBAUTHN_ORIGIN?.trim()
+    ?.split(",")[0]
+    ?.trim();
+  const portHint = process.env.SERVER_PORT || "3301";
+  const baseUrl = overrideOrigin || `http://localhost:${portHint}`;
+  const url = `${baseUrl}/supervisor/register?token=${encodeURIComponent(token)}`;
+
+  console.log(`\n  Copy: ${url}`);
+  if (process.stdin.isTTY) {
+    await askQuestion(
+      `  Open the URL above once startup completes. Press Enter to continue: `,
+    );
+  }
+}
+
+/**
+ * Fastify plugin that registers Supervisor routes, services, and static files.
+ * Can be used standalone or registered inside another Fastify app (e.g. hub).
+ */
+export const supervisorPlugin: FastifyPluginAsync<
+  SupervisorPluginOptions
+> = async (fastify, opts) => {
+  if (opts.hosted) {
+    process.env.NODE_ENV = "production";
+  }
+
+  const isProd = process.env.NODE_ENV === "production";
+
+  // Caller must run bootstrapSupervisor() before registering this plugin.
 
   // Logger — in hosted mode create a dedicated file logger since the
   // parent Fastify may not have one configured. In standalone mode the
@@ -288,15 +322,16 @@ export const startServer: StartServer = async (
           },
   }).withTypeProvider<ZodTypeProvider>();
 
-  const superAdminPassword = wizardRan
-    ? await promptSuperAdminPassword("Supervisor Setup")
-    : undefined;
+  const resetSuperAdminPasskey = wizardRan
+    ? await promptResetSuperAdminPasskey("Supervisor Setup")
+    : false;
+
+  await bootstrapSupervisor({ resetSuperAdminPasskey });
 
   await fastify.register(supervisorPlugin, {
     plugins,
     serverPort: hubPort,
     hosted: startupType === "hosted",
-    superAdminPassword,
   });
 
   try {

@@ -1,50 +1,56 @@
 import type {
   CreateUserResponse,
   Permission,
+  StepUpAssertionBody,
   UserActionResult,
   UserDetailResponse,
   UserListResponse,
 } from "@naisys/supervisor-shared";
 
-import { api } from "./apiClient";
+import { performStepUp } from "./apiAuth";
+import { api, apiEndpoints } from "./apiClient";
 
 export const getUsers = async (params: {
   page?: number;
   pageSize?: number;
   search?: string;
 }): Promise<UserListResponse> => {
-  const queryParams = new URLSearchParams();
-  if (params.page !== undefined) queryParams.set("page", String(params.page));
-  if (params.pageSize !== undefined)
-    queryParams.set("pageSize", String(params.pageSize));
-  if (params.search) queryParams.set("search", params.search);
-  return api.get<UserListResponse>(`/users?${queryParams}`);
+  return api.get<UserListResponse>(apiEndpoints.users(params));
 };
 
 export const getUser = async (
   username: string,
 ): Promise<UserDetailResponse> => {
-  return api.get<UserDetailResponse>(`/users/${username}`);
+  return api.get<UserDetailResponse>(apiEndpoints.userDetail(username));
 };
 
 export const createUser = async (data: {
   username: string;
-  password: string;
 }): Promise<CreateUserResponse> => {
-  return api.post<typeof data, CreateUserResponse>("/users", data);
+  const stepUpAssertion = await performStepUp();
+  return api.post<
+    { username: string } & StepUpAssertionBody,
+    CreateUserResponse
+  >(apiEndpoints.users(), {
+    username: data.username,
+    stepUpAssertion: stepUpAssertion ?? undefined,
+  });
 };
 
 export const updateUser = async (
   username: string,
   data: { username?: string },
 ): Promise<UserActionResult> => {
-  return api.put<typeof data, UserActionResult>(`/users/${username}`, data);
+  return api.put<typeof data, UserActionResult>(
+    apiEndpoints.userDetail(username),
+    data,
+  );
 };
 
 export const deleteUser = async (
   username: string,
 ): Promise<UserActionResult> => {
-  return api.delete<UserActionResult>(`/users/${username}`);
+  return api.delete<UserActionResult>(apiEndpoints.userDetail(username));
 };
 
 export const grantPermission = async (
@@ -52,7 +58,7 @@ export const grantPermission = async (
   permission: Permission,
 ): Promise<UserActionResult> => {
   return api.post<{ permission: Permission }, UserActionResult>(
-    `/users/${username}/permissions`,
+    apiEndpoints.userPermissions(username),
     { permission },
   );
 };
@@ -62,29 +68,21 @@ export const revokePermission = async (
   permission: Permission,
 ): Promise<UserActionResult> => {
   return api.delete<UserActionResult>(
-    `/users/${username}/permissions/${permission}`,
-  );
-};
-
-export const changePassword = async (
-  password: string,
-): Promise<UserActionResult> => {
-  return api.post<{ password: string }, UserActionResult>(
-    "/users/me/password",
-    { password },
+    apiEndpoints.userPermission(username, permission),
   );
 };
 
 export const rotateUserApiKey = async (
   username: string,
 ): Promise<UserActionResult> => {
-  return api.post<{}, UserActionResult>(`/users/${username}/rotate-key`, {});
+  return api.post<{}, UserActionResult>(apiEndpoints.userRotateKey(username), {});
 };
 
 export const createAgentUser = async (
   agentId: number,
 ): Promise<CreateUserResponse> => {
-  return api.post<{ agentId: number }, CreateUserResponse>("/users/from-agent", {
-    agentId,
-  });
+  return api.post<{ agentId: number }, CreateUserResponse>(
+    apiEndpoints.userCreateFromAgent,
+    { agentId },
+  );
 };

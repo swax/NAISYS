@@ -115,7 +115,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
               data: {
                 uuid: session.uuid,
                 username: session.username,
-                passwordHash: session.passwordHash,
+                passwordHash: "!sso-passkey-only",
               },
             });
           }

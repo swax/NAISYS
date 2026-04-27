@@ -31,13 +31,16 @@ import type {
   ImportAgentConfigResponse,
   LlmModelDetail,
   LogEntry,
-  LoginResponse,
   LogoutResponse,
   MailDataResponse,
   MailMessage,
   ModelsResponse,
   NpmVersionsResponse,
+  PasskeyCredential,
+  PasskeyCredentialList,
+  PasskeyRegistrationVerifyResponse,
   PinoLogEntry,
+  RegistrationTokenResponse,
   RotateAccessKeyResult,
   RunsDataResponse,
   RunSession,
@@ -49,7 +52,9 @@ import type {
   SendMailResponse,
   ServerLogResponse,
   StatusResponse,
+  StepUpOptionsResponse,
   UpdateAgentConfigResponse,
+  UserActionResult,
   VariablesResponse,
 } from "@naisys/supervisor-shared";
 
@@ -88,13 +93,16 @@ export type {
   ImportAgentConfigResponse,
   LlmModelDetail,
   LogEntry,
-  LoginResponse,
   LogoutResponse,
   MailDataResponse,
   MailMessage,
   ModelsResponse,
   NpmVersionsResponse,
+  PasskeyCredential,
+  PasskeyCredentialList,
+  PasskeyRegistrationVerifyResponse,
   PinoLogEntry,
+  RegistrationTokenResponse,
   RotateAccessKeyResult,
   RunsDataResponse,
   RunSession,
@@ -106,7 +114,9 @@ export type {
   SendMailResponse,
   ServerLogResponse,
   StatusResponse,
+  StepUpOptionsResponse,
   UpdateAgentConfigResponse,
+  UserActionResult,
   VariablesResponse,
 };
 
@@ -162,9 +172,37 @@ export const api = {
 };
 
 export const apiEndpoints = {
-  login: "/auth/login",
+  passkeyLoginOptions: "/auth/passkey/login-options",
+  passkeyLoginVerify: "/auth/passkey/login-verify",
+  passkeyRegisterOptions: "/auth/passkey/register-options",
+  passkeyRegisterVerify: "/auth/passkey/register-verify",
+  passkeyStepUpOptions: "/auth/passkey/stepup-options",
+  registrationTokenLookup: (token: string) =>
+    `/auth/registration-token/lookup?token=${encodeURIComponent(token)}`,
   logout: "/auth/logout",
   me: "/auth/me",
+  users: (params?: { page?: number; pageSize?: number; search?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.page !== undefined) search.set("page", String(params.page));
+    if (params?.pageSize !== undefined)
+      search.set("pageSize", String(params.pageSize));
+    if (params?.search) search.set("search", params.search);
+    const qs = search.toString();
+    return `/users${qs ? `?${qs}` : ""}`;
+  },
+  userCreateFromAgent: "/users/from-agent",
+  userDetail: (username: string) => `/users/${username}`,
+  userPermissions: (username: string) => `/users/${username}/permissions`,
+  userPermission: (username: string, permission: string) =>
+    `/users/${username}/permissions/${permission}`,
+  userRotateKey: (username: string) => `/users/${username}/rotate-key`,
+  userPasskeys: (username: string) => `/users/${username}/passkeys`,
+  userPasskeyDelete: (username: string, id: number) =>
+    `/users/${username}/passkeys/${id}/delete`,
+  userRegistrationToken: (username: string) =>
+    `/users/${username}/registration-token`,
+  userResetPasskeys: (username: string) =>
+    `/users/${username}/reset-passkeys`,
   status: "/status",
   agents: "/agents",
   hosts: "/hosts",

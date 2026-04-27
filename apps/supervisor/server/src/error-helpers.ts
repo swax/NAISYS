@@ -18,3 +18,31 @@ export function conflict(reply: FastifyReply, message: string): ErrorResponse {
   reply.status(409);
   return { success: false, message };
 }
+
+export function unauthorized(
+  reply: FastifyReply,
+  message: string,
+): ErrorResponse {
+  reply.status(401);
+  return { success: false, message };
+}
+
+export function forbidden(
+  reply: FastifyReply,
+  message: string,
+): ErrorResponse {
+  reply.status(403);
+  return { success: false, message };
+}
+
+/**
+ * Send-and-end variants for use inside preHandlers, where we can't return the
+ * payload to Fastify's reply pipeline — the request lifecycle ends here.
+ */
+export function sendUnauthorized(reply: FastifyReply, message: string): void {
+  reply.status(401).send({ success: false, message });
+}
+
+export function sendForbidden(reply: FastifyReply, message: string): void {
+  reply.status(403).send({ success: false, message });
+}

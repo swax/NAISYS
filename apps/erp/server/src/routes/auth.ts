@@ -9,10 +9,7 @@ import {
   LoginRequestSchema,
   LoginResponseSchema,
 } from "@naisys/erp-shared";
-import {
-  authenticateAndCreateSession,
-  deleteSession,
-} from "@naisys/supervisor-database";
+import { deleteSession } from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";
@@ -49,33 +46,14 @@ export default function authRoutes(fastify: FastifyInstance) {
     handler: async (request, reply) => {
       const { username, password } = request.body;
 
-      // SSO mode: authenticate against supervisor DB
+      // SSO mode: supervisor handles login via passkey. ERP doesn't accept
+      // password credentials at all — clients should authenticate against
+      // /supervisor/login and reuse the resulting session cookie here.
       if (isSupervisorAuth()) {
-        const authResult = await authenticateAndCreateSession(
-          username,
-          password,
+        return unauthorized(
+          reply,
+          "Sign in via the supervisor login page (passkey required)",
         );
-        if (!authResult) {
-          return unauthorized(reply, "Invalid username or password");
-        }
-
-        const ssoData = {
-          username,
-          passwordHash: authResult.user.passwordHash,
-        };
-        const user = await erpDb.user.upsert({
-          where: { uuid: authResult.user.uuid },
-          create: { uuid: authResult.user.uuid, ...ssoData },
-          update: ssoData,
-        });
-
-        reply.setCookie(
-          SESSION_COOKIE_NAME,
-          authResult.token,
-          sessionCookieOptions(authResult.expiresAt),
-        );
-
-        return { user: { id: user.id, username: user.username } };
       }
 
       // Standalone mode: authenticate against local DB

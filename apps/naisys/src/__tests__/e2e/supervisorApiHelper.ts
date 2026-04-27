@@ -1,5 +1,7 @@
 import { sleep } from "@naisys/common";
-import type { AuthUser } from "@naisys/supervisor-shared";
+import { createPrismaClient } from "@naisys/supervisor-database";
+import { join } from "path";
+import type { Page } from "playwright";
 
 import type { NaisysTestProcess } from "./e2eTestHelper.js";
 
@@ -10,7 +12,7 @@ export interface SupervisorApiClient {
   del: <T>(path: string) => Promise<T>;
   /** POST multipart/form-data and parse JSON response */
   postMultipart: <T>(path: string, formData: FormData) => Promise<T>;
-  /** Fetch a path relative to the host root (not the API prefix), with auth cookie */
+  /** Fetch a path relative to the host root (not the API prefix), with auth headers */
   fetchFromHost: (pathFromRoot: string, init?: RequestInit) => Promise<Response>;
 }
 
@@ -24,19 +26,21 @@ export async function parseJsonResponse<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-export function extractGeneratedSuperAdminPassword(output: string): string {
-  const match = output.match(/superadmin user created\. Password: (\S+)/);
+export function extractSuperAdminRegistrationUrl(output: string): string {
+  const match = output.match(
+    /Copy:\s+(http:\/\/\S+\/supervisor\/register\?token=\S+)/,
+  );
   if (!match) {
     throw new Error(
-      "Could not find generated superadmin password in NAISYS output",
+      "Could not find superadmin registration URL in NAISYS output",
     );
   }
   return match[1];
 }
 
-export function createSupervisorApiClient(
+function createSupervisorApiClientWithHeaders(
   baseUrl: string,
-  cookie: string,
+  authHeaders: Record<string, string>,
 ): SupervisorApiClient {
   // baseUrl looks like http://host:port/supervisor/api — derive the host root
   // for endpoints that already include the API prefix (e.g. attachment download URLs).
@@ -50,7 +54,7 @@ export function createSupervisorApiClient(
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
-        cookie,
+        ...authHeaders,
         ...(body ? { "content-type": "application/json" } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -70,7 +74,7 @@ export function createSupervisorApiClient(
     ): Promise<T> => {
       const response = await fetch(`${baseUrl}${path}`, {
         method: "POST",
-        headers: { cookie },
+        headers: authHeaders,
         body: formData,
       });
       return parseJsonResponse<T>(response);
@@ -78,36 +82,86 @@ export function createSupervisorApiClient(
     fetchFromHost: (pathFromRoot: string, init: RequestInit = {}) =>
       fetch(`${hostRoot}${pathFromRoot}`, {
         ...init,
-        headers: { ...(init.headers ?? {}), cookie },
+        headers: { ...(init.headers ?? {}), ...authHeaders },
       }),
   };
 }
 
-export async function loginAs(
+export function createSupervisorApiClient(
   baseUrl: string,
-  username: string,
-  password: string,
-): Promise<SupervisorApiClient> {
-  const response = await fetch(`${baseUrl}/auth/login`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-  await parseJsonResponse<{ user: AuthUser }>(response);
+  cookie: string,
+): SupervisorApiClient {
+  return createSupervisorApiClientWithHeaders(baseUrl, { cookie });
+}
 
-  const cookie = response.headers.get("set-cookie")?.split(";")[0];
-  if (!cookie) {
-    throw new Error("Login response did not include a session cookie");
+export function createSupervisorApiKeyClient(
+  baseUrl: string,
+  apiKey: string,
+): SupervisorApiClient {
+  return createSupervisorApiClientWithHeaders(baseUrl, {
+    authorization: `Bearer ${apiKey}`,
+  });
+}
+
+export async function readSupervisorUserApiKey(
+  naisys: NaisysTestProcess,
+  username: string,
+): Promise<string> {
+  const db = await createPrismaClient(
+    join(naisys.testDir, "database", "supervisor.db"),
+  );
+  try {
+    const user = await db.user.findUnique({
+      where: { username },
+      select: { apiKey: true },
+    });
+    if (!user?.apiKey) {
+      throw new Error(`Supervisor user ${username} does not have an API key`);
+    }
+    return user.apiKey;
+  } finally {
+    await db.$disconnect();
   }
-  return createSupervisorApiClient(baseUrl, cookie);
 }
 
 export async function loginAsSuperAdmin(
   naisys: NaisysTestProcess,
   baseUrl: string,
 ): Promise<SupervisorApiClient> {
-  const password = extractGeneratedSuperAdminPassword(naisys.getFullOutput());
-  return loginAs(baseUrl, "superadmin", password);
+  const apiKey = await readSupervisorUserApiKey(naisys, "superadmin");
+  return createSupervisorApiKeyClient(baseUrl, apiKey);
+}
+
+export async function installVirtualPasskeyAuthenticator(
+  page: Page,
+): Promise<void> {
+  const client = await page.context().newCDPSession(page);
+  await client.send("WebAuthn.enable");
+  await client.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+}
+
+export async function registerSuperAdminPasskeyViaUi(
+  naisys: NaisysTestProcess,
+  page: Page,
+): Promise<void> {
+  await installVirtualPasskeyAuthenticator(page);
+  await page.goto(extractSuperAdminRegistrationUrl(naisys.getFullOutput()));
+  await page
+    .getByRole("button", { name: "Register passkey" })
+    .waitFor({ state: "visible", timeout: 15000 });
+  await page.getByLabel("Device label").fill("E2E virtual authenticator");
+  await page.getByRole("button", { name: "Register passkey" }).click();
+  await page.getByText("Passkey registered").waitFor({ timeout: 15000 });
+  await page.waitForURL(/\/supervisor\/agents/, { timeout: 15000 });
 }
 
 export async function waitFor<T>(

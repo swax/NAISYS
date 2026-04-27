@@ -70,6 +70,7 @@ export interface RunCommandOptions {
 
 export interface NaisysTestProcess {
   process: ChildProcess;
+  testDir: string;
   stdout: string[];
   stderr: string[];
   sendCommand: (command: string) => void;
@@ -555,6 +556,7 @@ export function spawnNaisys(
 
   return {
     process: proc,
+    testDir,
     stdout,
     stderr,
     sendCommand,

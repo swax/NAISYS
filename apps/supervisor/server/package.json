@@ -55,6 +55,7 @@
     "@naisys/supervisor-database": "3.0.0",
     "@naisys/supervisor-shared": "3.0.0",
     "@scalar/fastify-api-reference": "^1.48.7",
+    "@simplewebauthn/server": "^13.3.0",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.2",
