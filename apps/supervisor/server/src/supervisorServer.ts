@@ -32,6 +32,7 @@ import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
   createSupervisorDatabaseClient,
   deleteAllPasskeyCredentialsForUser,
+  deleteAllSessionsForUser,
   deploySupervisorMigrations,
   ensureSuperAdmin,
   hasActiveRegistrationToken,
@@ -94,6 +95,9 @@ export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
 
   if (opts.resetSuperAdminPasskey) {
     await deleteAllPasskeyCredentialsForUser(superAdminResult.user.id);
+    // Drop any lingering sessions so an old browser cookie can't outlive the
+    // credential it was minted from.
+    await deleteAllSessionsForUser(superAdminResult.user.id);
   }
 
   // Issue a fresh registration token if the superadmin has no way in:
@@ -291,6 +295,10 @@ export const startServer: StartServer = async (
 
   const fastify = Fastify({
     pluginTimeout: 60_000,
+    // trustProxy: TLS terminates at the reverse proxy, so honor X-Forwarded-*
+    // headers — otherwise request.protocol reads the internal http hop and
+    // registration URLs / WebAuthn origin come out http:// behind https://.
+    trustProxy: true,
     logger:
       // Log to file in hosted mode
       isProd
@@ -323,7 +331,9 @@ export const startServer: StartServer = async (
   }).withTypeProvider<ZodTypeProvider>();
 
   const resetSuperAdminPasskey = wizardRan
-    ? await promptResetSuperAdminPasskey("Supervisor Setup")
+    ? await promptResetSuperAdminPasskey("Supervisor Setup", {
+        defaultReset: !process.argv.includes("--setup"),
+      })
     : false;
 
   await bootstrapSupervisor({ resetSuperAdminPasskey });

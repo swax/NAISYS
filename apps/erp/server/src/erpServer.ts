@@ -193,6 +193,9 @@ async function startServer(wizardRan?: boolean) {
 
   const fastify = Fastify({
     pluginTimeout: 60_000,
+    // trustProxy: TLS terminates at the reverse proxy, so honor X-Forwarded-*
+    // headers — otherwise request.protocol reads the internal http hop.
+    trustProxy: true,
     logger: {
       transport: {
         target: "pino-pretty",

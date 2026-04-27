@@ -70,8 +70,9 @@ export const startHub: StartHub = async (
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
 
-    // Create Fastify instance (TLS is handled by the reverse proxy)
-    const fastify = Fastify({ pluginTimeout: 60_000 });
+    // trustProxy: TLS terminates at the reverse proxy, so honor X-Forwarded-*
+    // headers — otherwise request.protocol reads the internal http hop.
+    const fastify = Fastify({ pluginTimeout: 60_000, trustProxy: true });
 
     // Register HTTP attachment upload/download routes
     createHubAttachmentService(fastify, hubDatabaseService, logService);
@@ -181,7 +182,9 @@ export const startHub: StartHub = async (
         bootstrapSupervisor: BootstrapSupervisor;
       };
       const resetSuperAdminPasskey = wizardRan
-        ? await promptResetSuperAdminPasskey("Supervisor Setup")
+        ? await promptResetSuperAdminPasskey("Supervisor Setup", {
+            defaultReset: !process.argv.includes("--setup"),
+          })
         : false;
 
       // Bootstrap before plugin register so the operator prompt isn't bounded by pluginTimeout and doesn't interleave with hub connection logs.
