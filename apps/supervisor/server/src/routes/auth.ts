@@ -305,6 +305,7 @@ export default function authRoutes(
       const rpId = rpIdFromHost(request.headers.host);
       const options = await generatePasskeyRegistrationOptions({
         userId: target.userId,
+        userUuid: target.uuid,
         username: target.username,
         rpId,
       });
@@ -500,10 +501,17 @@ type RegistrationTarget =
       ok: true;
       userId: number;
       username: string;
+      uuid: string;
       viaToken: true;
       token: string;
     }
-  | { ok: true; userId: number; username: string; viaToken: false }
+  | {
+      ok: true;
+      userId: number;
+      username: string;
+      uuid: string;
+      viaToken: false;
+    }
   | { ok: false; message: string };
 
 /**
@@ -545,6 +553,7 @@ async function resolveRegistrationTarget(
       ok: true,
       userId: lookup.userId,
       username: lookup.username,
+      uuid: lookup.uuid,
       viaToken: true,
       token: tokenCandidate,
     };
@@ -555,6 +564,7 @@ async function resolveRegistrationTarget(
       ok: true,
       userId: request.supervisorUser.id,
       username: request.supervisorUser.username,
+      uuid: request.supervisorUser.uuid,
       viaToken: false,
     };
   }

@@ -115,6 +115,7 @@ export function buildRegistrationUrl(opts: {
 
 export async function generatePasskeyRegistrationOptions(input: {
   userId: number;
+  userUuid: string;
   username: string;
   rpId: string;
 }): Promise<PublicKeyCredentialCreationOptionsJSON> {
@@ -123,7 +124,10 @@ export async function generatePasskeyRegistrationOptions(input: {
     rpName: RP_NAME,
     rpID: input.rpId,
     userName: input.username,
-    userID: new TextEncoder().encode(String(input.userId)),
+    // WebAuthn user handle: opaque, stable-per-user identifier. UUID rather
+    // than the auto-increment DB id so it doesn't leak account ordering and
+    // survives a DB wipe-and-reseed.
+    userID: new TextEncoder().encode(input.userUuid),
     attestationType: "none",
     authenticatorSelection: {
       // Required (not preferred) so that login with allowCredentials:[]
@@ -335,11 +339,12 @@ export async function issueRegistrationLink(opts: {
 export async function getUserForRegistrationToken(token: string): Promise<{
   userId: number;
   username: string;
+  uuid: string;
 } | null> {
   const lookup = await lookupRegistrationToken(token);
   if (!lookup) return null;
   // Verify the user record still exists (in case it was deleted).
   const user = await getUserById(lookup.userId);
   if (!user) return null;
-  return { userId: lookup.userId, username: lookup.username };
+  return { userId: lookup.userId, username: lookup.username, uuid: user.uuid };
 }

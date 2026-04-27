@@ -145,6 +145,7 @@ beforeEach(() => {
   mocks.getUserForRegistrationToken.mockResolvedValue({
     userId: 42,
     username: "target",
+    uuid: "target-uuid",
   });
   mocks.userHasPasskey.mockResolvedValue(true);
   mocks.requireStepUp.mockResolvedValue({ ok: true });
@@ -286,6 +287,7 @@ describe("passkey auth routes", () => {
       });
       expect(mocks.generatePasskeyRegistrationOptions).toHaveBeenCalledWith({
         userId: 42,
+        userUuid: "target-uuid",
         username: "target",
         rpId: "supervisor.example",
       });
@@ -374,6 +376,7 @@ describe("passkey auth routes", () => {
       );
       expect(mocks.generatePasskeyRegistrationOptions).toHaveBeenCalledWith({
         userId: 7,
+        userUuid: "admin-uuid",
         username: "admin",
         rpId: "supervisor.example",
       });
