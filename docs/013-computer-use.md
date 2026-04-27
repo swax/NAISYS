@@ -53,7 +53,7 @@ picked. `viewport: { x, y, width, height }` — `x/y` is the origin on
 native, `width/height` is the size at native resolution.
 **Viewport ⊂ Native** spatially.
 
-**Scaled** — the viewport *resized* to fit `TARGET_MEGAPIXELS`. This is
+**Scaled** — the viewport _resized_ to fit `TARGET_MEGAPIXELS`. This is
 what the model sees in screenshots and the coord space it emits in tool
 calls. `scaledWidth/Height` in `DesktopConfig`. **Not** a spatial subset
 of the viewport — same content at a different resolution. Often equal
@@ -65,10 +65,12 @@ recomputing `getTargetScaleFactor` at call sites.
 
 ```ts
 interface DesktopConfig {
-  nativeDisplayWidth, nativeDisplayHeight;   // physical display
-  viewport: { x, y, width, height };         // focus rect (or full display)
-  scaledWidth, scaledHeight;                 // viewport sized for the model
-  scaleFactor;                               // viewport.w × scaleFactor ≈ scaledWidth
+  nativeDisplayWidth;
+  nativeDisplayHeight; // physical display
+  viewport: { x; y; width; height }; // focus rect (or full display)
+  scaledWidth;
+  scaledHeight; // viewport sized for the model
+  scaleFactor; // viewport.w × scaleFactor ≈ scaledWidth
   desktopPlatform;
 }
 ```
@@ -102,7 +104,7 @@ the model emitted, so replaying the context back to the API is a pure
 pass-through. Focused-viewport actions don't feed the model different
 numbers than it saw. Bounds checks and error messages are in the same
 frame the model emitted in, so a tool-error tells the model "coordinate
-(X, Y) is outside 1380×776" using *its* X and Y.
+(X, Y) is outside 1380×776" using _its_ X and Y.
 
 The translation itself is a single helper in
 `computerService.translateScaledActionToScreen`:
@@ -156,14 +158,14 @@ caching on Anthropic and force a full context refresh elsewhere. The
 - Model is told nothing about resolution. Emits coords in a 0–999
   normalized grid.
 - `convertGoogleActionToInternal` denormalizes `0..999 → scaledWidth/
-  Height` and maps Google's named functions (`click_at`, `scroll_at`,
+Height` and maps Google's named functions (`click_at`, `scroll_at`,
   `type_text_at`, …) to the internal Anthropic-style action names
   (`left_click`, `scroll`, …).
 - Replay: `reconstructGoogleArgs` does the inverse, using the viewport
   dims stamped on the stored action (via `attachViewportToActions`) so
   a later focus change can't misalign the replayed coords.
 
-Google's extractor is the only one that *must* touch coords on the way
+Google's extractor is the only one that _must_ touch coords on the way
 in, because its API space isn't the scaled space. It still lands in the
 same internal format.
 
@@ -174,19 +176,19 @@ computer-use tooling — can drive the desktop through the shell. They
 share the same coord contract as the LLM path: scaled coords in, scaled
 coords into `executeAction`, ComputerService translates.
 
-| Subcommand | Purpose |
-|---|---|
-| `screenshot` | Capture the scaled viewport and append to context |
-| `focus X Y W H` | Set focus (args in scaled pixels); `focus clear` resets |
+| Subcommand           | Purpose                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `screenshot`         | Capture the scaled viewport and append to context                             |
+| `focus X Y W H`      | Set focus (args in scaled pixels); `focus clear` resets                       |
 | `click X Y [button]` | Click at scaled-screenshot coords (`left`/`right`/`middle`/`double`/`triple`) |
-| `move X Y` | Move the cursor without clicking |
-| `scroll X Y <dir> N` | Scroll N clicks at scaled-screenshot coords |
-| `drag X1 Y1 X2 Y2` | Press, drag, release |
-| `key <combo>` | Press a key (`ctrl+l`, `alt+tab`, …) |
-| `hold <combo> <ms>` | Hold a key for a duration |
-| `type <text>` | Type text |
-| `wait [seconds]` | Pause to let the UI settle (defaults to 5s) |
-| `dump` | Save full / viewport-native / scaled screenshots for debugging |
+| `move X Y`           | Move the cursor without clicking                                              |
+| `scroll X Y <dir> N` | Scroll N clicks at scaled-screenshot coords                                   |
+| `drag X1 Y1 X2 Y2`   | Press, drag, release                                                          |
+| `key <combo>`        | Press a key (`ctrl+l`, `alt+tab`, …)                                          |
+| `hold <combo> <ms>`  | Hold a key for a duration                                                     |
+| `type <text>`        | Type text                                                                     |
+| `wait [seconds]`     | Pause to let the UI settle (defaults to 5s)                                   |
+| `dump`               | Save full / viewport-native / scaled screenshots for debugging                |
 
 For vendors with native computer-use tool support, the subcommands
 that duplicate the native tool (`screenshot`, `click`, `move`, `scroll`,
@@ -199,11 +201,11 @@ the shell gives finer timing control.
 
 Three capture entry points in `ComputerService`:
 
-| Function | Area | Resolution |
-|---|---|---|
-| `captureFullScreenshot` | Full physical display | Native |
-| `captureViewportScreenshot` | Focused viewport, cropped | Native |
-| `captureScaledScreenshot` | Focused viewport, resized | Scaled (`TARGET_MEGAPIXELS`) |
+| Function                    | Area                      | Resolution                   |
+| --------------------------- | ------------------------- | ---------------------------- |
+| `captureFullScreenshot`     | Full physical display     | Native                       |
+| `captureViewportScreenshot` | Focused viewport, cropped | Native                       |
+| `captureScaledScreenshot`   | Focused viewport, resized | Scaled (`TARGET_MEGAPIXELS`) |
 
 `captureScaledScreenshot` composes the others: capture full → crop to
 viewport → resize to scaled. Screenshots cache under
@@ -237,12 +239,12 @@ retry against.
 
 One file per display server, all exposing the same surface:
 
-| Backend | Used when |
-|---|---|
+| Backend             | Used when                                                                                                                                                             |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `windowsDesktop.ts` | `process.platform === "win32"` or `WSL_DISTRO_NAME` set (WSL controls the Windows host via `powershell.exe` rather than WSLg, since WSLg only exposes Linux GUI apps) |
-| `macosDesktop.ts` | `process.platform === "darwin"` |
-| `x11Desktop.ts` | `DISPLAY` set or `XDG_SESSION_TYPE === "x11"` |
-| `waylandDesktop.ts` | `WAYLAND_DISPLAY` set or `XDG_SESSION_TYPE === "wayland"` |
+| `macosDesktop.ts`   | `process.platform === "darwin"`                                                                                                                                       |
+| `x11Desktop.ts`     | `DISPLAY` set or `XDG_SESSION_TYPE === "x11"`                                                                                                                         |
+| `waylandDesktop.ts` | `WAYLAND_DISPLAY` set or `XDG_SESSION_TYPE === "wayland"`                                                                                                             |
 
 Each exports `captureScreenshot`, `mouseClick`, `mouseDoubleClick`,
 `mouseMove`, `mouseDrag`, `mouseScroll`, `typeText`, `pressKey`,

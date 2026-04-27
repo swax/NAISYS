@@ -18,12 +18,8 @@
 import { execFileSync } from "child_process";
 
 import type { ExecError } from "../execError.js";
-import type {
-  CanonicalKeyChord} from "../keyCombo.js";
-import {
-  normalizeKeyCombo,
-  PRESS_KEY_HOLD_MS,
-} from "../keyCombo.js";
+import type { CanonicalKeyChord } from "../keyCombo.js";
+import { normalizeKeyCombo, PRESS_KEY_HOLD_MS } from "../keyCombo.js";
 
 // --- Retina / HiDPI coordinate handling ---
 

@@ -123,9 +123,9 @@ describe("Mock-LLM Loop E2E", () => {
       await sleep(2000);
     }
     expect(peeked).toContain("Mock LLM ran at");
-    expect((peeked.match(/Mock LLM ran at/g) ?? []).length).toBeGreaterThanOrEqual(
-      2,
-    );
+    expect(
+      (peeked.match(/Mock LLM ran at/g) ?? []).length,
+    ).toBeGreaterThanOrEqual(2);
     // ns-comment routes through commandHandler in LLM mode and shows up
     // in the buffer alongside the wait-window prompt suffix.
     expect(peeked).toContain("ns-comment");

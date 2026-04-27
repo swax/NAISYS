@@ -168,15 +168,19 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
     console.log("-".repeat(nameWidth) + "-+-" + "-".repeat(20) + "-+-------");
     for (const [name, t] of sorted) {
       const ratio = `${t.covered}/${t.total}`;
-      const pct = t.total ? `${(100 * t.covered / t.total).toFixed(2)}%` : "-";
-      console.log(name.padEnd(nameWidth) + " | " + ratio.padEnd(20) + " | " + pct);
+      const pct = t.total
+        ? `${((100 * t.covered) / t.total).toFixed(2)}%`
+        : "-";
+      console.log(
+        name.padEnd(nameWidth) + " | " + ratio.padEnd(20) + " | " + pct,
+      );
     }
     console.log(
       "\nScope: Node.js processes via c8, plus the supervisor client React\n" +
-      "       code via vite-plugin-istanbul (Playwright dumps window.__coverage__).\n" +
-      "       For the client, only files actually loaded during a Playwright\n" +
-      "       test contribute to the denominator. Other workspaces use --all,\n" +
-      "       so unloaded files count as 0%.",
+        "       code via vite-plugin-istanbul (Playwright dumps window.__coverage__).\n" +
+        "       For the client, only files actually loaded during a Playwright\n" +
+        "       test contribute to the denominator. Other workspaces use --all,\n" +
+        "       so unloaded files count as 0%.",
     );
 
     // Write a checked-in snapshot. Git history of this file is the coverage
@@ -189,7 +193,7 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       totalAll += t.total;
     }
     const totalPct = totalAll
-      ? `${(100 * totalCovered / totalAll).toFixed(2)}%`
+      ? `${((100 * totalCovered) / totalAll).toFixed(2)}%`
       : "-";
     const lines = [
       "# Coverage",
@@ -209,7 +213,9 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       "| --- | ---: | ---: | ---: |",
     ];
     for (const [name, t] of sorted) {
-      const pct = t.total ? `${(100 * t.covered / t.total).toFixed(2)}%` : "-";
+      const pct = t.total
+        ? `${((100 * t.covered) / t.total).toFixed(2)}%`
+        : "-";
       lines.push(
         `| ${name} | ${formatCount(t.covered)} | ${formatCount(t.total)} | ${pct} |`,
       );

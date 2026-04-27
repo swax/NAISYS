@@ -45,7 +45,9 @@ function convertOpenAiActionToInternal(
       const path = (action.path || []) as Array<
         { x: number; y: number } | DesktopCoord
       >;
-      const toCoord = (p: { x: number; y: number } | DesktopCoord | undefined): DesktopCoord =>
+      const toCoord = (
+        p: { x: number; y: number } | DesktopCoord | undefined,
+      ): DesktopCoord =>
         Array.isArray(p) ? [p[0], p[1]] : p ? [p.x, p.y] : [0, 0];
       return {
         action: "left_click_drag",

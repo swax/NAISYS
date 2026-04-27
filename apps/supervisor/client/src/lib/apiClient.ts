@@ -201,8 +201,7 @@ export const apiEndpoints = {
     `/users/${username}/passkeys/${id}/delete`,
   userRegistrationToken: (username: string) =>
     `/users/${username}/registration-token`,
-  userResetPasskeys: (username: string) =>
-    `/users/${username}/reset-passkeys`,
+  userResetPasskeys: (username: string) => `/users/${username}/reset-passkeys`,
   status: "/status",
   agents: "/agents",
   hosts: "/hosts",

@@ -124,7 +124,7 @@ export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
       `  Open the URL above once startup completes. Press Enter to continue: `,
     );
   }
-}
+};
 
 /**
  * Fastify plugin that registers Supervisor routes, services, and static files.

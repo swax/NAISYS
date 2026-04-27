@@ -51,15 +51,15 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 
 ### Deployment Modes
 
-| Command                                  | Mode             | Description                                                                              |
-| ---------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------- |
-| `naisys`                                 | Local            | Standalone, ephemeral, yaml-driven, no database, no network                              |
-| `naisys --hub=http://host:3300`          | Hub-controlled   | Connects to an external hub, hub manages agents and all data                             |
-| `naisys --integrated-hub`                | Hub-controlled   | Starts a hub in-process and connects to it (saves memory on small servers)               |
-| `naisys --integrated-hub --supervisor`   | Hub + Supervisor | Integrated hub with the Supervisor web UI mounted on the same Fastify server             |
-| `naisys-hub`                             | Hub              | Standalone hub server (Socket.IO + Fastify) with database                                |
-| `naisys-hub --supervisor`                | Hub + Supervisor | Hub with Supervisor web UI                                                               |
-| `naisys-hub --supervisor --erp`          | Hub + Sup + ERP  | Adds the ERP app alongside the supervisor (requires `--supervisor`)                      |
+| Command                                | Mode             | Description                                                                  |
+| -------------------------------------- | ---------------- | ---------------------------------------------------------------------------- |
+| `naisys`                               | Local            | Standalone, ephemeral, yaml-driven, no database, no network                  |
+| `naisys --hub=http://host:3300`        | Hub-controlled   | Connects to an external hub, hub manages agents and all data                 |
+| `naisys --integrated-hub`              | Hub-controlled   | Starts a hub in-process and connects to it (saves memory on small servers)   |
+| `naisys --integrated-hub --supervisor` | Hub + Supervisor | Integrated hub with the Supervisor web UI mounted on the same Fastify server |
+| `naisys-hub`                           | Hub              | Standalone hub server (Socket.IO + Fastify) with database                    |
+| `naisys-hub --supervisor`              | Hub + Supervisor | Hub with Supervisor web UI                                                   |
+| `naisys-hub --supervisor --erp`        | Hub + Sup + ERP  | Adds the ERP app alongside the supervisor (requires `--supervisor`)          |
 
 ### Architecture Diagram
 
@@ -200,7 +200,10 @@ Event names are snake_case strings (`mail_send`, `users_updated`, `cost_control`
 // Client side: hubClient.sendRequest<E>(event, payload) returns Promise<Response>
 // Uses Socket.IO's built-in acknowledgement callbacks for correlation
 // 30-second timeout; rejects if not connected
-const response = await hubClient.sendRequest(HubEvents.MAIL_LIST, { userId, filter });
+const response = await hubClient.sendRequest(HubEvents.MAIL_LIST, {
+  userId,
+  filter,
+});
 ```
 
 **Fire-and-forget** (client → hub, no ack):
@@ -225,38 +228,38 @@ Hub handlers are registered on `naisysServer` as named event handlers with Zod s
 
 High-frequency writes that don't need confirmation. Client buffers and sends periodically (typically every 1–2 seconds or when buffer is full).
 
-| Event        | Data                                     | Notes                                                                       |
-| ------------ | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `log_write`  | context_log row batch                    | Batched in `hubLogBuffer`, flushed ~1s                                      |
-| `cost_write` | cost row batch                           | Batched in `hubCostBuffer`, flushed ~2s                                     |
-| `heartbeat`  | active user IDs + per-run session state  | Sent every 2s; carries pause/run state so supervisor sees live agent status |
+| Event        | Data                                    | Notes                                                                       |
+| ------------ | --------------------------------------- | --------------------------------------------------------------------------- |
+| `log_write`  | context_log row batch                   | Batched in `hubLogBuffer`, flushed ~1s                                      |
+| `cost_write` | cost row batch                          | Batched in `hubCostBuffer`, flushed ~2s                                     |
+| `heartbeat`  | active user IDs + per-run session state | Sent every 2s; carries pause/run state so supervisor sees live agent status |
 
 #### Request-Response (NAISYS → Hub, awaits ack)
 
-| Event               | Params                                   | Returns          | Notes                                                                                                                |
-| ------------------- | ---------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Registration**    |                                          |                  |                                                                                                                      |
-| (auth handshake)    | hostname, machineId, accessKey           | accepted/error   | Handled during Socket.IO auth middleware. Hub validates `HUB_ACCESS_KEY`, auto-creates host if name/machineId is new |
-| **Session**         |                                          |                  |                                                                                                                      |
-| `session_create`    | userId, modelName                        | runId, sessionId | On agent start                                                                                                       |
-| `session_increment` | userId, runId                            | sessionId        | On session compact                                                                                                   |
-| **Mail**            |                                          |                  |                                                                                                                      |
-| `mail_send`         | fromUserId, toUsernames[], subject, body | success/error    | Hub resolves usernames, creates records, pushes `mail_received` to target hosts                                      |
-| `mail_list`         | userId, filter?                          | raw message data | Hub queries, returns raw data. Client formats for display                                                            |
-| `mail_peek`         | userId, messageId                        | raw message data | Fetches a message without marking it read (split from the original `mail.read`)                                      |
-| `mail_mark_read`    | userId, messageIds[]                     | success/error    | Marks messages as read (the second half of the original `mail.read`)                                                 |
-| `mail_archive`      | userId, messageIds[]                     | success/error    |                                                                                                                      |
-| `mail_search`       | userId, terms, flags                     | raw results      |                                                                                                                      |
-| `mail_unread`       | userId                                   | unread messages  | For notification checking                                                                                            |
-| **Agent control (two-hop relay: requester → hub → target host)** |                       |                  |                                                                                                                      |
-| `agent_start`       | userId, taskDescription                  | success/error    | Hub finds eligible host via `user_hosts` (or any non-restricted host if unassigned), relays to target                |
-| `agent_stop`        | userId, reason                           | success/error    | Hub routes stop request to the host currently running the agent                                                      |
-| `agent_run_pause`   | userId                                   | success/error    | Forces the agent's command loop into an indefinite wait                                                              |
-| `agent_run_resume`  | userId                                   | success/error    | Resumes a paused run                                                                                                 |
-| `agent_run_command` | userId, command                          | success/error    | Sends a command into the agent's active session (used by supervisor debug)                                           |
-| `agent_peek`        | userId                                   | output snapshot  | Peeks at the agent's current output buffer                                                                           |
-| **Admin (Supervisor → Hub)** |                                 |                  |                                                                                                                      |
-| `rotate_access_key` | -                                        | new key          | Rotates `HUB_ACCESS_KEY` (admin-only)                                                                                |
+| Event                                                            | Params                                   | Returns          | Notes                                                                                                                |
+| ---------------------------------------------------------------- | ---------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Registration**                                                 |                                          |                  |                                                                                                                      |
+| (auth handshake)                                                 | hostname, machineId, accessKey           | accepted/error   | Handled during Socket.IO auth middleware. Hub validates `HUB_ACCESS_KEY`, auto-creates host if name/machineId is new |
+| **Session**                                                      |                                          |                  |                                                                                                                      |
+| `session_create`                                                 | userId, modelName                        | runId, sessionId | On agent start                                                                                                       |
+| `session_increment`                                              | userId, runId                            | sessionId        | On session compact                                                                                                   |
+| **Mail**                                                         |                                          |                  |                                                                                                                      |
+| `mail_send`                                                      | fromUserId, toUsernames[], subject, body | success/error    | Hub resolves usernames, creates records, pushes `mail_received` to target hosts                                      |
+| `mail_list`                                                      | userId, filter?                          | raw message data | Hub queries, returns raw data. Client formats for display                                                            |
+| `mail_peek`                                                      | userId, messageId                        | raw message data | Fetches a message without marking it read (split from the original `mail.read`)                                      |
+| `mail_mark_read`                                                 | userId, messageIds[]                     | success/error    | Marks messages as read (the second half of the original `mail.read`)                                                 |
+| `mail_archive`                                                   | userId, messageIds[]                     | success/error    |                                                                                                                      |
+| `mail_search`                                                    | userId, terms, flags                     | raw results      |                                                                                                                      |
+| `mail_unread`                                                    | userId                                   | unread messages  | For notification checking                                                                                            |
+| **Agent control (two-hop relay: requester → hub → target host)** |                                          |                  |                                                                                                                      |
+| `agent_start`                                                    | userId, taskDescription                  | success/error    | Hub finds eligible host via `user_hosts` (or any non-restricted host if unassigned), relays to target                |
+| `agent_stop`                                                     | userId, reason                           | success/error    | Hub routes stop request to the host currently running the agent                                                      |
+| `agent_run_pause`                                                | userId                                   | success/error    | Forces the agent's command loop into an indefinite wait                                                              |
+| `agent_run_resume`                                               | userId                                   | success/error    | Resumes a paused run                                                                                                 |
+| `agent_run_command`                                              | userId, command                          | success/error    | Sends a command into the agent's active session (used by supervisor debug)                                           |
+| `agent_peek`                                                     | userId                                   | output snapshot  | Peeks at the agent's current output buffer                                                                           |
+| **Admin (Supervisor → Hub)**                                     |                                          |                  |                                                                                                                      |
+| `rotate_access_key`                                              | -                                        | new key          | Rotates `HUB_ACCESS_KEY` (admin-only)                                                                                |
 
 ### Hub-Pushed Events
 
@@ -264,21 +267,21 @@ Hub pushes events over the WebSocket (no polling needed). Some events are broadc
 
 #### To all NAISYS clients (broadcast)
 
-| Event               | Data                                       | Trigger                                                                       |
-| ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------- |
-| `users_updated`     | users[] with full configs                  | On client connect, and whenever the supervisor changes users (`users_changed`)|
-| `hosts_updated`     | connected host topology                    | On connect, and on host changes (`hosts_changed`)                             |
-| `variables_updated` | global config (shell limits, spend limits) | On connect, and on variable changes (`variables_changed`)                     |
-| `models_updated`    | LLM and image model definitions            | On connect, and on model changes (`models_changed`)                           |
+| Event               | Data                                       | Trigger                                                                           |
+| ------------------- | ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `users_updated`     | users[] with full configs                  | On client connect, and whenever the supervisor changes users (`users_changed`)    |
+| `hosts_updated`     | connected host topology                    | On connect, and on host changes (`hosts_changed`)                                 |
+| `variables_updated` | global config (shell limits, spend limits) | On connect, and on variable changes (`variables_changed`)                         |
+| `models_updated`    | LLM and image model definitions            | On connect, and on model changes (`models_changed`)                               |
 | `agents_status`     | aggregate active-agent map + counters      | Periodically and on agent state changes (replaces the planned `heartbeat.status`) |
 
 #### Targeted to a specific NAISYS client
 
-| Event             | Data                          | Trigger                                                                       |
-| ----------------- | ----------------------------- | ----------------------------------------------------------------------------- |
-| `host_registered` | machineId, hostname           | Sent to a newly connected client with its assigned identity                   |
-| `cost_control`    | userId, enabled, reason       | Spend-limit enforcement, sent to the host running the affected agent          |
-| `mail_received`   | recipient user IDs            | New mail notification, sent to hosts running recipient agents                 |
+| Event             | Data                    | Trigger                                                              |
+| ----------------- | ----------------------- | -------------------------------------------------------------------- |
+| `host_registered` | machineId, hostname     | Sent to a newly connected client with its assigned identity          |
+| `cost_control`    | userId, enabled, reason | Spend-limit enforcement, sent to the host running the affected agent |
+| `mail_received`   | recipient user IDs      | New mail notification, sent to hosts running recipient agents        |
 
 The relayed agent-control requests (`agent_start`, `agent_stop`, `agent_run_pause`, `agent_run_resume`, `agent_run_command`, `agent_peek`) also arrive at the target NAISYS instance as Socket.IO events with acks; the `AgentManager` registers handlers for each.
 
@@ -286,14 +289,14 @@ The relayed agent-control requests (`agent_start`, `agent_stop`, `agent_run_paus
 
 The supervisor backend connects to the hub as a Socket.IO client with `host_type = supervisor`. It receives the broadcasts above plus these incremental data-stream events:
 
-| Event               | Data                                    | Trigger                                          |
-| ------------------- | --------------------------------------- | ------------------------------------------------ |
-| `log_push`          | context_log entries + session deltas    | Periodic flush after `log_write` ingestion       |
-| `mail_push`         | new mail message data                   | After `mail_send` is processed                   |
-| `mail_read_push`    | read-receipt deltas                     | After `mail_mark_read`                           |
-| `cost_push`         | cost deltas per session                 | Periodic flush after `cost_write` ingestion      |
-| `session_push`      | new RunSession                          | After `session_create`/`session_increment`       |
-| `session_heartbeat` | per-session lastActive bumps            | Per heartbeat tick                               |
+| Event               | Data                                 | Trigger                                     |
+| ------------------- | ------------------------------------ | ------------------------------------------- |
+| `log_push`          | context_log entries + session deltas | Periodic flush after `log_write` ingestion  |
+| `mail_push`         | new mail message data                | After `mail_send` is processed              |
+| `mail_read_push`    | read-receipt deltas                  | After `mail_mark_read`                      |
+| `cost_push`         | cost deltas per session              | Periodic flush after `cost_write` ingestion |
+| `session_push`      | new RunSession                       | After `session_create`/`session_increment`  |
+| `session_heartbeat` | per-session lastActive bumps         | Per heartbeat tick                          |
 
 #### Supervisor → Hub triggers (fire-and-forget)
 

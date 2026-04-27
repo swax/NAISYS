@@ -709,7 +709,9 @@ export default function userRoutes(
       const preserveActorSession = stillHasPasskey && actingOnSelf;
       await deleteAllSessionsForUser(
         targetUser.id,
-        preserveActorSession && cookieToken ? hashToken(cookieToken) : undefined,
+        preserveActorSession && cookieToken
+          ? hashToken(cookieToken)
+          : undefined,
       );
 
       // If the actor just invalidated their own session (last-passkey case),
@@ -754,7 +756,8 @@ export default function userRoutes(
     },
     async (request, reply) => {
       const callerId = request.supervisorUser!.id;
-      const isSelf = request.params.username === request.supervisorUser!.username;
+      const isSelf =
+        request.params.username === request.supervisorUser!.username;
       if (isSelf && !(await userHasPasskey(callerId))) {
         return forbidden(
           reply,
@@ -813,7 +816,10 @@ export default function userRoutes(
         return { success: false as const, message: stepUp.message };
       }
       if (request.params.username === request.supervisorUser!.username) {
-        return conflict(reply, "Use 'Issue Registration Link' on yourself instead");
+        return conflict(
+          reply,
+          "Use 'Issue Registration Link' on yourself instead",
+        );
       }
 
       const targetUser = await userService.getUserByUsername(

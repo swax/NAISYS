@@ -149,7 +149,7 @@ export const browserCmd: CommandDef = {
         "Capture a screenshot of the current page and add it to context (requires a vision-capable model)",
     },
     click: {
-      usage: "click <x> <y> [left|right|middle|double] | click \"<selector>\"",
+      usage: 'click <x> <y> [left|right|middle|double] | click "<selector>"',
       description:
         "Visual mode: click at screenshot coordinates. Text mode: click element by selector (e.g. text=Submit, #login, .btn)",
     },

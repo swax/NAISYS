@@ -195,7 +195,10 @@ SERVER_PORT=${SERVER_PORT}
     );
     expect(exported.yaml).toContain("username: operatorbot");
 
-    const editedYaml = exported.yaml.replace(/tokenMax:\s*\d+/, "tokenMax: 60000");
+    const editedYaml = exported.yaml.replace(
+      /tokenMax:\s*\d+/,
+      "tokenMax: 60000",
+    );
     expect(editedYaml).toContain("tokenMax: 60000");
 
     const imported = await admin.post<ImportAgentConfigResponse>(
@@ -224,9 +227,8 @@ SERVER_PORT=${SERVER_PORT}
     });
     expect(setLead.success).toBe(true);
 
-    const peerWithLead = await admin.get<AgentDetailResponse>(
-      "/agents/peerbot",
-    );
+    const peerWithLead =
+      await admin.get<AgentDetailResponse>("/agents/peerbot");
     expect(peerWithLead.leadUsername).toBe("operatorbot");
 
     const clearLead = await admin.put<SuccessResponse>("/agents/peerbot/lead", {
@@ -240,9 +242,8 @@ SERVER_PORT=${SERVER_PORT}
       {},
     );
     expect(disabled.success).toBe(true);
-    const peerDisabled = await admin.get<AgentDetailResponse>(
-      "/agents/peerbot",
-    );
+    const peerDisabled =
+      await admin.get<AgentDetailResponse>("/agents/peerbot");
     expect(peerDisabled.enabled).toBe(false);
 
     const enabled = await admin.post<SuccessResponse>(
@@ -250,27 +251,23 @@ SERVER_PORT=${SERVER_PORT}
       {},
     );
     expect(enabled.success).toBe(true);
-    const peerEnabled = await admin.get<AgentDetailResponse>(
-      "/agents/peerbot",
-    );
+    const peerEnabled = await admin.get<AgentDetailResponse>("/agents/peerbot");
     expect(peerEnabled.enabled).toBe(true);
 
     const archived = await admin.post<SuccessResponse>(
       "/agents/peerbot/archive",
     );
     expect(archived.success).toBe(true);
-    const peerArchived = await admin.get<AgentDetailResponse>(
-      "/agents/peerbot",
-    );
+    const peerArchived =
+      await admin.get<AgentDetailResponse>("/agents/peerbot");
     expect(peerArchived.archived).toBe(true);
 
     const unarchived = await admin.post<SuccessResponse>(
       "/agents/peerbot/unarchive",
     );
     expect(unarchived.success).toBe(true);
-    const peerUnarchived = await admin.get<AgentDetailResponse>(
-      "/agents/peerbot",
-    );
+    const peerUnarchived =
+      await admin.get<AgentDetailResponse>("/agents/peerbot");
     expect(peerUnarchived.archived).toBe(false);
 
     const resetSpend = await admin.post<SuccessResponse>(
@@ -286,10 +283,9 @@ SERVER_PORT=${SERVER_PORT}
     );
     expect(hostCreated.success).toBe(true);
 
-    const restricted = await admin.put<SuccessResponse>(
-      `/hosts/${TEST_HOST}`,
-      { restricted: true },
-    );
+    const restricted = await admin.put<SuccessResponse>(`/hosts/${TEST_HOST}`, {
+      restricted: true,
+    });
     expect(restricted.success).toBe(true);
 
     const hostDetail = await admin.get<HostDetailResponse>(

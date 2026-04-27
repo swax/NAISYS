@@ -89,10 +89,7 @@ export interface NaisysTestProcess {
    * Flush, send command, optionally wait for a substring, then wait for prompt.
    * Returns the output captured between the flush and the prompt.
    */
-  runCommand: (
-    command: string,
-    options?: RunCommandOptions,
-  ) => Promise<string>;
+  runCommand: (command: string, options?: RunCommandOptions) => Promise<string>;
   /** Press enter (blank line) and wait for the next prompt */
   pressEnter: (options?: { waitForPrompt?: boolean }) => Promise<string>;
   /** Run `ns-agent start <username> "<reason>"` and wait for "started" */

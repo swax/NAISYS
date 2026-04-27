@@ -207,7 +207,9 @@ function reconstructGoogleArgs(
     }
     case "scroll_document": {
       const a = internalActions[0];
-      return { direction: a?.action === "scroll" ? a.scroll_direction : "down" };
+      return {
+        direction: a?.action === "scroll" ? a.scroll_direction : "down",
+      };
     }
     case "scroll_at": {
       const a = internalActions[0];

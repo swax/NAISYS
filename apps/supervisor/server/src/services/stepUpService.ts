@@ -67,7 +67,9 @@ export async function requireStepUp(
   // side effect, so a single assertion can't be replayed against another
   // step-up attempt.
   const verification = await verifyAuthentication({
-    response: assertion as Parameters<typeof verifyAuthentication>[0]["response"],
+    response: assertion as Parameters<
+      typeof verifyAuthentication
+    >[0]["response"],
     expectedChallenge: challenge,
     expectedOrigin: origin,
     expectedRPID: rpId,

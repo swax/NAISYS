@@ -4,10 +4,10 @@
 
 Ports are grouped by doubled thousands digits to avoid collisions with common services:
 
-| Range  | Purpose                                  |
-| ------ | ---------------------------------------- |
-| `22xx` | Dev clients                              |
-| `33xx` | Servers                                  |
+| Range  | Purpose     |
+| ------ | ----------- |
+| `22xx` | Dev clients |
+| `33xx` | Servers     |
 
 Within each range, ports are assigned sequentially. E2E tests no longer
 use a fixed range; see "E2E Test Ports" below.
@@ -46,8 +46,8 @@ scheduled.
 
 NAISYS's own databases are SQLite (hub, supervisor, and erp each have their own Prisma schema with `provider = "sqlite"`), so there is no Postgres port for NAISYS itself. The external ports below are only relevant to the Odoo MCP integration target.
 
-| Port | Service       | Notes                                              |
-| ---- | ------------- | -------------------------------------------------- |
-| 5555 | Prisma Studio | `npm run prisma:studio` — inspects SQLite DBs      |
-| 5432 | PostgreSQL    | Backing store for Odoo when running it locally     |
-| 8069 | Odoo          | ERP integration target, accessed via `odoo` MCP    |
+| Port | Service       | Notes                                           |
+| ---- | ------------- | ----------------------------------------------- |
+| 5555 | Prisma Studio | `npm run prisma:studio` — inspects SQLite DBs   |
+| 5432 | PostgreSQL    | Backing store for Odoo when running it locally  |
+| 8069 | Odoo          | ERP integration target, accessed via `odoo` MCP |

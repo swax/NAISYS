@@ -2,7 +2,7 @@
 
 [← Back to main README](../../README.md)
 
-NAISYS ERP is an AI-first order and task-management system. It is optimized for agent consumption: a HATEOAS REST API makes every endpoint discoverable at runtime, slim responses and batch endpoints keep payloads small, and disabled actions carry a reason so agents know *why* they can't act.
+NAISYS ERP is an AI-first order and task-management system. It is optimized for agent consumption: a HATEOAS REST API makes every endpoint discoverable at runtime, slim responses and batch endpoints keep payloads small, and disabled actions carry a reason so agents know _why_ they can't act.
 
 Ships as its own package with a dedicated database — see [doc 006](../../docs/006-erp-orders.md) for the design. To run standalone:
 

@@ -13,10 +13,7 @@ import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useSession } from "../contexts/SessionContext";
-import {
-  lookupRegistrationToken,
-  passkeyRegister,
-} from "../lib/apiAuth";
+import { lookupRegistrationToken, passkeyRegister } from "../lib/apiAuth";
 
 type Phase = "loading" | "ready" | "registering" | "done" | "error";
 

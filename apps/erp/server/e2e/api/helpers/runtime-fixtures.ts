@@ -21,7 +21,9 @@ export async function startOpRun(
   note?: string,
 ): Promise<{ status: string }> {
   const res = await api.post(
-    erpApiPath(`/orders/${ref.orderKey}/runs/${ref.runNo}/ops/${ref.seqNo}/start`),
+    erpApiPath(
+      `/orders/${ref.orderKey}/runs/${ref.runNo}/ops/${ref.seqNo}/start`,
+    ),
     { data: { note } },
   );
   return expectJson<{ status: string }>(res, 200);
@@ -118,7 +120,10 @@ export async function clockOut(
 export async function listLaborTickets(
   api: APIRequestContext,
   ref: OpRunRef,
-): Promise<{ items: { id: number; clockOut: string | null }[]; total: number }> {
+): Promise<{
+  items: { id: number; clockOut: string | null }[];
+  total: number;
+}> {
   const res = await api.get(
     erpApiPath(
       `/orders/${ref.orderKey}/runs/${ref.runNo}/ops/${ref.seqNo}/labor`,

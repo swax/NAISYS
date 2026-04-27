@@ -164,10 +164,9 @@ SERVER_PORT=${SERVER_PORT}
 
     // --- Already-running guard (subagent.ts validateSubagentStart) ---
     {
-      const out = await naisys.runCommand(
-        'ns-agent start bob "again"',
-        { timeoutMs: 15000 },
-      );
+      const out = await naisys.runCommand('ns-agent start bob "again"', {
+        timeoutMs: 15000,
+      });
       expect(out.toLowerCase()).toContain("already running");
     }
 

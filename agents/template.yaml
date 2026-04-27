@@ -63,8 +63,8 @@ shellModel: claude4sonnet
 # Javascript not supported. Requires `lynx` on the host (e.g. `apt install lynx`).
 #webEnabled: true
 
-# Allow agent to browse the web with a real headless Chromium browser via Playwright. 
-# Vision-capable models see screenshots; others fall back to a text/selector mode. 
+# Allow agent to browse the web with a real headless Chromium browser via Playwright.
+# Vision-capable models see screenshots; others fall back to a text/selector mode.
 # Requires `npx playwright install chromium` on the host
 #browserEnabled: true
 

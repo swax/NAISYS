@@ -75,7 +75,10 @@ export const revokePermission = async (
 export const rotateUserApiKey = async (
   username: string,
 ): Promise<UserActionResult> => {
-  return api.post<{}, UserActionResult>(apiEndpoints.userRotateKey(username), {});
+  return api.post<{}, UserActionResult>(
+    apiEndpoints.userRotateKey(username),
+    {},
+  );
 };
 
 export const createAgentUser = async (

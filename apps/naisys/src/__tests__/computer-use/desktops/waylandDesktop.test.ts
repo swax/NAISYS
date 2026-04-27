@@ -41,12 +41,7 @@ describe("waylandDesktop keyboard input", () => {
       0,
       100,
     );
-    expect(Atomics.wait).toHaveBeenCalledWith(
-      expect.any(Int32Array),
-      0,
-      0,
-      50,
-    );
+    expect(Atomics.wait).toHaveBeenCalledWith(expect.any(Int32Array), 0, 0, 50);
   });
 
   test("normalizes lowercase aliases into Linux key names", () => {

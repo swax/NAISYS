@@ -362,7 +362,9 @@ export function createDesktopService(
       throw `Focus rect (${x}, ${y}, ${width}, ${height}) is outside the current screenshot bounds ${state.desktopConfig.scaledWidth}x${state.desktopConfig.scaledHeight}.`;
     }
 
-    computerService.setFocus(scaledRectToNativeRect(x, y, width, height, state));
+    computerService.setFocus(
+      scaledRectToNativeRect(x, y, width, height, state),
+    );
     output.commentAndLog(getFocusChangeCostNote());
     const { desktopConfig: newConfig } = requireVisibleDesktopState();
     lastFocusResponse = `Focused on (${x}, ${y}, ${width}x${height}). That ${width}x${height} region is now shown as scaled ${newConfig.scaledWidth}x${newConfig.scaledHeight}. Use 'ns-desktop focus clear' to return to the full desktop.`;

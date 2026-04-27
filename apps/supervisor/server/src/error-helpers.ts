@@ -27,10 +27,7 @@ export function unauthorized(
   return { success: false, message };
 }
 
-export function forbidden(
-  reply: FastifyReply,
-  message: string,
-): ErrorResponse {
+export function forbidden(reply: FastifyReply, message: string): ErrorResponse {
   reply.status(403);
   return { success: false, message };
 }

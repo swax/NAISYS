@@ -135,7 +135,9 @@ export function createBrowserService(
         new Promise<T>((_, reject) => {
           timer = setTimeout(
             () =>
-              reject(new Error(`${label} timed out after ${timeoutMs / 1000}s`)),
+              reject(
+                new Error(`${label} timed out after ${timeoutMs / 1000}s`),
+              ),
             timeoutMs,
           );
         }),
@@ -344,7 +346,11 @@ export function createBrowserService(
     const direction = (argv[1] || "").toLowerCase();
     const pixels = Number(argv[2]);
     const validDirs = ["up", "down", "left", "right"];
-    if (!validDirs.includes(direction) || !Number.isFinite(pixels) || pixels <= 0) {
+    if (
+      !validDirs.includes(direction) ||
+      !Number.isFinite(pixels) ||
+      pixels <= 0
+    ) {
       throw `Usage: ${browserCmd.name} scroll <up|down|left|right> <pixels>`;
     }
     let dx = 0;

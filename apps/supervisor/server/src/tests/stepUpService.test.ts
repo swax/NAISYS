@@ -23,9 +23,7 @@ import {
   STEPUP_CHALLENGE_COOKIE,
 } from "../services/stepUpService.js";
 
-function makeRequest(
-  overrides: Partial<FastifyRequest> = {},
-): FastifyRequest {
+function makeRequest(overrides: Partial<FastifyRequest> = {}): FastifyRequest {
   return {
     supervisorUser: {
       id: 7,
@@ -128,10 +126,9 @@ describe("requireStepUp", () => {
       expectedOrigin: "https://supervisor.example",
       expectedRPID: "supervisor.example",
     });
-    expect(reply.clearCookie).toHaveBeenCalledWith(
-      STEPUP_CHALLENGE_COOKIE,
-      { path: "/supervisor/api/" },
-    );
+    expect(reply.clearCookie).toHaveBeenCalledWith(STEPUP_CHALLENGE_COOKIE, {
+      path: "/supervisor/api/",
+    });
   });
 
   test("rejects assertions verified for a different user", async () => {

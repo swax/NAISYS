@@ -101,23 +101,23 @@ The access key only needs to be copied once per client machine. If it's rotated,
 
 ## Environment variables
 
-| Variable         | Where                     | Purpose                                                                   |
-| ---------------- | ------------------------- | ------------------------------------------------------------------------- |
-| `NAISYS_FOLDER`  | Hub, NAISYS, Supervisor   | Base directory for the access key file (`NAISYS_FOLDER/cert/`)            |
-| `HUB_ACCESS_KEY` | NAISYS client, Supervisor | The hub's access key — required for remote (standalone) hub connections   |
-| `SERVER_PORT`    | Hub                       | Plain-HTTP port the hub listens on (default 3300); the proxy points here  |
+| Variable         | Where                     | Purpose                                                                  |
+| ---------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `NAISYS_FOLDER`  | Hub, NAISYS, Supervisor   | Base directory for the access key file (`NAISYS_FOLDER/cert/`)           |
+| `HUB_ACCESS_KEY` | NAISYS client, Supervisor | The hub's access key — required for remote (standalone) hub connections  |
+| `SERVER_PORT`    | Hub                       | Plain-HTTP port the hub listens on (default 3300); the proxy points here |
 
 `HUB_ACCESS_KEY` is listed in `globalConfigLoader.EXCLUDED_KEYS` so the hub never distributes it to clients through the config channel.
 
 ## Files
 
-| File                                                          | Role                                                        |
-| ------------------------------------------------------------- | ----------------------------------------------------------- |
-| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk    |
-| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor    |
-| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key     |
-| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()`   |
-| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured          |
-| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`           |
-| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`       |
-| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                                 |
+| File                                                          | Role                                                      |
+| ------------------------------------------------------------- | --------------------------------------------------------- |
+| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk  |
+| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor  |
+| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key   |
+| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()` |
+| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured        |
+| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`         |
+| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`     |
+| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                               |

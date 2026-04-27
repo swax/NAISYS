@@ -33,9 +33,9 @@ describe("windowsDesktop keyboard input", () => {
     );
     expect(args[2]).toContain("Start-Sleep -Milliseconds 100");
 
-    expect(
-      args[2].indexOf("[NaisysInput]::keybd_event(0x5B"),
-    ).toBeLessThan(args[2].indexOf("Start-Sleep -Milliseconds 50"));
+    expect(args[2].indexOf("[NaisysInput]::keybd_event(0x5B")).toBeLessThan(
+      args[2].indexOf("Start-Sleep -Milliseconds 50"),
+    );
     expect(args[2].indexOf("Start-Sleep -Milliseconds 50")).toBeLessThan(
       args[2].indexOf("[NaisysInput]::keybd_event(0x52"),
     );

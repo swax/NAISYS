@@ -74,9 +74,8 @@ export const UserDetail: React.FC = () => {
   const [passkeysLoading, setPasskeysLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState("");
   const [registering, setRegistering] = useState(false);
-  const [issuedLink, setIssuedLink] = useState<RegistrationTokenResponse | null>(
-    null,
-  );
+  const [issuedLink, setIssuedLink] =
+    useState<RegistrationTokenResponse | null>(null);
 
   const isSelf = currentUser?.username === routeUsername;
 
@@ -383,11 +382,7 @@ export const UserDetail: React.FC = () => {
                   rotating={rotating}
                 />
               ) : (
-                <Code>
-                  {
-                    "••••••••••••••••"
-                  }
-                </Code>
+                <Code>{"••••••••••••••••"}</Code>
               )}
             </Group>
           )}
@@ -415,16 +410,19 @@ export const UserDetail: React.FC = () => {
               {/* Self-issuance is server-rejected for zero-passkey callers
                   (an admin must bootstrap the first credential). Hide the
                   button rather than letting it 403. */}
-              {canIssueRegistration &&
-                !(isSelf && passkeys.length === 0) && (
-                  <Button variant="light" onClick={handleIssueRegistrationLink}>
-                    {isSelf
-                      ? "Issue registration link for new device"
-                      : "Issue registration link"}
-                  </Button>
-                )}
+              {canIssueRegistration && !(isSelf && passkeys.length === 0) && (
+                <Button variant="light" onClick={handleIssueRegistrationLink}>
+                  {isSelf
+                    ? "Issue registration link for new device"
+                    : "Issue registration link"}
+                </Button>
+              )}
               {canResetPasskeys && (
-                <Button color="red" variant="outline" onClick={handleResetPasskeys}>
+                <Button
+                  color="red"
+                  variant="outline"
+                  onClick={handleResetPasskeys}
+                >
                   Reset all passkeys
                 </Button>
               )}

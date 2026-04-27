@@ -73,7 +73,9 @@ export function createMockPromptBuilder(
 
 export function createMockShellCommand() {
   const shellCommand: ShellCommand = {
-    handleCommand: vi.fn(() => Promise.resolve({ response: "", exitApp: false })),
+    handleCommand: vi.fn(() =>
+      Promise.resolve({ response: "", exitApp: false }),
+    ),
     isShellSuspended: vi.fn(() => false),
     isSecureContinuation: vi.fn(() => false),
     getCommandElapsedTimeString: vi.fn(() => ""),

@@ -65,7 +65,9 @@ export type BuildDesktopServiceOverrides = {
   model?: ComputerUseModelOverrides;
 };
 
-export function buildDesktopService(overrides: BuildDesktopServiceOverrides = {}) {
+export function buildDesktopService(
+  overrides: BuildDesktopServiceOverrides = {},
+) {
   const desktopConfig = makeDesktopConfig(overrides.config);
   const computerService = makeComputerService(
     desktopConfig,

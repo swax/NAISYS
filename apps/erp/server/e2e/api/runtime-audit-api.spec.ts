@@ -28,11 +28,7 @@
 import { type APIRequestContext } from "@playwright/test";
 
 import { test, expect } from "../fixtures";
-import {
-  erpApiPath,
-  expectJson,
-  expectLinks,
-} from "./helpers/erp-api-client";
+import { erpApiPath, expectJson, expectLinks } from "./helpers/erp-api-client";
 import {
   addItemField,
   addOperation,
@@ -153,18 +149,32 @@ test.describe("Runtime + audit API workflow", () => {
     });
     expect(step.seqNo).toBe(10);
 
-    const strField = await addStepField(api, orderKey, revNo, op1.seqNo, step.seqNo, {
-      label: stringFieldLabel,
-      type: "string",
-      required: true,
-    });
+    const strField = await addStepField(
+      api,
+      orderKey,
+      revNo,
+      op1.seqNo,
+      step.seqNo,
+      {
+        label: stringFieldLabel,
+        type: "string",
+        required: true,
+      },
+    );
     stringFieldSeqNo = strField.seqNo;
 
-    const attField = await addStepField(api, orderKey, revNo, op1.seqNo, step.seqNo, {
-      label: attachmentFieldLabel,
-      type: "attachment",
-      required: false,
-    });
+    const attField = await addStepField(
+      api,
+      orderKey,
+      revNo,
+      op1.seqNo,
+      step.seqNo,
+      {
+        label: attachmentFieldLabel,
+        type: "attachment",
+        required: false,
+      },
+    );
     attachmentFieldSeqNo = attField.seqNo;
   });
 
@@ -342,9 +352,7 @@ test.describe("Runtime + audit API workflow", () => {
       {
         instanceKey,
         quantity: 1,
-        fieldValues: [
-          { fieldSeqNo: itemFieldSeqNo, value: "Aluminum" },
-        ],
+        fieldValues: [{ fieldSeqNo: itemFieldSeqNo, value: "Aluminum" }],
       },
     );
     expect(result.status).toBe("closed");
@@ -450,7 +458,9 @@ test.describe("Runtime + audit API workflow", () => {
     }>(res, 200);
     expect(body.key).toBe(instanceKey);
     expect(body.quantity).toBe(1);
-    const matFv = body.fieldValues.find((fv) => fv.fieldSeqNo === itemFieldSeqNo);
+    const matFv = body.fieldValues.find(
+      (fv) => fv.fieldSeqNo === itemFieldSeqNo,
+    );
     expect(matFv?.value).toBe("Aluminum");
   });
 });

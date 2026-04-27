@@ -32,6 +32,7 @@ curl -H "Authorization: Bearer $NAISYS_API_KEY" "<hubUrl>/attachments/<publicId>
 The routes are registered as regular Fastify handlers on the hub's existing HTTPS server under the `/hub` base path. Because the client's configured `hubUrl` already includes `/hub`, client code hits `${hubUrl}/attachments`, which resolves server-side to `/hub/attachments`.
 
 **POST `/hub/attachments?filename=...&filesize=...&filehash=...&purpose=...`** — Upload a file.
+
 - Auth: `Authorization: Bearer <apiKey>` header.
 - `purpose` must be `"mail"` or `"context"`.
 - Body: raw file bytes. Fastify's default body parsing is disabled for this route so the body streams directly to disk.
@@ -40,6 +41,7 @@ The routes are registered as regular Fastify handlers on the hub's existing HTTP
 - Returns `{ id: number }` — the numeric `attachments.id` primary key, which the client passes back in `MAIL_SEND`.
 
 **GET `/hub/attachments/:publicId`** and **GET `/hub/attachments/:publicId/:filename`** — Download a file.
+
 - Auth: `Authorization: Bearer <apiKey>` header.
 - The optional trailing `:filename` segment is accepted for friendly URLs but ignored for lookup; the file is always found by `public_id`.
 - Content-Type is inferred from the stored filename (via `mimeFromFilename`). Content-Disposition is `inline` for images and `attachment` otherwise; Content-Length is set from `fs.statSync`.
