@@ -122,18 +122,17 @@ export const deleteUserPasskey = async (
  * Used to wrap sensitive admin actions so a hijacked session cookie can't
  * silently mint credentials or wipe passkeys.
  */
-export const performStepUp = async (): Promise<
-  AuthenticationResponseJSON | null
-> => {
-  const { needsStepUp, options } = await api.post<{}, StepUpOptionsResponse>(
-    apiEndpoints.passkeyStepUpOptions,
-    {},
-  );
-  if (!needsStepUp) return null;
-  return await startAuthentication({
-    optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
-  });
-};
+export const performStepUp =
+  async (): Promise<AuthenticationResponseJSON | null> => {
+    const { needsStepUp, options } = await api.post<{}, StepUpOptionsResponse>(
+      apiEndpoints.passkeyStepUpOptions,
+      {},
+    );
+    if (!needsStepUp) return null;
+    return await startAuthentication({
+      optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
+    });
+  };
 
 /**
  * POST a step-up-gated endpoint: run the step-up dance, then send the

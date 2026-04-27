@@ -99,7 +99,9 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
     await page.getByRole("button", { name: "Create" }).click();
 
     // Lands on the instance detail page
-    await expect(page.getByRole("heading", { name: instanceKey })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: instanceKey }),
+    ).toBeVisible();
     await expect(page.getByText("5", { exact: true }).first()).toBeVisible();
   });
 
@@ -177,7 +179,9 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
 
     // Filter to our order — search debounces ~300ms
     await page.getByPlaceholder("Search...").fill(orderKey);
-    await expect(page.getByRole("link", { name: new RegExp(orderKey) }).first()).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: new RegExp(orderKey) }).first(),
+    ).toBeVisible();
     await expect(page.getByText(`10 — ${opTitle}`)).toBeVisible();
   });
 
@@ -211,8 +215,12 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
     await page.goto("/erp/dispatch/ready-to-close");
     await expect(page.getByRole("heading", { name: "Dispatch" })).toBeVisible();
 
-    await page.getByPlaceholder("Search order key or description...").fill(orderKey);
-    await expect(page.getByRole("link", { name: new RegExp(orderKey) }).first()).toBeVisible();
+    await page
+      .getByPlaceholder("Search order key or description...")
+      .fill(orderKey);
+    await expect(
+      page.getByRole("link", { name: new RegExp(orderKey) }).first(),
+    ).toBeVisible();
   });
 
   test("complete the order run into a new item instance", async () => {
@@ -225,7 +233,9 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
 
     const dialog = page.getByRole("dialog", { name: "Complete Order Run" });
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel("Instance Key (SN / Lot Code)").fill(runInstanceKey);
+    await dialog
+      .getByLabel("Instance Key (SN / Lot Code)")
+      .fill(runInstanceKey);
     await dialog.getByLabel("Quantity").fill("1");
     await dialog.getByLabel(`${itemFieldLabel} *`).fill("Aluminum");
     await dialog.getByRole("button", { name: "Complete" }).click();

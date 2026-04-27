@@ -192,7 +192,9 @@ describe("CLI Session/Workspace E2E", () => {
       expect(out).toContain("filepath is required");
     }
     {
-      const out = await naisys.runCommand("ns-workspace add does-not-exist.txt");
+      const out = await naisys.runCommand(
+        "ns-workspace add does-not-exist.txt",
+      );
       expect(out).toContain("File not found");
     }
     {

@@ -45,7 +45,7 @@ build dependency to `npm test`; tsx-via-import has neither concern.)
 **2. Playwright's webServer always spawns through a shell.** Even with
 `command: "node ..."`, the actual parent of the node process is `sh`.
 Signal goes to the shell. Prefix with `exec` so the shell `exec`s into
-node and the spawning PID *is* the node process.
+node and the spawning PID _is_ the node process.
 
 **3. Playwright kills the webServer with SIGKILL by default.** Even with
 the cleanest possible process tree, the server's own
@@ -103,7 +103,7 @@ Two things make this worse than it sounds:
 
 - **Retries are counter-productive.** Naively retrying on 429 burns the
   same per-IP budget; five retries within a minute can leave the limiter
-  *more* exhausted than the original burst.
+  _more_ exhausted than the original burst.
 - **`reuseExistingServer` makes the limiter window slide across runs.**
   The limiter state lives in the server process; consecutive coverage
   invocations against the same server inherit each other's spent budget.
@@ -139,7 +139,7 @@ others didn't) and made it hard to apply a fix once. Consolidated into
 export async function loginAsTestUser(
   request: APIRequestContext,
   workerIndex: number,
-)
+);
 ```
 
 Both API and UI specs call it with their respective request contexts
@@ -178,7 +178,7 @@ The workflow this enables:
 
 That replaces the old `git stash → run → pop → run → diff` dance for
 measuring coverage impact, since the previous `COVERAGE.md` line in git
-*is* the baseline. `git log -p COVERAGE.md` is the project's coverage
+_is_ the baseline. `git log -p COVERAGE.md` is the project's coverage
 progress log.
 
 `coverage/` (the c8 raw + html output) stays in `.gitignore`;

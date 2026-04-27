@@ -72,15 +72,15 @@ There is no dedicated `remoteAgentRouter.ts` / `remoteAgentHandler.ts` file. The
 
 `apps/naisys/src/features/subagent.ts`. Subcommands:
 
-| Subcommand | Usage | Notes |
-| --- | --- | --- |
-| `help` | `help` | Lists subcommands. Shows debug-only commands when in debug mode. |
-| `list` | `list` | Lists the caller's subagents (filtered by `leadUserId === localUserId`) with per-agent running state. |
-| `start` | `start <name> "<task>"` | Local or remote start. In hub mode routes through `AGENT_START`. Requires target to be a direct subordinate (bypassed in debug mode). |
-| `stop` | `stop [-r] <name>` | Stops one agent, or with `-r` also stops all running subordinates recursively. Same subordinate-only permission check (bypassed in debug mode). |
-| `peek` | `peek <name> [skip] [take]` | Shows buffered output of a running agent. Remote-capable via `AGENT_PEEK`. Same subordinate-only permission check. |
-| `local` | `!local` | Debug-only. Lists agents running in this process. |
-| `switch` | `!switch <name>` | Debug-only. Switches the console focus to a locally-running agent. |
+| Subcommand | Usage                       | Notes                                                                                                                                           |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `help`     | `help`                      | Lists subcommands. Shows debug-only commands when in debug mode.                                                                                |
+| `list`     | `list`                      | Lists the caller's subagents (filtered by `leadUserId === localUserId`) with per-agent running state.                                           |
+| `start`    | `start <name> "<task>"`     | Local or remote start. In hub mode routes through `AGENT_START`. Requires target to be a direct subordinate (bypassed in debug mode).           |
+| `stop`     | `stop [-r] <name>`          | Stops one agent, or with `-r` also stops all running subordinates recursively. Same subordinate-only permission check (bypassed in debug mode). |
+| `peek`     | `peek <name> [skip] [take]` | Shows buffered output of a running agent. Remote-capable via `AGENT_PEEK`. Same subordinate-only permission check.                              |
+| `local`    | `!local`                    | Debug-only. Lists agents running in this process.                                                                                               |
+| `switch`   | `!switch <name>`            | Debug-only. Switches the console focus to a locally-running agent.                                                                              |
 
 Notes vs. the original plan:
 
@@ -210,19 +210,19 @@ Not implemented. The original plan had `sendMessage()` return a "delivery pendin
 
 ## Files of interest
 
-| Area | File |
-| --- | --- |
-| Hub auto-start loop | `apps/hub/src/handlers/hubMailService.ts` |
-| Hub agent routing / host selection | `apps/hub/src/handlers/hubAgentService.ts` |
-| Runner agent event handlers | `apps/naisys/src/agent/agentManager.ts` |
-| `ns-agent` command | `apps/naisys/src/features/subagent.ts` |
-| `ns-users` command | `apps/naisys/src/agent/userDisplayService.ts` |
-| `ns-session complete` | `apps/naisys/src/features/session.ts` |
-| Agent status calculation | `packages/common/src/agentStatus.ts` |
-| Standalone auto-start | `apps/naisys/src/mail/mail.ts` — `sendMessage()` |
-| Hub event schemas | `packages/hub-protocol/src/schemas/agents.ts` |
-| Hub event names | `packages/hub-protocol/src/events.ts` |
-| Global config loader | `packages/common/src/globalConfigLoader.ts` |
+| Area                               | File                                             |
+| ---------------------------------- | ------------------------------------------------ |
+| Hub auto-start loop                | `apps/hub/src/handlers/hubMailService.ts`        |
+| Hub agent routing / host selection | `apps/hub/src/handlers/hubAgentService.ts`       |
+| Runner agent event handlers        | `apps/naisys/src/agent/agentManager.ts`          |
+| `ns-agent` command                 | `apps/naisys/src/features/subagent.ts`           |
+| `ns-users` command                 | `apps/naisys/src/agent/userDisplayService.ts`    |
+| `ns-session complete`              | `apps/naisys/src/features/session.ts`            |
+| Agent status calculation           | `packages/common/src/agentStatus.ts`             |
+| Standalone auto-start              | `apps/naisys/src/mail/mail.ts` — `sendMessage()` |
+| Hub event schemas                  | `packages/hub-protocol/src/schemas/agents.ts`    |
+| Hub event names                    | `packages/hub-protocol/src/events.ts`            |
+| Global config loader               | `packages/common/src/globalConfigLoader.ts`      |
 
 ---
 

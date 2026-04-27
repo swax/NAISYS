@@ -31,5 +31,4 @@ describe("computerService coordinate mapping", () => {
       start_coordinate: [50, 25],
     });
   });
-
 });

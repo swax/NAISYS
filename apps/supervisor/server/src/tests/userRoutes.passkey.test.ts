@@ -1,8 +1,5 @@
 import cookie from "@fastify/cookie";
-import {
-  hashToken,
-  SESSION_COOKIE_NAME,
-} from "@naisys/common-node";
+import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
 import type { AuthUser } from "@naisys/supervisor-shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
@@ -270,10 +267,7 @@ describe("passkey user routes", () => {
       });
       expect(mocks.deletePasskeyCredential).toHaveBeenCalledWith(10, 7);
       expect(mocks.userHasPasskey).toHaveBeenCalledWith(7);
-      expect(mocks.deleteAllSessionsForUser).toHaveBeenCalledWith(
-        7,
-        undefined,
-      );
+      expect(mocks.deleteAllSessionsForUser).toHaveBeenCalledWith(7, undefined);
       expect(response.headers["set-cookie"]).toContain(
         `${SESSION_COOKIE_NAME}=`,
       );

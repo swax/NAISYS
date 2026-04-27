@@ -95,7 +95,10 @@ describe("calculatePeriodBoundaries", () => {
   });
 
   test("period duration matches the requested hours", () => {
-    const result = calculatePeriodBoundaries(2, new Date("2025-11-09T10:30:00"));
+    const result = calculatePeriodBoundaries(
+      2,
+      new Date("2025-11-09T10:30:00"),
+    );
     const durationHours =
       (result.periodEnd.getTime() - result.periodStart.getTime()) /
       (1000 * 60 * 60);

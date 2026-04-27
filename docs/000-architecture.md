@@ -8,12 +8,12 @@ A high-level picture of how NAISYS fits together. See each package's README for 
 
 Each package ships an npm binary and a programmatic export. The exports are what let one package boot another inside the same process.
 
-| Package | Binary | Entry point | Programmatic export |
-|---|---|---|---|
-| `naisys` | `naisys` | `apps/naisys/src/naisys.ts` | — (top-level process) |
-| `@naisys/hub` | `naisys-hub` | `apps/hub/src/naisysHub.ts` | `startHub()` |
+| Package              | Binary              | Entry point                                      | Programmatic export                 |
+| -------------------- | ------------------- | ------------------------------------------------ | ----------------------------------- |
+| `naisys`             | `naisys`            | `apps/naisys/src/naisys.ts`                      | — (top-level process)               |
+| `@naisys/hub`        | `naisys-hub`        | `apps/hub/src/naisysHub.ts`                      | `startHub()`                        |
 | `@naisys/supervisor` | `naisys-supervisor` | `apps/supervisor/server/src/supervisorServer.ts` | `supervisorPlugin` (Fastify plugin) |
-| `@naisys/erp` | `naisys-erp` | `apps/erp/server/src/erpServer.ts` | `erpPlugin` (Fastify plugin) |
+| `@naisys/erp`        | `naisys-erp`        | `apps/erp/server/src/erpServer.ts`               | `erpPlugin` (Fastify plugin)        |
 
 - **`naisys`** — the **runner**. Proxies a real shell to an LLM, provides `ns-*` commands (mail, web, images, desktop control), enforces cost and context limits.
 - **`@naisys/hub`** — the **server**. Fastify + Socket.IO. Owns persistence (mail, context logs, cost, variables) so runners stay stateless.

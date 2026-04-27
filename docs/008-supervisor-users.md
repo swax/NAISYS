@@ -51,16 +51,16 @@ enum Permission {
 }
 ```
 
-| Permission            | Description                                                                        |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| `supervisor_admin`    | Full access, including user management                                             |
-| `manage_agents`       | Create, configure, start/stop, pause/resume, archive, and delete agents            |
-| `remote_execution`    | Send arbitrary commands to an agent's active run (remote shell access)             |
-| `manage_hosts`        | Register and manage agent hosts                                                    |
-| `agent_communication` | Send messages to agents via mail and chat                                          |
-| `manage_models`       | Add, edit, and remove LLM model configurations                                     |
-| `manage_variables`    | Manage global variables used by agents                                             |
-| `view_run_logs`       | View unobfuscated run logs                                                         |
+| Permission            | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| `supervisor_admin`    | Full access, including user management                                  |
+| `manage_agents`       | Create, configure, start/stop, pause/resume, archive, and delete agents |
+| `remote_execution`    | Send arbitrary commands to an agent's active run (remote shell access)  |
+| `manage_hosts`        | Register and manage agent hosts                                         |
+| `agent_communication` | Send messages to agents via mail and chat                               |
+| `manage_models`       | Add, edit, and remove LLM model configurations                          |
+| `manage_variables`    | Manage global variables used by agents                                  |
+| `view_run_logs`       | View unobfuscated run logs                                              |
 
 Human-readable descriptions for each permission are maintained alongside the Zod enum in `apps/supervisor/shared/src/user-types.ts` as `PermissionDescriptions`.
 
@@ -125,14 +125,34 @@ All endpoints require authentication. Write endpoints require `supervisor_admin`
 {
   "_links": [
     { "rel": "self", "href": "/supervisor/api/" },
-    { "rel": "auth-me", "href": "/supervisor/api/auth/me", "title": "Current User" },
-    { "rel": "schemas", "href": "/supervisor/api/schemas/", "title": "Schemas" },
+    {
+      "rel": "auth-me",
+      "href": "/supervisor/api/auth/me",
+      "title": "Current User"
+    },
+    {
+      "rel": "schemas",
+      "href": "/supervisor/api/schemas/",
+      "title": "Schemas"
+    },
     { "rel": "agents", "href": "/supervisor/api/agents", "title": "Agents" },
     { "rel": "hosts", "href": "/supervisor/api/hosts", "title": "Hosts" },
     { "rel": "models", "href": "/supervisor/api/models", "title": "Models" },
-    { "rel": "variables", "href": "/supervisor/api/variables", "title": "Variables" },
-    { "rel": "permissions", "href": "/supervisor/api/permissions", "title": "Available Permissions" },
-    { "rel": "users", "href": "/supervisor/api/users", "title": "User Management" },
+    {
+      "rel": "variables",
+      "href": "/supervisor/api/variables",
+      "title": "Variables"
+    },
+    {
+      "rel": "permissions",
+      "href": "/supervisor/api/permissions",
+      "title": "Available Permissions"
+    },
+    {
+      "rel": "users",
+      "href": "/supervisor/api/users",
+      "title": "User Management"
+    },
     { "rel": "admin", "href": "/supervisor/api/admin", "title": "Admin" }
   ]
 }
@@ -167,9 +187,9 @@ List items are deliberately compact (no per-item permissions, no actions). Actio
   "total": 1,
   "pageSize": 20,
   "_links": [
-    { "rel": "self",  "href": "/supervisor/api/users?page=1&pageSize=20" },
+    { "rel": "self", "href": "/supervisor/api/users?page=1&pageSize=20" },
     { "rel": "first", "href": "/supervisor/api/users?page=1&pageSize=20" },
-    { "rel": "last",  "href": "/supervisor/api/users?page=1&pageSize=20" }
+    { "rel": "last", "href": "/supervisor/api/users?page=1&pageSize=20" }
   ],
   "_linkTemplates": [
     { "rel": "item", "hrefTemplate": "/supervisor/api/users/{username}" }
@@ -226,10 +246,36 @@ GET /supervisor/api/users/:username
     { "rel": "schema", "href": "/supervisor/api/schemas/UpdateUser" }
   ],
   "_actions": [
-    { "rel": "update", "href": "/supervisor/api/users/admin", "method": "PUT",    "title": "Update",         "schema": "/supervisor/api/schemas/UpdateUser", "body": { "username": "" } },
-    { "rel": "change-password",  "href": "/supervisor/api/users/me/password", "method": "POST", "title": "Change Password", "schema": "/supervisor/api/schemas/ChangePassword", "body": { "password": "" } },
-    { "rel": "grant-permission", "href": "/supervisor/api/users/admin/permissions", "method": "POST", "title": "Grant Permission", "schema": "/supervisor/api/schemas/GrantPermission", "body": { "permission": "" } },
-    { "rel": "rotate-key", "href": "/supervisor/api/users/admin/rotate-key", "method": "POST", "title": "Rotate API Key" }
+    {
+      "rel": "update",
+      "href": "/supervisor/api/users/admin",
+      "method": "PUT",
+      "title": "Update",
+      "schema": "/supervisor/api/schemas/UpdateUser",
+      "body": { "username": "" }
+    },
+    {
+      "rel": "change-password",
+      "href": "/supervisor/api/users/me/password",
+      "method": "POST",
+      "title": "Change Password",
+      "schema": "/supervisor/api/schemas/ChangePassword",
+      "body": { "password": "" }
+    },
+    {
+      "rel": "grant-permission",
+      "href": "/supervisor/api/users/admin/permissions",
+      "method": "POST",
+      "title": "Grant Permission",
+      "schema": "/supervisor/api/schemas/GrantPermission",
+      "body": { "permission": "" }
+    },
+    {
+      "rel": "rotate-key",
+      "href": "/supervisor/api/users/admin/rotate-key",
+      "method": "POST",
+      "title": "Rotate API Key"
+    }
     // "delete" is omitted entirely when isSelf
   ]
 }
@@ -265,6 +311,7 @@ Each permission entry has its own `_actions`:
 ```
 POST /supervisor/api/users
 ```
+
 ```json
 { "username": "operator", "password": "securepassword" }
 ```
@@ -278,6 +325,7 @@ Response: `201 { success, message, id, username }`. A `409` is returned on usern
 ```
 POST /supervisor/api/users/from-agent
 ```
+
 ```json
 { "agentId": 42 }
 ```
@@ -291,6 +339,7 @@ Response: `201 { success, message, id, username }`.
 ```
 PUT /supervisor/api/users/:username
 ```
+
 ```json
 { "username": "new-name", "password": "newpassword" }
 ```
@@ -309,6 +358,7 @@ Response: `{ success, message }`. Conflicts on duplicate username return `409`.
 ```
 POST /supervisor/api/users/me/password
 ```
+
 ```json
 { "password": "newpassword" }
 ```
@@ -342,6 +392,7 @@ Response: `{ success, message }`. Clears the auth cache.
 ```
 POST /supervisor/api/users/:username/permissions
 ```
+
 ```json
 { "permission": "manage_agents" }
 ```
@@ -405,7 +456,9 @@ The server emits every action a user might see and marks the ones they cannot in
 ```typescript
 // packages/common/src/hateoas.ts
 export function permGate(hasPerm: boolean, permission: Permission) {
-  return hasPerm ? {} : { disabled: true, disabledReason: `Requires '${permission}' permission` };
+  return hasPerm
+    ? {}
+    : { disabled: true, disabledReason: `Requires '${permission}' permission` };
 }
 ```
 
@@ -485,11 +538,16 @@ Domain-specific action/link builders are **co-located with their route file**, n
 
 ```ts
 // apps/supervisor/server/src/routes/users.ts
-function userItemLinks(username, agentUsername?): HateoasLink[]
-function userActions(username, isSelf, isAdmin): HateoasAction[]
-function permissionActions(username, permission, isSelf, isAdmin): HateoasAction[]
-function formatUser(user, currentUserId, currentUserPermissions, options)
-function formatListUser(user)
+function userItemLinks(username, agentUsername?): HateoasLink[];
+function userActions(username, isSelf, isAdmin): HateoasAction[];
+function permissionActions(
+  username,
+  permission,
+  isSelf,
+  isAdmin,
+): HateoasAction[];
+function formatUser(user, currentUserId, currentUserPermissions, options);
+function formatListUser(user);
 ```
 
 The same pattern applies for agents (`routes/agents.ts` carries `agentActions()` / `agentLinks()`), hosts, models, etc.
@@ -582,60 +640,60 @@ rotateUserApiKey(username)      → POST /users/:username/rotate-key
 
 ### Server
 
-| Path                                                                       | Purpose                                                          |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `packages/supervisor-database/prisma/schema.prisma`                        | `Permission` enum, `User`, `UserPermission`, `Session`           |
-| `packages/supervisor-database/src/sessionService.ts::ensureSuperAdmin`     | Admin bootstrap (grants `supervisor_admin` only)                 |
-| `apps/supervisor/server/src/routes/users.ts`                               | Users + permissions endpoints, domain HATEOAS builders, formatters |
-| `apps/supervisor/server/src/routes/schemas.ts`                             | Schema discovery                                                 |
-| `apps/supervisor/server/src/routes/root.ts`                                | API root `_links` + `/permissions` enum endpoint                 |
-| `apps/supervisor/server/src/services/userService.ts`                      | User + permission business logic                                 |
-| `apps/supervisor/server/src/auth-middleware.ts`                            | `SupervisorUser`, authCache, `requirePermission`, auto-provisioning |
-| `apps/supervisor/server/src/hateoas.ts`                                    | Generic HATEOAS helpers                                          |
-| `apps/supervisor/server/src/route-helpers.ts`                              | `permGate` + `resolveActions` wrappers                           |
-| `apps/supervisor/server/src/schema-registry.ts`                            | Registry backing `/schemas/*`                                    |
-| `apps/supervisor/shared/src/user-types.ts`                                 | Zod: `PermissionEnum`, `CreateUser`, `UpdateUser`, `GrantPermission`, `ChangePassword`, `CreateAgentUser`, `PermissionDescriptions` |
-| `apps/supervisor/shared/src/auth-types.ts`                                 | Zod: `LoginRequest`, `AuthUser` (id, username, permissions[])    |
+| Path                                                                   | Purpose                                                                                                                             |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/supervisor-database/prisma/schema.prisma`                    | `Permission` enum, `User`, `UserPermission`, `Session`                                                                              |
+| `packages/supervisor-database/src/sessionService.ts::ensureSuperAdmin` | Admin bootstrap (grants `supervisor_admin` only)                                                                                    |
+| `apps/supervisor/server/src/routes/users.ts`                           | Users + permissions endpoints, domain HATEOAS builders, formatters                                                                  |
+| `apps/supervisor/server/src/routes/schemas.ts`                         | Schema discovery                                                                                                                    |
+| `apps/supervisor/server/src/routes/root.ts`                            | API root `_links` + `/permissions` enum endpoint                                                                                    |
+| `apps/supervisor/server/src/services/userService.ts`                   | User + permission business logic                                                                                                    |
+| `apps/supervisor/server/src/auth-middleware.ts`                        | `SupervisorUser`, authCache, `requirePermission`, auto-provisioning                                                                 |
+| `apps/supervisor/server/src/hateoas.ts`                                | Generic HATEOAS helpers                                                                                                             |
+| `apps/supervisor/server/src/route-helpers.ts`                          | `permGate` + `resolveActions` wrappers                                                                                              |
+| `apps/supervisor/server/src/schema-registry.ts`                        | Registry backing `/schemas/*`                                                                                                       |
+| `apps/supervisor/shared/src/user-types.ts`                             | Zod: `PermissionEnum`, `CreateUser`, `UpdateUser`, `GrantPermission`, `ChangePassword`, `CreateAgentUser`, `PermissionDescriptions` |
+| `apps/supervisor/shared/src/auth-types.ts`                             | Zod: `LoginRequest`, `AuthUser` (id, username, permissions[])                                                                       |
 
 ### Client
 
-| Path                                                                       | Purpose                                              |
-| -------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `apps/supervisor/client/src/App.tsx`                                       | `/users` + `/users/:username` routes, client-config  |
-| `apps/supervisor/client/src/headers/navTabs.ts`                            | Nav tab config (Users visible, Admin admin-gated)    |
-| `apps/supervisor/client/src/headers/AppHeader.tsx`                         | Header rendering, `My User` menu link                |
-| `apps/supervisor/client/src/pages/users/UserList.tsx`                      | User list page                                       |
-| `apps/supervisor/client/src/pages/users/UserDetail.tsx`                    | User detail + permissions management                 |
-| `apps/supervisor/client/src/lib/apiUsers.ts`                               | Users API client                                     |
-| `apps/supervisor/client/src/contexts/SessionContext.tsx`                   | Auth state, `hasPermission()`                        |
+| Path                                                     | Purpose                                             |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| `apps/supervisor/client/src/App.tsx`                     | `/users` + `/users/:username` routes, client-config |
+| `apps/supervisor/client/src/headers/navTabs.ts`          | Nav tab config (Users visible, Admin admin-gated)   |
+| `apps/supervisor/client/src/headers/AppHeader.tsx`       | Header rendering, `My User` menu link               |
+| `apps/supervisor/client/src/pages/users/UserList.tsx`    | User list page                                      |
+| `apps/supervisor/client/src/pages/users/UserDetail.tsx`  | User detail + permissions management                |
+| `apps/supervisor/client/src/lib/apiUsers.ts`             | Users API client                                    |
+| `apps/supervisor/client/src/contexts/SessionContext.tsx` | Auth state, `hasPermission()`                       |
 
 ### Shared
 
-| Path                                                                       | Purpose                                              |
-| -------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `packages/common/src/hateoas-types.ts`                                     | `HateoasLink`, `HateoasAction`, templates, envelopes |
-| `packages/common/src/hateoas.ts`                                           | `hasAction`, `resolveActions`, `permGate`            |
-| `packages/common/src/authCache.ts`                                         | Shared `AuthCache<T>` used by both supervisor and ERP auth |
-| `apps/erp/shared/src/hateoas-types.ts`                                     | Re-exports from `@naisys/common`                     |
+| Path                                   | Purpose                                                    |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `packages/common/src/hateoas-types.ts` | `HateoasLink`, `HateoasAction`, templates, envelopes       |
+| `packages/common/src/hateoas.ts`       | `hasAction`, `resolveActions`, `permGate`                  |
+| `packages/common/src/authCache.ts`     | Shared `AuthCache<T>` used by both supervisor and ERP auth |
+| `apps/erp/shared/src/hateoas-types.ts` | Re-exports from `@naisys/common`                           |
 
 ## API Endpoints Summary
 
-| Method | Path                                                   | Description                        | Permission                  |
-| ------ | ------------------------------------------------------ | ---------------------------------- | --------------------------- |
-| GET    | `/supervisor/api/`                                     | API discovery root                 | (authenticated)             |
-| GET    | `/supervisor/api/permissions`                          | Enumerate available permissions    | (authenticated)             |
-| GET    | `/supervisor/api/users`                                | List users (paginated)             | (authenticated)             |
-| POST   | `/supervisor/api/users`                                | Create user                        | `supervisor_admin`          |
-| POST   | `/supervisor/api/users/from-agent`                     | Import hub agent as user           | `supervisor_admin`          |
-| POST   | `/supervisor/api/users/me/password`                    | Change own password                | (authenticated)             |
-| GET    | `/supervisor/api/users/:username`                      | Get user detail                    | (authenticated)             |
-| PUT    | `/supervisor/api/users/:username`                      | Update user                        | admin (any) / self (password) |
-| DELETE | `/supervisor/api/users/:username`                      | Delete user                        | `supervisor_admin` (not self) |
-| POST   | `/supervisor/api/users/:username/rotate-key`           | Rotate API key                     | `supervisor_admin`          |
-| POST   | `/supervisor/api/users/:username/permissions`          | Grant permission                   | `supervisor_admin`          |
-| DELETE | `/supervisor/api/users/:username/permissions/:perm`    | Revoke permission                  | `supervisor_admin` (not own `supervisor_admin`) |
-| GET    | `/supervisor/api/schemas/`                             | List all supervisor schema names   | (authenticated)             |
-| GET    | `/supervisor/api/schemas/:name`                        | Get a single JSON Schema           | (authenticated)             |
+| Method | Path                                                | Description                      | Permission                                      |
+| ------ | --------------------------------------------------- | -------------------------------- | ----------------------------------------------- |
+| GET    | `/supervisor/api/`                                  | API discovery root               | (authenticated)                                 |
+| GET    | `/supervisor/api/permissions`                       | Enumerate available permissions  | (authenticated)                                 |
+| GET    | `/supervisor/api/users`                             | List users (paginated)           | (authenticated)                                 |
+| POST   | `/supervisor/api/users`                             | Create user                      | `supervisor_admin`                              |
+| POST   | `/supervisor/api/users/from-agent`                  | Import hub agent as user         | `supervisor_admin`                              |
+| POST   | `/supervisor/api/users/me/password`                 | Change own password              | (authenticated)                                 |
+| GET    | `/supervisor/api/users/:username`                   | Get user detail                  | (authenticated)                                 |
+| PUT    | `/supervisor/api/users/:username`                   | Update user                      | admin (any) / self (password)                   |
+| DELETE | `/supervisor/api/users/:username`                   | Delete user                      | `supervisor_admin` (not self)                   |
+| POST   | `/supervisor/api/users/:username/rotate-key`        | Rotate API key                   | `supervisor_admin`                              |
+| POST   | `/supervisor/api/users/:username/permissions`       | Grant permission                 | `supervisor_admin`                              |
+| DELETE | `/supervisor/api/users/:username/permissions/:perm` | Revoke permission                | `supervisor_admin` (not own `supervisor_admin`) |
+| GET    | `/supervisor/api/schemas/`                          | List all supervisor schema names | (authenticated)                                 |
+| GET    | `/supervisor/api/schemas/:name`                     | Get a single JSON Schema         | (authenticated)                                 |
 
 ## Example AI Agent Workflow
 

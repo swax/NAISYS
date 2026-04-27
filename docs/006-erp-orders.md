@@ -70,18 +70,18 @@ The compiled client is bundled into `server/client-dist/` and served by `@fastif
 
 ### Tech Stack
 
-| Layer               | Technology                                                                  |
-| ------------------- | --------------------------------------------------------------------------- |
-| Server runtime      | Node.js ≥ 22                                                                |
-| API framework       | Fastify 5 + `fastify-type-provider-zod`                                     |
-| Auth / sessions     | `@fastify/cookie`, SHA-256 hashed session tokens in SQLite, `bcryptjs`      |
-| Database            | SQLite via Prisma (`@prisma/adapter-better-sqlite3`)                        |
-| Schemas             | Zod 4 (shared validation + OpenAPI generation)                              |
-| API docs            | `@fastify/swagger` + Scalar (`@scalar/fastify-api-reference`)               |
-| Other plugins       | `@fastify/cors`, `@fastify/multipart`, `@fastify/rate-limit`, `@fastify/static` |
-| Frontend            | React 19 + Vite + React Router v7                                           |
-| UI library          | Mantine (`@mantine/core`, `@mantine/form`, `@mantine/dates`, `@mantine/notifications`) + Tabler Icons |
-| Testing             | Vitest (unit), Playwright (API + UI E2E)                                    |
+| Layer           | Technology                                                                                            |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| Server runtime  | Node.js ≥ 22                                                                                          |
+| API framework   | Fastify 5 + `fastify-type-provider-zod`                                                               |
+| Auth / sessions | `@fastify/cookie`, SHA-256 hashed session tokens in SQLite, `bcryptjs`                                |
+| Database        | SQLite via Prisma (`@prisma/adapter-better-sqlite3`)                                                  |
+| Schemas         | Zod 4 (shared validation + OpenAPI generation)                                                        |
+| API docs        | `@fastify/swagger` + Scalar (`@scalar/fastify-api-reference`)                                         |
+| Other plugins   | `@fastify/cors`, `@fastify/multipart`, `@fastify/rate-limit`, `@fastify/static`                       |
+| Frontend        | React 19 + Vite + React Router v7                                                                     |
+| UI library      | Mantine (`@mantine/core`, `@mantine/form`, `@mantine/dates`, `@mantine/notifications`) + Tabler Icons |
+| Testing         | Vitest (unit), Playwright (API + UI E2E)                                                              |
 
 ### API Root Discovery
 
@@ -133,27 +133,27 @@ Order ─┬─ OrderRevision ─┬─ Operation ─┬─ Step ── Field
 
 Top-level entity representing a type of work. Optionally linked to an `Item` when the order produces inventory.
 
-| Field       | Type     | Notes                                                    |
-| ----------- | -------- | -------------------------------------------------------- |
-| id          | int (PK) | Auto-increment                                           |
-| key         | string   | Unique slug (`^[a-z0-9-]+$`); used in URLs               |
-| description | string   | Free-form description                                    |
-| status      | enum     | `active` / `archived`                                    |
-| itemId      | int? FK  | Optional link to an Item; constrains completion flow     |
-| created_by/at, updated_by/at | audit | Tracked on every entity below unless noted |
+| Field                        | Type     | Notes                                                |
+| ---------------------------- | -------- | ---------------------------------------------------- |
+| id                           | int (PK) | Auto-increment                                       |
+| key                          | string   | Unique slug (`^[a-z0-9-]+$`); used in URLs           |
+| description                  | string   | Free-form description                                |
+| status                       | enum     | `active` / `archived`                                |
+| itemId                       | int? FK  | Optional link to an Item; constrains completion flow |
+| created_by/at, updated_by/at | audit    | Tracked on every entity below unless noted           |
 
 #### Order Revisions
 
 Versioned snapshots of an order that go through an approval workflow. Revisions are what `OrderRun`s are created from.
 
-| Field          | Type     | Notes                                 |
-| -------------- | -------- | ------------------------------------- |
-| id             | int (PK) | Auto-increment                        |
-| orderId        | int (FK) | Parent order                          |
-| revNo          | int      | Auto-incremented per order            |
-| status         | enum     | `draft` / `approved` / `obsolete`     |
-| description    | string   | Revision body                         |
-| changeSummary  | string?  | What changed since previous revision  |
+| Field         | Type     | Notes                                |
+| ------------- | -------- | ------------------------------------ |
+| id            | int (PK) | Auto-increment                       |
+| orderId       | int (FK) | Parent order                         |
+| revNo         | int      | Auto-incremented per order           |
+| status        | enum     | `draft` / `approved` / `obsolete`    |
+| description   | string   | Revision body                        |
+| changeSummary | string?  | What changed since previous revision |
 
 **Unique constraint**: `(orderId, revNo)`.
 
@@ -163,14 +163,14 @@ Revisions expose a diff endpoint that compares against the last approved revisio
 
 Ordered steps within a revision. Each Operation may run at a specific `WorkCenter` and may depend on predecessor Operations in the same revision.
 
-| Field        | Type     | Notes                                              |
-| ------------ | -------- | -------------------------------------------------- |
-| id           | int (PK) | Auto-increment                                     |
-| orderRevId   | int (FK) | Parent revision                                    |
-| seqNo        | int      | Sequence number within the revision                |
-| title        | string   | Display name                                       |
-| description  | string   | Detail / markdown                                  |
-| workCenterId | int? FK  | Optional gating work center                        |
+| Field        | Type     | Notes                               |
+| ------------ | -------- | ----------------------------------- |
+| id           | int (PK) | Auto-increment                      |
+| orderRevId   | int (FK) | Parent revision                     |
+| seqNo        | int      | Sequence number within the revision |
+| title        | string   | Display name                        |
+| description  | string   | Detail / markdown                   |
+| workCenterId | int? FK  | Optional gating work center         |
 
 **Unique constraint**: `(orderRevId, seqNo)`.
 
@@ -178,10 +178,10 @@ Ordered steps within a revision. Each Operation may run at a specific `WorkCente
 
 Directed links between two Operations in the same revision. Used at run time to compute whether an `OperationRun` is `blocked`.
 
-| Field         | Type     | Notes                                   |
-| ------------- | -------- | --------------------------------------- |
-| successorId   | int (FK) | The Operation that waits                |
-| predecessorId | int (FK) | The Operation that must complete first  |
+| Field         | Type     | Notes                                  |
+| ------------- | -------- | -------------------------------------- |
+| successorId   | int (FK) | The Operation that waits               |
+| predecessorId | int (FK) | The Operation that must complete first |
 
 `@@unique([successorId, predecessorId])`. Deletes cascade when either side is deleted.
 
@@ -189,15 +189,15 @@ Directed links between two Operations in the same revision. Used at run time to 
 
 Work instructions nested under an Operation. Each Step may have a `FieldSet` attached to capture structured data during execution, and may be `multiSet` to allow the executor to enter multiple rows of field values.
 
-| Field        | Type     | Notes                                        |
-| ------------ | -------- | -------------------------------------------- |
-| id           | int (PK) | Auto-increment                               |
-| operationId  | int (FK) | Parent operation                             |
-| seqNo        | int      | Sequence number within operation             |
-| title        | string   | Step name                                    |
-| instructions | string   | Markdown instructions                        |
-| multiSet     | bool     | Allow multiple value sets per step run       |
-| fieldSetId   | int? FK  | Field template for this step                 |
+| Field        | Type     | Notes                                  |
+| ------------ | -------- | -------------------------------------- |
+| id           | int (PK) | Auto-increment                         |
+| operationId  | int (FK) | Parent operation                       |
+| seqNo        | int      | Sequence number within operation       |
+| title        | string   | Step name                              |
+| instructions | string   | Markdown instructions                  |
+| multiSet     | bool     | Allow multiple value sets per step run |
+| fieldSetId   | int? FK  | Field template for this step           |
 
 **Unique constraint**: `(operationId, seqNo)`.
 
@@ -205,26 +205,26 @@ Work instructions nested under an Operation. Each Step may have a `FieldSet` att
 
 Typed input definitions attached to a `FieldSet`. `FieldSet`s are reused between Steps and Items, so the same field plumbing drives both step data collection and item-instance metadata.
 
-| Field       | Type     | Notes                                                                 |
-| ----------- | -------- | --------------------------------------------------------------------- |
-| id          | int (PK) | Auto-increment                                                        |
-| fieldSetId  | int (FK) | Parent field set                                                      |
-| seqNo       | int      | Order                                                                 |
-| label       | string   | Display label                                                         |
-| type        | enum     | `string` / `number` / `date` / `datetime` / `yesNo` / `checkbox` / `attachment` |
-| isArray     | bool     | Whether field holds multiple values (API type string appends `[]`)    |
-| required    | bool     | Whether the value must be filled before the step can complete         |
+| Field      | Type     | Notes                                                                           |
+| ---------- | -------- | ------------------------------------------------------------------------------- |
+| id         | int (PK) | Auto-increment                                                                  |
+| fieldSetId | int (FK) | Parent field set                                                                |
+| seqNo      | int      | Order                                                                           |
+| label      | string   | Display label                                                                   |
+| type       | enum     | `string` / `number` / `date` / `datetime` / `yesNo` / `checkbox` / `attachment` |
+| isArray    | bool     | Whether field holds multiple values (API type string appends `[]`)              |
+| required   | bool     | Whether the value must be filled before the step can complete                   |
 
 #### Operation Field Refs
 
 Lets an Operation surface (read-only) field values that were captured by an earlier Operation's Step. Useful when a later operator needs to see measurements taken upstream without re-entering them.
 
-| Field        | Type     | Notes                                 |
-| ------------ | -------- | ------------------------------------- |
-| operationId  | int (FK) | Operation that references             |
-| seqNo        | int      | Display order within the operation    |
-| title        | string   | Label shown to the executor           |
-| sourceStepId | int (FK) | Step whose fields are being surfaced  |
+| Field        | Type     | Notes                                |
+| ------------ | -------- | ------------------------------------ |
+| operationId  | int (FK) | Operation that references            |
+| seqNo        | int      | Display order within the operation   |
+| title        | string   | Label shown to the executor          |
+| sourceStepId | int (FK) | Step whose fields are being surfaced |
 
 `@@unique([operationId, seqNo])` and `@@unique([operationId, sourceStepId])`.
 
@@ -232,11 +232,11 @@ Lets an Operation surface (read-only) field values that were captured by an earl
 
 A physical or logical location where Operations are performed. Users are assigned to Work Centers; only assigned users (or admins) can start/complete an `OperationRun` whose Operation is gated to a Work Center.
 
-| Field       | Type     | Notes                                   |
-| ----------- | -------- | --------------------------------------- |
-| id          | int (PK) | Auto-increment                          |
-| key         | string   | Unique slug                             |
-| description | string   | Free-form                               |
+| Field       | Type     | Notes          |
+| ----------- | -------- | -------------- |
+| id          | int (PK) | Auto-increment |
+| key         | string   | Unique slug    |
+| description | string   | Free-form      |
 
 `WorkCenterUser` is the join table (composite PK `[workCenterId, userId]`).
 
@@ -244,12 +244,12 @@ A physical or logical location where Operations are performed. Users are assigne
 
 Catalog entries that an Order may produce. An Item carries a `FieldSet` that acts as the template for every `ItemInstance` produced from runs of that item's orders.
 
-| Field       | Type     | Notes                                 |
-| ----------- | -------- | ------------------------------------- |
-| id          | int (PK) | Auto-increment                        |
-| key         | string   | Unique slug                           |
-| description | string   | Free-form                             |
-| fieldSetId  | int? FK  | Template for instance field values    |
+| Field       | Type     | Notes                              |
+| ----------- | -------- | ---------------------------------- |
+| id          | int (PK) | Auto-increment                     |
+| key         | string   | Unique slug                        |
+| description | string   | Free-form                          |
+| fieldSetId  | int? FK  | Template for instance field values |
 
 ### Execution Entities
 
@@ -257,17 +257,17 @@ Catalog entries that an Order may produce. An Item carries a `FieldSet` that act
 
 Concrete work requests created from an approved revision. Track the actual execution.
 
-| Field       | Type     | Notes                                                     |
-| ----------- | -------- | --------------------------------------------------------- |
-| id          | int (PK) | Auto-increment                                            |
-| runNo       | int      | Auto-incremented per order                                |
-| orderId     | int (FK) | Parent order                                              |
-| orderRevId  | int (FK) | Revision snapshot used to spawn OperationRuns             |
-| status      | enum     | `released` / `started` / `closed` / `cancelled`           |
-| priority    | enum     | `low` / `medium` / `high` / `critical`                    |
-| cost        | float?   | Rolled up from labor tickets on completion                |
-| dueAt       | string?  | ISO deadline                                              |
-| releaseNote | string?  | Context for operators                                     |
+| Field       | Type     | Notes                                           |
+| ----------- | -------- | ----------------------------------------------- |
+| id          | int (PK) | Auto-increment                                  |
+| runNo       | int      | Auto-incremented per order                      |
+| orderId     | int (FK) | Parent order                                    |
+| orderRevId  | int (FK) | Revision snapshot used to spawn OperationRuns   |
+| status      | enum     | `released` / `started` / `closed` / `cancelled` |
+| priority    | enum     | `low` / `medium` / `high` / `critical`          |
+| cost        | float?   | Rolled up from labor tickets on completion      |
+| dueAt       | string?  | ISO deadline                                    |
+| releaseNote | string?  | Context for operators                           |
 
 **Unique constraint**: `(orderId, runNo)`.
 
@@ -277,16 +277,16 @@ When an `OrderRun` is created, the system materializes an `OperationRun` for eve
 
 Execution records for Operations within an OrderRun. `assignedTo` is optional and can be auto-set to the current user when they start the run.
 
-| Field          | Type      | Notes                                                                                          |
-| -------------- | --------- | ---------------------------------------------------------------------------------------------- |
-| id             | int (PK)  | Auto-increment                                                                                 |
-| orderRunId     | int (FK)  | Parent order run                                                                               |
-| operationId    | int (FK)  | Source operation                                                                               |
-| status         | enum      | `blocked` / `pending` / `in_progress` / `completed` / `skipped` / `failed`                     |
-| assignedToId   | int? (FK) | Responsible user                                                                               |
-| cost           | float?    | Rolled up from labor tickets on completion                                                     |
-| statusNote     | string?   | Note captured on the most recent transition                                                    |
-| completedAt    | datetime? | Set when status moves to `completed` / `skipped` / `failed`                                    |
+| Field        | Type      | Notes                                                                      |
+| ------------ | --------- | -------------------------------------------------------------------------- |
+| id           | int (PK)  | Auto-increment                                                             |
+| orderRunId   | int (FK)  | Parent order run                                                           |
+| operationId  | int (FK)  | Source operation                                                           |
+| status       | enum      | `blocked` / `pending` / `in_progress` / `completed` / `skipped` / `failed` |
+| assignedToId | int? (FK) | Responsible user                                                           |
+| cost         | float?    | Rolled up from labor tickets on completion                                 |
+| statusNote   | string?   | Note captured on the most recent transition                                |
+| completedAt  | datetime? | Set when status moves to `completed` / `skipped` / `failed`                |
 
 **Unique constraint**: `(orderRunId, operationId)`. Blocked runs auto-unblock to `pending` when their last predecessor completes.
 
@@ -294,14 +294,14 @@ Execution records for Operations within an OrderRun. `assignedTo` is optional an
 
 Execution records for Steps within an OperationRun. Each StepRun owns a `FieldRecord` (its per-run instance of the Step's `FieldSet`) that holds the captured `FieldValue` rows.
 
-| Field          | Type      | Notes                                      |
-| -------------- | --------- | ------------------------------------------ |
-| id             | int (PK)  | Auto-increment                             |
-| operationRunId | int (FK)  | Parent operation run                       |
-| stepId         | int (FK)  | Source step                                |
-| fieldRecordId  | int? (FK) | Container for captured field values        |
-| completed      | bool      | Simple done/not-done toggle                |
-| statusNote     | string?   | Note captured on the most recent toggle    |
+| Field          | Type      | Notes                                   |
+| -------------- | --------- | --------------------------------------- |
+| id             | int (PK)  | Auto-increment                          |
+| operationRunId | int (FK)  | Parent operation run                    |
+| stepId         | int (FK)  | Source step                             |
+| fieldRecordId  | int? (FK) | Container for captured field values     |
+| completed      | bool      | Simple done/not-done toggle             |
+| statusNote     | string?   | Note captured on the most recent toggle |
 
 #### Field Values and Attachments
 
@@ -311,14 +311,14 @@ A `FieldRecord` holds the concrete `FieldValue` rows captured against a Step's (
 
 Inventory records produced by completing an `OrderRun` whose Order is linked to an Item. The Item's `FieldSet` is used as the template; captured values live on a fresh `FieldRecord`.
 
-| Field         | Type      | Notes                                             |
-| ------------- | --------- | ------------------------------------------------- |
-| id            | int (PK)  | Auto-increment                                    |
-| itemId        | int (FK)  | Parent item                                       |
-| orderRunId    | int? (FK) | The order run that produced this instance         |
-| fieldRecordId | int? (FK) | Captured template field values                    |
-| key           | string    | Instance identifier (unique per item)             |
-| quantity      | float?    | Optional numeric quantity                         |
+| Field         | Type      | Notes                                     |
+| ------------- | --------- | ----------------------------------------- |
+| id            | int (PK)  | Auto-increment                            |
+| itemId        | int (FK)  | Parent item                               |
+| orderRunId    | int? (FK) | The order run that produced this instance |
+| fieldRecordId | int? (FK) | Captured template field values            |
+| key           | string    | Instance identifier (unique per item)     |
+| quantity      | float?    | Optional numeric quantity                 |
 
 **Unique constraint**: `(itemId, key)`.
 
@@ -326,23 +326,23 @@ Inventory records produced by completing an `OrderRun` whose Order is linked to 
 
 Clock-in/clock-out time tracking against an `OperationRun`. An operation cannot complete while any of its tickets are still open; `cost` and `OperationRun.cost` are rolled up from closed tickets.
 
-| Field          | Type      | Notes                               |
-| -------------- | --------- | ----------------------------------- |
-| operationRunId | int (FK)  | Target operation run                |
-| userId         | int (FK)  | Worker                              |
-| clockIn        | datetime  | Required                            |
-| clockOut       | datetime? | Null while ticket is open           |
-| cost           | float?    | Computed on clock-out               |
+| Field          | Type      | Notes                     |
+| -------------- | --------- | ------------------------- |
+| operationRunId | int (FK)  | Target operation run      |
+| userId         | int (FK)  | Worker                    |
+| clockIn        | datetime  | Required                  |
+| clockOut       | datetime? | Null while ticket is open |
+| cost           | float?    | Computed on clock-out     |
 
 #### Operation Run Comments
 
 Free-form notes/issues/feedback attached to an OperationRun.
 
-| Field          | Type     | Notes                                   |
-| -------------- | -------- | --------------------------------------- |
-| operationRunId | int (FK) | Target operation run                    |
-| type           | enum     | `note` / `issue` / `feedback`           |
-| body           | string   | Markdown comment                        |
+| Field          | Type     | Notes                         |
+| -------------- | -------- | ----------------------------- |
+| operationRunId | int (FK) | Target operation run          |
+| type           | enum     | `note` / `issue` / `feedback` |
+| body           | string   | Markdown comment              |
 
 ### Users, Permissions, Sessions
 
@@ -350,13 +350,13 @@ The `User` model stores local accounts (`passwordHash`, optional `apiKey`) and s
 
 `UserPermission` grants one of the following `ErpPermission` values to a user:
 
-| Permission        | Grants                                                                                    |
-| ----------------- | ----------------------------------------------------------------------------------------- |
-| `erp_admin`       | Full access; bypasses work-center gating; manage users and permissions                    |
-| `order_planner`   | Create and edit orders, revisions, operations, steps, fields, dependencies, field refs    |
-| `order_manager`   | Manage order runs: create, cancel, reopen, reassign, fail operations, delete              |
-| `order_executor`  | Start / complete / skip operations, clock in/out, complete steps, add comments            |
-| `item_manager`    | CRUD items and item instances                                                             |
+| Permission       | Grants                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `erp_admin`      | Full access; bypasses work-center gating; manage users and permissions                 |
+| `order_planner`  | Create and edit orders, revisions, operations, steps, fields, dependencies, field refs |
+| `order_manager`  | Manage order runs: create, cancel, reopen, reassign, fail operations, delete           |
+| `order_executor` | Start / complete / skip operations, clock in/out, complete steps, add comments         |
+| `item_manager`   | CRUD items and item instances                                                          |
 
 `Session` stores SHA-256 hashes of opaque session tokens (never the raw tokens). When supervisor auth is enabled, the ERP also accepts the supervisor's session cookie and agent API keys via `@naisys/supervisor-database` / `@naisys/hub-database` lookups.
 
@@ -439,29 +439,29 @@ A user can have at most one open ticket against a given OperationRun. Clock-out 
 
 `_actions` is state- and permission-dependent. Actions the current user cannot perform are still returned so the agent can see the capability surface, but with a `disabled` string explaining why (missing permission, failing gate, etc.).
 
-| Resource        | State            | Available Actions                                                                 |
-| --------------- | ---------------- | --------------------------------------------------------------------------------- |
-| Order           | `active`         | update, archive, delete                                                           |
-| Order           | `archived`       | update, activate, delete                                                          |
-| OrderRevision   | `draft`          | update, approve, delete, + nested CRUD on operations/steps/fields/deps/refs       |
-| OrderRevision   | `approved`       | create-run, diff, obsolete                                                        |
-| OrderRevision   | `obsolete`       | diff                                                                              |
-| OrderRun        | `released`       | update, start, cancel, delete                                                     |
-| OrderRun        | `started`        | update, complete (if `itemKey`) or close (if not), cancel                         |
-| OrderRun        | `closed`         | reopen                                                                            |
-| OrderRun        | `cancelled`      | reopen                                                                            |
-| OperationRun    | `blocked`        | assign, add-comment, start* (disabled: predecessors/work-center)                  |
-| OperationRun    | `pending`        | assign, start, skip, fail, add-comment, update                                    |
-| OperationRun    | `in_progress`    | update, complete*, skip, fail, clock-in/out, add-comment                          |
-| OperationRun    | `completed`      | reopen, add-comment                                                               |
-| OperationRun    | `skipped`        | reopen, add-comment                                                               |
-| OperationRun    | `failed`         | reopen, add-comment                                                               |
-| StepRun         | `completed=false`| complete, update field values, upload/delete attachments                          |
-| StepRun         | `completed=true` | reopen                                                                            |
-| Item            | (stateless)      | update, delete, + nested CRUD on fields and instances                             |
-| ItemInstance    | (stateless)      | update, delete, update field values                                               |
-| WorkCenter      | (stateless)      | update, delete, assign-user, unassign-user                                        |
-| User            | (stateless)      | update, delete, grant-permission, revoke-permission, change-password              |
+| Resource      | State             | Available Actions                                                           |
+| ------------- | ----------------- | --------------------------------------------------------------------------- |
+| Order         | `active`          | update, archive, delete                                                     |
+| Order         | `archived`        | update, activate, delete                                                    |
+| OrderRevision | `draft`           | update, approve, delete, + nested CRUD on operations/steps/fields/deps/refs |
+| OrderRevision | `approved`        | create-run, diff, obsolete                                                  |
+| OrderRevision | `obsolete`        | diff                                                                        |
+| OrderRun      | `released`        | update, start, cancel, delete                                               |
+| OrderRun      | `started`         | update, complete (if `itemKey`) or close (if not), cancel                   |
+| OrderRun      | `closed`          | reopen                                                                      |
+| OrderRun      | `cancelled`       | reopen                                                                      |
+| OperationRun  | `blocked`         | assign, add-comment, start\* (disabled: predecessors/work-center)           |
+| OperationRun  | `pending`         | assign, start, skip, fail, add-comment, update                              |
+| OperationRun  | `in_progress`     | update, complete\*, skip, fail, clock-in/out, add-comment                   |
+| OperationRun  | `completed`       | reopen, add-comment                                                         |
+| OperationRun  | `skipped`         | reopen, add-comment                                                         |
+| OperationRun  | `failed`          | reopen, add-comment                                                         |
+| StepRun       | `completed=false` | complete, update field values, upload/delete attachments                    |
+| StepRun       | `completed=true`  | reopen                                                                      |
+| Item          | (stateless)       | update, delete, + nested CRUD on fields and instances                       |
+| ItemInstance  | (stateless)       | update, delete, update field values                                         |
+| WorkCenter    | (stateless)       | update, delete, assign-user, unassign-user                                  |
+| User          | (stateless)       | update, delete, grant-permission, revoke-permission, change-password        |
 
 \* `start` and `complete` may appear as `disabled` when gates fail (blocked predecessors, work-center mismatch, open labor tickets, unfinished steps, required fields missing).
 
@@ -473,156 +473,156 @@ All paths are relative to `/erp/api`. Every list endpoint accepts `page` (defaul
 
 ### Discovery
 
-| Method | Path                  | Description                                                    |
-| ------ | --------------------- | -------------------------------------------------------------- |
-| GET    | `/`                   | API root; auth-aware resource + action directory               |
-| GET    | `/schemas/`           | List of registered JSON Schema names                           |
-| GET    | `/schemas/:name`      | Single JSON Schema                                             |
-| GET    | `/openapi.json`       | Full OpenAPI document                                          |
-| GET    | `/api-reference` *    | Scalar interactive API browser (HTML; mounted outside `/api`)  |
+| Method | Path                | Description                                                   |
+| ------ | ------------------- | ------------------------------------------------------------- |
+| GET    | `/`                 | API root; auth-aware resource + action directory              |
+| GET    | `/schemas/`         | List of registered JSON Schema names                          |
+| GET    | `/schemas/:name`    | Single JSON Schema                                            |
+| GET    | `/openapi.json`     | Full OpenAPI document                                         |
+| GET    | `/api-reference` \* | Scalar interactive API browser (HTML; mounted outside `/api`) |
 
 ### Auth & Users
 
-| Method | Path                                         | Description                                 |
-| ------ | -------------------------------------------- | ------------------------------------------- |
-| POST   | `/auth/login`                                | Username + password → session cookie        |
-| POST   | `/auth/logout`                               | Destroy current session                     |
-| GET    | `/auth/me`                                   | Current user + permissions                  |
-| GET    | `/users`                                     | List users (admin)                          |
-| POST   | `/users`                                     | Create user (admin)                         |
-| POST   | `/users/agent`                               | Create agent-user (admin, supervisor)       |
-| GET    | `/users/:id`                                 | Get user                                    |
-| PUT    | `/users/:id`                                 | Update user (admin)                         |
-| DELETE | `/users/:id`                                 | Delete user (admin)                         |
-| POST   | `/users/:id/change-password`                 | Change password (self or admin)             |
-| POST   | `/users/:id/permissions/:permission`         | Grant permission (admin)                    |
-| DELETE | `/users/:id/permissions/:permission`         | Revoke permission (admin)                   |
-| GET    | `/user-permissions`                          | Cross-user permissions directory (admin)    |
+| Method | Path                                 | Description                              |
+| ------ | ------------------------------------ | ---------------------------------------- |
+| POST   | `/auth/login`                        | Username + password → session cookie     |
+| POST   | `/auth/logout`                       | Destroy current session                  |
+| GET    | `/auth/me`                           | Current user + permissions               |
+| GET    | `/users`                             | List users (admin)                       |
+| POST   | `/users`                             | Create user (admin)                      |
+| POST   | `/users/agent`                       | Create agent-user (admin, supervisor)    |
+| GET    | `/users/:id`                         | Get user                                 |
+| PUT    | `/users/:id`                         | Update user (admin)                      |
+| DELETE | `/users/:id`                         | Delete user (admin)                      |
+| POST   | `/users/:id/change-password`         | Change password (self or admin)          |
+| POST   | `/users/:id/permissions/:permission` | Grant permission (admin)                 |
+| DELETE | `/users/:id/permissions/:permission` | Revoke permission (admin)                |
+| GET    | `/user-permissions`                  | Cross-user permissions directory (admin) |
 
 ### Admin
 
-| Method | Path                        | Description                                                |
-| ------ | --------------------------- | ---------------------------------------------------------- |
-| GET    | `/admin`                    | Version, DB path, DB size, schema version (admin)          |
-| GET    | `/admin/attachments`        | Paginated list of uploaded attachments (admin)             |
-| GET    | `/admin/server-logs`        | Tail Pino server log (`lines`, `minLevel`) (admin)         |
+| Method | Path                 | Description                                        |
+| ------ | -------------------- | -------------------------------------------------- |
+| GET    | `/admin`             | Version, DB path, DB size, schema version (admin)  |
+| GET    | `/admin/attachments` | Paginated list of uploaded attachments (admin)     |
+| GET    | `/admin/server-logs` | Tail Pino server log (`lines`, `minLevel`) (admin) |
 
 ### Orders, Revisions, and the Plan Tree
 
-| Method | Path                                                                                        | Description                          |
-| ------ | ------------------------------------------------------------------------------------------- | ------------------------------------ |
-| GET    | `/orders`                                                                                   | List (filters: `status`, `search`)   |
-| POST   | `/orders`                                                                                   | Create                               |
-| GET    | `/orders/:orderKey`                                                                         | Get                                  |
-| PUT    | `/orders/:orderKey`                                                                         | Update                               |
-| DELETE | `/orders/:orderKey`                                                                         | Delete                               |
-| GET    | `/orders/:orderKey/revs`                                                                    | List revisions (filter: `status`)    |
-| POST   | `/orders/:orderKey/revs`                                                                    | Create revision                      |
-| GET    | `/orders/:orderKey/revs/:revNo`                                                             | Get revision                         |
-| PUT    | `/orders/:orderKey/revs/:revNo`                                                             | Update (draft only)                  |
-| GET    | `/orders/:orderKey/revs/:revNo/diff`                                                        | Diff vs. prior approved revision     |
-| POST   | `/orders/:orderKey/revs/:revNo/approve`                                                     | `draft → approved`                   |
-| POST   | `/orders/:orderKey/revs/:revNo/obsolete`                                                    | `approved → obsolete`                |
-| GET    | `/orders/:orderKey/revs/:revNo/ops`                                                         | List operations                      |
-| POST   | `/orders/:orderKey/revs/:revNo/ops`                                                         | Create operation                     |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                                  | Get operation                        |
-| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                                  | Update operation                     |
-| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                                  | Delete operation                     |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies`                                     | List predecessors                    |
-| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies`                                     | Add predecessor                      |
-| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies/:predecessorSeqNo`                   | Remove predecessor                   |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs`                                       | List field refs                      |
-| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs`                                       | Create field ref                     |
-| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs/:seqNo`                                | Delete field ref                     |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps`                                            | List steps                           |
-| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps`                                            | Create step (supports batch)         |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                                 | Get step                             |
-| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                                 | Update step                          |
-| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                                 | Delete step                          |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields`                          | List step fields                     |
-| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields`                          | Create field (supports batch)        |
-| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo`              | Get field                            |
-| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo`              | Update field                         |
-| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo`              | Delete field                         |
+| Method | Path                                                                           | Description                        |
+| ------ | ------------------------------------------------------------------------------ | ---------------------------------- |
+| GET    | `/orders`                                                                      | List (filters: `status`, `search`) |
+| POST   | `/orders`                                                                      | Create                             |
+| GET    | `/orders/:orderKey`                                                            | Get                                |
+| PUT    | `/orders/:orderKey`                                                            | Update                             |
+| DELETE | `/orders/:orderKey`                                                            | Delete                             |
+| GET    | `/orders/:orderKey/revs`                                                       | List revisions (filter: `status`)  |
+| POST   | `/orders/:orderKey/revs`                                                       | Create revision                    |
+| GET    | `/orders/:orderKey/revs/:revNo`                                                | Get revision                       |
+| PUT    | `/orders/:orderKey/revs/:revNo`                                                | Update (draft only)                |
+| GET    | `/orders/:orderKey/revs/:revNo/diff`                                           | Diff vs. prior approved revision   |
+| POST   | `/orders/:orderKey/revs/:revNo/approve`                                        | `draft → approved`                 |
+| POST   | `/orders/:orderKey/revs/:revNo/obsolete`                                       | `approved → obsolete`              |
+| GET    | `/orders/:orderKey/revs/:revNo/ops`                                            | List operations                    |
+| POST   | `/orders/:orderKey/revs/:revNo/ops`                                            | Create operation                   |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                     | Get operation                      |
+| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                     | Update operation                   |
+| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo`                                     | Delete operation                   |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies`                        | List predecessors                  |
+| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies`                        | Add predecessor                    |
+| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/dependencies/:predecessorSeqNo`      | Remove predecessor                 |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs`                          | List field refs                    |
+| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs`                          | Create field ref                   |
+| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/field-refs/:seqNo`                   | Delete field ref                   |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps`                               | List steps                         |
+| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps`                               | Create step (supports batch)       |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                    | Get step                           |
+| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                    | Update step                        |
+| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo`                    | Delete step                        |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields`             | List step fields                   |
+| POST   | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields`             | Create field (supports batch)      |
+| GET    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo` | Get field                          |
+| PUT    | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo` | Update field                       |
+| DELETE | `/orders/:orderKey/revs/:revNo/ops/:seqNo/steps/:stepSeqNo/fields/:fieldSeqNo` | Delete field                       |
 
 ### Order Runs and the Execution Tree
 
-| Method | Path                                                                                         | Description                                             |
-| ------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| GET    | `/orders/:orderKey/runs`                                                                     | List (filters: `status`, `priority`, `search`)          |
-| POST   | `/orders/:orderKey/runs`                                                                     | Create run from an approved revision                    |
-| GET    | `/orders/:orderKey/runs/:runNo`                                                              | Get run                                                 |
-| PUT    | `/orders/:orderKey/runs/:runNo`                                                              | Update run                                              |
-| DELETE | `/orders/:orderKey/runs/:runNo`                                                              | Delete (released only)                                  |
-| POST   | `/orders/:orderKey/runs/:runNo/start`                                                        | `released → started`                                    |
-| POST   | `/orders/:orderKey/runs/:runNo/complete`                                                     | Close with item instance creation (CompleteOrderRun)    |
-| POST   | `/orders/:orderKey/runs/:runNo/close`                                                        | Close without item instance                             |
-| POST   | `/orders/:orderKey/runs/:runNo/cancel`                                                       | Cancel                                                  |
-| POST   | `/orders/:orderKey/runs/:runNo/reopen`                                                       | Reopen closed/cancelled                                 |
-| GET    | `/orders/:orderKey/runs/:runNo/ops`                                                          | List operation runs                                     |
-| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo`                                                   | Get operation run                                       |
-| PUT    | `/orders/:orderKey/runs/:runNo/ops/:seqNo`                                                   | Update (e.g., `assignedToId`)                           |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/start`                                             | `pending → in_progress`                                 |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/complete`                                          | `in_progress → completed`                               |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/skip`                                              | `* → skipped`                                           |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/fail`                                              | `in_progress → failed`                                  |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/reopen`                                            | Terminal → `pending`                                    |
-| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/comments`                                          | List comments                                           |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/comments`                                          | Add comment                                             |
-| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor`                                             | List labor tickets                                      |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor`                                             | Clock in                                                |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor/:ticketId`                                   | Clock out                                               |
-| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps`                                             | List step runs                                          |
-| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo`                                  | Get step run                                            |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/complete`                         | Mark step complete                                      |
-| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/reopen`                           | Reopen step                                             |
-| GET    | `.../steps/:stepSeqNo/fields`                                                                | List captured field values                              |
-| PUT    | `.../steps/:stepSeqNo/fields`                                                                | Batch update field values                               |
-| PUT    | `.../steps/:stepSeqNo/fields/:fieldSeqNo`                                                    | Update single-value field                               |
-| PUT    | `.../steps/:stepSeqNo/fields/:fieldSeqNo/values/:setIndex`                                   | Update a specific set in a multiSet field               |
-| DELETE | `.../steps/:stepSeqNo/fields/:fieldSeqNo/values/:setIndex`                                   | Delete a value set                                      |
-| GET    | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments`                                        | List attachments                                        |
-| POST   | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments`                                        | Upload attachment (multipart)                           |
-| DELETE | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments/:attachmentId`                          | Detach/delete attachment                                |
-| GET    | `/attachments/:publicId/download`                                                            | Download by public ID                                   |
+| Method | Path                                                                 | Description                                          |
+| ------ | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| GET    | `/orders/:orderKey/runs`                                             | List (filters: `status`, `priority`, `search`)       |
+| POST   | `/orders/:orderKey/runs`                                             | Create run from an approved revision                 |
+| GET    | `/orders/:orderKey/runs/:runNo`                                      | Get run                                              |
+| PUT    | `/orders/:orderKey/runs/:runNo`                                      | Update run                                           |
+| DELETE | `/orders/:orderKey/runs/:runNo`                                      | Delete (released only)                               |
+| POST   | `/orders/:orderKey/runs/:runNo/start`                                | `released → started`                                 |
+| POST   | `/orders/:orderKey/runs/:runNo/complete`                             | Close with item instance creation (CompleteOrderRun) |
+| POST   | `/orders/:orderKey/runs/:runNo/close`                                | Close without item instance                          |
+| POST   | `/orders/:orderKey/runs/:runNo/cancel`                               | Cancel                                               |
+| POST   | `/orders/:orderKey/runs/:runNo/reopen`                               | Reopen closed/cancelled                              |
+| GET    | `/orders/:orderKey/runs/:runNo/ops`                                  | List operation runs                                  |
+| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo`                           | Get operation run                                    |
+| PUT    | `/orders/:orderKey/runs/:runNo/ops/:seqNo`                           | Update (e.g., `assignedToId`)                        |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/start`                     | `pending → in_progress`                              |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/complete`                  | `in_progress → completed`                            |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/skip`                      | `* → skipped`                                        |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/fail`                      | `in_progress → failed`                               |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/reopen`                    | Terminal → `pending`                                 |
+| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/comments`                  | List comments                                        |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/comments`                  | Add comment                                          |
+| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor`                     | List labor tickets                                   |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor`                     | Clock in                                             |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/labor/:ticketId`           | Clock out                                            |
+| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps`                     | List step runs                                       |
+| GET    | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo`          | Get step run                                         |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/complete` | Mark step complete                                   |
+| POST   | `/orders/:orderKey/runs/:runNo/ops/:seqNo/steps/:stepSeqNo/reopen`   | Reopen step                                          |
+| GET    | `.../steps/:stepSeqNo/fields`                                        | List captured field values                           |
+| PUT    | `.../steps/:stepSeqNo/fields`                                        | Batch update field values                            |
+| PUT    | `.../steps/:stepSeqNo/fields/:fieldSeqNo`                            | Update single-value field                            |
+| PUT    | `.../steps/:stepSeqNo/fields/:fieldSeqNo/values/:setIndex`           | Update a specific set in a multiSet field            |
+| DELETE | `.../steps/:stepSeqNo/fields/:fieldSeqNo/values/:setIndex`           | Delete a value set                                   |
+| GET    | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments`                | List attachments                                     |
+| POST   | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments`                | Upload attachment (multipart)                        |
+| DELETE | `.../steps/:stepSeqNo/fields/:fieldSeqNo/attachments/:attachmentId`  | Detach/delete attachment                             |
+| GET    | `/attachments/:publicId/download`                                    | Download by public ID                                |
 
 ### Items, Inventory, Work Centers
 
-| Method | Path                                                       | Description                                       |
-| ------ | ---------------------------------------------------------- | ------------------------------------------------- |
-| GET    | `/items`                                                   | List items (filter: `search`)                     |
-| POST   | `/items`                                                   | Create item                                       |
-| GET    | `/items/:itemKey`                                          | Get item (includes field template)                |
-| PUT    | `/items/:itemKey`                                          | Update item                                       |
-| DELETE | `/items/:itemKey`                                          | Delete item                                       |
-| GET    | `/items/:itemKey/fields`                                   | List field template                               |
-| POST   | `/items/:itemKey/fields`                                   | Create field (supports batch)                     |
-| PUT    | `/items/:itemKey/fields/:fieldSeqNo`                       | Update field                                      |
-| DELETE | `/items/:itemKey/fields/:fieldSeqNo`                       | Delete field                                      |
-| GET    | `/items/:itemKey/instances`                                | List instances                                    |
-| POST   | `/items/:itemKey/instances`                                | Create instance                                   |
-| GET    | `/items/:itemKey/instances/:instanceId`                    | Get instance                                      |
-| PUT    | `/items/:itemKey/instances/:instanceId`                    | Update instance                                   |
-| DELETE | `/items/:itemKey/instances/:instanceId`                    | Delete instance                                   |
-| PUT    | `/items/:itemKey/instances/:instanceId/fields`             | Batch update field values                         |
-| PUT    | `/items/:itemKey/instances/:instanceId/fields/:fieldSeqNo` | Update single field value                         |
-| GET    | `/inventory`                                               | Flattened list of all item instances              |
-| GET    | `/work-centers`                                            | List work centers                                 |
-| POST   | `/work-centers`                                            | Create work center                                |
-| GET    | `/work-centers/:key`                                       | Get work center (includes user assignments)      |
-| PUT    | `/work-centers/:key`                                       | Update work center                                |
-| DELETE | `/work-centers/:key`                                       | Delete work center                                |
-| GET    | `/work-centers/:key/users`                                 | List assigned users                               |
-| POST   | `/work-centers/:key/users`                                 | Assign user                                       |
-| DELETE | `/work-centers/:key/users/:userId`                         | Unassign user                                     |
+| Method | Path                                                       | Description                                 |
+| ------ | ---------------------------------------------------------- | ------------------------------------------- |
+| GET    | `/items`                                                   | List items (filter: `search`)               |
+| POST   | `/items`                                                   | Create item                                 |
+| GET    | `/items/:itemKey`                                          | Get item (includes field template)          |
+| PUT    | `/items/:itemKey`                                          | Update item                                 |
+| DELETE | `/items/:itemKey`                                          | Delete item                                 |
+| GET    | `/items/:itemKey/fields`                                   | List field template                         |
+| POST   | `/items/:itemKey/fields`                                   | Create field (supports batch)               |
+| PUT    | `/items/:itemKey/fields/:fieldSeqNo`                       | Update field                                |
+| DELETE | `/items/:itemKey/fields/:fieldSeqNo`                       | Delete field                                |
+| GET    | `/items/:itemKey/instances`                                | List instances                              |
+| POST   | `/items/:itemKey/instances`                                | Create instance                             |
+| GET    | `/items/:itemKey/instances/:instanceId`                    | Get instance                                |
+| PUT    | `/items/:itemKey/instances/:instanceId`                    | Update instance                             |
+| DELETE | `/items/:itemKey/instances/:instanceId`                    | Delete instance                             |
+| PUT    | `/items/:itemKey/instances/:instanceId/fields`             | Batch update field values                   |
+| PUT    | `/items/:itemKey/instances/:instanceId/fields/:fieldSeqNo` | Update single field value                   |
+| GET    | `/inventory`                                               | Flattened list of all item instances        |
+| GET    | `/work-centers`                                            | List work centers                           |
+| POST   | `/work-centers`                                            | Create work center                          |
+| GET    | `/work-centers/:key`                                       | Get work center (includes user assignments) |
+| PUT    | `/work-centers/:key`                                       | Update work center                          |
+| DELETE | `/work-centers/:key`                                       | Delete work center                          |
+| GET    | `/work-centers/:key/users`                                 | List assigned users                         |
+| POST   | `/work-centers/:key/users`                                 | Assign user                                 |
+| DELETE | `/work-centers/:key/users/:userId`                         | Unassign user                               |
 
 ### Dispatch and Audit
 
-| Method | Path                        | Description                                                                                     |
-| ------ | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/dispatch`                 | Operation runs across all open orders. Filters: `status`, `priority`, `search`, `workCenter`, `canWork`, `clockedIn`, `viewAs` |
-| GET    | `/dispatch/ready-to-close`  | Order runs whose operations are all terminal — candidates for close/complete                    |
-| GET    | `/audit`                    | Audit log entries (filters: `entityType`, `entityId`)                                           |
+| Method | Path                       | Description                                                                                                                    |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/dispatch`                | Operation runs across all open orders. Filters: `status`, `priority`, `search`, `workCenter`, `canWork`, `clockedIn`, `viewAs` |
+| GET    | `/dispatch/ready-to-close` | Order runs whose operations are all terminal — candidates for close/complete                                                   |
+| GET    | `/audit`                   | Audit log entries (filters: `entityType`, `entityId`)                                                                          |
 
 ### Registered JSON Schemas
 

@@ -9,12 +9,8 @@
 import { execFileSync } from "child_process";
 
 import type { ExecError } from "../execError.js";
-import type {
-  CanonicalKeyChord} from "../keyCombo.js";
-import {
-  normalizeKeyCombo,
-  PRESS_KEY_HOLD_MS,
-} from "../keyCombo.js";
+import type { CanonicalKeyChord } from "../keyCombo.js";
+import { normalizeKeyCombo, PRESS_KEY_HOLD_MS } from "../keyCombo.js";
 
 function runPowerShell(command: string, timeoutMs: number = 10000) {
   execFileSync("powershell.exe", ["-NoProfile", "-Command", command], {
@@ -228,10 +224,7 @@ function winVirtualKey(key: string): string {
         const code = key.toUpperCase().charCodeAt(0);
         // Letters A-Z (0x41-0x5A) and digits 0-9 (0x30-0x39) map directly to
         // their VK codes. Anything else would hit unrelated VKs (e.g. VK_LWIN).
-        if (
-          (code >= 0x41 && code <= 0x5a) ||
-          (code >= 0x30 && code <= 0x39)
-        ) {
+        if ((code >= 0x41 && code <= 0x5a) || (code >= 0x30 && code <= 0x39)) {
           return `0x${code.toString(16).toUpperCase()}`;
         }
       }
@@ -265,8 +258,7 @@ const WIN_EXTENDED_KEYS = new Set([
 // issue on Windows.
 function winKeyEventStmt(key: string, up: boolean): string {
   const vk = winVirtualKey(key);
-  const flags =
-    (WIN_EXTENDED_KEYS.has(key) ? 1 : 0) | (up ? 2 : 0); // EXTENDED | KEYUP
+  const flags = (WIN_EXTENDED_KEYS.has(key) ? 1 : 0) | (up ? 2 : 0); // EXTENDED | KEYUP
   return `[NaisysInput]::keybd_event(${vk},[byte]([NaisysInput]::MapVirtualKey(${vk},0) -band 0xFF),${flags},[IntPtr]::Zero)`;
 }
 

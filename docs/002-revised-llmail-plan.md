@@ -24,9 +24,9 @@ Conversation grouping is handled by `mail_messages.participants` — a sorted CS
 
 The hub is the single source of truth (see doc 005), so there is no cross-machine sync-ownership concern. All mail rows are written to the hub DB:
 
-| Table             | Writer                           |
-| ----------------- | -------------------------------- |
-| `mail_messages`   | Sender (on send)                 |
+| Table             | Writer                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `mail_messages`   | Sender (on send)                                                                                |
 | `mail_recipients` | Sender (on send, one per recipient); recipient updates `read_at`/`archived_at` on their own row |
 
 Because each recipient has their own row, read/archive updates never collide — `updateMany WHERE message_id = X AND user_id = me` is unambiguous.

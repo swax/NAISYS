@@ -56,14 +56,12 @@ export default defineConfig({
       // Never reuse a leftover server when collecting coverage — a stale
       // process on :3302 may have been started without NODE_V8_COVERAGE,
       // and Playwright would silently skip launching the instrumented one.
-      reuseExistingServer:
-        !process.env.CI && !process.env.NODE_V8_COVERAGE,
+      reuseExistingServer: !process.env.CI && !process.env.NODE_V8_COVERAGE,
     },
     {
       command: "npm run dev --prefix ../client",
       port: 2202,
-      reuseExistingServer:
-        !process.env.CI && !process.env.NODE_V8_COVERAGE,
+      reuseExistingServer: !process.env.CI && !process.env.NODE_V8_COVERAGE,
     },
   ],
 });

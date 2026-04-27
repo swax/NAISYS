@@ -94,9 +94,7 @@ export function configuredExpectedOrigin(): string | string[] | null {
  *   2. The browser-supplied Origin header, else
  *   3. A best-effort derivation from the request's protocol + host header.
  */
-export function getExpectedOrigin(
-  request: FastifyRequest,
-): string | string[] {
+export function getExpectedOrigin(request: FastifyRequest): string | string[] {
   const configured = configuredExpectedOrigin();
   if (configured !== null) return configured;
   const originHeader = request.headers.origin;
@@ -334,13 +332,10 @@ export async function issueRegistrationLink(opts: {
   return { url, expiresAt, token };
 }
 
-export async function getUserForRegistrationToken(token: string): Promise<
-  | {
-      userId: number;
-      username: string;
-    }
-  | null
-> {
+export async function getUserForRegistrationToken(token: string): Promise<{
+  userId: number;
+  username: string;
+} | null> {
   const lookup = await lookupRegistrationToken(token);
   if (!lookup) return null;
   // Verify the user record still exists (in case it was deleted).

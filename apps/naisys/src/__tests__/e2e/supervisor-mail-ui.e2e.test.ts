@@ -248,9 +248,7 @@ SERVER_PORT=${SERVER_PORT}
     await replyDialog
       .getByText("New Message")
       .waitFor({ state: "visible", timeout: 10000 });
-    const subjectValue = await replyDialog
-      .getByLabel("Subject")
-      .inputValue();
+    const subjectValue = await replyDialog.getByLabel("Subject").inputValue();
     expect(subjectValue).toMatch(/^RE: Status update/);
 
     await replyDialog.getByRole("button", { name: "Cancel" }).click();
@@ -274,9 +272,7 @@ SERVER_PORT=${SERVER_PORT}
     await newDialog.getByRole("button", { name: "Send" }).click();
 
     // Modal should close on send.
-    await page
-      .getByRole("dialog")
-      .waitFor({ state: "hidden", timeout: 15000 });
+    await page.getByRole("dialog").waitFor({ state: "hidden", timeout: 15000 });
 
     // Verify via API that the new message landed for gamma.
     await waitFor(

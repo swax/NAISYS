@@ -44,28 +44,28 @@ The ERP middleware only gates `/erp/api` routes; non-ERP paths are treated as pu
 
 ### Supervisor Auth
 
-| Component       | Location                                                                                                                  |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| User table      | `supervisor.db` → `users` (id, username, uuid, is_agent, password_hash, api_key, created_at, updated_at)                  |
-| Session table   | `supervisor.db` → `sessions` (id, user_id, token_hash UNIQUE, expires_at, created_at)                                     |
-| Permissions     | `supervisor.db` → `user_permissions` (user_id, permission, granted_at, granted_by). `Permission` Prisma enum.             |
-| User service    | `apps/supervisor/server/src/services/userService.ts`                                                                      |
-| Session service | `packages/supervisor-database/src/sessionService.ts`                                                                      |
-| Auth middleware | `apps/supervisor/server/src/auth-middleware.ts`                                                                           |
-| Auth routes     | `apps/supervisor/server/src/routes/auth.ts`                                                                               |
+| Component       | Location                                                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| User table      | `supervisor.db` → `users` (id, username, uuid, is_agent, password_hash, api_key, created_at, updated_at)                   |
+| Session table   | `supervisor.db` → `sessions` (id, user_id, token_hash UNIQUE, expires_at, created_at)                                      |
+| Permissions     | `supervisor.db` → `user_permissions` (user_id, permission, granted_at, granted_by). `Permission` Prisma enum.              |
+| User service    | `apps/supervisor/server/src/services/userService.ts`                                                                       |
+| Session service | `packages/supervisor-database/src/sessionService.ts`                                                                       |
+| Auth middleware | `apps/supervisor/server/src/auth-middleware.ts`                                                                            |
+| Auth routes     | `apps/supervisor/server/src/routes/auth.ts`                                                                                |
 | Shared types    | `apps/supervisor/shared/src/auth-types.ts` (LoginRequestSchema, AuthUserSchema, LoginResponseSchema, LogoutResponseSchema) |
 
 ### ERP Auth
 
-| Component       | Location                                                                                             |
-| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Component       | Location                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
 | User table      | `naisys_erp.db` → `users` (id, uuid UNIQUE, username UNIQUE, password_hash, api_key, is_agent, deleted_at, …) |
-| Session table   | `naisys_erp.db` → `sessions` (id, user_id, token_hash UNIQUE, expires_at, created_at)                |
-| Permissions     | `naisys_erp.db` → `user_permissions`. `ErpPermission` enum.                                          |
-| Auth middleware | `apps/erp/server/src/auth-middleware.ts`                                                             |
-| Auth routes     | `apps/erp/server/src/routes/auth.ts`                                                                 |
-| SSO flag        | `apps/erp/server/src/supervisorAuth.ts` (`enableSupervisorAuth`, `isSupervisorAuth`)                 |
-| Shared types    | `apps/erp/shared/src/auth-types.ts` (LoginRequestSchema, AuthUserSchema, LoginResponseSchema)        |
+| Session table   | `naisys_erp.db` → `sessions` (id, user_id, token_hash UNIQUE, expires_at, created_at)                         |
+| Permissions     | `naisys_erp.db` → `user_permissions`. `ErpPermission` enum.                                                   |
+| Auth middleware | `apps/erp/server/src/auth-middleware.ts`                                                                      |
+| Auth routes     | `apps/erp/server/src/routes/auth.ts`                                                                          |
+| SSO flag        | `apps/erp/server/src/supervisorAuth.ts` (`enableSupervisorAuth`, `isSupervisorAuth`)                          |
+| Shared types    | `apps/erp/shared/src/auth-types.ts` (LoginRequestSchema, AuthUserSchema, LoginResponseSchema)                 |
 
 ### User Schema
 
@@ -137,9 +137,9 @@ When a valid supervisor session is found but the ERP user doesn't exist locally,
 
 ### Public Routes
 
-| App        | Public routes                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| Supervisor | `/supervisor/api/auth/login`, `/supervisor/api/` (root), anything not under `/supervisor/api` |
+| App        | Public routes                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Supervisor | `/supervisor/api/auth/login`, `/supervisor/api/` (root), anything not under `/supervisor/api`                            |
 | ERP        | `/erp/api/auth/login`, `/erp/api/client-config`, `/erp/api/schemas/*`, `/erp/api/` (root), anything not under `/erp/api` |
 
 ### Session Service Surface (`@naisys/supervisor-database`)

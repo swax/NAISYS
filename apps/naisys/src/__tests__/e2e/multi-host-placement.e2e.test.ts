@@ -189,15 +189,13 @@ HUB_ACCESS_KEY=${hubAccessKey}
     const alex = agents.items.find((a) => a.name === "alex");
     expect(alex).toBeDefined();
 
-    const assigned = await admin.post<SuccessResponse>(
-      "/hosts/HOST-A/agents",
-      { agentId: alex!.id },
-    );
+    const assigned = await admin.post<SuccessResponse>("/hosts/HOST-A/agents", {
+      agentId: alex!.id,
+    });
     expect(assigned.success).toBe(true);
 
-    const hostAAfterAssign = await admin.get<HostDetailResponse>(
-      "/hosts/HOST-A",
-    );
+    const hostAAfterAssign =
+      await admin.get<HostDetailResponse>("/hosts/HOST-A");
     expect(hostAAfterAssign.restricted).toBe(true);
     expect(hostAAfterAssign.assignedAgents.some((a) => a.name === "alex")).toBe(
       true,
@@ -207,18 +205,16 @@ HUB_ACCESS_KEY=${hubAccessKey}
     await sleep(1000);
 
     // ---- Step 5: alex is assigned -> lands on HOST-A even though restricted ----
-    const alexStart = await admin.post<AgentStartResult>(
-      "/agents/alex/start",
-      { task: "placement: assigned host" },
-    );
+    const alexStart = await admin.post<AgentStartResult>("/agents/alex/start", {
+      task: "placement: assigned host",
+    });
     expect(alexStart.success).toBe(true);
     expect(alexStart.hostname).toBe("HOST-A");
 
     // ---- Step 6: bob is unassigned -> only HOST-B is unrestricted+online ----
-    const bobStart = await admin.post<AgentStartResult>(
-      "/agents/bob/start",
-      { task: "placement: unrestricted only" },
-    );
+    const bobStart = await admin.post<AgentStartResult>("/agents/bob/start", {
+      task: "placement: unrestricted only",
+    });
     expect(bobStart.success).toBe(true);
     expect(bobStart.hostname).toBe("HOST-B");
 

@@ -25,8 +25,8 @@ A REST-with-HATEOAS API inverts that:
   follows `dispatch` → a specific order run → its operations; it never loads
   the Admin, Users, or Inventory branches.
 - **Current state is explicit in the response.** Each resource carries
-  `_actions` describing what can be done *to this specific resource right
-  now*, including why some actions are disabled. The agent doesn't have to
+  `_actions` describing what can be done _to this specific resource right
+  now_, including why some actions are disabled. The agent doesn't have to
   re-derive the state machine.
 - **Schemas are fetched only when needed.** An action declares
   `schema: "/erp/api/schemas/UpdateOrder"`; the agent fetches that once
@@ -40,8 +40,8 @@ to guess.
 
 Every non-trivial response carries some subset of four members:
 
-| Member             | Purpose                                                                 |
-| ------------------ | ----------------------------------------------------------------------- |
+| Member             | Purpose                                                                |
+| ------------------ | ---------------------------------------------------------------------- |
 | `_links`           | Navigation: `self`, `collection`, `parent`, pagination, related        |
 | `_actions`         | Concrete things this caller can try on this resource (POST/PUT/DELETE) |
 | `_linkTemplates`   | URL patterns for items in a list (e.g. `/orders/{key}`)                |
@@ -139,7 +139,7 @@ typically `{ success, message, id }` plus minimal `_links` / `_actions` —
 because an agent that just successfully issued a command usually doesn't need
 the full resource echoed back.
 
-UI clients that *do* want the full resource (to refresh their view) send
+UI clients that _do_ want the full resource (to refresh their view) send
 `Prefer: return=representation` (RFC 7240). The server switches to the full
 formatter and overrides Fastify's schema-driven serialiser so every field
 makes it through. See `mutationResult()` in `apps/erp/server/src/route-helpers.ts`.
@@ -149,9 +149,13 @@ makes it through. See `mutationResult()` in `apps/erp/server/src/route-helpers.t
 Actions carry a `body` stub that matches the schema:
 
 ```json
-{ "rel": "create", "href": "...", "method": "POST",
+{
+  "rel": "create",
+  "href": "...",
+  "method": "POST",
   "body": { "username": "", "password": "" },
-  "schema": "/supervisor/api/schemas/CreateUser" }
+  "schema": "/supervisor/api/schemas/CreateUser"
+}
 ```
 
 For simple requests the agent never fetches the schema at all — the stub is
@@ -207,7 +211,7 @@ it with `disabled: true` + a human-readable `disabledReason`.
 Reasons the default favours disabled-with-reason over hiding:
 
 - **Discoverability.** An AI agent (or a human reading JSON) can see the full
-  action surface and understand what *could* be possible, which helps it
+  action surface and understand what _could_ be possible, which helps it
   plan multi-step sequences.
 - **Recourse.** `disabledReason` doubles as a hint. "Stop the agent before
   archiving" tells the caller what to do next. A hidden action teaches
@@ -412,10 +416,13 @@ resolveActions(
       body: { task: "" },
       permission: "manage_agents",
       disabledWhen: (ctx) =>
-        ctx.active     ? "Agent is already running"
-      : ctx.archived   ? "Agent is archived"
-      : !ctx.enabled   ? "Agent is disabled"
-                       : null,
+        ctx.active
+          ? "Agent is already running"
+          : ctx.archived
+            ? "Agent is archived"
+            : !ctx.enabled
+              ? "Agent is disabled"
+              : null,
     },
     // ...
   ],
@@ -439,27 +446,27 @@ single tooltip line.
 
 ## Files
 
-| File                                                           | Role                                                        |
-| -------------------------------------------------------------- | ----------------------------------------------------------- |
-| `packages/common/src/hateoas-types.ts`                         | Zod schemas for `HateoasLink`, `HateoasAction`, templates, `AlternateEncoding` |
-| `packages/common/src/hateoas.ts`                               | `hasAction`, `hasActionTemplate`, `hasLinkTemplate`, `resolveActions`, `permGate`, `formatDisabledReason` |
-| `packages/common-node/src/bearerToken.ts`                      | `extractBearerToken()`                                      |
-| `packages/common-node/src/hashToken.ts`                        | `hashToken()` for auth cache keys                           |
-| `apps/supervisor/server/src/hateoas.ts`                        | Supervisor generic helpers: `selfLink`, `collectionLink`, `schemaLink`, `paginationLinks`, `timestampCursorLinks`, `idCursorLinks`, `attachmentUrl`, `API_PREFIX` |
-| `apps/supervisor/server/src/route-helpers.ts`                  | Supervisor-typed `resolveActions` wrapper                   |
-| `apps/supervisor/server/src/schema-registry.ts`                | Supervisor Zod → OpenAPI + JSON Schema registry             |
-| `apps/supervisor/server/src/routes/root.ts`                    | Supervisor API discovery root                               |
-| `apps/supervisor/server/src/routes/schemas.ts`                 | `GET /schemas/`, `GET /schemas/:name`                       |
-| `apps/supervisor/server/src/api-reference.ts`                  | Scalar API reference at `/supervisor/api-reference`         |
-| `apps/erp/server/src/hateoas.ts`                               | ERP generic helpers (mirror of supervisor's)                |
-| `apps/erp/server/src/route-helpers.ts`                         | ERP-typed `resolveActions`, `mutationResult`, `wantsFullResponse`, `draftCrudActions`, status guards, resolution chains |
-| `apps/erp/server/src/schema-registry.ts`                       | ERP Zod → OpenAPI + JSON Schema registry                    |
-| `apps/erp/server/src/routes/root.ts`                           | ERP API discovery root                                      |
-| `apps/erp/server/src/routes/schemas.ts`                        | ERP schema endpoints                                        |
-| `apps/erp/server/src/routes/step-runs.ts`                      | Canonical example of `_actionTemplates` + `alternateEncoding` |
-| `apps/erp/server/src/routes/step-field-attachments.ts`         | Canonical example of multipart upload handler               |
-| `apps/erp/server/src/erpRoutes.ts`                             | Route mount table — shows the URL hierarchy (keys, not ids) |
-| `apps/erp/server/src/api-reference.ts`                         | Scalar API reference at `/erp/api-reference`                |
+| File                                                   | Role                                                                                                                                                              |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/common/src/hateoas-types.ts`                 | Zod schemas for `HateoasLink`, `HateoasAction`, templates, `AlternateEncoding`                                                                                    |
+| `packages/common/src/hateoas.ts`                       | `hasAction`, `hasActionTemplate`, `hasLinkTemplate`, `resolveActions`, `permGate`, `formatDisabledReason`                                                         |
+| `packages/common-node/src/bearerToken.ts`              | `extractBearerToken()`                                                                                                                                            |
+| `packages/common-node/src/hashToken.ts`                | `hashToken()` for auth cache keys                                                                                                                                 |
+| `apps/supervisor/server/src/hateoas.ts`                | Supervisor generic helpers: `selfLink`, `collectionLink`, `schemaLink`, `paginationLinks`, `timestampCursorLinks`, `idCursorLinks`, `attachmentUrl`, `API_PREFIX` |
+| `apps/supervisor/server/src/route-helpers.ts`          | Supervisor-typed `resolveActions` wrapper                                                                                                                         |
+| `apps/supervisor/server/src/schema-registry.ts`        | Supervisor Zod → OpenAPI + JSON Schema registry                                                                                                                   |
+| `apps/supervisor/server/src/routes/root.ts`            | Supervisor API discovery root                                                                                                                                     |
+| `apps/supervisor/server/src/routes/schemas.ts`         | `GET /schemas/`, `GET /schemas/:name`                                                                                                                             |
+| `apps/supervisor/server/src/api-reference.ts`          | Scalar API reference at `/supervisor/api-reference`                                                                                                               |
+| `apps/erp/server/src/hateoas.ts`                       | ERP generic helpers (mirror of supervisor's)                                                                                                                      |
+| `apps/erp/server/src/route-helpers.ts`                 | ERP-typed `resolveActions`, `mutationResult`, `wantsFullResponse`, `draftCrudActions`, status guards, resolution chains                                           |
+| `apps/erp/server/src/schema-registry.ts`               | ERP Zod → OpenAPI + JSON Schema registry                                                                                                                          |
+| `apps/erp/server/src/routes/root.ts`                   | ERP API discovery root                                                                                                                                            |
+| `apps/erp/server/src/routes/schemas.ts`                | ERP schema endpoints                                                                                                                                              |
+| `apps/erp/server/src/routes/step-runs.ts`              | Canonical example of `_actionTemplates` + `alternateEncoding`                                                                                                     |
+| `apps/erp/server/src/routes/step-field-attachments.ts` | Canonical example of multipart upload handler                                                                                                                     |
+| `apps/erp/server/src/erpRoutes.ts`                     | Route mount table — shows the URL hierarchy (keys, not ids)                                                                                                       |
+| `apps/erp/server/src/api-reference.ts`                 | Scalar API reference at `/erp/api-reference`                                                                                                                      |
 
 ## Adding a new action — the checklist
 
@@ -467,7 +474,7 @@ single tooltip line.
 2. **Schema registry**: register it in `apps/<app>/server/src/schema-registry.ts`.
 3. **Route handler**: add the endpoint in `routes/<resource>.ts` with
    `preHandler: requirePermission(...)`.
-4. **Action list**: add an entry to `xActions()` in the *same* file, with
+4. **Action list**: add an entry to `xActions()` in the _same_ file, with
    the appropriate `permission`, `disabledWhen`, `visibleWhen`, and/or
    `statuses`.
 5. **Response formatter**: if the mutation should return an updated view,

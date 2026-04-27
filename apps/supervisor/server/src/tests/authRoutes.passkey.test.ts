@@ -428,16 +428,18 @@ describe("passkey auth routes", () => {
         },
       });
       expect(callOrder).toEqual(["verify", "consume"]);
-      expect(mocks.consumeTokenAndStoreVerifiedCredential).toHaveBeenCalledWith({
-        token: "target-token",
-        verified: {
-          credentialId: "credential-id",
-          publicKey: "public-key",
-          counter: 0,
-          transports: ["internal"],
+      expect(mocks.consumeTokenAndStoreVerifiedCredential).toHaveBeenCalledWith(
+        {
+          token: "target-token",
+          verified: {
+            credentialId: "credential-id",
+            publicKey: "public-key",
+            counter: 0,
+            transports: ["internal"],
+          },
+          deviceLabel: "Work laptop",
         },
-        deviceLabel: "Work laptop",
-      });
+      );
       expect(mocks.createSessionForUser).toHaveBeenCalledWith(42);
       expect(response.headers["set-cookie"]).toEqual(
         expect.arrayContaining([
@@ -479,7 +481,9 @@ describe("passkey auth routes", () => {
         },
         deviceLabel: "Phone",
       });
-      expect(mocks.consumeTokenAndStoreVerifiedCredential).not.toHaveBeenCalled();
+      expect(
+        mocks.consumeTokenAndStoreVerifiedCredential,
+      ).not.toHaveBeenCalled();
       expect(mocks.createSessionForUser).not.toHaveBeenCalled();
     } finally {
       await app.close();

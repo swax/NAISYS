@@ -64,7 +64,12 @@ If you need to update the database schema:
 All Prisma types are exported for use in other packages:
 
 ```typescript
-import type { users, costs, context_log, mail_messages } from "@naisys/hub-database";
+import type {
+  users,
+  costs,
+  context_log,
+  mail_messages,
+} from "@naisys/hub-database";
 ```
 
 ## Notes

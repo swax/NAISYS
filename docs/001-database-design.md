@@ -20,7 +20,7 @@ hard to get any other way:
   multi-machine deployments with many concurrent agents are the obvious
   reason to graduate to Postgres later.
 - **Field deploys are just `npm install`.** Add a column → `prisma
-  migrate dev` writes a versioned migration file → commit and publish.
+migrate dev` writes a versioned migration file → commit and publish.
   On the next app start, `migrationHelper.ts` checks the on-disk DB
   version and runs any pending migrations automatically — no manual
   SQL, no separate ops step, no hand-written upgrade tooling for
@@ -49,11 +49,11 @@ hard to get any other way:
 NAISYS currently has three independent Prisma schemas, each with its own
 `.db` file under `$NAISYS_FOLDER/database/`:
 
-| Schema                          | File              | Owner                             |
-| ------------------------------- | ----------------- | --------------------------------- |
-| `packages/hub-database`         | `naisys_hub.db`   | The Hub — agent state, mail, logs, costs, hosts, users |
-| `packages/supervisor-database`  | `supervisor.db`   | Supervisor web UI — sessions, web-side concerns |
-| `apps/erp/server/prisma`        | `naisys_erp.db`   | ERP — orders, operations, work centers, attachments |
+| Schema                         | File            | Owner                                                  |
+| ------------------------------ | --------------- | ------------------------------------------------------ |
+| `packages/hub-database`        | `naisys_hub.db` | The Hub — agent state, mail, logs, costs, hosts, users |
+| `packages/supervisor-database` | `supervisor.db` | Supervisor web UI — sessions, web-side concerns        |
+| `apps/erp/server/prisma`       | `naisys_erp.db` | ERP — orders, operations, work centers, attachments    |
 
 They're split because the apps deploy independently, evolve at different
 speeds, and have unrelated data shapes. A schema change in the ERP
@@ -90,7 +90,7 @@ playbook for rolling out schema changes.
 
 A few details that matter in practice:
 
-- **Forward only.** If the on-disk version is *newer* than the binary
+- **Forward only.** If the on-disk version is _newer_ than the binary
   expects, the helper throws rather than guessing. Downgrades require
   manual intervention.
 - **Stale WAL recovery.** If a previous process crashed mid-write,
@@ -99,7 +99,7 @@ A few details that matter in practice:
   detects this, removes the stale files, and retries once.
 - **Journal-mode handover.** Before closing the version-check connection
   the helper switches journal mode from WAL to DELETE so that `prisma
-  migrate deploy` (a separate process) doesn't trip over leftover WAL
+migrate deploy` (a separate process) doesn't trip over leftover WAL
   state.
 
 ## Connection conventions

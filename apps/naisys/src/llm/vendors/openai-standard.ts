@@ -164,8 +164,9 @@ function extractConsoleCommands(
   tools: VendorDeps["tools"],
 ): string[] | undefined {
   const toolCalls = output
-    .filter((item): item is Extract<ResponseOutputItem, { type: "function_call" }> =>
-      item.type === "function_call",
+    .filter(
+      (item): item is Extract<ResponseOutputItem, { type: "function_call" }> =>
+        item.type === "function_call",
     )
     .map((item) => ({
       type: "function",

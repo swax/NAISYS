@@ -13,7 +13,10 @@ export interface SupervisorApiClient {
   /** POST multipart/form-data and parse JSON response */
   postMultipart: <T>(path: string, formData: FormData) => Promise<T>;
   /** Fetch a path relative to the host root (not the API prefix), with auth headers */
-  fetchFromHost: (pathFromRoot: string, init?: RequestInit) => Promise<Response>;
+  fetchFromHost: (
+    pathFromRoot: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
 }
 
 export async function parseJsonResponse<T>(response: Response): Promise<T> {
@@ -68,10 +71,7 @@ function createSupervisorApiClientWithHeaders(
     put: <T>(path: string, body?: Record<string, unknown>) =>
       apiRequest<T>("PUT", path, body),
     del: <T>(path: string) => apiRequest<T>("DELETE", path),
-    postMultipart: async <T>(
-      path: string,
-      formData: FormData,
-    ): Promise<T> => {
+    postMultipart: async <T>(path: string, formData: FormData): Promise<T> => {
       const response = await fetch(`${baseUrl}${path}`, {
         method: "POST",
         headers: authHeaders,

@@ -47,10 +47,7 @@ import {
   requireStepUp,
   STEPUP_CHALLENGE_COOKIE,
 } from "../services/stepUpService.js";
-import {
-  getUserById,
-  getUserPermissions,
-} from "../services/userService.js";
+import { getUserById, getUserPermissions } from "../services/userService.js";
 
 // Challenge cookies: a single shared name per flow means a second tab
 // running the same flow will overwrite the first tab's challenge — at worst
@@ -291,8 +288,7 @@ export default function authRoutes(
           reply.code(412);
           return {
             success: false as const,
-            message:
-              "Use a registration link to enroll your first passkey.",
+            message: "Use a registration link to enroll your first passkey.",
           };
         }
         const stepUp = await requireStepUp(request, reply, request.body);
@@ -537,10 +533,7 @@ async function resolveRegistrationTarget(
     if (!lookup) {
       return { ok: false, message: "Registration link is invalid or expired" };
     }
-    if (
-      request.supervisorUser &&
-      request.supervisorUser.id !== lookup.userId
-    ) {
+    if (request.supervisorUser && request.supervisorUser.id !== lookup.userId) {
       return {
         ok: false,
         message:

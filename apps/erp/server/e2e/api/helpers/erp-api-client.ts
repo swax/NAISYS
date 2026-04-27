@@ -47,9 +47,7 @@ export function expectActions(
   rels: string[],
 ): void {
   expect(body._actions).toEqual(
-    expect.arrayContaining(
-      rels.map((rel) => expect.objectContaining({ rel })),
-    ),
+    expect.arrayContaining(rels.map((rel) => expect.objectContaining({ rel }))),
   );
 }
 
@@ -69,8 +67,6 @@ export function expectLinks(
   rels: string[],
 ): void {
   expect(body._links).toEqual(
-    expect.arrayContaining(
-      rels.map((rel) => expect.objectContaining({ rel })),
-    ),
+    expect.arrayContaining(rels.map((rel) => expect.objectContaining({ rel }))),
   );
 }
