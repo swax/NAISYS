@@ -126,7 +126,7 @@ Both middlewares accept `Authorization: Bearer <apiKey>` for machine/agent acces
 model User {
   id                  Int                 @id @default(autoincrement())
   username            String              @unique
-  uuid                String              @default("")
+  uuid                String              @unique  // WebAuthn user handle
   isAgent             Boolean             @default(false)
   apiKey              String?             @unique
   createdAt           DateTime            @default(now())
