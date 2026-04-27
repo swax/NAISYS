@@ -37,7 +37,7 @@ Standalone supervisor reads configuration from `.env`:
 - **Cost analysis** — graphs and a model cost calculator (Chart.js)
 - **Admin** — system info/config, DB sizes, app/DB version, error-filtered logs
 - **Variables** — sensitive-value hiding, read-only mode
-- **Users & permissions** ([doc 008](../../docs/008-supervisor-users.md)) — CRUD, permission management, create-user-from-agent, password reset, API keys with rotation
+- **Users & permissions** ([doc 008](../../docs/008-supervisor-users.md)) — CRUD, permission management, create-user-from-agent, registration-link issuance with QR code, passkey list/delete/reset, API keys with rotation
 - **API reference** — Scalar UI gated behind auth; OpenAPI spec hidden from agents
 
 ### UX
@@ -59,11 +59,12 @@ Standalone supervisor reads configuration from `.env`:
 
 ### Auth ([doc 007](../../docs/007-web-auth.md))
 
-- Username/password auth with bcryptjs
+- Passkey-only supervisor login (WebAuthn, usernameless, required user verification)
+- One-time registration links for new accounts; QR code in the UI for phone enrollment
+- Step-up auth on sensitive actions (issue registration link, delete passkey, reset passkeys, create user) re-proves credential possession
 - Sessions table with multi-session support; cookie sharing between co-hosted supervisor + ERP
-- Login/logout, rate limiting, secure cookies in production
-- Password reset from CLI
-- Forced setup of the superadmin password at first run, logged for acknowledgement
+- Logout, rate limiting, secure cookies in production
+- Bootstrap superadmin via printed registration URL on first run; `--setup` re-issues a fresh link if locked out
 - Read-only mode for variables/users
 
 ### Supervising running agents

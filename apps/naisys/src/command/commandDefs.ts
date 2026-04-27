@@ -114,8 +114,7 @@ export const desktopCmd: CommandDef = {
 
 export const browserCmd: CommandDef = {
   name: "ns-browser",
-  description:
-    "A headless browser that has both text based and visual modes",
+  description: "A headless browser that has both text based and visual modes",
   subcommands: {
     open: {
       usage: "open <url>",

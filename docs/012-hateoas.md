@@ -153,7 +153,7 @@ Actions carry a `body` stub that matches the schema:
   "rel": "create",
   "href": "...",
   "method": "POST",
-  "body": { "username": "", "password": "" },
+  "body": { "username": "" },
   "schema": "/supervisor/api/schemas/CreateUser"
 }
 ```
