@@ -24,13 +24,13 @@ import {
 import type {
   FastifyInstance,
   FastifyPluginOptions,
-  FastifyReply,
   FastifyRequest,
 } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import { authCache } from "../auth-middleware.js";
+import { unauthorized } from "../error-helpers.js";
 import {
   consumeTokenAndStoreVerifiedCredential,
   generatePasskeyAuthenticationOptions,
@@ -120,6 +120,7 @@ export default function authRoutes(
         tags: ["Authentication"],
         response: {
           200: PasskeyAuthenticationOptionsSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -157,6 +158,7 @@ export default function authRoutes(
         response: {
           200: StepUpOptionsResponseSchema,
           401: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
         security: [{ cookieAuth: [] }],
       },
@@ -202,6 +204,7 @@ export default function authRoutes(
         response: {
           200: AuthUserSchema,
           401: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -272,6 +275,7 @@ export default function authRoutes(
           200: PasskeyRegistrationOptionsSchema,
           401: ErrorResponseSchema,
           412: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -332,6 +336,7 @@ export default function authRoutes(
         response: {
           200: PasskeyRegistrationVerifyResponseSchema,
           401: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -416,6 +421,7 @@ export default function authRoutes(
         response: {
           200: RegistrationTokenLookupResponseSchema,
           404: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -487,11 +493,6 @@ export default function authRoutes(
       return request.supervisorUser;
     },
   );
-}
-
-function unauthorized(reply: FastifyReply, message: string) {
-  reply.code(401);
-  return { success: false as const, message };
 }
 
 type RegistrationTarget =
