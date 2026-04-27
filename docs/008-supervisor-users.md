@@ -74,7 +74,7 @@ Instead of an `AuthType` enum, the User model uses an `isAgent` boolean together
 model User {
   id                 Int                 @id @default(autoincrement())
   username           String              @unique
-  uuid               String              @default("")
+  uuid               String              @unique  // WebAuthn user handle; see doc 007
   isAgent            Boolean             @default(false) @map("is_agent")
   createdAt          DateTime            @default(now()) @map("created_at")
   apiKey             String?             @unique @map("api_key")

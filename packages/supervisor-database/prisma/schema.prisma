@@ -21,7 +21,7 @@ enum Permission {
 model User {
   id                  Int                 @id @default(autoincrement())
   username            String              @unique
-  uuid                String              @default("")
+  uuid                String              @unique
   isAgent             Boolean             @default(false) @map("is_agent")
   createdAt           DateTime            @default(now()) @map("created_at")
   apiKey              String?             @unique @map("api_key")
