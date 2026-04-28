@@ -1,4 +1,5 @@
 import {
+  Anchor,
   Button,
   Card,
   Container,
@@ -41,6 +42,7 @@ export const UserDetail: React.FC = () => {
   const [editError, setEditError] = useState("");
   const [grantPerm, setGrantPerm] = useState<ErpPermission | null>(null);
   const [rotating, setRotating] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const [pwOpened, { open: openPw, close: closePw }] = useDisclosure();
   const [newPassword, setNewPassword] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
@@ -52,6 +54,7 @@ export const UserDetail: React.FC = () => {
     try {
       const result = await api.get<User>(apiEndpoints.user(routeUsername));
       setUser(result);
+      setApiKey(null);
     } catch {
       // handled
     } finally {
@@ -140,14 +143,21 @@ export const UserDetail: React.FC = () => {
     if (!routeUsername) return;
     if (
       !confirm(
-        "Rotate this user's API key? The old key will stop working immediately.",
+        "Generate a new API key? The old key will stop working immediately.",
       )
     )
       return;
     setRotating(true);
     try {
-      await api.post(apiEndpoints.userRotateKey(routeUsername), {});
-      void fetchUser();
+      const result = await api.post<{
+        success: boolean;
+        message: string;
+        apiKey?: string;
+      }>(apiEndpoints.userRotateKey(routeUsername), {});
+      setApiKey(result.apiKey ?? null);
+      setUser((current) =>
+        current ? { ...current, hasApiKey: !!result.apiKey } : current,
+      );
     } catch (err) {
       showErrorNotification(err);
     } finally {
@@ -249,21 +259,37 @@ export const UserDetail: React.FC = () => {
             </Text>
             <Text>{user.isAgent ? "Agent" : "User"}</Text>
           </Group>
-          {(user.apiKey || hasAction(user._actions, "rotate-key")) && (
+          {supervisorAuth ? (
             <Group>
               <Text fw={600} w={120}>
-                API Key:
+                Credentials:
               </Text>
-              <SecretField
-                value={user.apiKey ?? null}
-                onRotate={
-                  hasAction(user._actions, "rotate-key")
-                    ? handleRotateKey
-                    : undefined
-                }
-                rotating={rotating}
-              />
+              <Text size="sm">
+                Password and API key are managed in the{" "}
+                <Anchor href={`/supervisor/users/${user.username}`}>
+                  supervisor
+                </Anchor>
+                .
+              </Text>
             </Group>
+          ) : (
+            (user.hasApiKey || hasAction(user._actions, "rotate-key")) && (
+              <Group>
+                <Text fw={600} w={120}>
+                  API Key:
+                </Text>
+                <SecretField
+                  value={apiKey}
+                  emptyLabel={user.hasApiKey ? "Generated (hidden)" : "Not set"}
+                  onRotate={
+                    hasAction(user._actions, "rotate-key")
+                      ? handleRotateKey
+                      : undefined
+                  }
+                  rotating={rotating}
+                />
+              </Group>
+            )
           )}
         </Stack>
       </Card>

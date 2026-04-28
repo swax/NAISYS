@@ -1,18 +1,26 @@
-import type { DualLogger } from "@naisys/common-node";
+import { type DualLogger, hashToken } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentPeekRequestSchema,
   AgentRunCommandRequestSchema,
   AgentRunPauseRequestSchema,
-  AgentStartRequestSchema,
+  type AgentStartDispatch,
+  AgentStartInboundSchema,
   AgentStopRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
+import { randomBytes } from "crypto";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
+
+type AgentResponse = { success: boolean; error?: string };
+
+type StartDecision =
+  | { kind: "fail"; error: string }
+  | { kind: "go"; bestHostId: number };
 
 /** Handles agent_start requests by routing them to the least-loaded eligible host */
 export function createHubAgentService(
@@ -23,6 +31,28 @@ export function createHubAgentService(
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
 ) {
+  /**
+   * Mint a fresh runtime API key for a user, rotating any prior key. Plaintext
+   * is returned only here and travels once over the AGENT_START message; the
+   * DB only stores the hash. Keys persist across hub restarts/crashes/updates;
+   * revocation lives on the user disable/archive/delete paths and on graceful
+   * AGENT_STOP.
+   */
+  async function issueRuntimeApiKey(userId: number): Promise<string> {
+    const token = randomBytes(32).toString("hex");
+    await hubDb.users.update({
+      where: { id: userId },
+      data: { api_key_hash: hashToken(token) },
+    });
+    return token;
+  }
+
+  async function revokeRuntimeApiKey(userId: number): Promise<void> {
+    await hubDb.users.update({
+      where: { id: userId },
+      data: { api_key_hash: null },
+    });
+  }
   /** Find the least-loaded eligible host for a given user */
   async function findBestHost(startUserId: number): Promise<number | null> {
     // Look up which hosts this user is assigned to
@@ -83,44 +113,79 @@ export function createHubAgentService(
     return !!user?.enabled && !user?.archived;
   }
 
+  /** Run the start preconditions and pick a host. */
+  async function decideStartAgent(userId: number): Promise<StartDecision> {
+    if (!(await isAgentEnabled(userId))) {
+      return { kind: "fail", error: `Agent ${userId} is disabled` };
+    }
+    if (heartbeatService.findHostsForAgent(userId).length > 0) {
+      return { kind: "fail", error: `Agent ${userId} is already running` };
+    }
+    const bestHostId = await findBestHost(userId);
+    if (bestHostId === null) {
+      return {
+        kind: "fail",
+        error: `No eligible hosts are online for user ${userId}`,
+      };
+    }
+    return { kind: "go", bestHostId };
+  }
+
+  /**
+   * Issue a runtime key and send AGENT_START. Stranded keys from a failed
+   * send or failed response stay in the DB until the next AGENT_START for
+   * that user rotates them, or the user is disabled/archived/deleted — the
+   * agent process that would have used the key never started, so there's
+   * nobody to authenticate with it in the meantime.
+   */
+  async function dispatchAgentStart(args: {
+    bestHostId: number;
+    payload: Omit<AgentStartDispatch, "runtimeApiKey">;
+    onResponse: (response: AgentResponse) => void;
+  }): Promise<{ sent: boolean }> {
+    const { bestHostId, payload, onResponse } = args;
+    const startUserId = payload.startUserId;
+    const runtimeApiKey = await issueRuntimeApiKey(startUserId);
+
+    const sent = naisysServer.sendMessage(
+      bestHostId,
+      HubEvents.AGENT_START,
+      { ...payload, runtimeApiKey },
+      (response: AgentResponse) => {
+        if (response.success) {
+          heartbeatService.addStartedAgent(bestHostId, startUserId);
+        }
+        onResponse(response);
+      },
+    );
+
+    return { sent };
+  }
+
   /** Try to start an agent on the best available host (fire-and-forget) */
   async function tryStartAgent(startUserId: number): Promise<boolean> {
     try {
-      if (!(await isAgentEnabled(startUserId))) {
-        logService.log(
-          `[Hub:Agents] Auto-start: agent ${startUserId} is disabled or archived`,
-        );
+      const decision = await decideStartAgent(startUserId);
+      if (decision.kind === "fail") {
+        logService.log(`[Hub:Agents] Auto-start: ${decision.error}`);
         return false;
       }
 
-      const bestHostId = await findBestHost(startUserId);
-      if (bestHostId === null) {
-        logService.log(
-          `[Hub:Agents] Auto-start: no eligible host for user ${startUserId}`,
-        );
-        return false;
-      }
-
-      const sent = naisysServer.sendMessage(
-        bestHostId,
-        HubEvents.AGENT_START,
-        {
-          startUserId,
-        },
-        (response) => {
-          if (response.success) {
-            heartbeatService.addStartedAgent(bestHostId, startUserId);
-          } else {
+      const { sent } = await dispatchAgentStart({
+        bestHostId: decision.bestHostId,
+        payload: { startUserId },
+        onResponse: (response) => {
+          if (!response.success) {
             logService.error(
               `[Hub:Agents] Auto-start failed for user ${startUserId}: ${response.error}`,
             );
           }
         },
-      );
+      });
 
       if (sent) {
         logService.log(
-          `[Hub:Agents] Auto-start: sent start for user ${startUserId} to host ${bestHostId}`,
+          `[Hub:Agents] Auto-start: sent start for user ${startUserId} to host ${decision.bestHostId}`,
         );
       }
       return sent;
@@ -134,49 +199,22 @@ export function createHubAgentService(
     HubEvents.AGENT_START,
     async (hostId, data, ack) => {
       try {
-        const parsed = AgentStartRequestSchema.parse(data);
-        const requesterUserId = parsed.requesterUserId;
+        const parsed = AgentStartInboundSchema.parse(data);
 
-        if (!(await isAgentEnabled(parsed.startUserId))) {
-          ack({
-            success: false,
-            error: `Agent ${parsed.startUserId} is disabled`,
-          });
+        const decision = await decideStartAgent(parsed.startUserId);
+        if (decision.kind === "fail") {
+          ack({ success: false, error: decision.error });
           return;
         }
 
-        const bestHostId = await findBestHost(parsed.startUserId);
-
-        if (bestHostId === null) {
-          ack({
-            success: false,
-            error: `No eligible hosts are online for user ${parsed.startUserId}`,
-          });
-          return;
-        }
-
-        if (!requesterUserId) {
-          ack({
-            success: false,
-            error: `Missing requesterUserId in agent_start request for user ${parsed.startUserId}`,
-          });
-          return;
-        }
-
-        // Forward the start request to the selected host
-        const sent = naisysServer.sendMessage(
-          bestHostId,
-          HubEvents.AGENT_START,
-          {
+        const { sent } = await dispatchAgentStart({
+          bestHostId: decision.bestHostId,
+          payload: {
             startUserId: parsed.startUserId,
             taskDescription: parsed.taskDescription,
             sourceHostId: hostId,
           },
-          (response) => {
-            if (response.success) {
-              heartbeatService.addStartedAgent(bestHostId, parsed.startUserId);
-            }
-
+          onResponse: (response) => {
             // Reverse-ack with the response from the host (including success status and any error message) back to the original requester
             ack(response);
             // Send task description mail after successful start to avoid
@@ -184,17 +222,17 @@ export function createHubAgentService(
             if (response.success && parsed.taskDescription) {
               void sendTaskMail(
                 parsed.startUserId,
-                requesterUserId,
+                parsed.requesterUserId,
                 parsed.taskDescription,
               );
             }
           },
-        );
+        });
 
         if (!sent) {
           ack({
             success: false,
-            error: `Failed to send to host ${bestHostId}`,
+            error: `Failed to send to host ${decision.bestHostId}`,
           });
         }
       } catch (error) {
@@ -255,6 +293,11 @@ export function createHubAgentService(
           (response) => {
             if (response.success) {
               heartbeatService.removeStoppedAgent(targetHostId, parsed.userId);
+              revokeRuntimeApiKey(parsed.userId).catch((err) => {
+                logService.error(
+                  `[Hub:Agents] Failed to revoke runtime key for user ${parsed.userId} on stop: ${err}`,
+                );
+              });
             }
             // Ack with the first response
             if (!acked) {

@@ -203,7 +203,6 @@ export function createUserService(
         enabled: user.enabled,
         leadUserId: user.leadUserId,
         assignedHostIds: user.assignedHostIds,
-        apiKey: user.apiKey,
         config: user.config,
       });
     }

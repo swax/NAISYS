@@ -4,7 +4,6 @@ import {
   assertUrlSafeKey,
   buildDefaultAgentConfig,
 } from "@naisys/common";
-import { randomBytes } from "crypto";
 
 import { hubDb } from "../database/hubDb.js";
 import { sendUserListChanged } from "./hubConnectionService.js";
@@ -61,7 +60,6 @@ export async function createAgentConfig(
       username: defaultConfig.username,
       title: defaultConfig.title,
       config: jsonContent,
-      api_key: randomBytes(32).toString("hex"),
       enabled: true,
     },
   });

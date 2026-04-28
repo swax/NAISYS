@@ -1,6 +1,6 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { hashToken } from "@naisys/common-node";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 
 import { supervisorDbPath } from "./dbConfig.js";
@@ -65,15 +65,18 @@ export async function findSession(
 
 /**
  * Find a supervisor user by API key. Returns null if not found or DB not initialized.
+ * The supervisor user table holds both human users and agent users — `isAgent`
+ * lets callers route the match correctly when an agent authenticates with the
+ * external (persistent) key stored here rather than the hub-issued runtime key.
  */
 export async function findUserByApiKey(
   apiKey: string,
-): Promise<{ uuid: string; username: string } | null> {
+): Promise<{ uuid: string; username: string; isAgent: boolean } | null> {
   if (!supervisorDb) return null;
 
   const user = await supervisorDb.user.findUnique({
-    where: { apiKey },
-    select: { uuid: true, username: true },
+    where: { apiKeyHash: hashToken(apiKey) },
+    select: { uuid: true, username: true, isAgent: true },
   });
 
   return user;
@@ -154,7 +157,6 @@ export interface EnsureSuperAdminResult {
     id: number;
     uuid: string;
     username: string;
-    apiKey: string | null;
   };
   /** True when the superadmin user record was just created (i.e. first-time bootstrap) */
   created: boolean;
@@ -179,16 +181,14 @@ export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
         id: existing.id,
         uuid: existing.uuid,
         username: existing.username,
-        apiKey: existing.apiKey,
       },
     };
   }
 
   const uuid = randomUUID();
-  const apiKey = randomBytes(32).toString("hex");
 
   const user = await supervisorDb.user.create({
-    data: { uuid, username: SUPER_ADMIN_USERNAME, apiKey },
+    data: { uuid, username: SUPER_ADMIN_USERNAME },
   });
 
   await supervisorDb.userPermission.create({
@@ -197,6 +197,6 @@ export async function ensureSuperAdmin(): Promise<EnsureSuperAdminResult> {
 
   return {
     created: true,
-    user: { id: user.id, uuid, username: SUPER_ADMIN_USERNAME, apiKey },
+    user: { id: user.id, uuid, username: SUPER_ADMIN_USERNAME },
   };
 }

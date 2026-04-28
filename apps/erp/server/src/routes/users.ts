@@ -29,9 +29,9 @@ import {
   createUserForAgent,
   createUserWithPassword,
   deleteUser,
-  getUserApiKey,
   getUserByUsername,
   getUserByUuid,
+  hasUserApiKey,
   listUsers,
   updateUser,
 } from "../services/user-service.js";
@@ -64,7 +64,11 @@ function userActions(
     });
   }
 
-  if (isSelf) {
+  // In SSO mode the supervisor owns passwords (passkey-only) and external API
+  // keys, so ERP doesn't expose its own change-password / rotate-key actions.
+  const sso = isSupervisorAuth();
+
+  if (isSelf && !sso) {
     actions.push({
       rel: "change-password",
       href: `${API_PREFIX}/users/me/password`,
@@ -85,12 +89,14 @@ function userActions(
       body: { permission: "" },
     });
 
-    actions.push({
-      rel: "rotate-key",
-      href: `${href}/rotate-key`,
-      method: "POST",
-      title: "Rotate API Key",
-    });
+    if (!sso) {
+      actions.push({
+        rel: "rotate-key",
+        href: `${href}/rotate-key`,
+        method: "POST",
+        title: "Generate API Key",
+      });
+    }
 
     if (!isSelf) {
       actions.push({
@@ -132,7 +138,7 @@ export function formatUser(
   user: Awaited<ReturnType<typeof getUserById>>,
   currentUserId: number,
   currentUserPermissions: ErpPermission[],
-  options?: { apiKey?: string | null },
+  options?: { hasApiKey?: boolean },
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
@@ -143,7 +149,7 @@ export function formatUser(
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
-    apiKey: isAdmin ? (options?.apiKey ?? null) : undefined,
+    hasApiKey: options?.hasApiKey ?? false,
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
@@ -278,6 +284,15 @@ export default function userRoutes(fastify: FastifyInstance) {
         return;
       }
 
+      if (isSupervisorAuth()) {
+        reply.code(400);
+        return {
+          success: false,
+          message:
+            "Passwords are managed by the supervisor when SSO is enabled.",
+        };
+      }
+
       await updateUser(request.erpUser.id, {
         password: request.body.password,
       });
@@ -309,7 +324,6 @@ export default function userRoutes(fastify: FastifyInstance) {
         return mutationResult(request, reply, full, {
           id: full!.id,
           username: full!.username,
-          apiKey: full!.apiKey,
           _links: full!._links,
           _actions: full!._actions,
         });
@@ -387,7 +401,6 @@ export default function userRoutes(fastify: FastifyInstance) {
         return mutationResult(request, reply, full, {
           id: full!.id,
           username: full!.username,
-          apiKey: full!.apiKey,
           _links: full!._links,
           _actions: full!._actions,
         });
@@ -423,13 +436,15 @@ export default function userRoutes(fastify: FastifyInstance) {
         return { success: false, message: "User not found" };
       }
 
-      const apiKey = await getUserApiKey(user.id);
+      const hasApiKey = isSupervisorAuth()
+        ? false
+        : await hasUserApiKey(user.id);
 
       return formatUser(
         user,
         request.erpUser!.id,
         request.erpUser!.permissions,
-        { apiKey },
+        { hasApiKey },
       );
     },
   );
@@ -455,16 +470,26 @@ export default function userRoutes(fastify: FastifyInstance) {
 
       const isAdmin = hasPermission(request.erpUser, "erp_admin");
 
-      // Non-admins can only change their own password
-      const body = isAdmin ? request.body : { password: request.body.password };
+      // In SSO mode the supervisor owns passwords, so we strip any password
+      // field before forwarding the update — even from admins.
+      const sso = isSupervisorAuth();
+      const body = isAdmin
+        ? sso
+          ? { username: request.body.username }
+          : request.body
+        : sso
+          ? {}
+          : { password: request.body.password };
 
       try {
         const user = await updateUser(targetUser.id, body);
         authCache.clear();
+        const hasApiKey = sso ? false : await hasUserApiKey(user.id);
         const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
+          { hasApiKey },
         );
         return mutationResult(request, reply, full, {
           _actions: full!._actions,

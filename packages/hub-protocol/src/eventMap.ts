@@ -17,7 +17,8 @@ import type {
   AgentRunCommandResponse,
   AgentRunPauseRequest,
   AgentRunPauseResponse,
-  AgentStartRequest,
+  AgentStartDispatch,
+  AgentStartInbound,
   AgentStartResponse,
   AgentStopRequest,
   AgentStopResponse,
@@ -68,8 +69,9 @@ import type { UserListResponse } from "./schemas/users.js";
 
 /** Events that follow a request → response pattern via Socket.IO ack */
 export interface HubRequestEvents {
+  // Bidirectional: inbound to hub, dispatch out to host. Schemas enforce per-direction shape.
   [HubEvents.AGENT_START]: {
-    request: AgentStartRequest;
+    request: AgentStartInbound | AgentStartDispatch;
     response: AgentStartResponse;
   };
   [HubEvents.AGENT_STOP]: {

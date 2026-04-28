@@ -24,7 +24,7 @@ model User {
   uuid                String              @unique
   isAgent             Boolean             @default(false) @map("is_agent")
   createdAt           DateTime            @default(now()) @map("created_at")
-  apiKey              String?             @unique @map("api_key")
+  apiKeyHash          String?             @unique @map("api_key_hash")
   updatedAt           DateTime            @updatedAt @map("updated_at")
   permissions         UserPermission[]    @relation("UserPermissions")
   grantedPermissions  UserPermission[]    @relation("GrantedByPermissions")

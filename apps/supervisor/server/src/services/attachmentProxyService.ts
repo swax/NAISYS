@@ -1,15 +1,19 @@
-import { createHash } from "crypto";
+import {
+  generateAttachmentPublicId,
+  getHubAttachmentPath,
+  MAX_HUB_ATTACHMENT_SIZE,
+  sendAttachmentResponse,
+} from "@naisys/common-node";
+import { createHash, randomBytes } from "crypto";
 import type { FastifyReply } from "fastify";
-import http from "http";
-import https from "https";
+import { existsSync, mkdirSync, renameSync, writeFileSync } from "fs";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
-import { getHubUrl } from "./hubConnectionService.js";
 
 /**
- * Upload a file buffer to the hub's attachment endpoint.
- * Returns the attachment ID from the hub.
+ * Store a file buffer in the hub attachment store.
+ * Returns the attachment ID from the hub DB.
  */
 export async function uploadToHub(
   fileBuffer: Buffer,
@@ -17,159 +21,68 @@ export async function uploadToHub(
   uploadAsUserId: number,
   purpose: string = "mail",
 ): Promise<number> {
-  const hubUrl = getHubUrl();
-  if (!hubUrl) {
-    throw new Error("Hub URL not configured");
+  if (purpose !== "mail" && purpose !== "context") {
+    throw new Error('Invalid purpose. Must be "mail" or "context"');
   }
 
-  // Look up user's API key from the hub DB
-  const user = await hubDb.users.findUnique({
-    where: { id: uploadAsUserId },
-    select: { api_key: true },
-  });
-
-  if (!user?.api_key) {
-    throw new Error(`User ${uploadAsUserId} has no API key`);
-  }
-
-  // Compute SHA-256 of file buffer
-  const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
-
-  const url = new URL(`${hubUrl}/attachments`);
-  url.searchParams.set("filename", filename);
-  url.searchParams.set("filesize", String(fileBuffer.length));
-  url.searchParams.set("filehash", fileHash);
-  url.searchParams.set("purpose", purpose);
-
-  const httpModule = url.protocol === "https:" ? https : http;
-
-  const response = await new Promise<{ id: number }>((resolve, reject) => {
-    const req = httpModule.request(
-      url,
-      {
-        method: "POST",
-        headers: {
-          "Content-Length": fileBuffer.length,
-          Authorization: `Bearer ${user.api_key}`,
-        },
-      },
-      (res) => {
-        let body = "";
-        res.on("data", (chunk) => (body += chunk));
-        res.on("end", () => {
-          try {
-            const parsed = JSON.parse(body);
-            if (res.statusCode !== 200) {
-              reject(
-                new Error(
-                  parsed.error ||
-                    `Hub upload failed with status ${res.statusCode}`,
-                ),
-              );
-            } else {
-              resolve(parsed);
-            }
-          } catch {
-            reject(new Error(`Invalid response from hub: ${body}`));
-          }
-        });
-      },
+  if (fileBuffer.length > MAX_HUB_ATTACHMENT_SIZE) {
+    throw new Error(
+      `File too large. Max size: ${MAX_HUB_ATTACHMENT_SIZE} bytes`,
     );
+  }
 
-    req.on("error", reject);
-    req.end(fileBuffer);
+  const naisysFolder = process.env.NAISYS_FOLDER || "";
+  const fileHash = createHash("sha256").update(fileBuffer).digest("hex");
+  const { storageDir, storagePath } = getHubAttachmentPath(
+    naisysFolder,
+    fileHash,
+  );
+  mkdirSync(storageDir, { recursive: true });
+
+  if (!existsSync(storagePath)) {
+    const tmpPath = `${storagePath}.tmp.${randomBytes(4).toString("hex")}`;
+    writeFileSync(tmpPath, fileBuffer);
+    renameSync(tmpPath, storagePath);
+  }
+
+  const record = await hubDb.attachments.create({
+    data: {
+      public_id: generateAttachmentPublicId(),
+      filepath: storagePath,
+      filename,
+      file_size: fileBuffer.length,
+      file_hash: fileHash,
+      purpose,
+      uploaded_by: uploadAsUserId,
+    },
   });
 
   getLogger().info(
-    `Uploaded attachment ${response.id} (${filename}) for user ${uploadAsUserId}`,
+    `Uploaded attachment ${record.id} (${filename}) for user ${uploadAsUserId}`,
   );
 
-  return response.id;
+  return record.id;
 }
 
 /**
- * Proxy a download request from the client through to the hub's attachment endpoint.
- * Streams the file directly from hub to client.
+ * Proxy a download request from the client from the hub attachment store.
+ * Streams the file directly from disk to the client.
  */
 export async function proxyDownloadFromHub(
   publicId: string,
   reply: FastifyReply,
-): Promise<void> {
-  const hubUrl = getHubUrl();
-  if (!hubUrl) {
-    throw new Error("Hub URL not configured");
-  }
-
-  // Look up the attachment to get the uploader's user ID
+): Promise<FastifyReply> {
   const attachment = await hubDb.attachments.findUnique({
     where: { public_id: publicId },
-    select: { uploaded_by: true },
   });
 
   if (!attachment) {
-    reply.code(404).send({ error: "Attachment not found" });
-    return;
+    return reply.code(404).send({ error: "Attachment not found" });
   }
 
-  // Look up the uploader's API key
-  const user = await hubDb.users.findUnique({
-    where: { id: attachment.uploaded_by },
-    select: { api_key: true },
-  });
-
-  if (!user?.api_key) {
-    reply.code(500).send({ error: "Cannot authenticate download to hub" });
-    return;
-  }
-
-  const url = new URL(`${hubUrl}/attachments/${publicId}`);
-  const httpModule = url.protocol === "https:" ? https : http;
-
-  return new Promise<void>((resolve, reject) => {
-    const req = httpModule.request(
-      url,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${user.api_key}`,
-        },
-      },
-      (res) => {
-        if (res.statusCode !== 200) {
-          let body = "";
-          res.on("data", (chunk) => (body += chunk));
-          res.on("end", () => {
-            reply.code(res.statusCode || 500).send({
-              error: `Hub download failed: ${body}`,
-            });
-            resolve();
-          });
-          return;
-        }
-
-        // Forward headers from hub
-        if (res.headers["content-disposition"]) {
-          reply.header(
-            "content-disposition",
-            res.headers["content-disposition"],
-          );
-        }
-        if (res.headers["content-type"]) {
-          reply.header("content-type", res.headers["content-type"]);
-        }
-        if (res.headers["content-length"]) {
-          reply.header("content-length", res.headers["content-length"]);
-        }
-
-        reply.send(res);
-        resolve();
-      },
-    );
-
-    req.on("error", (err) => {
-      getLogger().error(err, "Error proxying attachment download");
-      reject(err);
-    });
-    req.end();
-  });
+  return sendAttachmentResponse(
+    reply,
+    attachment.filepath,
+    attachment.filename,
+  ) as FastifyReply;
 }

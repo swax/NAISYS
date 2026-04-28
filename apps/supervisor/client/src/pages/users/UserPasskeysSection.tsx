@@ -364,9 +364,7 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
                   {new Date(p.createdAt).toLocaleDateString()}
                 </Table.Td>
                 <Table.Td>
-                  {p.lastUsedAt
-                    ? new Date(p.lastUsedAt).toLocaleString()
-                    : "—"}
+                  {p.lastUsedAt ? new Date(p.lastUsedAt).toLocaleString() : "—"}
                 </Table.Td>
                 <Table.Td>
                   <Button

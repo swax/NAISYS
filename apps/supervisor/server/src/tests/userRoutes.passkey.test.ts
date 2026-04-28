@@ -27,7 +27,7 @@ const mocks = vi.hoisted(() => ({
   rotateUserApiKey: vi.fn(),
   grantPermission: vi.fn(),
   revokePermission: vi.fn(),
-  getUserApiKey: vi.fn(),
+  hasUserApiKey: vi.fn(),
   createUserForAgent: vi.fn(),
   getUserByUuid: vi.fn(),
   getHubAgentById: vi.fn(),
@@ -88,7 +88,7 @@ vi.mock("../services/userService.js", () => ({
   createPasskeyUser: mocks.createPasskeyUser,
   createUserForAgent: mocks.createUserForAgent,
   deleteUser: mocks.deleteUser,
-  getUserApiKey: mocks.getUserApiKey,
+  hasUserApiKey: mocks.hasUserApiKey,
   getUserByUsername: mocks.getUserByUsername,
   getUserByUsernameWithPermissions: mocks.getUserByUsernameWithPermissions,
   getUserByUuid: mocks.getUserByUuid,
@@ -164,6 +164,8 @@ beforeEach(() => {
   mocks.deletePasskeyCredential.mockResolvedValue(true);
   mocks.renamePasskeyDeviceLabel.mockResolvedValue(true);
   mocks.userHasPasskey.mockResolvedValue(false);
+  mocks.hasUserApiKey.mockResolvedValue(false);
+  mocks.rotateUserApiKey.mockResolvedValue("generated-api-key");
   mocks.deleteAllSessionsForUser.mockResolvedValue(undefined);
   mocks.deleteAllPasskeyCredentialsForUser.mockResolvedValue(2);
 });

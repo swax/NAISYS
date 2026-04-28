@@ -33,19 +33,36 @@ export class AuthCache<TUser> {
       this.cache.delete(key);
       return undefined;
     }
+    // Re-insert to move to the end of Map iteration order, making eviction LRU rather than FIFO.
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry.user;
   }
 
   /** Cache a lookup result. Pass `null` to cache a negative (invalid token) result. */
   set(key: string, user: TUser | null) {
-    if (this.cache.size >= this.maxSize) {
+    if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
       const firstKey = this.cache.keys().next().value!;
       this.cache.delete(firstKey);
     }
+    // Delete first so re-inserting moves the entry to the end (LRU recency).
+    this.cache.delete(key);
     this.cache.set(key, {
       user,
       expiresAt: Date.now() + (user ? this.ttlMs : this.negativeTtlMs),
     });
+  }
+
+  /** Return the cached value, or run `loader` and cache its result (positive or negative). */
+  async getOrLoad(
+    key: string,
+    loader: () => Promise<TUser | null>,
+  ): Promise<TUser | null> {
+    const cached = this.get(key);
+    if (cached !== undefined) return cached;
+    const user = await loader();
+    this.set(key, user);
+    return user;
   }
 
   /** Remove a specific key from the cache (e.g. on logout). */

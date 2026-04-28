@@ -232,16 +232,19 @@ export async function enableAgent(id: number): Promise<void> {
 }
 
 export async function disableAgent(id: number): Promise<void> {
+  // Null api_key_hash so the user's runtime key stops authenticating against
+  // ERP/supervisor immediately, even if an agent process is still alive
+  // somewhere holding the plaintext.
   await hubDb.users.update({
     where: { id },
-    data: { enabled: false },
+    data: { enabled: false, api_key_hash: null },
   });
 }
 
 export async function archiveAgent(id: number): Promise<void> {
   await hubDb.users.update({
     where: { id },
-    data: { archived: true },
+    data: { archived: true, api_key_hash: null },
   });
 }
 

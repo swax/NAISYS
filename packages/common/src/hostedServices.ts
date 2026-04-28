@@ -15,6 +15,7 @@ export type StartHub = (
   wizardRan?: boolean,
 ) => Promise<{
   serverPort: number;
+  shutdown: () => Promise<void>;
 }>;
 
 /** Starts the Supervisor web server. Exported by @naisys/supervisor */

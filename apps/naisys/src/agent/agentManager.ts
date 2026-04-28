@@ -3,7 +3,7 @@ import {
   AgentPeekRequestSchema,
   AgentRunCommandRequestSchema,
   AgentRunPauseRequestSchema,
-  AgentStartRequestSchema,
+  AgentStartDispatchSchema,
   AgentStopRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
@@ -41,13 +41,17 @@ export class AgentManager {
         const hostname = this.globalConfig.globalConfig().hostname;
 
         try {
-          const parsed = AgentStartRequestSchema.parse(data);
+          const parsed = AgentStartDispatchSchema.parse(data);
 
           if (parsed.sourceHostId !== this.hostService.getLocalHostId()) {
             this.notifyHubRequest("start", parsed.startUserId);
           }
 
-          await this.startAgent(parsed.startUserId);
+          await this.startAgent(
+            parsed.startUserId,
+            undefined,
+            parsed.runtimeApiKey,
+          );
 
           ack({
             success: true,
@@ -202,7 +206,11 @@ export class AgentManager {
     });
   }
 
-  async startAgent(userId: number, onStop?: (reason: string) => void) {
+  async startAgent(
+    userId: number,
+    onStop?: (reason: string) => void,
+    runtimeApiKey?: string,
+  ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
     if (existing) {
@@ -220,6 +228,7 @@ export class AgentManager {
       this.userService,
       this.modelService,
       this.promptNotification,
+      runtimeApiKey,
     );
 
     this.runningAgents.push(agent);

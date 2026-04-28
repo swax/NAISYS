@@ -112,7 +112,6 @@ export const UserDetailResponseSchema = z.object({
   isAgent: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  apiKey: z.string().nullable().optional(),
   hasApiKey: z.boolean(),
   permissions: z.array(UserPermissionSchema),
   _links: z.array(HateoasLinkSchema),
@@ -123,6 +122,7 @@ export type UserDetailResponse = z.infer<typeof UserDetailResponseSchema>;
 export const UserActionResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+  apiKey: z.string().optional(),
 });
 export type UserActionResult = z.infer<typeof UserActionResultSchema>;
 

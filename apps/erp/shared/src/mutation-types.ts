@@ -61,7 +61,6 @@ export const RunCreateResponseSchema = CreateResponseSchema.extend({
 export const UserCreateResponseSchema = z.object({
   id: z.number(),
   username: z.string(),
-  apiKey: z.string().nullable().optional(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });

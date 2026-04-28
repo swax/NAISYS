@@ -1,15 +1,21 @@
 import { z } from "zod";
 
-/** Request to start an agent on its assigned host */
-export const AgentStartRequestSchema = z.object({
+/** Client (supervisor / NAISYS host) → hub. runtimeApiKey is intentionally absent. */
+export const AgentStartInboundSchema = z.object({
   startUserId: z.number(),
   taskDescription: z.string().optional(),
-  // Used for permission validation
-  requesterUserId: z.number().optional(),
-  // Used to prevent redundant notification on loop back
+  requesterUserId: z.number(),
+});
+export type AgentStartInbound = z.infer<typeof AgentStartInboundSchema>;
+
+/** Hub → target host. runtimeApiKey is issued by the hub per dispatch. */
+export const AgentStartDispatchSchema = z.object({
+  startUserId: z.number(),
+  taskDescription: z.string().optional(),
+  runtimeApiKey: z.string(),
   sourceHostId: z.number().optional(),
 });
-export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
+export type AgentStartDispatch = z.infer<typeof AgentStartDispatchSchema>;
 
 /** Response to agent start request */
 export const AgentStartResponseSchema = z.object({

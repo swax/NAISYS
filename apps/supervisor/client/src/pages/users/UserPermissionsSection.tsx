@@ -1,4 +1,12 @@
-import { Button, Group, Select, Stack, Table, Text, Title } from "@mantine/core";
+import {
+  Button,
+  Group,
+  Select,
+  Stack,
+  Table,
+  Text,
+  Title,
+} from "@mantine/core";
 import { hasAction } from "@naisys/common";
 import {
   type Permission,

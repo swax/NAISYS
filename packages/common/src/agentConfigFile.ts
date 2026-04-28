@@ -200,6 +200,5 @@ export interface UserEntry {
   enabled: boolean;
   leadUserId?: number;
   assignedHostIds?: number[];
-  apiKey?: string;
   config: AgentConfigFile;
 }

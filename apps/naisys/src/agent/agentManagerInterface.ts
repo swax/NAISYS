@@ -5,6 +5,7 @@ export interface IAgentManager {
   startAgent: (
     userId: number,
     onStop?: (reason: string) => void,
+    runtimeApiKey?: string,
   ) => Promise<number>;
   stopAgent: (agentUserId: number, reason: string) => Promise<void>;
   stopAll: (reason: string, excludeUserId?: number) => Promise<void>;

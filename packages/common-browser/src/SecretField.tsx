@@ -12,12 +12,14 @@ export interface SecretFieldProps {
   value: string | null;
   onRotate?: () => void;
   rotating?: boolean;
+  emptyLabel?: string;
 }
 
 export const SecretField: React.FC<SecretFieldProps> = ({
   value,
   onRotate,
   rotating,
+  emptyLabel = "Not set",
 }) => {
   const [visible, setVisible] = useState(false);
 
@@ -58,7 +60,7 @@ export const SecretField: React.FC<SecretFieldProps> = ({
         </>
       ) : (
         <Text c="dimmed" size="sm">
-          Not set
+          {emptyLabel}
         </Text>
       )}
       {onRotate && (

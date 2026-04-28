@@ -1,5 +1,8 @@
 import { hubDb } from "../database/hubDb.js";
 
+// Reserved at the agent shell — set by the runtime, not editable as a variable.
+const RESERVED_VARIABLE_KEYS = new Set(["NAISYS_API_KEY"]);
+
 export async function getVariables() {
   return hubDb.variables.findMany({ orderBy: { key: "asc" } });
 }
@@ -11,6 +14,9 @@ export async function saveVariable(
   sensitive: boolean,
   userUuid: string,
 ): Promise<{ success: boolean; message: string }> {
+  if (RESERVED_VARIABLE_KEYS.has(key)) {
+    throw new Error(`'${key}' is reserved and cannot be set as a variable`);
+  }
   await hubDb.variables.upsert({
     where: { key },
     update: {

@@ -1,16 +1,12 @@
 import { assertUrlSafeKey } from "@naisys/common";
-import { hashToken } from "@naisys/common-node";
-import {
-  getAgentApiKeyByUuid,
-  rotateAgentApiKeyByUuid,
-} from "@naisys/hub-database";
+import { generatePersistentUserApiKey } from "@naisys/common-node";
 import type { Permission } from "@naisys/supervisor-database";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 
 import supervisorDb from "../database/supervisorDb.js";
 
+export { hashToken } from "@naisys/common-node";
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";
-export { hashToken };
 
 export async function getUserByUsername(username: string) {
   return supervisorDb.user.findUnique({ where: { username } });
@@ -35,6 +31,16 @@ export async function createUserForAgent(username: string, uuid: string) {
       uuid,
       isAgent: true,
     },
+    include: { permissions: true },
+  });
+}
+
+export async function upsertUserForAgent(username: string, uuid: string) {
+  assertUrlSafeKey(username, "Username");
+  return supervisorDb.user.upsert({
+    where: { uuid },
+    create: { username, uuid, isAgent: true },
+    update: {},
     include: { permissions: true },
   });
 }
@@ -83,7 +89,6 @@ export async function createPasskeyUser(data: { username: string }) {
       username: data.username,
       uuid,
       isAgent: false,
-      apiKey: randomBytes(32).toString("hex"),
     },
     include: { permissions: true },
   });
@@ -144,37 +149,25 @@ export async function checkUserPermission(
   return perm !== null;
 }
 
-export async function getUserApiKey(id: number): Promise<string | null> {
+export async function hasUserApiKey(id: number): Promise<boolean> {
   const user = await supervisorDb.user.findUnique({
     where: { id },
-    select: { isAgent: true, uuid: true, apiKey: true },
+    select: { apiKeyHash: true },
   });
-  if (!user) return null;
-
-  if (user.isAgent) {
-    return getAgentApiKeyByUuid(user.uuid);
-  } else {
-    return user.apiKey ?? null;
-  }
+  return !!user?.apiKeyHash;
 }
 
 export async function rotateUserApiKey(id: number): Promise<string> {
-  const newKey = randomBytes(32).toString("hex");
-
-  const user = await supervisorDb.user.findUnique({
-    where: { id },
-    select: { isAgent: true, uuid: true },
+  return generatePersistentUserApiKey(id, {
+    userExists: async (userId) =>
+      (await supervisorDb.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      })) !== null,
+    updateApiKeyHash: (userId, apiKeyHash) =>
+      supervisorDb.user.update({
+        where: { id: userId },
+        data: { apiKeyHash },
+      }),
   });
-  if (!user) throw new Error("User not found");
-
-  if (user.isAgent) {
-    await rotateAgentApiKeyByUuid(user.uuid, newKey);
-  } else {
-    await supervisorDb.user.update({
-      where: { id },
-      data: { apiKey: newKey },
-    });
-  }
-
-  return newKey;
 }

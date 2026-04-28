@@ -14,6 +14,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
 import { type UserDetailResponse } from "@naisys/supervisor-shared";
@@ -52,7 +53,7 @@ export const UserDetail: React.FC = () => {
     try {
       const result = await getUser(routeUsername);
       setUser(result);
-      setApiKey(result.apiKey ?? null);
+      setApiKey(null);
     } catch {
       // error handled silently
     } finally {
@@ -83,7 +84,11 @@ export const UserDetail: React.FC = () => {
       await deleteUser(routeUsername);
       void navigate("/users");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete user");
+      notifications.show({
+        title: "Delete Failed",
+        message: err instanceof Error ? err.message : "Failed to delete user",
+        color: "red",
+      });
     }
   };
 
@@ -112,16 +117,24 @@ export const UserDetail: React.FC = () => {
     if (!routeUsername) return;
     if (
       !confirm(
-        "Rotate this user's API key? The old key will stop working immediately.",
+        "Generate a new API key? The old key will stop working immediately.",
       )
     )
       return;
     setRotating(true);
     try {
-      await rotateUserApiKey(routeUsername);
-      void fetchUser();
+      const result = await rotateUserApiKey(routeUsername);
+      setApiKey(result.apiKey ?? null);
+      setUser((current) =>
+        current ? { ...current, hasApiKey: !!result.apiKey } : current,
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to rotate API key");
+      notifications.show({
+        title: "Rotate Failed",
+        message:
+          err instanceof Error ? err.message : "Failed to rotate API key",
+        color: "red",
+      });
     } finally {
       setRotating(false);
     }
@@ -230,6 +243,7 @@ export const UserDetail: React.FC = () => {
               {apiKey !== null || hasAction(user._actions, "rotate-key") ? (
                 <SecretField
                   value={apiKey}
+                  emptyLabel={user.hasApiKey ? "Generated (hidden)" : "Not set"}
                   onRotate={
                     hasAction(user._actions, "rotate-key")
                       ? handleRotateKey

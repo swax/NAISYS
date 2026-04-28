@@ -4,7 +4,6 @@ import http from "http";
 import https from "https";
 import path from "path";
 
-import type { UserService } from "../agent/userService.js";
 import type { HubClient } from "../hub/hubClient.js";
 
 /**
@@ -72,8 +71,7 @@ function uploadFileToHub(
  */
 export function createAttachmentService(
   hubClient: HubClient | undefined,
-  userService: UserService,
-  localUserId: number,
+  runtimeApiKey?: string,
 ) {
   /**
    * Upload a file to the hub and return the attachment ID.
@@ -86,10 +84,14 @@ export function createAttachmentService(
       throw `File not found: ${filepath}`;
     }
 
-    const apiKey = userService.getUserById(localUserId)?.apiKey;
-    if (!apiKey) throw "No API key configured for this user.";
+    if (!runtimeApiKey) throw "No API key configured for this user.";
 
-    return uploadFileToHub(hubClient.getHubUrl(), apiKey, filepath, purpose);
+    return uploadFileToHub(
+      hubClient.getHubUrl(),
+      runtimeApiKey,
+      filepath,
+      purpose,
+    );
   }
 
   /**

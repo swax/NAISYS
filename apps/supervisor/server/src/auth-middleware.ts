@@ -1,4 +1,4 @@
-import { AuthCache } from "@naisys/common";
+import { AuthCache, urlMatchesPrefix } from "@naisys/common";
 import {
   extractBearerToken,
   hashToken,
@@ -11,9 +11,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { sendForbidden, sendUnauthorized } from "./error-helpers.js";
 import {
-  createUserForAgent,
-  getUserByUuid,
   getUserPermissions,
+  upsertUserForAgent,
 } from "./services/userService.js";
 
 export interface SupervisorUser {
@@ -43,7 +42,7 @@ function isPublicRoute(url: string): boolean {
   if (url === "/supervisor/api/" || url === "/supervisor/api") return true;
 
   for (const prefix of PUBLIC_PREFIXES) {
-    if (url.startsWith(prefix)) return true;
+    if (urlMatchesPrefix(url, prefix)) return true;
   }
 
   // Non-supervisor-API paths (static files, ERP routes, etc.)
@@ -65,55 +64,32 @@ export async function resolveUserFromToken(
   token: string,
 ): Promise<SupervisorUser | null> {
   const tokenHash = hashToken(token);
-  const cacheKey = `cookie:${tokenHash}`;
-  const cached = authCache.get(cacheKey);
-
-  if (cached !== undefined) return cached;
-
-  const session = await findSession(tokenHash);
-  if (!session) {
-    authCache.set(cacheKey, null);
-    return null;
-  }
-
-  const user = await buildSupervisorUser(
-    session.userId,
-    session.username,
-    session.uuid,
-  );
-  authCache.set(cacheKey, user);
-  return user;
+  return authCache.getOrLoad(`cookie:${tokenHash}`, async () => {
+    const session = await findSession(tokenHash);
+    if (!session) return null;
+    return buildSupervisorUser(session.userId, session.username, session.uuid);
+  });
 }
 
 export async function resolveUserFromApiKey(
   apiKey: string,
 ): Promise<SupervisorUser | null> {
-  const apiKeyHash = hashToken(apiKey);
-  const cacheKey = `apikey:${apiKeyHash}`;
-  const cached = authCache.get(cacheKey);
+  return authCache.getOrLoad(`apikey:${hashToken(apiKey)}`, async () => {
+    // Supervisor DB holds humans + agents with external keys; hub DB holds
+    // agents matching their hub-issued runtime key.
+    const match =
+      (await findUserByApiKey(apiKey)) ?? (await findAgentByApiKey(apiKey));
+    if (!match) return null;
 
-  if (cached !== undefined) return cached;
+    const localUser = await upsertUserForAgent(match.username, match.uuid);
 
-  // Try supervisor DB first (human users), then hub DB (agents)
-  const match =
-    (await findUserByApiKey(apiKey)) ?? (await findAgentByApiKey(apiKey));
-  if (!match) {
-    authCache.set(cacheKey, null);
-    return null;
-  }
-
-  let localUser = await getUserByUuid(match.uuid);
-  if (!localUser) {
-    localUser = await createUserForAgent(match.username, match.uuid);
-  }
-
-  const user = await buildSupervisorUser(
-    localUser.id,
-    localUser.username,
-    localUser.uuid,
-  );
-  authCache.set(cacheKey, user);
-  return user;
+    return {
+      id: localUser.id,
+      username: localUser.username,
+      uuid: localUser.uuid,
+      permissions: localUser.permissions.map((p) => p.permission),
+    };
+  });
 }
 
 export function registerAuthMiddleware(fastify: FastifyInstance) {

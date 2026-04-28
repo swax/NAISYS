@@ -1,3 +1,4 @@
+import { hashToken } from "@naisys/common-node";
 import { existsSync } from "fs";
 
 import { hubDbPath } from "./dbConfig.js";
@@ -23,7 +24,7 @@ export async function createHubDatabaseClient(): Promise<boolean> {
 }
 
 /**
- * Find an agent (from the hub `users` table) by API key.
+ * Find an agent (from the hub `users` table) by runtime API key.
  */
 export async function findAgentByApiKey(
   apiKey: string,
@@ -31,7 +32,7 @@ export async function findAgentByApiKey(
   if (!prisma) return null;
 
   const user = await prisma.users.findUnique({
-    where: { api_key: apiKey },
+    where: { api_key_hash: hashToken(apiKey) },
     select: { uuid: true, username: true },
   });
 
@@ -50,22 +51,6 @@ export async function getHubAgentById(
     where: { id },
     select: { id: true, uuid: true, username: true },
   });
-}
-
-/**
- * Look up an agent's API key by UUID.
- */
-export async function getAgentApiKeyByUuid(
-  uuid: string,
-): Promise<string | null> {
-  if (!prisma) return null;
-
-  const user = await prisma.users.findFirst({
-    where: { uuid },
-    select: { api_key: true },
-  });
-
-  return user?.api_key ?? null;
 }
 
 /**
@@ -117,27 +102,6 @@ export async function sumCostsByUuid(
   });
 
   return result._sum.cost ?? 0;
-}
-
-/**
- * Rotate an agent's API key by UUID.
- */
-export async function rotateAgentApiKeyByUuid(
-  uuid: string,
-  newKey: string,
-): Promise<void> {
-  if (!prisma) throw new Error("Hub database not initialized");
-
-  const user = await prisma.users.findFirst({
-    where: { uuid },
-    select: { id: true },
-  });
-  if (!user) throw new Error("Agent not found in hub database");
-
-  await prisma.users.update({
-    where: { id: user.id },
-    data: { api_key: newKey },
-  });
 }
 
 /**

@@ -57,6 +57,7 @@ export async function createAgentRuntime(
   userService: UserService,
   modelService: ModelService,
   promptNotification: PromptNotificationService,
+  runtimeApiKey?: string,
 ) {
   /*
    * Per-agent composition root. Keep this as linear hand-wiring rather than a
@@ -72,11 +73,7 @@ export async function createAgentRuntime(
     hubClient,
     localUserId,
   );
-  const attachmentService = createAttachmentService(
-    hubClient,
-    userService,
-    localUserId,
-  );
+  const attachmentService = createAttachmentService(hubClient, runtimeApiKey);
   const logService = createLogService(
     hubLogBuffer,
     runService,
@@ -90,8 +87,7 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     output,
-    userService,
-    localUserId,
+    runtimeApiKey,
   );
   const workspaces = createWorkspacesFeature(shellWrapper);
 

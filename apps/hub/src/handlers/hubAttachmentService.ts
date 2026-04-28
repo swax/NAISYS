@@ -1,23 +1,25 @@
-import { mimeFromFilename } from "@naisys/common";
-import type { DualLogger } from "@naisys/common-node";
-import { extractBearerToken } from "@naisys/common-node";
+import {
+  type DualLogger,
+  extractBearerToken,
+  generateAttachmentPublicId,
+  getHubAttachmentPath,
+  hashToken,
+  MAX_HUB_ATTACHMENT_SIZE,
+  sendAttachmentResponse,
+} from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AttachmentPurpose } from "@naisys/hub-database";
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
 import type { FastifyInstance } from "fastify";
 import {
-  createReadStream,
   createWriteStream,
   existsSync,
   mkdirSync,
   renameSync,
-  statSync,
   unlinkSync,
 } from "fs";
 import { join } from "path";
 import { pipeline, Writable } from "stream";
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 /**
  * HTTP attachment upload/download service.
@@ -31,7 +33,9 @@ export function createHubAttachmentService(
   const naisysFolder = process.env.NAISYS_FOLDER || "";
 
   async function resolveUserByApiKey(apiKey: string): Promise<number | null> {
-    const user = await hubDb.users.findUnique({ where: { api_key: apiKey } });
+    const user = await hubDb.users.findUnique({
+      where: { api_key_hash: hashToken(apiKey) },
+    });
     return user?.id ?? null;
   }
 
@@ -83,9 +87,9 @@ export function createHubAttachmentService(
           return reply.code(400).send({ error: "Invalid filesize" });
         }
 
-        if (fileSize > MAX_FILE_SIZE) {
+        if (fileSize > MAX_HUB_ATTACHMENT_SIZE) {
           return reply.code(413).send({
-            error: `File too large. Max size: ${MAX_FILE_SIZE} bytes`,
+            error: `File too large. Max size: ${MAX_HUB_ATTACHMENT_SIZE} bytes`,
           });
         }
 
@@ -114,7 +118,7 @@ export function createHubAttachmentService(
           const sizeChecker = new Writable({
             write(chunk: Buffer, _encoding, callback) {
               bytesWritten += chunk.length;
-              if (bytesWritten > MAX_FILE_SIZE) {
+              if (bytesWritten > MAX_HUB_ATTACHMENT_SIZE) {
                 callback(new Error("File exceeds size limit"));
                 return;
               }
@@ -160,16 +164,11 @@ export function createHubAttachmentService(
           });
         }
 
-        // Move to content-addressable path: attachments/hub/<first2>/<next2>/<fullhash>
-        const storageDir = join(
+        const { storageDir, storagePath } = getHubAttachmentPath(
           naisysFolder,
-          "attachments",
-          "hub",
-          computedHash.slice(0, 2),
-          computedHash.slice(2, 4),
+          computedHash,
         );
         mkdirSync(storageDir, { recursive: true });
-        const storagePath = join(storageDir, computedHash);
 
         if (existsSync(storagePath)) {
           // Dedup: identical file already on disk, discard temp
@@ -182,10 +181,9 @@ export function createHubAttachmentService(
           renameSync(tmpPath, storagePath);
         }
 
-        // Create DB record
         const record = await hubDb.attachments.create({
           data: {
-            public_id: randomBytes(8).toString("base64url").slice(0, 10),
+            public_id: generateAttachmentPublicId(),
             filepath: storagePath,
             filename,
             file_size: bytesWritten,
@@ -242,28 +240,11 @@ export function createHubAttachmentService(
       return reply.code(404).send({ error: "Attachment not found" });
     }
 
-    if (!existsSync(attachment.filepath)) {
-      return reply
-        .code(404)
-        .send({ error: "Attachment file missing from disk" });
-    }
-
-    const stat = statSync(attachment.filepath);
-    const contentType = mimeFromFilename(attachment.filename);
-    const disposition = contentType.startsWith("image/")
-      ? "inline"
-      : "attachment";
-
-    reply
-      .header("Content-Type", contentType)
-      .header(
-        "Content-Disposition",
-        `${disposition}; filename="${attachment.filename.replace(/"/g, '\\"')}"`,
-      )
-      .header("Content-Length", stat.size);
-
-    const readStream = createReadStream(attachment.filepath);
-    return reply.send(readStream);
+    return sendAttachmentResponse(
+      reply,
+      attachment.filepath,
+      attachment.filename,
+    );
   }
 
   fastify.get<{ Params: { publicId: string; filename: string } }>(

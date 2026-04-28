@@ -18,4 +18,5 @@ export * from "./modelTypes.js";
 export * from "./securityHeaders.js";
 export * from "./sleep.js";
 export * from "./templateVars.js";
+export * from "./urlPathMatch.js";
 export * from "./urlSafeKey.js";
