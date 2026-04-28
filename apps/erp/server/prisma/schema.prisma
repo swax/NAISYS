@@ -418,8 +418,8 @@ model User {
   id           Int       @id @default(autoincrement())
   uuid         String    @unique
   username     String    @unique
-  passwordHash String    @map("password_hash")
-  apiKey       String?   @unique @map("api_key")
+  passwordHash String?   @map("password_hash")
+  apiKeyHash   String?   @unique @map("api_key_hash")
   isAgent      Boolean   @default(false) @map("is_agent")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")

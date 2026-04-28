@@ -109,7 +109,7 @@ function userActions(
     rel: "rotate-key",
     href: `${href}/rotate-key`,
     method: "POST",
-    title: "Rotate API Key",
+    title: "Generate API Key",
     ...adminGate,
   });
 
@@ -177,20 +177,19 @@ function formatUser(
   user: Awaited<ReturnType<typeof userService.getUserById>>,
   currentUserId: number,
   currentUserPermissions: Permission[],
-  options?: { agentUsername?: string | null; apiKey?: string | null },
+  options?: { agentUsername?: string | null; hasApiKey?: boolean },
 ) {
   if (!user) return null;
   const isSelf = user.id === currentUserId;
   const isAdmin = currentUserPermissions.includes("supervisor_admin");
-  const apiKeyValue = options?.apiKey ?? null;
+  const hasApiKey = options?.hasApiKey ?? false;
   return {
     id: user.id,
     username: user.username,
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
-    apiKey: isAdmin ? apiKeyValue : undefined,
-    hasApiKey: apiKeyValue !== null,
+    hasApiKey,
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
@@ -424,13 +423,13 @@ export default function userRoutes(
         agentUsername = hubAgent?.username ?? null;
       }
 
-      const apiKey = await userService.getUserApiKey(user.id);
+      const hasApiKey = await userService.hasUserApiKey(user.id);
 
       return formatUser(
         user,
         request.supervisorUser?.id ?? 0,
         request.supervisorUser?.permissions ?? [],
-        { agentUsername, apiKey },
+        { agentUsername, hasApiKey },
       );
     },
   );
@@ -516,9 +515,13 @@ export default function userRoutes(
       if (!targetUser) {
         return notFound(reply, "User not found");
       }
-      await userService.rotateUserApiKey(targetUser.id);
+      const apiKey = await userService.rotateUserApiKey(targetUser.id);
       authCache.clear();
-      return { success: true, message: "API key rotated" };
+      return {
+        success: true,
+        message: "API key generated. Copy it now; it cannot be shown again.",
+        apiKey,
+      };
     },
   );
 

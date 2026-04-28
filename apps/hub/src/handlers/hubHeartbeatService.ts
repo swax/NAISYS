@@ -1,5 +1,5 @@
 import type { DualLogger } from "@naisys/common-node";
-import type { HubDatabaseService } from "@naisys/hub-database";
+import { type HubDatabaseService } from "@naisys/hub-database";
 import type {
   AgentsStatus,
   CommandLoopState,
@@ -122,7 +122,9 @@ export function createHubHeartbeatService(
     }
   });
 
-  // Clean up tracking when a host disconnects
+  // Clean up tracking when a host disconnects. Runtime API keys are not
+  // touched here — they're rotated on the next AGENT_START and revoked
+  // explicitly on user disable/archive/delete.
   naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
     hostActiveAgents.delete(hostId);
     hostActiveSessions.delete(hostId);

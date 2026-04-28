@@ -90,6 +90,7 @@ const agentPath = program.args[0] || ".";
 let hubUrl: string | undefined = program.opts().hub;
 const integratedHub = Boolean(program.opts().integratedHub);
 let supervisorUrl: string | undefined;
+let integratedHubShutdown: (() => Promise<void>) | undefined;
 
 if (integratedHub) {
   // Don't import the hub module tree unless needed, sharing the same process space is to save memory on small servers
@@ -105,6 +106,7 @@ if (integratedHub) {
     agentPath,
     wizardRan,
   );
+  integratedHubShutdown = hubResult.shutdown;
   hubUrl = `http://localhost:${hubResult.serverPort}/hub`;
   if (program.opts().supervisor) {
     supervisorUrl = `http://localhost:${hubResult.serverPort}/supervisor`;
@@ -203,6 +205,9 @@ await agentManager.waitForAllAgentsToComplete();
 hubLogBuffer?.cleanup();
 hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
+if (integratedHubShutdown) {
+  await integratedHubShutdown();
+}
 
 if (updateService?.isUpdateInProgress()) {
   // Update handler exits after handing off restart management to the wrapper or PM2

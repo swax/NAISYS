@@ -21,7 +21,7 @@ export default function attachmentRoutes(
       return reply.code(400).send({ error: "Missing attachment ID" });
     }
 
-    await proxyDownloadFromHub(publicId, reply);
+    return await proxyDownloadFromHub(publicId, reply);
   };
 
   const schema = {

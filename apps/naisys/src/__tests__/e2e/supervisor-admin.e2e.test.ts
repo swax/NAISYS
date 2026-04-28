@@ -131,11 +131,12 @@ SERVER_PORT=${SERVER_PORT}
     const limitedDetail = await admin.get<UserDetailResponse>(
       `/users/${limitedUsername}`,
     );
-    expect(limitedDetail.apiKey).toEqual(expect.any(String));
-    const limited = createSupervisorApiKeyClient(
-      API_BASE,
-      limitedDetail.apiKey!,
+    expect(limitedDetail.hasApiKey).toBe(false);
+    const limitedKey = await admin.post<SuccessResponse & { apiKey: string }>(
+      `/users/${limitedUsername}/rotate-key`,
     );
+    expect(limitedKey.apiKey).toEqual(expect.any(String));
+    const limited = createSupervisorApiKeyClient(API_BASE, limitedKey.apiKey);
 
     // ---- Step 2 cont.: privileged action without permission must 403 ----
     await expect(

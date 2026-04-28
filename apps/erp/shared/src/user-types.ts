@@ -76,7 +76,7 @@ export const UserSchema = z.object({
   isAgent: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  apiKey: z.string().nullable().optional(),
+  hasApiKey: z.boolean(),
   permissions: z.array(UserPermissionSchema),
   _links: z.array(z.any()).optional(),
   _actions: z.array(z.any()).optional(),

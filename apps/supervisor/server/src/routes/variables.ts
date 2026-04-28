@@ -122,7 +122,8 @@ export default function variablesRoutes(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save variable";
-        return reply.code(500).send({ success: false, message });
+        const status = message.includes("reserved") ? 400 : 500;
+        return reply.code(status).send({ success: false, message });
       }
     },
   );

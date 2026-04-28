@@ -10,11 +10,9 @@ export { deployPrismaMigrations } from "@naisys/common-node";
 export {
   createHubDatabaseClient,
   findAgentByApiKey,
-  getAgentApiKeyByUuid,
   getHubAgentById,
   getHubVariable,
   getLatestRunInfoByUuid,
-  rotateAgentApiKeyByUuid,
   sumCostsByUuid,
 } from "./hubSessionService.js";
 // Re-export Prisma Client and all generated types

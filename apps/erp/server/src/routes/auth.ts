@@ -58,7 +58,7 @@ export default function authRoutes(fastify: FastifyInstance) {
 
       // Standalone mode: authenticate against local DB
       const user = await erpDb.user.findUnique({ where: { username } });
-      if (!user) {
+      if (!user || user.passwordHash === null) {
         return unauthorized(reply, "Invalid username or password");
       }
 

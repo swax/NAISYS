@@ -1,7 +1,7 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 
 import erpDb from "./erpDb.js";
 
@@ -34,7 +34,6 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
         uuid: randomUUID(),
         username: SUPER_ADMIN_USERNAME,
         passwordHash: hash,
-        apiKey: randomBytes(32).toString("hex"),
       },
     });
 
@@ -61,8 +60,8 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
 
 /**
  * Sync superadmin from supervisor into ERP DB and ensure permissions.
- * For supervisor auth mode. The supervisor uses passkey-only auth, so the
- * mirrored ERP row stores a sentinel passwordHash that can never match.
+ * For supervisor auth mode. Supervisor uses passkey-only auth — the
+ * mirrored ERP row has no passwordHash.
  */
 export async function ensureSupervisorSuperAdmin(): Promise<void> {
   const result = await ensureSuperAdmin();
@@ -72,12 +71,9 @@ export async function ensureSupervisorSuperAdmin(): Promise<void> {
     create: {
       uuid: result.user.uuid,
       username: result.user.username,
-      passwordHash: "!sso-passkey-only",
-      apiKey: result.user.apiKey,
     },
     update: {
       username: result.user.username,
-      apiKey: result.user.apiKey,
     },
   });
 

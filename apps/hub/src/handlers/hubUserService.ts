@@ -19,7 +19,6 @@ export function createHubUserService(
         enabled: true,
         config: true,
         lead_user_id: true,
-        api_key: true,
         user_hosts: {
           select: { host_id: true },
         },
@@ -36,7 +35,6 @@ export function createHubUserService(
         u.user_hosts.length > 0
           ? u.user_hosts.map((uh) => uh.host_id)
           : undefined,
-      apiKey: u.api_key || undefined,
     }));
 
     return { success: true, users };

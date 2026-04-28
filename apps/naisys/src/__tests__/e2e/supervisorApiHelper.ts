@@ -1,5 +1,7 @@
 import { sleep } from "@naisys/common";
+import { hashToken } from "@naisys/common-node";
 import { createPrismaClient } from "@naisys/supervisor-database";
+import { randomBytes } from "crypto";
 import { join } from "path";
 import type { Page } from "playwright";
 
@@ -103,22 +105,27 @@ export function createSupervisorApiKeyClient(
   });
 }
 
-export async function readSupervisorUserApiKey(
+export async function generateSupervisorUserApiKey(
   naisys: NaisysTestProcess,
   username: string,
 ): Promise<string> {
+  const apiKey = randomBytes(32).toString("hex");
   const db = await createPrismaClient(
     join(naisys.testDir, "database", "supervisor.db"),
   );
   try {
     const user = await db.user.findUnique({
       where: { username },
-      select: { apiKey: true },
+      select: { id: true },
     });
-    if (!user?.apiKey) {
-      throw new Error(`Supervisor user ${username} does not have an API key`);
+    if (!user) {
+      throw new Error(`Supervisor user ${username} does not exist`);
     }
-    return user.apiKey;
+    await db.user.update({
+      where: { id: user.id },
+      data: { apiKeyHash: hashToken(apiKey) },
+    });
+    return apiKey;
   } finally {
     await db.$disconnect();
   }
@@ -128,7 +135,7 @@ export async function loginAsSuperAdmin(
   naisys: NaisysTestProcess,
   baseUrl: string,
 ): Promise<SupervisorApiClient> {
-  const apiKey = await readSupervisorUserApiKey(naisys, "superadmin");
+  const apiKey = await generateSupervisorUserApiKey(naisys, "superadmin");
   return createSupervisorApiKeyClient(baseUrl, apiKey);
 }
 

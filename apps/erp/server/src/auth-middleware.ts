@@ -1,4 +1,4 @@
-import { AuthCache } from "@naisys/common";
+import { AuthCache, urlMatchesPrefix } from "@naisys/common";
 import {
   extractBearerToken,
   hashToken,
@@ -34,6 +34,71 @@ async function loadPermissions(userId: number): Promise<ErpPermission[]> {
     select: { permission: true },
   });
   return perms.map((p) => p.permission);
+}
+
+async function materializeErpUser(localUser: {
+  id: number;
+  username: string;
+}): Promise<ErpUser> {
+  return {
+    id: localUser.id,
+    username: localUser.username,
+    permissions: await loadPermissions(localUser.id),
+  };
+}
+
+async function resolveCookie(token: string): Promise<ErpUser | null> {
+  const tokenHash = hashToken(token);
+  return authCache.getOrLoad(`cookie:${tokenHash}`, async () => {
+    const localUser = isSupervisorAuth()
+      ? await loadCookieUserSso(tokenHash)
+      : await loadCookieUserStandalone(tokenHash);
+    return localUser ? materializeErpUser(localUser) : null;
+  });
+}
+
+async function loadCookieUserSso(tokenHash: string) {
+  const session = await findSession(tokenHash);
+  if (!session) return null;
+  return erpDb.user.upsert({
+    where: { uuid: session.uuid },
+    create: { uuid: session.uuid, username: session.username },
+    update: {},
+  });
+}
+
+async function loadCookieUserStandalone(tokenHash: string) {
+  const session = await erpDb.session.findUnique({
+    where: { tokenHash, expiresAt: { gt: new Date() } },
+    include: { user: true },
+  });
+  return session?.user ?? null;
+}
+
+async function resolveApiKey(apiKey: string): Promise<ErpUser | null> {
+  const apiKeyHash = hashToken(apiKey);
+  return authCache.getOrLoad(`apikey:${apiKeyHash}`, async () => {
+    const localUser = isSupervisorAuth()
+      ? await loadApiKeyUserSso(apiKey)
+      : await erpDb.user.findUnique({ where: { apiKeyHash } });
+    return localUser ? materializeErpUser(localUser) : null;
+  });
+}
+
+async function loadApiKeyUserSso(apiKey: string) {
+  // Try supervisor DB (humans + agents with external keys),
+  // then hub DB (agents matching their hub-issued runtime key).
+  const supervisorUser = await findUserByApiKey(apiKey);
+  const hubAgent = supervisorUser ? null : await findAgentByApiKey(apiKey);
+  const match = supervisorUser ?? hubAgent;
+  if (!match) return null;
+
+  const isAgent = supervisorUser?.isAgent ?? !!hubAgent;
+  return erpDb.user.upsert({
+    where: { uuid: match.uuid },
+    create: { uuid: match.uuid, username: match.username, isAgent },
+    update: {},
+  });
 }
 
 export function hasPermission(
@@ -73,13 +138,11 @@ function isPublicRoute(url: string): boolean {
   // Exact match: API root
   if (url === "/erp/api/" || url === "/erp/api") return true;
 
-  // Prefix matches
   for (const prefix of PUBLIC_PREFIXES) {
-    if (url.startsWith(prefix)) return true;
+    if (urlMatchesPrefix(url, prefix)) return true;
   }
 
-  // Schema routes
-  if (url.startsWith("/erp/api/schemas")) return true;
+  if (urlMatchesPrefix(url, "/erp/api/schemas")) return true;
 
   // Non-ERP-API paths (static files, supervisor routes, etc.)
   if (!url.startsWith("/erp/api")) return true;
@@ -94,132 +157,21 @@ export function registerAuthMiddleware(fastify: FastifyInstance) {
 
   fastify.addHook("onRequest", async (request, reply) => {
     const token = request.cookies?.[SESSION_COOKIE_NAME];
-
     if (token) {
-      const tokenHash = hashToken(token);
-      const cacheKey = `cookie:${tokenHash}`;
-      const cached = authCache.get(cacheKey);
-
-      if (cached !== undefined) {
-        // Cache hit (valid or negative)
-        if (cached) request.erpUser = cached;
-      } else if (isSupervisorAuth()) {
-        // SSO mode: supervisor DB is source of truth for sessions
-        const session = await findSession(tokenHash);
-        if (session) {
-          let localUser = await erpDb.user.findUnique({
-            where: { uuid: session.uuid },
-          });
-          if (!localUser) {
-            localUser = await erpDb.user.create({
-              data: {
-                uuid: session.uuid,
-                username: session.username,
-                passwordHash: "!sso-passkey-only",
-              },
-            });
-          }
-          const permissions = await loadPermissions(localUser.id);
-          const erpUser = {
-            id: localUser.id,
-            username: localUser.username,
-            permissions,
-          };
-          authCache.set(cacheKey, erpUser);
-          request.erpUser = erpUser;
-        } else {
-          authCache.set(cacheKey, null);
-        }
-      } else {
-        // Standalone mode: local session only
-        const session = await erpDb.session.findUnique({
-          where: {
-            tokenHash,
-            expiresAt: { gt: new Date() },
-          },
-          include: { user: true },
-        });
-        if (session) {
-          const permissions = await loadPermissions(session.user.id);
-          const erpUser = {
-            id: session.user.id,
-            username: session.user.username,
-            permissions,
-          };
-          authCache.set(cacheKey, erpUser);
-          request.erpUser = erpUser;
-        } else {
-          authCache.set(cacheKey, null);
-        }
-      }
+      const user = await resolveCookie(token);
+      if (user) request.erpUser = user;
     }
 
-    // API key auth (for agents / machine-to-machine)
     if (!request.erpUser) {
       const apiKey = extractBearerToken(request.headers.authorization);
       if (apiKey) {
-        const apiKeyHash = hashToken(apiKey);
-        const cacheKey = `apikey:${apiKeyHash}`;
-        const cached = authCache.get(cacheKey);
-
-        if (cached !== undefined) {
-          if (cached) request.erpUser = cached;
-        } else if (isSupervisorAuth()) {
-          // SSO mode: try supervisor DB (human users), then hub DB (agents)
-          const match =
-            (await findUserByApiKey(apiKey)) ??
-            (await findAgentByApiKey(apiKey));
-          if (match) {
-            let localUser = await erpDb.user.findUnique({
-              where: { uuid: match.uuid },
-            });
-            if (!localUser) {
-              localUser = await erpDb.user.create({
-                data: {
-                  uuid: match.uuid,
-                  username: match.username,
-                  passwordHash: "!api-key-only",
-                  isAgent: true,
-                },
-              });
-            }
-            const permissions = await loadPermissions(localUser.id);
-            const erpUser = {
-              id: localUser.id,
-              username: localUser.username,
-              permissions,
-            };
-            authCache.set(cacheKey, erpUser);
-            request.erpUser = erpUser;
-          } else {
-            authCache.set(cacheKey, null);
-          }
-        } else {
-          // Standalone mode: check local ERP user table
-          const localUser = await erpDb.user.findUnique({
-            where: { apiKey },
-          });
-          if (localUser) {
-            const permissions = await loadPermissions(localUser.id);
-            const erpUser = {
-              id: localUser.id,
-              username: localUser.username,
-              permissions,
-            };
-            authCache.set(cacheKey, erpUser);
-            request.erpUser = erpUser;
-          } else {
-            authCache.set(cacheKey, null);
-          }
-        }
+        const user = await resolveApiKey(apiKey);
+        if (user) request.erpUser = user;
       }
     }
 
-    // Check if auth is required
     if (request.erpUser) return; // Authenticated, always allowed
-
     if (isPublicRoute(request.url)) return; // Public route
-
     if (publicRead && request.method === "GET") return; // Public read mode
 
     reply.status(401).send({

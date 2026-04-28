@@ -1,13 +1,9 @@
+import { generatePersistentUserApiKey } from "@naisys/common-node";
 import type { ErpPermission } from "@naisys/erp-shared";
-import {
-  getAgentApiKeyByUuid,
-  rotateAgentApiKeyByUuid,
-} from "@naisys/hub-database";
 import bcrypt from "bcryptjs";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 
 import erpDb from "../erpDb.js";
-import { isSupervisorAuth } from "../supervisorAuth.js";
 
 // --- Prisma include & result type ---
 
@@ -70,18 +66,12 @@ export async function getUserById(id: number) {
   });
 }
 
-export async function getUserApiKey(id: number): Promise<string | null> {
+export async function hasUserApiKey(id: number): Promise<boolean> {
   const user = await erpDb.user.findUnique({
     where: { id },
-    select: { isAgent: true, uuid: true, apiKey: true },
+    select: { apiKeyHash: true },
   });
-  if (!user) return null;
-
-  if (user.isAgent && isSupervisorAuth()) {
-    return getAgentApiKeyByUuid(user.uuid);
-  } else {
-    return user.apiKey ?? null;
-  }
+  return !!user?.apiKeyHash;
 }
 
 // --- Mutations ---
@@ -98,7 +88,6 @@ export async function createUserForAgent(username: string, uuid: string) {
     data: {
       username,
       uuid,
-      passwordHash: "",
       isAgent: true,
     },
     include: includePermissions,
@@ -117,7 +106,6 @@ export async function createUserWithPassword(data: {
       uuid,
       passwordHash,
       isAgent: false,
-      apiKey: randomBytes(32).toString("hex"),
     },
     include: includePermissions,
   });
@@ -166,22 +154,16 @@ export async function revokePermission(
 }
 
 export async function rotateUserApiKey(id: number): Promise<string> {
-  const newKey = randomBytes(32).toString("hex");
-
-  const user = await erpDb.user.findUnique({
-    where: { id },
-    select: { isAgent: true, uuid: true },
+  return generatePersistentUserApiKey(id, {
+    userExists: async (userId) =>
+      (await erpDb.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      })) !== null,
+    updateApiKeyHash: (userId, apiKeyHash) =>
+      erpDb.user.update({
+        where: { id: userId },
+        data: { apiKeyHash },
+      }),
   });
-  if (!user) throw new Error("User not found");
-
-  if (user.isAgent && isSupervisorAuth()) {
-    await rotateAgentApiKeyByUuid(user.uuid, newKey);
-  } else {
-    await erpDb.user.update({
-      where: { id },
-      data: { apiKey: newKey },
-    });
-  }
-
-  return newKey;
 }

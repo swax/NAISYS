@@ -6,7 +6,7 @@ import {
   type HubDatabaseService,
   type PrismaClient,
 } from "@naisys/hub-database";
-import { randomBytes, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 
 /** Seeds agent configs from YAML files into an empty database. Skips if users already exist. */
 export async function seedAgentConfigs(
@@ -57,7 +57,6 @@ async function seedUsersToDatabase(
         username: safeUsername,
         title: user.config.title,
         config: JSON.stringify({ ...user.config, username: safeUsername }),
-        api_key: randomBytes(32).toString("hex"),
       },
     });
 

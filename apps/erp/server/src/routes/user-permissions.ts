@@ -9,9 +9,11 @@ import {
   getUserById,
   getUserByUsername,
   grantPermission,
+  hasUserApiKey,
   revokePermission,
   rotateUserApiKey,
 } from "../services/user-service.js";
+import { isSupervisorAuth } from "../supervisorAuth.js";
 import { formatUser } from "./users.js";
 
 export default function userPermissionRoutes(fastify: FastifyInstance) {
@@ -32,14 +34,26 @@ export default function userPermissionRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      if (isSupervisorAuth()) {
+        reply.code(400);
+        return {
+          success: false,
+          message:
+            "API keys are managed by the supervisor when SSO is enabled.",
+        };
+      }
       const targetUser = await getUserByUsername(request.params.username);
       if (!targetUser) {
         reply.code(404);
         return { success: false, message: "User not found" };
       }
-      await rotateUserApiKey(targetUser.id);
+      const apiKey = await rotateUserApiKey(targetUser.id);
       authCache.clear();
-      return { success: true, message: "API key rotated" };
+      return {
+        success: true,
+        message: "API key generated. Copy it now; it cannot be shown again.",
+        apiKey,
+      };
     },
   );
 
@@ -70,10 +84,12 @@ export default function userPermissionRoutes(fastify: FastifyInstance) {
         );
         authCache.clear();
         const user = await getUserById(targetUser.id);
+        const hasApiKey = user ? await hasUserApiKey(user.id) : false;
         const full = formatUser(
           user,
           request.erpUser!.id,
           request.erpUser!.permissions,
+          { hasApiKey },
         );
         return mutationResult(request, reply, full, {
           _actions: full!._actions,
@@ -129,10 +145,12 @@ export default function userPermissionRoutes(fastify: FastifyInstance) {
       await revokePermission(targetUser.id, permission);
       authCache.clear();
       const user = await getUserById(targetUser.id);
+      const hasApiKey = user ? await hasUserApiKey(user.id) : false;
       const full = formatUser(
         user,
         request.erpUser!.id,
         request.erpUser!.permissions,
+        { hasApiKey },
       );
       return mutationResult(request, reply, full, {
         _actions: full!._actions,

@@ -9,7 +9,6 @@ import stripAnsi from "strip-ansi";
 import treeKill from "tree-kill";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { UserService } from "../agent/userService.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
@@ -28,11 +27,8 @@ export function createShellWrapper(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   output: OutputService,
-  userService: UserService,
-  localUserId: number,
+  runtimeApiKey?: string,
 ) {
-  const _apiKey = userService.getUserById(localUserId)?.apiKey;
-
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
   const _commandOutput = createOutputBuffer(OUTPUT_HEAD_MAX, OUTPUT_TAIL_MAX);
@@ -79,8 +75,8 @@ export function createShellWrapper(
    */
   function getCleanEnv() {
     const cleanEnv = { ...process.env, ...globalConfig().shellVariableMap };
-    if (_apiKey) {
-      cleanEnv.NAISYS_API_KEY = _apiKey;
+    if (runtimeApiKey) {
+      cleanEnv.NAISYS_API_KEY = runtimeApiKey;
     }
     return cleanEnv;
   }

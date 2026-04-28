@@ -1,0 +1,2 @@
+-- No-op. Password hashes were removed by the passkey auth migration before
+-- this placeholder migration was created.
