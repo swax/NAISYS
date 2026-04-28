@@ -50,6 +50,18 @@ function isLoopbackRegistrationUrl(url: string): boolean {
   }
 }
 
+// True when the URL is http:// on a non-loopback host. Browsers refuse to run
+// WebAuthn outside a secure context, so the link is effectively broken — almost
+// always a sign the reverse proxy isn't forwarding X-Forwarded-Proto.
+function isInsecureRegistrationUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" && !isLoopbackRegistrationUrl(url);
+  } catch {
+    return false;
+  }
+}
+
 interface UserPasskeysSectionProps {
   routeUsername: string;
   isSelf: boolean;
@@ -247,15 +259,16 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
               {new Date(issuedLink.expiresAt).toLocaleString()}):
             </Text>
             <Group align="flex-start" wrap="nowrap">
-              {!isLoopbackRegistrationUrl(issuedLink.registrationUrl) && (
-                <div style={{ background: "white", padding: 8 }}>
-                  <QRCodeSVG
-                    value={issuedLink.registrationUrl}
-                    size={160}
-                    level="M"
-                  />
-                </div>
-              )}
+              {!isLoopbackRegistrationUrl(issuedLink.registrationUrl) &&
+                !isInsecureRegistrationUrl(issuedLink.registrationUrl) && (
+                  <div style={{ background: "white", padding: 8 }}>
+                    <QRCodeSVG
+                      value={issuedLink.registrationUrl}
+                      size={160}
+                      level="M"
+                    />
+                  </div>
+                )}
               <Stack gap="xs" style={{ flex: 1, minWidth: 0 }}>
                 <Code
                   block
@@ -289,6 +302,21 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
                     <Code>SUPERVISOR_WEBAUTHN_ORIGIN</Code> to a LAN-reachable
                     URL to enable QR enrollment from phones.
                   </Text>
+                )}
+                {isInsecureRegistrationUrl(issuedLink.registrationUrl) && (
+                  <Alert color="yellow" variant="light" p="xs">
+                    <Text size="xs">
+                      This link is <Code>http://</Code> on a non-localhost host.
+                      Browsers will refuse to run WebAuthn outside a secure
+                      context, so passkey registration will fail. The supervisor
+                      derived the protocol from the request — almost always
+                      this means the reverse proxy isn't forwarding{" "}
+                      <Code>X-Forwarded-Proto: https</Code>. Fix the proxy
+                      config (and confirm <Code>trust proxy</Code> is enabled),
+                      or pin{" "}
+                      <Code>SUPERVISOR_WEBAUTHN_ORIGIN=https://your.host</Code>.
+                    </Text>
+                  </Alert>
                 )}
               </Stack>
             </Group>
