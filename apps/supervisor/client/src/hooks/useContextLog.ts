@@ -21,6 +21,7 @@ export const useContextLog = (
   sessionId: number,
   enabled: boolean = true,
   isOnline: boolean = false,
+  subagentId: number | null = null,
 ) => {
   const { agents } = useAgentDataContext();
   const userLookup = useMemo(
@@ -28,8 +29,11 @@ export const useContextLog = (
     [agents],
   );
 
-  // Create a unique key for this session
-  const sessionKey = `${agentUsername}-${runId}-${sessionId}`;
+  // Subagent sessions share their parent's username + runId; the discriminator
+  // is the subagentId. Bake it into the cache key so subagents don't collide
+  // with the parent (or each other) in the module-level cache maps.
+  const subagentKey = subagentId ?? 0;
+  const sessionKey = `${agentUsername}-${runId}-${subagentKey}-${sessionId}`;
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
 
@@ -92,6 +96,7 @@ export const useContextLog = (
           agentUsername,
           runId,
           sessionId,
+          subagentId,
           logsAfter: rangeStart,
           logsBefore: gapFirstId,
         });
@@ -161,12 +166,13 @@ export const useContextLog = (
         agentUsername,
         runId,
         sessionId,
+        subagentId,
         logsAfter: logsAfterCache.get(sessionKey),
       };
 
       return await getContextLog(params);
     },
-    [agentUsername, runId, sessionId],
+    [agentUsername, runId, sessionId, subagentId],
   );
 
   const query = useQuery({
@@ -191,7 +197,7 @@ export const useContextLog = (
   // WebSocket subscription for real-time log updates when online
   useSubscription<LogPushEntry[]>(
     isOnline && enabled && agentUsername
-      ? `logs:${agentUsername}:${runId}:${sessionId}`
+      ? `logs:${agentUsername}:${runId}:${subagentKey}:${sessionId}`
       : null,
     handlePushEntries,
   );

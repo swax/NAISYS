@@ -133,12 +133,24 @@ export function createChatService(
     attachmentIds?: number[],
     resolvedPaths?: string[],
   ): Promise<string> {
+    if (recipients.length === 0) {
+      throw "No recipients";
+    }
+
     message = message.replace(/\\n/g, "\n");
 
-    if (hubClient) {
-      const response = await hubClient.sendRequest(HubEvents.MAIL_SEND, {
+    // Ephemerals always go local; the hub doesn't know about them.
+    const localRecipients = hubClient
+      ? recipients.filter((r) => r.isEphemeral)
+      : recipients;
+    const hubRecipients = hubClient
+      ? recipients.filter((r) => !r.isEphemeral)
+      : [];
+
+    if (hubRecipients.length > 0) {
+      const response = await hubClient!.sendRequest(HubEvents.MAIL_SEND, {
         fromUserId: localUserId,
-        toUserIds: recipients.map((r) => r.userId),
+        toUserIds: hubRecipients.map((r) => r.userId),
         subject: "",
         body: message,
         kind: "chat",
@@ -148,28 +160,27 @@ export function createChatService(
       if (!response.success) {
         throw response.error || "Failed to send chat message";
       }
-
-      return "Chat sent";
     }
 
-    // Local mode: notify recipients directly with compact format
-    const localUser = userService.getUserById(localUserId);
-    const localUsername = localUser?.username || "unknown";
+    if (localRecipients.length > 0) {
+      const localUser = userService.getUserById(localUserId);
+      const localUsername = localUser?.username || "unknown";
 
-    let text = `Chat from ${localUsername}: ${message}`;
-    if (resolvedPaths?.length) {
-      text += "\n  Attachments:";
-      for (const fp of resolvedPaths) {
-        text += `\n    ${fp}`;
+      let text = `Chat from ${localUsername}: ${message}`;
+      if (resolvedPaths?.length) {
+        text += "\n  Attachments:";
+        for (const fp of resolvedPaths) {
+          text += `\n    ${fp}`;
+        }
       }
-    }
 
-    for (const recipient of recipients) {
-      promptNotification.notify({
-        userId: recipient.userId,
-        wake: "yes",
-        contextOutput: [text],
-      });
+      for (const recipient of localRecipients) {
+        promptNotification.notify({
+          userId: recipient.userId,
+          wake: "yes",
+          contextOutput: [text],
+        });
+      }
     }
 
     return "Chat sent";

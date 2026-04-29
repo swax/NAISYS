@@ -1,12 +1,16 @@
 import { HubEvents } from "@naisys/hub-protocol";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
+import type { SubagentContext } from "../agent/agentManagerInterface.js";
 import type { HubClient } from "../hub/hubClient.js";
 
 export async function createRunService(
   { agentConfig }: AgentConfig,
-  hubClient: HubClient | undefined,
+  /** Host's hubClient for a main agent; parent's hubClient for a subagent
+   * (the only hub access a subagent gets, scoped to SESSION_CREATE/INCREMENT). */
+  sessionHubClient: HubClient | undefined,
   localUserId: number,
+  subagentContext?: SubagentContext,
 ) {
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -17,11 +21,16 @@ export async function createRunService(
   await init();
 
   async function init() {
-    if (hubClient) {
-      const response = await hubClient.sendRequest(HubEvents.SESSION_CREATE, {
-        userId: localUserId,
-        modelName: agentConfig().shellModel,
-      });
+    if (sessionHubClient) {
+      const response = await sessionHubClient.sendRequest(
+        HubEvents.SESSION_CREATE,
+        {
+          userId: subagentContext?.parentUserId ?? localUserId,
+          modelName: agentConfig().shellModel,
+          subagentId: subagentContext?.subagentId,
+          parentRunId: subagentContext?.parentRunId,
+        },
+      );
 
       if (!response.success) {
         throw new Error(`Failed to create session via hub: ${response.error}`);
@@ -30,16 +39,21 @@ export async function createRunService(
       runId = response.runId!;
       sessionId = response.sessionId!;
     } else {
-      runId = 1;
+      runId = subagentContext?.parentRunId ?? 1;
       sessionId = 1;
     }
   }
 
   async function incrementSession(): Promise<void> {
-    if (hubClient) {
-      const response = await hubClient.sendRequest(
+    if (sessionHubClient) {
+      const response = await sessionHubClient.sendRequest(
         HubEvents.SESSION_INCREMENT,
-        { userId: localUserId, runId, modelName: agentConfig().shellModel },
+        {
+          userId: subagentContext?.parentUserId ?? localUserId,
+          runId,
+          subagentId: subagentContext?.subagentId,
+          modelName: agentConfig().shellModel,
+        },
       );
 
       if (!response.success) {

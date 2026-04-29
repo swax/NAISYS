@@ -68,7 +68,7 @@ export async function getLatestRunInfoByUuid(
   if (!user) return null;
 
   const latest = await prisma.run_session.findFirst({
-    where: { user_id: user.id },
+    where: { user_id: user.id, subagent_id: 0 },
     orderBy: [{ run_id: "desc" }, { session_id: "desc" }],
     select: { run_id: true, created_at: true },
   });

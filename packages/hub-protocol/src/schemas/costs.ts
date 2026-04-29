@@ -18,6 +18,7 @@ export type CostSource = z.infer<typeof CostSourceEnum>;
 export const CostWriteEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   source: CostSourceEnum,
   model: z.string(),
@@ -52,6 +53,7 @@ export type CostWriteResponse = z.infer<typeof CostWriteResponseSchema>;
 export const CostPushEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   costDelta: z.number(),
 });

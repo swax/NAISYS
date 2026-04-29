@@ -9,20 +9,20 @@ code via vite-plugin-istanbul. Unloaded files count as 0% for everything
 except `apps/supervisor/client` and `apps/erp/client`, where only
 modules loaded during a Playwright test contribute to the denominator.
 
-**Total: 41,591 / 63,357 statements (65.65%)**
+**Total: 42,213 / 64,025 statements (65.93%)**
 
 | Workspace                    | Covered |  Total |       % |
 | ---------------------------- | ------: | -----: | ------: |
 | apps/erp/client              |     967 |  3,751 |  25.78% |
-| apps/erp/server              |  11,953 | 15,646 |  76.40% |
+| apps/erp/server              |  11,950 | 15,643 |  76.39% |
 | apps/erp/shared              |   2,050 |  2,052 |  99.90% |
-| apps/hub                     |   3,389 |  4,173 |  81.21% |
-| apps/naisys                  |   9,572 | 17,768 |  53.87% |
-| apps/supervisor/client       |   1,137 |  4,143 |  27.44% |
-| apps/supervisor/server       |   7,519 |  9,923 |  75.77% |
-| apps/supervisor/shared       |   1,358 |  1,360 |  99.85% |
-| packages/common              |   1,329 |  1,594 |  83.38% |
-| packages/common-node         |     598 |  1,055 |  56.68% |
+| apps/hub                     |   3,416 |  4,222 |  80.91% |
+| apps/naisys                  |   9,977 | 18,154 |  54.96% |
+| apps/supervisor/client       |   1,139 |  4,199 |  27.13% |
+| apps/supervisor/server       |   7,655 | 10,046 |  76.20% |
+| apps/supervisor/shared       |   1,370 |  1,372 |  99.85% |
+| packages/common              |   1,349 |  1,614 |  83.58% |
+| packages/common-node         |     596 |  1,055 |  56.49% |
 | packages/hub-database        |     165 |    221 |  74.66% |
-| packages/hub-protocol        |   1,103 |  1,103 | 100.00% |
+| packages/hub-protocol        |   1,128 |  1,128 | 100.00% |
 | packages/supervisor-database |     451 |    568 |  79.40% |

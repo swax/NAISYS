@@ -171,6 +171,19 @@ export const api = {
   },
 };
 
+const sessionScopedUrl = (
+  username: string,
+  runId: number,
+  sessionId: number,
+  subagentId: number | null | undefined,
+  action: "logs" | "pause" | "resume" | "command",
+) => {
+  if (subagentId != null) {
+    return `/agents/${username}/runs/${runId}/subagents/${subagentId}/sessions/${sessionId}/${action}`;
+  }
+  return `/agents/${username}/runs/${runId}/sessions/${sessionId}/${action}`;
+};
+
 export const apiEndpoints = {
   passkeyLoginOptions: "/auth/passkey/login-options",
   passkeyLoginVerify: "/auth/passkey/login-verify",
@@ -220,16 +233,32 @@ export const apiEndpoints = {
     `/agents/${username}/chat/${participants}`,
   agentChatArchive: (username: string) => `/agents/${username}/chat/archive`,
   agentMailArchive: (username: string) => `/agents/${username}/mail/archive`,
-  agentContextLog: (username: string, runId: number, sessionId: number) =>
-    `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
+  agentContextLog: (
+    username: string,
+    runId: number,
+    sessionId: number,
+    subagentId?: number | null,
+  ) => sessionScopedUrl(username, runId, sessionId, subagentId, "logs"),
   agentStart: (username: string) => `/agents/${username}/start`,
   agentStop: (username: string) => `/agents/${username}/stop`,
-  agentRunPause: (username: string, runId: number, sessionId: number) =>
-    `/agents/${username}/runs/${runId}/sessions/${sessionId}/pause`,
-  agentRunResume: (username: string, runId: number, sessionId: number) =>
-    `/agents/${username}/runs/${runId}/sessions/${sessionId}/resume`,
-  agentRunCommand: (username: string, runId: number, sessionId: number) =>
-    `/agents/${username}/runs/${runId}/sessions/${sessionId}/command`,
+  agentRunPause: (
+    username: string,
+    runId: number,
+    sessionId: number,
+    subagentId?: number | null,
+  ) => sessionScopedUrl(username, runId, sessionId, subagentId, "pause"),
+  agentRunResume: (
+    username: string,
+    runId: number,
+    sessionId: number,
+    subagentId?: number | null,
+  ) => sessionScopedUrl(username, runId, sessionId, subagentId, "resume"),
+  agentRunCommand: (
+    username: string,
+    runId: number,
+    sessionId: number,
+    subagentId?: number | null,
+  ) => sessionScopedUrl(username, runId, sessionId, subagentId, "command"),
   agentEnable: (username: string) => `/agents/${username}/enable`,
   agentDisable: (username: string) => `/agents/${username}/disable`,
   agentArchive: (username: string) => `/agents/${username}/archive`,

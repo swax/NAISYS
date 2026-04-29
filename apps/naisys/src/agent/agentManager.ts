@@ -16,6 +16,7 @@ import type { HubLogBuffer } from "../hub/hubLogBuffer.js";
 import type { HostService } from "../services/hostService.js";
 import type { ModelService } from "../services/modelService.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { SubagentContext } from "./agentManagerInterface.js";
 import type { AgentRuntime } from "./agentRuntime.js";
 import { createAgentRuntime } from "./agentRuntime.js";
 import type { UserService } from "./userService.js";
@@ -24,6 +25,13 @@ import type { UserService } from "./userService.js";
 export class AgentManager {
   runningAgents: AgentRuntime[] = [];
   private runPromises = new Map<number, Promise<void>>();
+  // Guards cleanupAgent against double-entry: stopAgent's force-stop-on-timeout
+  // path and the runPromise resolution can both fire it for the same agent.
+  private cleanupStarted = new WeakSet<AgentRuntime>();
+  // onStop runs from cleanupAgent (not the runPromise continuation) so the
+  // force-stop-on-timeout path still fires it — otherwise an ephemeral whose
+  // command loop never resolves after abort would leak in userService.
+  private onStopCallbacks = new Map<number, (reason: string) => void>();
   onHeartbeatNeeded?: () => void;
 
   constructor(
@@ -91,13 +99,15 @@ export class AgentManager {
           try {
             const parsed = AgentRunPauseRequestSchema.parse(data);
 
+            // Subagents are looked up by their synthetic id; main agents by userId
+            const targetId = parsed.subagentId ?? parsed.userId;
             const agent = this.runningAgents.find(
-              (a) => a.agentUserId === parsed.userId,
+              (a) => a.agentUserId === targetId,
             );
             if (!agent) {
               ack({
                 success: false,
-                error: `Agent ${parsed.userId} is not running on this host`,
+                error: `Agent ${targetId} is not running on this host`,
               });
               return;
             }
@@ -110,7 +120,7 @@ export class AgentManager {
             ) {
               ack({
                 success: false,
-                error: `Run/session is no longer the active one for agent ${parsed.userId}`,
+                error: `Run/session is no longer the active one for agent ${targetId}`,
               });
               return;
             }
@@ -137,13 +147,14 @@ export class AgentManager {
         try {
           const parsed = AgentRunCommandRequestSchema.parse(data);
 
+          const targetId = parsed.subagentId ?? parsed.userId;
           const agent = this.runningAgents.find(
-            (a) => a.agentUserId === parsed.userId,
+            (a) => a.agentUserId === targetId,
           );
           if (!agent) {
             ack({
               success: false,
-              error: `Agent ${parsed.userId} is not running on this host`,
+              error: `Agent ${targetId} is not running on this host`,
             });
             return;
           }
@@ -154,14 +165,14 @@ export class AgentManager {
           ) {
             ack({
               success: false,
-              error: `Run/session is no longer the active one for agent ${parsed.userId}`,
+              error: `Run/session is no longer the active one for agent ${targetId}`,
             });
             return;
           }
 
           this.promptNotification.notify({
             wake: "always",
-            userId: parsed.userId,
+            userId: targetId,
             debugCommands: [parsed.command],
           });
 
@@ -210,6 +221,7 @@ export class AgentManager {
     userId: number,
     onStop?: (reason: string) => void,
     runtimeApiKey?: string,
+    subagentContext?: SubagentContext,
   ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
@@ -229,6 +241,7 @@ export class AgentManager {
       this.modelService,
       this.promptNotification,
       runtimeApiKey,
+      subagentContext,
     );
 
     this.runningAgents.push(agent);
@@ -238,10 +251,13 @@ export class AgentManager {
       this.setActiveConsoleAgent(agent.agentUserId);
     }
 
-    const runPromise = agent.runCommandLoop().then((exitReason) => {
-      onStop?.(exitReason);
-      this.cleanupAgent(agent);
-    });
+    if (onStop) {
+      this.onStopCallbacks.set(userId, onStop);
+    }
+
+    const runPromise = agent
+      .runCommandLoop()
+      .then((exitReason) => this.cleanupAgent(agent, exitReason));
 
     this.runPromises.set(userId, runPromise);
 
@@ -278,7 +294,7 @@ export class AgentManager {
         agent.output.error(
           `[NAISYS] Force stopping ${agent.agentUsername} (timed out)`,
         );
-        this.cleanupAgent(agent);
+        await this.cleanupAgent(agent, reason);
       }
     }
   }
@@ -290,23 +306,36 @@ export class AgentManager {
     await Promise.all(agents.map((a) => this.stopAgent(a.agentUserId, reason)));
   }
 
-  private cleanupAgent(agent: AgentRuntime) {
+  private async cleanupAgent(agent: AgentRuntime, reason: string) {
+    if (this.cleanupStarted.has(agent)) return;
+    this.cleanupStarted.add(agent);
+
+    // Stop ephemeral children first so they drain final log/cost writes
+    // through the parent's still-live host buffers.
+    await agent.subagentService.cleanup();
+
     const agentIndex = this.runningAgents.findIndex((a) => a === agent);
-    if (agentIndex < 0) return; // Already cleaned up (e.g. force-stopped after timeout)
 
-    if (agent.output.isConsoleEnabled()) {
-      const switchToAgent = this.runningAgents.find((a) => a !== agent);
+    if (agentIndex >= 0) {
+      if (agent.output.isConsoleEnabled()) {
+        const switchToAgent = this.runningAgents.find((a) => a !== agent);
 
-      if (switchToAgent) {
-        this.setActiveConsoleAgent(switchToAgent.agentUserId);
+        if (switchToAgent) {
+          this.setActiveConsoleAgent(switchToAgent.agentUserId);
+        }
       }
+
+      // Splice from runningAgents before onStop, since onStop may remove the
+      // ephemeral from userMap and the heartbeat reads both.
+      this.runningAgents.splice(agentIndex, 1);
+      this.onHeartbeatNeeded?.();
+      agent.completeShutdown();
+      this.runPromises.delete(agent.agentUserId);
     }
 
-    this.runningAgents.splice(agentIndex, 1);
-
-    this.onHeartbeatNeeded?.();
-    agent.completeShutdown();
-    this.runPromises.delete(agent.agentUserId);
+    const onStop = this.onStopCallbacks.get(agent.agentUserId);
+    this.onStopCallbacks.delete(agent.agentUserId);
+    onStop?.(reason);
   }
 
   setActiveConsoleAgent(userId: number) {

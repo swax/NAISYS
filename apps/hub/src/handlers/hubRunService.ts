@@ -17,6 +17,7 @@ export function createHubRunService(
   function pushSessionToSupervisors(session: {
     userId: number;
     runId: number;
+    subagentId?: number;
     sessionId: number;
     modelName: string;
     createdAt: string;
@@ -38,20 +39,45 @@ export function createHubRunService(
       try {
         const parsed = SessionCreateRequestSchema.parse(data);
 
-        // Get the last run_id across all sessions
-        const lastRun = await hubDb.run_session.findFirst({
-          select: { run_id: true },
-          orderBy: { run_id: "desc" },
-        });
+        // Subagent path: inherit the parent's runId rather than allocating a new one.
+        let runId: number;
+        if (parsed.subagentId !== undefined) {
+          if (parsed.parentRunId === undefined) {
+            throw new Error("parentRunId is required when subagentId is set");
+          }
+          // Confirm the parent's run row exists before materializing a child
+          // under it — otherwise we'd silently create an orphan subagent row.
+          const parent = await hubDb.run_session.findFirst({
+            where: {
+              user_id: parsed.userId,
+              run_id: parsed.parentRunId,
+              subagent_id: 0,
+            },
+            select: { run_id: true },
+          });
+          if (!parent) {
+            throw new Error(
+              `parent run ${parsed.parentRunId} not found for user ${parsed.userId}`,
+            );
+          }
+          runId = parsed.parentRunId;
+        } else {
+          const lastRun = await hubDb.run_session.findFirst({
+            select: { run_id: true },
+            orderBy: { run_id: "desc" },
+          });
+          runId = lastRun ? lastRun.run_id + 1 : 1;
+        }
 
-        const newRunId = lastRun ? lastRun.run_id + 1 : 1;
+        const subagentId = parsed.subagentId ?? 0;
         const newSessionId = 1;
         const now = new Date().toISOString();
 
         await hubDb.run_session.create({
           data: {
             user_id: parsed.userId,
-            run_id: newRunId,
+            run_id: runId,
+            subagent_id: subagentId,
             session_id: newSessionId,
             host_id: hostId,
             model_name: parsed.modelName,
@@ -62,13 +88,14 @@ export function createHubRunService(
 
         ack({
           success: true,
-          runId: newRunId,
+          runId,
           sessionId: newSessionId,
         });
 
         pushSessionToSupervisors({
           userId: parsed.userId,
-          runId: newRunId,
+          runId,
+          subagentId: parsed.subagentId,
           sessionId: newSessionId,
           modelName: parsed.modelName,
           createdAt: now,
@@ -88,13 +115,15 @@ export function createHubRunService(
     async (hostId, data, ack) => {
       try {
         const parsed = SessionIncrementRequestSchema.parse(data);
+        const subagentId = parsed.subagentId ?? 0;
 
-        // Get the max session_id for this user + run
+        // Get the max session_id for this user + run + subagent
         const lastSession = await hubDb.run_session.findFirst({
           select: { session_id: true },
           where: {
             user_id: parsed.userId,
             run_id: parsed.runId,
+            subagent_id: subagentId,
           },
           orderBy: { session_id: "desc" },
         });
@@ -106,6 +135,7 @@ export function createHubRunService(
           data: {
             user_id: parsed.userId,
             run_id: parsed.runId,
+            subagent_id: subagentId,
             session_id: newSessionId,
             host_id: hostId,
             model_name: parsed.modelName,
@@ -119,6 +149,7 @@ export function createHubRunService(
         pushSessionToSupervisors({
           userId: parsed.userId,
           runId: parsed.runId,
+          subagentId: parsed.subagentId,
           sessionId: newSessionId,
           modelName: parsed.modelName,
           createdAt: now,

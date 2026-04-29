@@ -1,3 +1,4 @@
+import type { HeartbeatSession } from "@naisys/hub-protocol";
 import {
   AgentsStatusSchema,
   HubEvents,
@@ -24,18 +25,39 @@ export function createHeartbeatService(
   }
 
   function sendHeartbeat() {
-    const activeSessions = agentManager.runningAgents.map((a) => ({
-      userId: a.agentUserId,
-      runId: a.getRunId(),
-      sessionId: a.getSessionId(),
-      paused: a.isPaused(),
-      state: a.getState(),
-    }));
+    // Ephemerals ride under the parent's userId so the synthetic id never
+    // enters hub-user tracking. The subagentId still distinguishes the row.
+    // Skip an entry rather than ever emitting a synthetic id as `userId`.
+    const activeSessions: HeartbeatSession[] = [];
+    for (const a of agentManager.runningAgents) {
+      const user = userService.getUserById(a.agentUserId);
+      let userId: number;
+      let subagentId: number | undefined;
+      if (user?.isEphemeral) {
+        if (user.leadUserId == null) continue; // orphan ephemeral — shouldn't happen
+        userId = user.leadUserId;
+        subagentId = a.agentUserId;
+      } else {
+        // Negative agentUserId without an isEphemeral user record means we're
+        // racing teardown (user record cleared before splice). Drop it.
+        if (a.agentUserId < 0) continue;
+        userId = a.agentUserId;
+      }
+      activeSessions.push({
+        userId,
+        runId: a.getRunId(),
+        subagentId,
+        sessionId: a.getSessionId(),
+        paused: a.isPaused(),
+        state: a.getState(),
+      });
+    }
 
     if (hubClient) {
       hubClient.sendMessage(HubEvents.HEARTBEAT, { activeSessions });
     } else {
-      userService.setActiveUsers({ "": activeSessions.map((s) => s.userId) });
+      const uniqueUserIds = [...new Set(activeSessions.map((s) => s.userId))];
+      userService.setActiveUsers({ "": uniqueUserIds });
     }
   }
 

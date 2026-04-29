@@ -50,6 +50,14 @@ export interface PeriodInfo {
   periodEnd: Date;
 }
 
+interface ParentCostTracker {
+  addSubagentCost(cost: number): void;
+  checkSpendLimit(): void;
+  getBudgetLeft(): number | null;
+  subscribeSubagent(userId: number): void;
+  unsubscribeSubagent(userId: number): void;
+}
+
 export function createCostTracker(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -59,6 +67,10 @@ export function createCostTracker(
   hubCostBuffer: HubCostBuffer | undefined,
   localUserId: number,
   promptNotification: PromptNotificationService,
+  /** When set, this tracker is for an ephemeral subagent: spend-limit checks
+   * defer to the parent and costs roll into the parent's accounting via
+   * addSubagentCost. */
+  parentCostTracker?: ParentCostTracker,
 ) {
   // In-memory per-model aggregated costs (always maintained, both modes)
   const modelCosts = new Map<string, ModelCostData>();
@@ -73,6 +85,9 @@ export function createCostTracker(
   // Hub mode: budget tracking from COST_WRITE responses
   let hubBudgetLeft: number | null = null;
   let costSinceLastSnapshot = 0;
+
+  // Children that need to be woken when this tracker's suspension lifts.
+  const subagentSubscriptions = new Set<number>();
 
   // Register for budget updates from the shared buffer
   if (hubCostBuffer) {
@@ -97,10 +112,22 @@ export function createCostTracker(
           userId: localUserId,
           commentOutput: ["Cost control suspension lifted, resuming"],
         });
+        // Wake any subagents that were paused on the parent's suspension
+        for (const subagentUserId of subagentSubscriptions) {
+          promptNotification.notify({
+            wake: "always",
+            userId: subagentUserId,
+            commentOutput: ["Cost control suspension lifted, resuming"],
+          });
+        }
       } else {
         hubCostControlReason = parsed.reason;
       }
     });
+  }
+
+  if (parentCostTracker) {
+    parentCostTracker.subscribeSubagent(localUserId);
   }
 
   function updateInMemory(
@@ -130,6 +157,7 @@ export function createCostTracker(
 
     totalCost += cost;
     costSinceLastSnapshot += cost;
+    // Subagents still update periodCost for the ns-cost period display; spend-limit/budget checks defer to the parent.
     addCostToPeriod(cost);
   }
 
@@ -142,18 +170,18 @@ export function createCostTracker(
     cacheWriteTokens: number,
     cacheReadTokens: number,
   ) {
-    hubCostBuffer!.pushEntry(
-      localUserId,
-      runService.getRunId(),
-      runService.getSessionId(),
+    hubCostBuffer!.pushEntry({
+      userId: localUserId,
+      runId: runService.getRunId(),
+      sessionId: runService.getSessionId(),
       source,
-      modelKey,
+      model: modelKey,
       cost,
       inputTokens,
       outputTokens,
       cacheWriteTokens,
       cacheReadTokens,
-    );
+    });
   }
 
   // Record token usage for LLM calls
@@ -194,6 +222,8 @@ export function createCostTracker(
         cacheReadTokens,
       );
     }
+
+    parentCostTracker?.addSubagentCost(cost);
   }
 
   // Record fixed cost for non-token services like image generation
@@ -203,6 +233,16 @@ export function createCostTracker(
     if (hubCostBuffer) {
       pushToBuffer(source, modelKey, cost, 0, 0, 0, 0);
     }
+
+    parentCostTracker?.addSubagentCost(cost);
+  }
+
+  /** Roll a subagent's cost into this tracker's running totals. The per-model
+   * breakdown stays scoped to costs the agent spent directly. */
+  function addSubagentCost(cost: number) {
+    totalCost += cost;
+    costSinceLastSnapshot += cost;
+    addCostToPeriod(cost);
   }
 
   // Common function to calculate cost from token usage
@@ -238,6 +278,11 @@ export function createCostTracker(
   // Check if the current spend limit has been reached and throw an error if so
   // In hub mode, checks the cost control state received from the hub
   function checkSpendLimit() {
+    if (parentCostTracker) {
+      parentCostTracker.checkSpendLimit();
+      return;
+    }
+
     if (hubClient) {
       if (!hubClient.isConnected()) {
         throw new SpendLimitError(
@@ -298,6 +343,21 @@ export function createCostTracker(
     if (hubCostBuffer) {
       hubCostBuffer.unregisterBudgetCallback(localUserId);
     }
+    if (parentCostTracker) {
+      parentCostTracker.unsubscribeSubagent(localUserId);
+    }
+  }
+
+  function getCostControlReason(): string | undefined {
+    return hubCostControlReason;
+  }
+
+  function subscribeSubagent(userId: number) {
+    subagentSubscriptions.add(userId);
+  }
+
+  function unsubscribeSubagent(userId: number) {
+    subagentSubscriptions.delete(userId);
   }
 
   // Exposed for costDisplayService
@@ -327,6 +387,7 @@ export function createCostTracker(
 
   /** Returns the estimated remaining budget, or null if no per-agent limit */
   function getBudgetLeft(): number | null {
+    if (parentCostTracker) return parentCostTracker.getBudgetLeft();
     if (hubBudgetLeft === null) return null;
     return Math.max(0, hubBudgetLeft - costSinceLastSnapshot);
   }
@@ -342,6 +403,10 @@ export function createCostTracker(
     getPeriodInfo,
     getBudgetLeft,
     resetCosts,
+    addSubagentCost,
+    getCostControlReason,
+    subscribeSubagent,
+    unsubscribeSubagent,
   };
 }
 

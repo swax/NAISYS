@@ -288,6 +288,11 @@ export const subagentCmd: CommandDef = {
       usage: "list",
       description: "List your subagents and their status",
     },
+    create: {
+      usage: 'create "<title>" "<task>"',
+      description:
+        "Create and start an ephemeral subagent with a task description. The subagent is local to this NAISYS instance and is removed when it terminates",
+    },
     start: {
       usage: 'start <name> "<task>"',
       description: "Start agent by name with a task description",

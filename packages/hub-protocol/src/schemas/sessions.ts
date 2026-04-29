@@ -7,6 +7,7 @@ export const SessionPushSchema = z.object({
   session: z.object({
     userId: z.number(),
     runId: z.number(),
+    subagentId: z.number().nullable().optional(),
     sessionId: z.number(),
     modelName: z.string(),
     createdAt: z.string(),
@@ -18,10 +19,13 @@ export const SessionPushSchema = z.object({
 });
 export type SessionPush = z.infer<typeof SessionPushSchema>;
 
-/** Request to create a new run session */
+/** Request to create a new run session. If subagentId is set, parentRunId is
+ * required and the row is materialized under the parent's run. */
 export const SessionCreateRequestSchema = z.object({
   userId: z.number(),
   modelName: z.string(),
+  subagentId: z.number().optional(),
+  parentRunId: z.number().optional(),
 });
 export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
 
@@ -38,6 +42,7 @@ export type SessionCreateResponse = z.infer<typeof SessionCreateResponseSchema>;
 export const SessionIncrementRequestSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().optional(),
   modelName: z.string(),
 });
 export type SessionIncrementRequest = z.infer<
@@ -58,6 +63,7 @@ export type SessionIncrementResponse = z.infer<
 export const SessionHeartbeatUpdateSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   lastActive: z.string(),
   paused: z.boolean().optional(),

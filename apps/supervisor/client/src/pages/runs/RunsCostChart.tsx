@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useColorResolver } from "../../lib/charts";
 import type { RunSession } from "../../types/runSession";
+import { runUrl } from "./RunsSidebar";
 
 interface RunsCostChartProps {
   runs: RunSession[];
@@ -18,14 +19,55 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
   const resolveColor = useColorResolver();
   const navigate = useNavigate();
 
-  const sortedRuns = useMemo(
-    () =>
-      [...runs].sort(
+  const sortedRuns = useMemo<RunSession[]>(() => {
+    // Roll ephemeral subagent costs into the parent session whose createdAt
+    // is the latest one at or before the subagent's createdAt. With one
+    // parent session per run (the common case) all subagent costs land on
+    // that single session.
+    const parents = runs.filter((r) => r.subagentId == null);
+
+    const parentsByRun = new Map<string, RunSession[]>();
+    for (const p of parents) {
+      const key = `${p.userId}-${p.runId}`;
+      const list = parentsByRun.get(key);
+      if (list) list.push(p);
+      else parentsByRun.set(key, [p]);
+    }
+    for (const list of parentsByRun.values()) {
+      list.sort(
         (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      ),
-    [runs],
-  );
+      );
+    }
+
+    const surcharge = new Map<string, number>();
+    for (const sub of runs) {
+      if (sub.subagentId == null) continue;
+      const list = parentsByRun.get(`${sub.userId}-${sub.runId}`);
+      if (!list || list.length === 0) continue;
+      const subTime = new Date(sub.createdAt).getTime();
+      let target = list[0];
+      for (const p of list) {
+        if (new Date(p.createdAt).getTime() <= subTime) target = p;
+        else break;
+      }
+      const sessionKey = `${target.userId}-${target.runId}-${target.sessionId}`;
+      surcharge.set(
+        sessionKey,
+        (surcharge.get(sessionKey) ?? 0) + sub.totalCost,
+      );
+    }
+
+    const rolledUp = parents.map((p) => {
+      const extra = surcharge.get(`${p.userId}-${p.runId}-${p.sessionId}`);
+      return extra ? { ...p, totalCost: p.totalCost + extra } : p;
+    });
+
+    return rolledUp.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }, [runs]);
 
   const data = useMemo<ChartData<"line">>(() => {
     const color = resolveColor("blue.6");
@@ -77,9 +119,7 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
         if (elements.length === 0) return;
         const run = sortedRuns[elements[0].index];
         if (!run) return;
-        void navigate(
-          `/agents/${agentName}/runs/${run.runId}-${run.sessionId}`,
-        );
+        void navigate(runUrl(agentName, run));
       },
       scales: {
         x: { display: false },
@@ -104,7 +144,7 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
     [sortedRuns, agentName, navigate],
   );
 
-  if (runs.length === 0) return null;
+  if (sortedRuns.length === 0) return null;
 
   return (
     <div style={{ height: 60 }}>

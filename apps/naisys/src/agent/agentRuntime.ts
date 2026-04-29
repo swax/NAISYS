@@ -42,7 +42,10 @@ import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import { createAgentConfig } from "./agentConfig.js";
-import type { IAgentManager } from "./agentManagerInterface.js";
+import type {
+  IAgentManager,
+  SubagentContext,
+} from "./agentManagerInterface.js";
 import { createUserDisplayService } from "./userDisplayService.js";
 import type { UserService } from "./userService.js";
 
@@ -58,7 +61,19 @@ export async function createAgentRuntime(
   modelService: ModelService,
   promptNotification: PromptNotificationService,
   runtimeApiKey?: string,
+  subagentContext?: SubagentContext,
 ) {
+  // For subagents, strip the hub surface so hub-aware services take their
+  // local-mode branch. RunService keeps the parent's hubClient (as
+  // sessionHubClient) so SESSION_CREATE/INCREMENT can register the
+  // run_session row before any log or cost write references it.
+  const sessionHubClient = hubClient;
+  if (subagentContext) {
+    hubLogBuffer = wrapLogBufferForSubagent(hubLogBuffer, subagentContext);
+    hubCostBuffer = wrapCostBufferForSubagent(hubCostBuffer, subagentContext);
+    hubClient = undefined;
+  }
+
   /*
    * Per-agent composition root. Keep this as linear hand-wiring rather than a
    * DI container: construction order is dependency order, which keeps cycles
@@ -70,8 +85,9 @@ export async function createAgentRuntime(
 
   const runService = await createRunService(
     agentConfig,
-    hubClient,
+    sessionHubClient,
     localUserId,
+    subagentContext,
   );
   const attachmentService = createAttachmentService(hubClient, runtimeApiKey);
   const logService = createLogService(
@@ -113,6 +129,7 @@ export async function createAgentRuntime(
     hubCostBuffer,
     localUserId,
     promptNotification,
+    subagentContext?.parentCostTracker,
   );
   const costDisplayService = createCostDisplayService(
     globalConfig,
@@ -208,6 +225,9 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     hubClient,
+    agentConfig,
+    runService,
+    costTracker,
   );
   const lynxService = createLynxService(globalConfig, costTracker, output);
   const browserService = createBrowserService(
@@ -370,3 +390,47 @@ export async function createAgentRuntime(
 }
 
 export type AgentRuntime = Awaited<ReturnType<typeof createAgentRuntime>>;
+
+// Re-stamp entries with the parent's identity tuple before forwarding to the
+// host buffer. sessionId rides through unchanged. cleanup is a no-op — the
+// host owns the underlying buffer's lifecycle.
+function wrapLogBufferForSubagent(
+  parent: HubLogBuffer | undefined,
+  ctx: SubagentContext,
+): HubLogBuffer | undefined {
+  if (!parent) return undefined;
+  return {
+    pushEntry: (entry, resolveAttachment) =>
+      parent.pushEntry(
+        {
+          ...entry,
+          userId: ctx.parentUserId,
+          runId: ctx.parentRunId,
+          subagentId: ctx.subagentId,
+        },
+        resolveAttachment,
+      ),
+    cleanup: () => {},
+  };
+}
+
+function wrapCostBufferForSubagent(
+  parent: HubCostBuffer | undefined,
+  ctx: SubagentContext,
+): HubCostBuffer | undefined {
+  if (!parent) return undefined;
+  // Budget callbacks are no-ops: subagent costs roll into the parent's pool
+  // via the parent's userId on the wrapped entries.
+  return {
+    pushEntry: (entry) =>
+      parent.pushEntry({
+        ...entry,
+        userId: ctx.parentUserId,
+        runId: ctx.parentRunId,
+        subagentId: ctx.subagentId,
+      }),
+    registerBudgetCallback: () => {},
+    unregisterBudgetCallback: () => {},
+    cleanup: () => {},
+  };
+}

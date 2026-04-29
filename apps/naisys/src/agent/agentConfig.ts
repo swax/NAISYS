@@ -21,16 +21,18 @@ export function createAgentConfig(
       throw new Error(`User with ID ${localUserId} not found`);
     }
 
-    return buildFullAgentConfig(user.config);
+    return buildFullAgentConfig(user.config, user.isEphemeral === true);
   }
 
-  function buildFullAgentConfig(config: AgentConfigFile) {
+  function buildFullAgentConfig(config: AgentConfigFile, isEphemeral: boolean) {
     // Sanitize spend limits
     const spendLimitDollars = sanitizeSpendLimit(config.spendLimitDollars);
     const spendLimitHours = sanitizeSpendLimit(config.spendLimitHours);
 
-    // Validate if spend limit is defined on the agent or .env
+    // Ephemeral subagents delegate spend-limit checks to their parent, so they
+    // don't need their own spendLimitDollars or a global one set.
     if (
+      !isEphemeral &&
       spendLimitDollars === undefined &&
       globalConfig().spendLimitDollars === undefined
     ) {
@@ -91,7 +93,10 @@ export function createAgentConfig(
     (user.config as any)[field] = typedValue;
 
     // Update in-memory only (not persisted)
-    fullAgentConfig = buildFullAgentConfig(user.config);
+    fullAgentConfig = buildFullAgentConfig(
+      user.config,
+      user.isEphemeral === true,
+    );
   }
 
   function handleCommand(cmdArgs: string): string {

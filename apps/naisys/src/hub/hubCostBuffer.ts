@@ -1,6 +1,5 @@
 import {
   COST_FLUSH_INTERVAL_MS,
-  type CostSource,
   type CostWriteEntry,
   CostWriteResponseSchema,
   HubEvents,
@@ -27,30 +26,8 @@ export function createHubCostBuffer(hubClient: HubClient) {
 
   const flushInterval = setInterval(() => void flush(), COST_FLUSH_INTERVAL_MS);
 
-  function pushEntry(
-    localUserId: number,
-    runId: number,
-    sessionId: number,
-    source: CostSource,
-    modelKey: string,
-    cost: number,
-    inputTokens: number,
-    outputTokens: number,
-    cacheWriteTokens: number,
-    cacheReadTokens: number,
-  ) {
-    buffer.push({
-      userId: localUserId,
-      runId,
-      sessionId,
-      source,
-      model: modelKey,
-      cost,
-      inputTokens,
-      outputTokens,
-      cacheWriteTokens,
-      cacheReadTokens,
-    });
+  function pushEntry(entry: CostWriteEntry) {
+    buffer.push(entry);
   }
 
   function registerBudgetCallback(userId: number, callback: BudgetCallback) {

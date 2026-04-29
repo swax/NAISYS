@@ -31,11 +31,15 @@ export function createHubLogService(
       for (const entry of parsed.entries) {
         const now = new Date().toISOString();
         const lineCount = entry.message.split("\n").length;
+        const subagentId = entry.subagentId ?? 0;
+        // Wire format: undefined for parent (subagent_id 0 in DB), number otherwise
+        const wireSubagentId = subagentId === 0 ? undefined : subagentId;
 
         const log = await hubDb.context_log.create({
           data: {
             user_id: entry.userId,
             run_id: entry.runId,
+            subagent_id: subagentId,
             session_id: entry.sessionId,
             host_id: hostId,
             role: entry.role,
@@ -52,6 +56,7 @@ export function createHubLogService(
           where: {
             user_id: entry.userId,
             run_id: entry.runId,
+            subagent_id: subagentId,
             session_id: entry.sessionId,
           },
           data: {
@@ -98,7 +103,7 @@ export function createHubLogService(
         }
 
         // Collect push entry with DB-assigned ID
-        const sessionKey = `${entry.userId}-${entry.runId}-${entry.sessionId}`;
+        const sessionKey = `${entry.userId}-${entry.runId}-${subagentId}-${entry.sessionId}`;
         const previousId = lastPushedLogId.get(sessionKey) ?? null;
 
         pushEntries.push({
@@ -106,6 +111,7 @@ export function createHubLogService(
           previousId,
           userId: entry.userId,
           runId: entry.runId,
+          subagentId: wireSubagentId,
           sessionId: entry.sessionId,
           role: entry.role,
           source: entry.source,
@@ -129,6 +135,7 @@ export function createHubLogService(
           sessionUpdates.set(sessionKey, {
             userId: entry.userId,
             runId: entry.runId,
+            subagentId: wireSubagentId,
             sessionId: entry.sessionId,
             lastActive: now,
             latestLogId: log.id,

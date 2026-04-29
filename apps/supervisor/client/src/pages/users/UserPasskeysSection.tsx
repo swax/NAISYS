@@ -309,8 +309,8 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
                       This link is <Code>http://</Code> on a non-localhost host.
                       Browsers will refuse to run WebAuthn outside a secure
                       context, so passkey registration will fail. The supervisor
-                      derived the protocol from the request — almost always
-                      this means the reverse proxy isn't forwarding{" "}
+                      derived the protocol from the request — almost always this
+                      means the reverse proxy isn't forwarding{" "}
                       <Code>X-Forwarded-Proto: https</Code>. Fix the proxy
                       config (and confirm <Code>trust proxy</Code> is enabled),
                       or pin{" "}

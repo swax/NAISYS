@@ -19,24 +19,23 @@ export function createHubHeartbeatService(
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
 ) {
-  // Track active agent user IDs per host from heartbeat data
+  // Active agent user ids per host. Subagents ride under the parent's userId.
   const hostActiveAgents = new Map<number, number[]>();
 
-  // Track each active agent's current run session and its last heartbeat time.
-  // Keyed by hostId so we can drop sessions when a host disconnects.
-  const hostActiveSessions = new Map<
-    number,
-    Map<
-      number,
-      {
-        runId: number;
-        sessionId: number;
-        lastActive: string;
-        paused?: boolean;
-        state?: CommandLoopState;
-      }
-    >
-  >();
+  // Active sessions per host, keyed by `${userId}:${subagentId ?? 0}` so a
+  // parent and its subagents are tracked independently.
+  interface ActiveSessionInfo {
+    userId: number;
+    subagentId: number | null;
+    runId: number;
+    sessionId: number;
+    lastActive: string;
+    paused?: boolean;
+    state?: CommandLoopState;
+  }
+  const hostActiveSessions = new Map<number, Map<string, ActiveSessionInfo>>();
+  const sessionKey = (userId: number, subagentId: number | null | undefined) =>
+    `${userId}:${subagentId ?? 0}`;
 
   // Track per-agent notification IDs (latestLogId, latestMailId)
   const agentNotifications = new Map<
@@ -62,7 +61,10 @@ export function createHubHeartbeatService(
   naisysServer.registerEvent(HubEvents.HEARTBEAT, async (hostId, data) => {
     const parsed = HeartbeatSchema.parse(data);
 
-    const activeUserIds = parsed.activeSessions.map((s) => s.userId);
+    // Dedup: a parent and its subagents share a userId.
+    const activeUserIds = [
+      ...new Set(parsed.activeSessions.map((s) => s.userId)),
+    ];
 
     // Update in-memory per-host active agent IDs
     hostActiveAgents.set(hostId, activeUserIds);
@@ -87,31 +89,30 @@ export function createHubHeartbeatService(
       // Bump run_session.last_active for each active session so the run-online
       // badge stays lit even during quiet periods with no log writes. The
       // aggregate SESSION_HEARTBEAT broadcast runs on its own interval below.
-      const sessionMap = new Map<
-        number,
-        {
-          runId: number;
-          sessionId: number;
-          lastActive: string;
-          paused?: boolean;
-          state?: CommandLoopState;
-        }
-      >();
+      const sessionMap = new Map<string, ActiveSessionInfo>();
       for (const session of parsed.activeSessions) {
-        await hubDb.run_session.updateMany({
-          where: {
-            user_id: session.userId,
-            run_id: session.runId,
-            session_id: session.sessionId,
-          },
-          data: { last_active: now },
-        });
-        sessionMap.set(session.userId, {
+        const subagentId = session.subagentId ?? 0;
+        sessionMap.set(sessionKey(session.userId, subagentId), {
+          userId: session.userId,
+          subagentId: subagentId === 0 ? null : subagentId,
           runId: session.runId,
           sessionId: session.sessionId,
           lastActive: now,
           paused: session.paused,
           state: session.state,
+        });
+      }
+      if (parsed.activeSessions.length > 0) {
+        await hubDb.run_session.updateMany({
+          where: {
+            OR: parsed.activeSessions.map((session) => ({
+              user_id: session.userId,
+              run_id: session.runId,
+              subagent_id: session.subagentId ?? 0,
+              session_id: session.sessionId,
+            })),
+          },
+          data: { last_active: now },
         });
       }
       hostActiveSessions.set(hostId, sessionMap);
@@ -162,10 +163,11 @@ export function createHubHeartbeatService(
   function pushSessionHeartbeat() {
     const updates: SessionHeartbeatUpdate[] = [];
     for (const sessions of hostActiveSessions.values()) {
-      for (const [userId, info] of sessions) {
+      for (const info of sessions.values()) {
         updates.push({
-          userId,
+          userId: info.userId,
           runId: info.runId,
+          subagentId: info.subagentId ?? undefined,
           sessionId: info.sessionId,
           lastActive: info.lastActive,
           paused: info.paused,

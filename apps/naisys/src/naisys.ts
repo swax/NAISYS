@@ -205,6 +205,7 @@ await agentManager.waitForAllAgentsToComplete();
 hubLogBuffer?.cleanup();
 hubCostBuffer?.cleanup();
 heartbeatService.cleanup();
+hubClient?.cleanup();
 if (integratedHubShutdown) {
   await integratedHubShutdown();
 }

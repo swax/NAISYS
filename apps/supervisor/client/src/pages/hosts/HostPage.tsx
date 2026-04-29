@@ -39,8 +39,9 @@ import {
 import {
   formatCost,
   formatPrimaryTime,
+  getRowKey,
   getRunIdLabel,
-  getRunKey,
+  runUrl,
 } from "../runs/RunsSidebar";
 
 export const HostPage: React.FC = () => {
@@ -598,20 +599,17 @@ export const HostPage: React.FC = () => {
               </Table.Thead>
               <Table.Tbody>
                 {hostRuns.map((run) => {
-                  const runKey = getRunKey(run);
                   const canNavigate = Boolean(run.username);
                   const runAgent = run.username
                     ? agents.find((a) => a.name === run.username)
                     : undefined;
                   return (
                     <Table.Tr
-                      key={`${run.userId}-${runKey}`}
+                      key={getRowKey(run)}
                       style={{ cursor: canNavigate ? "pointer" : "default" }}
                       onClick={() => {
-                        if (canNavigate) {
-                          void navigate(
-                            `/agents/${run.username}/runs/${runKey}`,
-                          );
+                        if (canNavigate && run.username) {
+                          void navigate(runUrl(run.username, run));
                         }
                       }}
                     >

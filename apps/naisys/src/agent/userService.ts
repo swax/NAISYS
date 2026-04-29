@@ -44,7 +44,14 @@ export function createUserService(
             return;
           }
 
-          userMap = parseUserList(response);
+          const newMap = parseUserList(response);
+          // The hub doesn't know about ephemerals, so carry them forward.
+          if (userMap) {
+            for (const user of userMap.values()) {
+              if (user.isEphemeral) newMap.set(user.userId, user);
+            }
+          }
+          userMap = newMap;
           resolveUsers();
         } catch (error) {
           rejectUsers(
@@ -65,6 +72,17 @@ export function createUserService(
 
   function getUsers(): UserEntry[] {
     return Array.from(userMap.values());
+  }
+
+  /** Like getUsers, but hides ephemerals from anyone other than their parent.
+   * Use for any per-agent display so siblings can't see each other's subagents. */
+  function getVisibleUsers(perspectiveUserId: number): UserEntry[] {
+    return Array.from(userMap.values()).filter((u) => {
+      if (!u.isEphemeral) return true;
+      return (
+        u.leadUserId === perspectiveUserId || u.userId === perspectiveUserId
+      );
+    });
   }
 
   function getUserById(id: number): UserEntry | undefined {
@@ -218,6 +236,26 @@ export function createUserService(
     return undefined;
   }
 
+  /** Synthetic id for an ephemeral subagent. Negative values can't collide
+   * with hub-assigned positive ids, and double as the entry's `subagentId`. */
+  let nextSyntheticId = 0;
+  function nextSyntheticUserId(): number {
+    nextSyntheticId -= 1;
+    return nextSyntheticId;
+  }
+
+  /** Add an ephemeral user that lives only in local memory; never sent to the hub. */
+  function addLocalUser(entry: UserEntry): void {
+    if (userMap.has(entry.userId)) {
+      throw `User id ${entry.userId} already exists`;
+    }
+    userMap.set(entry.userId, entry);
+  }
+
+  function removeLocalUser(userId: number): void {
+    userMap.delete(userId);
+  }
+
   /** Parse a comma-separated username string and resolve to users. Throws on any not-found. */
   function resolveUsernames(csvUsernames: string): UserEntry[] {
     const usernames = csvUsernames.split(",").map((u) => u.trim());
@@ -242,6 +280,7 @@ export function createUserService(
 
   return {
     getUsers,
+    getVisibleUsers,
     getUserById,
     waitForUsers,
     getStartupUserIds,
@@ -253,6 +292,9 @@ export function createUserService(
     getUserStatus,
     getUserByName,
     resolveUsernames,
+    nextSyntheticUserId,
+    addLocalUser,
+    removeLocalUser,
   };
 }
 

@@ -251,6 +251,14 @@ export function createHubClient(
     };
   }
 
+  function cleanup() {
+    activeConnection?.disconnect();
+    activeConnection = null;
+    eventHandlers.clear();
+    connectedHandler = null;
+    connectErrorHandler = null;
+  }
+
   return {
     // RegistrableCommand
     command: hubCmd,
@@ -266,6 +274,7 @@ export function createHubClient(
     unregisterEvent,
     sendMessage,
     sendRequest,
+    cleanup,
   };
 }
 
