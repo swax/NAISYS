@@ -1,4 +1,4 @@
-import type { BootstrapSupervisor, StartHub } from "@naisys/common";
+import type { HostedSupervisorModule, StartHub } from "@naisys/common";
 import {
   createDualLogger,
   cwdWithTilde,
@@ -46,6 +46,7 @@ export const startHub: StartHub = async (
 ) => {
   try {
     const agentPath = startupAgentPath || ".";
+    let cleanupSupervisor: HostedSupervisorModule["cleanupSupervisor"] | undefined;
 
     // Create log service first
     const logService = createDualLogger("hub-server.log");
@@ -175,12 +176,11 @@ export const startHub: StartHub = async (
       // Don't import the whole fastify web server module tree unless needed
       // Use variable to avoid compile-time type dependency on @naisys/supervisor (allows parallel builds)
       const supervisorModule = "@naisys/supervisor";
-      const { supervisorPlugin, bootstrapSupervisor } = (await import(
+      const hostedSupervisor = (await import(
         supervisorModule
-      )) as {
-        supervisorPlugin: any;
-        bootstrapSupervisor: BootstrapSupervisor;
-      };
+      )) as HostedSupervisorModule;
+      const { supervisorPlugin, bootstrapSupervisor } = hostedSupervisor;
+      cleanupSupervisor = hostedSupervisor.cleanupSupervisor;
       const resetSuperAdminPasskey = wizardRan
         ? await promptResetSuperAdminPasskey("Supervisor Setup", {
             defaultReset: !process.argv.includes("--setup"),
@@ -210,6 +210,7 @@ export const startHub: StartHub = async (
     let shutdownPromise: Promise<void> | null = null;
     async function runShutdown(): Promise<void> {
       try {
+        cleanupSupervisor?.();
         heartbeatService.cleanup();
         costService.cleanup();
         mailService.cleanup();

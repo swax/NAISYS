@@ -44,10 +44,12 @@ let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubUrl: string | undefined;
 let hubVersion = "";
+let shuttingDown = false;
 
 export function initHubConnection(hubUrl: string) {
   const hubAccessKey = resolveHubAccessKey();
   resolvedHubUrl = hubUrl;
+  shuttingDown = false;
 
   if (!hubAccessKey) {
     getLogger().warn(
@@ -92,7 +94,7 @@ export function initHubConnection(hubUrl: string) {
     emitHubConnectionStatus(false);
 
     // Server-initiated disconnects don't auto-reconnect in Socket.IO
-    if (reason === "io server disconnect") {
+    if (!shuttingDown && reason === "io server disconnect") {
       socket?.connect();
     }
   });
@@ -359,9 +361,11 @@ export function initHubConnection(hubUrl: string) {
 }
 
 export function cleanupHubConnection() {
+  shuttingDown = true;
   const currentSocket = socket;
   socket = null;
   connected = false;
+  currentSocket?.io.reconnection(false);
   currentSocket?.disconnect();
 }
 

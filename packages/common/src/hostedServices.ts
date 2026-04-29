@@ -30,3 +30,11 @@ export type StartServer = (
 export type BootstrapSupervisor = (opts: {
   resetSuperAdminPasskey?: boolean;
 }) => Promise<void>;
+
+/** Dynamic import surface exported by @naisys/supervisor for hosted hub mode. */
+export type HostedSupervisorModule = {
+  supervisorPlugin: any;
+  bootstrapSupervisor: BootstrapSupervisor;
+  /** Pre-shutdown cleanup the embedded hub calls before tearing down its own services. */
+  cleanupSupervisor: () => void;
+};

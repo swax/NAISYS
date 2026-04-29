@@ -66,4 +66,30 @@ describe("Integrated Hub Shutdown E2E", () => {
 
     naisys.dumpStderrIfAny("Integrated hub shutdown");
   });
+
+  test("exit with embedded supervisor and ERP stops reconnecting clients", async () => {
+    createEnvFile(testDir, { naisysFolder: testDir });
+    appendFileSync(join(testDir, ".env"), `\nSERVER_PORT=${serverPort}`);
+
+    naisys = spawnNaisys(testDir, {
+      args: ["--integrated-hub", "--supervisor", "--erp"],
+    });
+
+    await naisys.waitForOutput("AGENT STARTED", 60000);
+    await naisys.waitForPrompt();
+
+    await naisys.runCommand("exit", {
+      waitFor: "AGENT EXITED",
+      waitForPrompt: false,
+      timeoutMs: 30000,
+    });
+
+    const exitCode = await waitForExit(naisys.process, 10000);
+    expect(exitCode).toBe(0);
+
+    const fullOutput = naisys.getFullOutput();
+    expect(fullOutput).toContain("[NAISYS] Exited");
+
+    naisys.dumpStderrIfAny("Integrated hub supervisor/ERP shutdown");
+  });
 });
