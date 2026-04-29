@@ -175,7 +175,12 @@ const router = createBrowserRouter(
           errorElement={<RouteErrorPage />}
         />
         <Route
-          path=":username/runs/:runKey"
+          path=":username/runs/:runId/sessions/:sessionId"
+          element={<AgentRuns />}
+          errorElement={<RouteErrorPage />}
+        />
+        <Route
+          path=":username/runs/:runId/subagents/:subagentId/sessions/:sessionId"
           element={<AgentRuns />}
           errorElement={<RouteErrorPage />}
         />

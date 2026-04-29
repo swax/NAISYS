@@ -44,6 +44,9 @@ export type AgentStopResponse = z.infer<typeof AgentStopResponseSchema>;
 export const AgentRunPauseRequestSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  // Synthetic subagent ids are always negative; rejecting 0/positive values
+  // keeps `subagentId ?? userId` resolution from aliasing onto a real userId.
+  subagentId: z.number().negative().nullable().optional(),
   sessionId: z.number(),
   sourceHostId: z.number().optional(),
 });
@@ -62,6 +65,8 @@ export type AgentRunPauseResponse = z.infer<typeof AgentRunPauseResponseSchema>;
 export const AgentRunCommandRequestSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  // See AgentRunPauseRequestSchema — synthetic subagent ids must be negative.
+  subagentId: z.number().negative().nullable().optional(),
   sessionId: z.number(),
   command: z.string(),
   sourceHostId: z.number().optional(),

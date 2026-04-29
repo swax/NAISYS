@@ -9,6 +9,7 @@ import type {
   ErrorResponse,
   RunsDataRequest,
   RunsDataResponse,
+  SubagentSessionParams,
 } from "@naisys/supervisor-shared";
 import {
   AgentRunCommandRequestSchema,
@@ -21,8 +22,13 @@ import {
   ErrorResponseSchema,
   RunsDataRequestSchema,
   RunsDataResponseSchema,
+  SubagentSessionParamsSchema,
 } from "@naisys/supervisor-shared";
-import type { FastifyInstance, FastifyPluginOptions } from "fastify";
+import type {
+  FastifyInstance,
+  FastifyPluginOptions,
+  FastifyReply,
+} from "fastify";
 
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { notFound } from "../error-helpers.js";
@@ -92,6 +98,34 @@ export default function agentRunsRoutes(
             rel: "logs",
             hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/logs`,
           },
+          {
+            rel: "subagent-logs",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/subagents/{subagentId}/sessions/{sessionId}/logs`,
+          },
+          {
+            rel: "pause",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/pause`,
+          },
+          {
+            rel: "subagent-pause",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/subagents/{subagentId}/sessions/{sessionId}/pause`,
+          },
+          {
+            rel: "resume",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/resume`,
+          },
+          {
+            rel: "subagent-resume",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/subagents/{subagentId}/sessions/{sessionId}/resume`,
+          },
+          {
+            rel: "command",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/sessions/{sessionId}/command`,
+          },
+          {
+            rel: "subagent-command",
+            hrefTemplate: `${API_PREFIX}/agents/${username}/runs/{runId}/subagents/{subagentId}/sessions/{sessionId}/command`,
+          },
         ],
         _links: timestampCursorLinks(
           `/agents/${username}/runs`,
@@ -102,18 +136,46 @@ export default function agentRunsRoutes(
     },
   );
 
-  // GET /:username/runs/:runId/sessions/:sessionId/logs — Context log
+  // Context log — parent and subagent variants share a handler.
+  registerContextLogRoute(fastify, false);
+  registerContextLogRoute(fastify, true);
+
+  // Paired pause/resume routes — the verb is carried in the URL rather than
+  // the body so the HATEOAS action list can express them as two distinct
+  // affordances that toggle on/off based on current run state.
+  registerRunPauseRoute(fastify, "pause", true, false);
+  registerRunPauseRoute(fastify, "pause", true, true);
+  registerRunPauseRoute(fastify, "resume", false, false);
+  registerRunPauseRoute(fastify, "resume", false, true);
+
+  registerRunCommandRoute(fastify, false);
+  registerRunCommandRoute(fastify, true);
+}
+
+function registerContextLogRoute(
+  fastify: FastifyInstance,
+  withSubagent: boolean,
+) {
+  const path = withSubagent
+    ? "/:username/runs/:runId/subagents/:subagentId/sessions/:sessionId/logs"
+    : "/:username/runs/:runId/sessions/:sessionId/logs";
+  const params = withSubagent
+    ? SubagentSessionParamsSchema
+    : ContextLogParamsSchema;
+
   fastify.get<{
-    Params: ContextLogParams;
+    Params: ContextLogParams | SubagentSessionParams;
     Querystring: ContextLogRequest;
     Reply: ContextLogResponse;
   }>(
-    "/:username/runs/:runId/sessions/:sessionId/logs",
+    path,
     {
       schema: {
-        description: "Get context log for a specific run session",
+        description: withSubagent
+          ? "Get context log for a subagent's run session"
+          : "Get context log for a specific run session",
         tags: ["Runs"],
-        params: ContextLogParamsSchema,
+        params,
         querystring: ContextLogRequestSchema,
         response: {
           200: ContextLogResponseSchema,
@@ -123,6 +185,9 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       const { username, runId, sessionId } = request.params;
+      const subagentId = withSubagent
+        ? (request.params as SubagentSessionParams).subagentId
+        : undefined;
       const { logsAfter, logsBefore, limit } = request.query;
       const id = resolveAgentId(username);
 
@@ -137,6 +202,7 @@ export default function agentRunsRoutes(
         logsAfter,
         logsBefore,
         limit,
+        subagentId,
       );
 
       // Obfuscate log text for users without view_run_logs permission
@@ -151,12 +217,16 @@ export default function agentRunsRoutes(
         ? Math.min(...data.logs.map((l) => l.id))
         : undefined;
 
+      const baseHref = withSubagent
+        ? `/agents/${username}/runs/${runId}/subagents/${subagentId}/sessions/${sessionId}/logs`
+        : `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`;
+
       return {
         success: true,
         message: "Context log retrieved successfully",
         data,
         _links: idCursorLinks(
-          `/agents/${username}/runs/${runId}/sessions/${sessionId}/logs`,
+          baseHref,
           "logsAfter",
           "logsBefore",
           maxLogId,
@@ -166,25 +236,106 @@ export default function agentRunsRoutes(
       };
     },
   );
+}
 
-  // Paired pause/resume routes — the verb is carried in the URL rather than
-  // the body so the HATEOAS action list can express them as two distinct
-  // affordances that toggle on/off based on current run state.
-  registerRunPauseRoute(fastify, "pause", true);
-  registerRunPauseRoute(fastify, "resume", false);
+function registerRunPauseRoute(
+  fastify: FastifyInstance,
+  verb: "pause" | "resume",
+  paused: boolean,
+  withSubagent: boolean,
+) {
+  const label = verb === "pause" ? "Pause" : "Resume";
+  const path = withSubagent
+    ? `/:username/runs/:runId/subagents/:subagentId/sessions/:sessionId/${verb}`
+    : `/:username/runs/:runId/sessions/:sessionId/${verb}`;
+  const params = withSubagent
+    ? SubagentSessionParamsSchema
+    : ContextLogParamsSchema;
 
   fastify.post<{
-    Params: ContextLogParams;
+    Params: ContextLogParams | SubagentSessionParams;
+    Reply: AgentRunPauseResult | ErrorResponse;
+  }>(
+    path,
+    {
+      preHandler: [requirePermission("manage_agents")],
+      schema: {
+        description: withSubagent
+          ? `${label} a subagent's active session via the hub`
+          : `${label} a run's active session via the hub`,
+        tags: ["Runs"],
+        params,
+        response: {
+          200: AgentRunPauseResultSchema,
+          503: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { username, runId, sessionId } = request.params;
+      const subagentId = withSubagent
+        ? (request.params as SubagentSessionParams).subagentId
+        : undefined;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, "Agent not found");
+      }
+
+      if (!isHubConnected()) {
+        return hubUnavailable(reply);
+      }
+
+      const response = await sendAgentRunPauseState(
+        id,
+        runId,
+        sessionId,
+        paused,
+        subagentId,
+      );
+
+      if (response.success) {
+        return {
+          success: true,
+          message: paused ? "Run paused" : "Run resumed",
+        };
+      } else {
+        return reply.status(500).send({
+          success: false,
+          message: response.error || `Failed to ${verb} run`,
+        });
+      }
+    },
+  );
+}
+
+function registerRunCommandRoute(
+  fastify: FastifyInstance,
+  withSubagent: boolean,
+) {
+  const path = withSubagent
+    ? "/:username/runs/:runId/subagents/:subagentId/sessions/:sessionId/command"
+    : "/:username/runs/:runId/sessions/:sessionId/command";
+  const params = withSubagent
+    ? SubagentSessionParamsSchema
+    : ContextLogParamsSchema;
+
+  fastify.post<{
+    Params: ContextLogParams | SubagentSessionParams;
     Body: AgentRunCommandRequestBody;
     Reply: AgentRunCommandResult | ErrorResponse;
   }>(
-    "/:username/runs/:runId/sessions/:sessionId/command",
+    path,
     {
       preHandler: [requirePermission("remote_execution")],
       schema: {
-        description: "Send a command to a run's active session via the hub",
+        description: withSubagent
+          ? "Send a command to a subagent's active session via the hub"
+          : "Send a command to a run's active session via the hub",
         tags: ["Runs"],
-        params: ContextLogParamsSchema,
+        params,
         body: AgentRunCommandRequestSchema,
         response: {
           200: AgentRunCommandResultSchema,
@@ -196,6 +347,9 @@ export default function agentRunsRoutes(
     },
     async (request, reply) => {
       const { username, runId, sessionId } = request.params;
+      const subagentId = withSubagent
+        ? (request.params as SubagentSessionParams).subagentId
+        : undefined;
       const { command } = request.body;
       const id = resolveAgentId(username);
 
@@ -204,13 +358,16 @@ export default function agentRunsRoutes(
       }
 
       if (!isHubConnected()) {
-        return reply.status(503).send({
-          success: false,
-          message: "Hub is not connected",
-        });
+        return hubUnavailable(reply);
       }
 
-      const response = await sendAgentRunCommand(id, runId, sessionId, command);
+      const response = await sendAgentRunCommand(
+        id,
+        runId,
+        sessionId,
+        command,
+        subagentId,
+      );
 
       if (response.success) {
         return {
@@ -227,65 +384,9 @@ export default function agentRunsRoutes(
   );
 }
 
-function registerRunPauseRoute(
-  fastify: FastifyInstance,
-  verb: "pause" | "resume",
-  paused: boolean,
-) {
-  const label = verb === "pause" ? "Pause" : "Resume";
-
-  fastify.post<{
-    Params: ContextLogParams;
-    Reply: AgentRunPauseResult | ErrorResponse;
-  }>(
-    `/:username/runs/:runId/sessions/:sessionId/${verb}`,
-    {
-      preHandler: [requirePermission("manage_agents")],
-      schema: {
-        description: `${label} a run's active session via the hub`,
-        tags: ["Runs"],
-        params: ContextLogParamsSchema,
-        response: {
-          200: AgentRunPauseResultSchema,
-          503: ErrorResponseSchema,
-          500: ErrorResponseSchema,
-        },
-        security: [{ cookieAuth: [] }],
-      },
-    },
-    async (request, reply) => {
-      const { username, runId, sessionId } = request.params;
-      const id = resolveAgentId(username);
-
-      if (!id) {
-        return notFound(reply, "Agent not found");
-      }
-
-      if (!isHubConnected()) {
-        return reply.status(503).send({
-          success: false,
-          message: "Hub is not connected",
-        });
-      }
-
-      const response = await sendAgentRunPauseState(
-        id,
-        runId,
-        sessionId,
-        paused,
-      );
-
-      if (response.success) {
-        return {
-          success: true,
-          message: paused ? "Run paused" : "Run resumed",
-        };
-      } else {
-        return reply.status(500).send({
-          success: false,
-          message: response.error || `Failed to ${verb} run`,
-        });
-      }
-    },
-  );
+function hubUnavailable(reply: FastifyReply) {
+  return reply.status(503).send({
+    success: false,
+    message: "Hub is not connected",
+  });
 }

@@ -72,10 +72,16 @@ export const useHostRuns = (hostname: string | undefined) => {
       if (result.success && result.data) {
         setBaseRuns((prev) => {
           const seen = new Set(
-            prev.map((r) => `${r.userId}-${r.runId}-${r.sessionId}`),
+            prev.map(
+              (r) =>
+                `${r.userId}-${r.runId}-${r.subagentId ?? 0}-${r.sessionId}`,
+            ),
           );
           const additions = result.data!.runs.filter(
-            (r) => !seen.has(`${r.userId}-${r.runId}-${r.sessionId}`),
+            (r) =>
+              !seen.has(
+                `${r.userId}-${r.runId}-${r.subagentId ?? 0}-${r.sessionId}`,
+              ),
           );
           return [...prev, ...additions];
         });

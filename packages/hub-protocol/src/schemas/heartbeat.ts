@@ -21,6 +21,7 @@ export type CommandLoopState = z.infer<typeof CommandLoopStateSchema>;
 export const HeartbeatSessionSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   /** True when the agent's command loop is pause-locked on indefinite wait. */
   paused: z.boolean().optional(),

@@ -113,6 +113,7 @@ export function createMockSubagent() {
     command: subagentCmd,
     handleCommand: vi.fn(() => ""),
     raiseSwitchEvent: vi.fn(),
+    cleanup: vi.fn(),
   };
 
   return subagent;
@@ -234,6 +235,10 @@ export function createMockCostTracker() {
     getPeriodInfo: vi.fn(() => null),
     getBudgetLeft: vi.fn(() => null),
     resetCosts: vi.fn(),
+    addSubagentCost: vi.fn(),
+    getCostControlReason: vi.fn(() => undefined),
+    subscribeSubagent: vi.fn(),
+    unsubscribeSubagent: vi.fn(),
   };
 
   return costTracker;

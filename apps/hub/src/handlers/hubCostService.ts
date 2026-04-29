@@ -25,9 +25,10 @@ export function createHubCostService(
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
 ) {
-  // Track which users have been suspended due to spend limit overrun
-  const suspendedByGlobal = new Set<number>();
-  const suspendedByAgent = new Set<number>();
+  // Suspended users → original suspension reason. Stored so a defensive
+  // re-send (when a suspended user keeps writing costs) can use the same text.
+  const suspendedByGlobal = new Map<number, string>();
+  const suspendedByAgent = new Map<number, string>();
 
   naisysServer.registerEvent(
     HubEvents.COST_WRITE,
@@ -41,10 +42,15 @@ export function createHubCostService(
         const userCostTotals = new Map<number, number>();
 
         for (const entry of parsed.entries) {
+          const subagentId = entry.subagentId ?? 0;
+          // Wire format: undefined for parent (subagent_id 0 in DB), number otherwise
+          const wireSubagentId = subagentId === 0 ? undefined : subagentId;
+
           await hubDb.costs.create({
             data: {
               user_id: entry.userId,
               run_id: entry.runId,
+              subagent_id: subagentId,
               session_id: entry.sessionId,
               host_id: hostId,
               source: entry.source,
@@ -62,6 +68,7 @@ export function createHubCostService(
             where: {
               user_id: entry.userId,
               run_id: entry.runId,
+              subagent_id: subagentId,
               session_id: entry.sessionId,
             },
             data: {
@@ -69,7 +76,7 @@ export function createHubCostService(
             },
           });
 
-          const key = `${entry.userId}:${entry.runId}:${entry.sessionId}`;
+          const key = `${entry.userId}:${entry.runId}:${subagentId}:${entry.sessionId}`;
           const existing = costPushMap.get(key);
           if (existing) {
             existing.costDelta += entry.cost;
@@ -77,6 +84,7 @@ export function createHubCostService(
             costPushMap.set(key, {
               userId: entry.userId,
               runId: entry.runId,
+              subagentId: wireSubagentId,
               sessionId: entry.sessionId,
               costDelta: entry.cost,
             });
@@ -95,10 +103,13 @@ export function createHubCostService(
           });
         }
 
-        // Re-send cost_control to any suspended users still writing costs
+        // Re-send cost_control to suspended users still writing costs.
+        // Per-agent reason wins: a per-agent limit overrides the global one.
         for (const userId of userCostTotals.keys()) {
-          if (suspendedByGlobal.has(userId) || suspendedByAgent.has(userId)) {
-            sendCostControl(userId, false, "Spend limit exceeded");
+          const reason =
+            suspendedByAgent.get(userId) ?? suspendedByGlobal.get(userId);
+          if (reason !== undefined) {
+            sendCostControl(userId, false, reason);
           }
         }
 
@@ -130,8 +141,8 @@ export function createHubCostService(
   async function checkSpendLimits(candidateUserIds?: Iterable<number>) {
     const activeUserIds = heartbeatService.getActiveUserIds();
     const usersToCheck = new Set(activeUserIds);
-    for (const userId of suspendedByGlobal) usersToCheck.add(userId);
-    for (const userId of suspendedByAgent) usersToCheck.add(userId);
+    for (const userId of suspendedByGlobal.keys()) usersToCheck.add(userId);
+    for (const userId of suspendedByAgent.keys()) usersToCheck.add(userId);
     if (candidateUserIds) {
       for (const userId of candidateUserIds) usersToCheck.add(userId);
     }
@@ -301,7 +312,7 @@ export function createHubCostService(
           `[Hub:Costs] Suspending user ${userId} (global limit): ${reason}`,
         );
         sendCostControl(userId, false, reason);
-        suspendedByGlobal.add(userId);
+        suspendedByGlobal.set(userId, reason);
         await setCostSuspendedReason(hubDb, userId, reason);
       } else if (!isOverLimit && wasSuspended) {
         await resumeFromGlobal(
@@ -340,7 +351,7 @@ export function createHubCostService(
       const reason = `Spend limit of $${spendLimit} reached (current: $${periodCost.toFixed(2)})`;
       logService.log(`[Hub:Costs] Suspending user ${userId}: ${reason}`);
       sendCostControl(userId, false, reason);
-      suspendedByAgent.add(userId);
+      suspendedByAgent.set(userId, reason);
       await setCostSuspendedReason(hubDb, userId, reason);
     } else if (!isOverLimit && wasSuspended) {
       const reason = `Spend limit period reset (current: $${periodCost.toFixed(2)}, limit: $${spendLimit})`;

@@ -43,15 +43,22 @@ import {
   formatDuration,
   formatPrimaryTime,
   getRunIdLabel,
-  getRunKey,
   RunsSidebar,
+  runUrl,
 } from "./RunsSidebar";
 
 /** Re-rendering triggered by agentParam */
 export const AgentRuns: React.FC = () => {
-  const { username, runKey } = useParams<{
+  const {
+    username,
+    runId: runIdParam,
+    sessionId: sessionIdParam,
+    subagentId: subagentIdParam,
+  } = useParams<{
     username: string;
-    runKey: string;
+    runId: string;
+    sessionId: string;
+    subagentId: string;
   }>();
   const navigate = useNavigate();
   const { agents, readStatus } = useAgentDataContext();
@@ -59,6 +66,12 @@ export const AgentRuns: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
+
+  const activeRunId = runIdParam !== undefined ? Number(runIdParam) : undefined;
+  const activeSessionId =
+    sessionIdParam !== undefined ? Number(sessionIdParam) : undefined;
+  const activeSubagentId =
+    subagentIdParam !== undefined ? Number(subagentIdParam) : null;
 
   const agent = agents.find((a) => a.name === username);
   const agentName = agent?.name;
@@ -95,15 +108,17 @@ export const AgentRuns: React.FC = () => {
   // Auto-select a run when fresh data arrives and no run is in the URL
   useEffect(() => {
     if (freshData !== "loaded") return;
-    if (runKey) return; // URL already has a run selected
+    if (activeRunId !== undefined) return; // URL already has a run selected
     if (allRuns.length === 0) return;
 
     const expandParam = searchParams.get("expand");
+    // Auto-select only picks parent runs; subagents are reached via explicit click.
+    const parentRuns = allRuns.filter((run) => run.subagentId == null);
     let targetRun: RunSession | undefined;
 
     if (expandParam === "new") {
       // Select first run with unread logs
-      targetRun = allRuns.find((run) => {
+      targetRun = parentRuns.find((run) => {
         if (!agentName) return false;
         const agentReadStatus = readStatus[agentName];
         if (!agentReadStatus) return false;
@@ -111,18 +126,16 @@ export const AgentRuns: React.FC = () => {
       });
     } else if (expandParam === "online") {
       // Select first online run
-      targetRun = allRuns.find((run) => run.isOnline);
+      targetRun = parentRuns.find((run) => run.isOnline);
     }
 
     // Fallback: select first run
     if (!targetRun) {
-      targetRun = allRuns[0];
+      targetRun = parentRuns[0];
     }
 
-    if (targetRun) {
-      void navigate(`/agents/${username}/runs/${getRunKey(targetRun)}`, {
-        replace: true,
-      });
+    if (targetRun && username) {
+      void navigate(runUrl(username, targetRun), { replace: true });
     }
   }, [
     freshData,
@@ -130,7 +143,7 @@ export const AgentRuns: React.FC = () => {
     agentName,
     readStatus,
     searchParams,
-    runKey,
+    activeRunId,
     username,
     navigate,
   ]);
@@ -140,9 +153,15 @@ export const AgentRuns: React.FC = () => {
     setFreshData("loading");
   }, [username]);
 
-  const selectedRun = runKey
-    ? allRuns.find((run) => getRunKey(run) === runKey)
-    : undefined;
+  const selectedRun =
+    activeRunId !== undefined && activeSessionId !== undefined
+      ? allRuns.find(
+          (run) =>
+            run.runId === activeRunId &&
+            run.sessionId === activeSessionId &&
+            (run.subagentId ?? null) === activeSubagentId,
+        )
+      : undefined;
 
   const hasUnreadLogs = useCallback(
     (run: RunSession) => {
@@ -164,12 +183,14 @@ export const AgentRuns: React.FC = () => {
     setPauseLoading(true);
     try {
       const result = target
-        ? await pauseRun(username, run.runId, run.sessionId)
-        : await resumeRun(username, run.runId, run.sessionId);
+        ? await pauseRun(username, run.runId, run.sessionId, run.subagentId)
+        : await resumeRun(username, run.runId, run.sessionId, run.subagentId);
       if (result.success) {
         // Flip locally on ack so the button label doesn't lag the
         // heartbeat round-trip; the next heartbeat will confirm.
-        patchRun(run.userId, run.runId, run.sessionId, { paused: target });
+        patchRun(run.userId, run.runId, run.sessionId, run.subagentId, {
+          paused: target,
+        });
       } else {
         notifications.show({
           title: target ? "Pause Failed" : "Resume Failed",
@@ -222,6 +243,7 @@ export const AgentRuns: React.FC = () => {
         run.runId,
         run.sessionId,
         command,
+        run.subagentId,
       );
       if (result.success) {
         setCommandInput("");
@@ -275,7 +297,9 @@ export const AgentRuns: React.FC = () => {
       totalRuns={totalRuns}
       runsLoading={runsLoading}
       agentName={agent.name}
-      activeRunKey={runKey}
+      activeRunId={activeRunId}
+      activeSessionId={activeSessionId}
+      activeSubagentId={activeSubagentId}
       onNavLinkClick={closeDrawer}
       hasUnreadLogs={hasUnreadLogs}
       hasMore={hasMore}
@@ -380,6 +404,11 @@ export const AgentRuns: React.FC = () => {
                 <Text size="sm" fw={600} visibleFrom="sm">
                   {formatPrimaryTime(selectedRun.createdAt)}
                 </Text>
+                {selectedRun.subagentId != null && (
+                  <Badge size="sm" variant="light" color="violet">
+                    ↳ Subagent {selectedRun.subagentId}
+                  </Badge>
+                )}
                 {selectedRun.hostName && (
                   <Badge
                     size="sm"

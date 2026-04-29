@@ -1,14 +1,19 @@
+import type { AgentConfigFile } from "@naisys/common";
 import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import stripAnsi from "strip-ansi";
 import table from "text-table";
 
+import type { AgentConfig } from "../agent/agentConfig.js";
 import type { IAgentManager } from "../agent/agentManagerInterface.js";
 import type { UserService } from "../agent/userService.js";
 import { subagentCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { HubClient } from "../hub/hubClient.js";
+import type { CostTracker } from "../llm/costTracker.js";
 import type { MailService } from "../mail/mail.js";
+import type { RunService } from "../services/runService.js";
+import { agentNames } from "../utils/agentNames.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
@@ -18,6 +23,7 @@ interface Subagent {
   agentName: string;
   title: string;
   taskDescription?: string;
+  isEphemeral?: boolean;
 }
 
 export function createSubagentService(
@@ -29,6 +35,9 @@ export function createSubagentService(
   localUserId: number,
   promptNotification: PromptNotificationService,
   hubClient: HubClient | undefined,
+  agentConfig: AgentConfig,
+  runService: RunService,
+  costTracker: CostTracker,
 ) {
   const mySubagentsMap = new Map<number, Subagent>();
 
@@ -46,6 +55,7 @@ export function createSubagentService(
         const subs = subagentCmd.subcommands!;
         let helpOutput = `${subagentCmd.name} <command>
   ${subs.list.usage}: ${subs.list.description}
+  ${subs.create.usage}: ${subs.create.description}
   ${subs.start.usage}: ${subs.start.description}
   ${subs.stop.usage}: ${subs.stop.description}
   ${subs.peek.usage}: ${subs.peek.description}`;
@@ -72,8 +82,19 @@ export function createSubagentService(
 
         return listLocalAgents();
       }
-      // "create" command removed - generated agent yaml configs from a template and wrote them to disk. See git history.
       // "spawn" command removed - launched agents as separate child node processes. See git history.
+      case "create": {
+        const title = argv[1];
+        const taskDescription = argv[2];
+
+        if (!title || !taskDescription) {
+          errorText =
+            'Missing required parameters. Expected: create "<title>" "<task>"\n';
+          break;
+        }
+
+        return await createEphemeralSubagent(title, taskDescription);
+      }
       case "start": {
         const subagentName = argv[1];
         const taskDescription = argv[2];
@@ -252,6 +273,94 @@ export function createSubagentService(
     return user;
   }
 
+  async function createEphemeralSubagent(
+    title: string,
+    taskDescription: string,
+  ) {
+    if (userService.getUserById(localUserId)?.isEphemeral) {
+      throw "Subagents cannot create their own subagents";
+    }
+
+    const existingNames = new Set(
+      userService.getUsers().map((u) => u.username),
+    );
+    const shuffled = [...agentNames].sort(() => Math.random() - 0.5);
+    const agentName = shuffled.find((n) => !existingNames.has(n));
+
+    if (!agentName) {
+      throw "No available usernames for subagents";
+    }
+
+    const subagentUserId = userService.nextSyntheticUserId();
+    const parentConfig = agentConfig.agentConfig();
+    const leadAgent = parentConfig.username;
+
+    const subagentConfig: AgentConfigFile = {
+      username: agentName,
+      title,
+      agentPrompt:
+        `You are \${agent.username}, a \${agent.title} working for ${leadAgent}.\n` +
+        `Task: ${taskDescription}\n` +
+        `Complete the task and/or wait for follow-up messages from ${leadAgent}. ` +
+        `When finished, use ns-session to end your session.`,
+      commandProtection:
+        parentConfig.commandProtection == "auto" ? "auto" : "none",
+      // spendLimitDollars omitted: subagent defers checkSpendLimit to parent.
+      // spendLimitHours kept: drives ns-cost period display.
+      spendLimitHours: parentConfig.spendLimitHours,
+      shellModel: parentConfig.shellModel,
+      imageModel: parentConfig.imageModel,
+      tokenMax: parentConfig.tokenMax,
+      wakeOnMessage: true,
+      completeSessionEnabled: true,
+      webEnabled: parentConfig.webEnabled,
+      mailEnabled: parentConfig.mailEnabled,
+      chatEnabled: parentConfig.chatEnabled,
+      browserEnabled: parentConfig.browserEnabled,
+      multipleCommandsEnabled: parentConfig.multipleCommandsEnabled,
+    };
+
+    userService.addLocalUser({
+      userId: subagentUserId,
+      username: agentName,
+      enabled: true,
+      leadUserId: localUserId,
+      config: subagentConfig,
+      isEphemeral: true,
+    });
+
+    const subagent: Subagent = {
+      userId: subagentUserId,
+      agentName,
+      title,
+      taskDescription,
+      isEphemeral: true,
+    };
+    mySubagentsMap.set(subagentUserId, subagent);
+
+    try {
+      await agentManager.startAgent(
+        subagentUserId,
+        (stopReason) => handleAgentTermination(subagent, stopReason),
+        undefined,
+        {
+          parentUserId: localUserId,
+          parentRunId: runService.getRunId(),
+          subagentId: subagentUserId,
+          parentCostTracker: costTracker,
+        },
+      );
+    } catch (error) {
+      userService.removeLocalUser(subagentUserId);
+      mySubagentsMap.delete(subagentUserId);
+      throw error;
+    }
+
+    await sendStartupMessage(subagent, taskDescription);
+
+    return `Subagent '${agentName}' (${title}) created and started`;
+  }
+
   async function startAgent(agentName: string, taskDescription: string) {
     refreshMySubagents();
 
@@ -366,32 +475,36 @@ export function createSubagentService(
     // Collect subordinate IDs before stopping the parent
     const subordinateIds = recursive ? findRunningSubordinates(userId) : [];
 
-    if (hubClient) {
-      // Hub mode: send stop requests through hub for each agent
-      const response = await hubClient.sendRequest(HubEvents.AGENT_STOP, {
+    // Ephemerals are local-only — the hub doesn't know their synthetic ids,
+    // so route each target per its own ephemerality (a non-ephemeral parent
+    // can have ephemeral children).
+    const isHubRouted = (targetId: number) =>
+      !!hubClient && !userService.getUserById(targetId)?.isEphemeral;
+
+    if (isHubRouted(userId)) {
+      // Confirm the hub accepted the parent stop so failures surface to the caller
+      const response = await hubClient!.sendRequest(HubEvents.AGENT_STOP, {
         userId,
         reason,
       });
-
       if (!response.success) {
         throw `Failed to stop agent via hub: ${response.error}`;
       }
-
-      // Stop subordinates (fire-and-forget, don't block on results)
-      void Promise.all(
-        subordinateIds.map((subId) =>
-          hubClient
-            .sendRequest(HubEvents.AGENT_STOP, { userId: subId, reason })
-            .catch(() => {}),
-        ),
-      );
     } else {
-      // Non-hub mode: stop all agents simultaneously
-      void Promise.all([
-        ...subordinateIds.map((subId) => agentManager.stopAgent(subId, reason)),
-        agentManager.stopAgent(userId, reason),
-      ]);
+      // Local stop awaits the agent's actual shutdown (up to 10s) — fire-and-forget
+      void agentManager.stopAgent(userId, reason);
     }
+
+    // Subordinates fire-and-forget; route each per its own ephemerality
+    void Promise.all(
+      subordinateIds.map((subId) =>
+        isHubRouted(subId)
+          ? hubClient!
+              .sendRequest(HubEvents.AGENT_STOP, { userId: subId, reason })
+              .catch(() => {})
+          : agentManager.stopAgent(subId, reason).catch(() => {}),
+      ),
+    );
 
     const stoppedCount = subordinateIds.length + 1;
     return recursive && stoppedCount > 1
@@ -415,10 +528,12 @@ export function createSubagentService(
       throw `You're not authorized to peek at agent '${agentName}' — not your subordinate`;
     }
 
+    const isEphemeral = userService.getUserById(userId)?.isEphemeral;
+
     let lines: string[];
     let totalLines: number;
 
-    if (hubClient) {
+    if (hubClient && !isEphemeral) {
       const response = await hubClient.sendRequest(HubEvents.AGENT_PEEK, {
         userId,
         skip,
@@ -463,6 +578,11 @@ export function createSubagentService(
         `Subagent '${subagent.agentName}' has terminated. Reason: ${reason}`,
       ],
     });
+
+    if (subagent.isEphemeral) {
+      userService.removeLocalUser(subagent.userId);
+      mySubagentsMap.delete(subagent.userId);
+    }
   }
 
   const registrableCommand: RegistrableCommand = {
@@ -470,9 +590,23 @@ export function createSubagentService(
     handleCommand,
   };
 
+  async function cleanup() {
+    const stopPromises = [...mySubagentsMap.values()]
+      .filter((sub) => sub.isEphemeral)
+      .map((sub) =>
+        agentManager.stopAgent(sub.userId, "parent terminated").catch((err) => {
+          output.errorAndLog(
+            `Failed to stop ephemeral subagent ${sub.agentName}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }),
+      );
+    await Promise.all(stopPromises);
+  }
+
   return {
     ...registrableCommand,
     raiseSwitchEvent,
+    cleanup,
   };
 }
 

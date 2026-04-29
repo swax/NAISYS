@@ -180,12 +180,24 @@ export function createMailService(
     attachmentIds?: number[],
     resolvedPaths?: string[],
   ): Promise<string> {
+    if (recipients.length === 0) {
+      throw "No recipients";
+    }
+
     message = message.replace(/\\n/g, "\n");
 
-    if (hubClient) {
-      const response = await hubClient.sendRequest(HubEvents.MAIL_SEND, {
+    // Ephemerals always go local; the hub doesn't know about them.
+    const localRecipients = hubClient
+      ? recipients.filter((r) => r.isEphemeral)
+      : recipients;
+    const hubRecipients = hubClient
+      ? recipients.filter((r) => !r.isEphemeral)
+      : [];
+
+    if (hubRecipients.length > 0) {
+      const response = await hubClient!.sendRequest(HubEvents.MAIL_SEND, {
         fromUserId: localUserId,
-        toUserIds: recipients.map((r) => r.userId),
+        toUserIds: hubRecipients.map((r) => r.userId),
         subject,
         body: message,
         kind: "mail",
@@ -195,43 +207,42 @@ export function createMailService(
       if (!response.success) {
         throw response.error || "Failed to send message";
       }
-
-      return "Mail sent";
     }
 
-    // Local mode: emit to event bus
+    if (localRecipients.length > 0) {
+      const mailContent: MailContent = {
+        fromUsername: localUsername,
+        fromTitle: localTitle,
+        recipientUsernames: localRecipients.map((r) => r.username),
+        subject,
+        body: message,
+        createdAt: new Date().toISOString(),
+        filePaths: resolvedPaths,
+      };
 
-    const mailContent: MailContent = {
-      fromUsername: localUsername,
-      fromTitle: localTitle,
-      recipientUsernames: recipients.map((r) => r.username),
-      subject,
-      body: message,
-      createdAt: new Date().toISOString(),
-      filePaths: resolvedPaths,
-    };
+      const display = formatMessageDisplay(mailContent);
 
-    const display = formatMessageDisplay(mailContent);
+      for (const recipient of localRecipients) {
+        promptNotification.notify({
+          userId: recipient.userId,
+          wake: "yes",
+          contextOutput: ["New Message:", display],
+        });
+      }
 
-    for (const recipient of recipients) {
-      promptNotification.notify({
-        userId: recipient.userId,
-        wake: "yes",
-        contextOutput: ["New Message:", display],
-      });
-    }
-
-    // Auto-start inactive recipient agents so they can process the mail
-    if (globalConfig.globalConfig().autoStartAgentsOnMessage) {
-      const runningUserIds = new Set(
-        agentManager.runningAgents.map((a) => a.agentUserId),
-      );
-      for (const recipient of recipients) {
-        if (
-          recipient.userId !== localUserId &&
-          !runningUserIds.has(recipient.userId)
-        ) {
-          agentManager.startAgent(recipient.userId).catch(() => {});
+      // Auto-start is local-mode only — ephemerals start via `ns-agent create`.
+      if (!hubClient && globalConfig.globalConfig().autoStartAgentsOnMessage) {
+        const runningUserIds = new Set(
+          agentManager.runningAgents.map((a) => a.agentUserId),
+        );
+        for (const recipient of localRecipients) {
+          if (
+            recipient.userId !== localUserId &&
+            !recipient.isEphemeral &&
+            !runningUserIds.has(recipient.userId)
+          ) {
+            agentManager.startAgent(recipient.userId).catch(() => {});
+          }
         }
       }
     }

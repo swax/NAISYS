@@ -146,12 +146,14 @@ export function initHubConnection(hubUrl: string) {
 
     const browserIO = getIO();
 
-    // Group log entries by session and emit to log rooms
+    // Group log entries by room. subagentId is in the key so a subagent's
+    // stream doesn't bleed into the parent's view.
     const bySession = new Map<string, typeof parsed.data.entries>();
     for (const entry of parsed.data.entries) {
       const username = resolveUsername(entry.userId);
       if (!username) continue;
-      const room = `logs:${username}:${entry.runId}:${entry.sessionId}`;
+      const subagentId = entry.subagentId ?? 0;
+      const room = `logs:${username}:${entry.runId}:${subagentId}:${entry.sessionId}`;
       if (!bySession.has(room)) bySession.set(room, []);
       bySession.get(room)!.push(entry);
     }
@@ -356,6 +358,13 @@ export function initHubConnection(hubUrl: string) {
   });
 }
 
+export function cleanupHubConnection() {
+  const currentSocket = socket;
+  socket = null;
+  connected = false;
+  currentSocket?.disconnect();
+}
+
 export function isHubConnected(): boolean {
   return connected;
 }
@@ -498,6 +507,7 @@ export function sendAgentRunPauseState(
   runId: number,
   sessionId: number,
   paused: boolean,
+  subagentId?: number,
 ) {
   return new Promise<AgentRunPauseResponse>((resolve, reject) => {
     if (!socket || !connected) {
@@ -509,7 +519,7 @@ export function sendAgentRunPauseState(
       ? HubEvents.AGENT_RUN_PAUSE
       : HubEvents.AGENT_RUN_RESUME;
 
-    socket.emit(event, { userId, runId, sessionId }, (response) => {
+    socket.emit(event, { userId, runId, subagentId, sessionId }, (response) => {
       resolve(response);
     });
   });
@@ -520,6 +530,7 @@ export function sendAgentRunCommand(
   runId: number,
   sessionId: number,
   command: string,
+  subagentId?: number,
 ) {
   return new Promise<AgentRunCommandResponse>((resolve, reject) => {
     if (!socket || !connected) {
@@ -529,7 +540,7 @@ export function sendAgentRunCommand(
 
     socket.emit(
       HubEvents.AGENT_RUN_COMMAND,
-      { userId, runId, sessionId, command },
+      { userId, runId, subagentId, sessionId, command },
       (response) => {
         resolve(response);
       },

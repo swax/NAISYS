@@ -156,7 +156,7 @@ export const startHub: StartHub = async (
     );
 
     // Register hub mail service for mail events from NAISYS instances
-    createHubMailService(
+    const mailService = createHubMailService(
       naisysServer,
       hubDatabaseService,
       logService,
@@ -211,6 +211,8 @@ export const startHub: StartHub = async (
     async function runShutdown(): Promise<void> {
       try {
         heartbeatService.cleanup();
+        costService.cleanup();
+        mailService.cleanup();
         await io.close();
         await fastify.close();
       } finally {

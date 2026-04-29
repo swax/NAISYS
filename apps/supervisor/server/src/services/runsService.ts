@@ -110,7 +110,6 @@ export async function getRunsData(
   page: number = 1,
   count: number = 50,
 ): Promise<RunsData> {
-  // Build the where clause
   const where: any = {};
   if (filter.userId !== undefined) {
     where.user_id = filter.userId;
@@ -131,9 +130,13 @@ export async function getRunsData(
   // Get paginated runs
   const runSessions = await hubDb.run_session.findMany({
     where,
-    orderBy: {
-      created_at: "desc",
-    },
+    // Group sessions and subagents under their parent run. subagent_id desc
+    // puts the parent (0) before subagents (-1, -2, ...).
+    orderBy: [
+      { run_id: "desc" },
+      { subagent_id: "desc" },
+      { created_at: "desc" },
+    ],
     skip: (page - 1) * count,
     take: count,
     include: {
@@ -148,6 +151,7 @@ export async function getRunsData(
       userId: session.user_id,
       username: session.users.username,
       runId: session.run_id,
+      subagentId: session.subagent_id === 0 ? undefined : session.subagent_id,
       sessionId: session.session_id,
       createdAt: session.created_at.toISOString(),
       lastActive: session.last_active.toISOString(),
@@ -174,10 +178,12 @@ export async function getContextLog(
   logsAfter?: number,
   logsBefore?: number,
   limit?: number,
+  subagentId?: number,
 ): Promise<ContextLogData> {
   const where: any = {
     user_id: userId,
     run_id: runId,
+    subagent_id: subagentId ?? 0,
     session_id: sessionId,
   };
 

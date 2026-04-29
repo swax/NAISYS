@@ -112,10 +112,11 @@ export function createHubConnection(
   }
 
   function disconnect() {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
-      connected = false;
+    const currentSocket = socket;
+    socket = null;
+    connected = false;
+    if (currentSocket) {
+      currentSocket.disconnect();
       hubClientLog.log(`[NAISYS:HubClient] Disconnected from ${hubUrl}`);
     }
   }

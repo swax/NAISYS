@@ -17,6 +17,7 @@
     "dev": "tsx watch src/naisysHub.ts",
     "start": "node dist/naisysHub.js",
     "build": "tsc",
+    "test": "vitest run",
     "type-check": "tsc --noEmit",
     "npm:publish:dryrun": "npm publish --dry-run",
     "npm:publish": "npm publish --access public"
@@ -51,7 +52,8 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": ">=22.0.0"

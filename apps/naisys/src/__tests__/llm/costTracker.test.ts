@@ -1,8 +1,117 @@
 import { calculatePeriodBoundaries } from "@naisys/common";
-import { describe, expect, test } from "vitest";
+import { HubEvents } from "@naisys/hub-protocol";
+import { describe, expect, test, vi } from "vitest";
 
+import type { AgentConfig } from "../../agent/agentConfig.js";
+import type { GlobalConfig } from "../../globalConfig.js";
+import type { HubClient } from "../../hub/hubClient.js";
+import type { HubCostBuffer } from "../../hub/hubCostBuffer.js";
 import { calculateModelCacheSavings } from "../../llm/cacheSavings.js";
-import type { LlmModelCosts } from "../../llm/costTracker.js";
+import {
+  type CostTracker,
+  createCostTracker,
+  type LlmModelCosts,
+  SpendLimitError,
+} from "../../llm/costTracker.js";
+import type { ModelService } from "../../services/modelService.js";
+import type { RunService } from "../../services/runService.js";
+import type { PromptNotificationService } from "../../utils/promptNotificationService.js";
+
+function createTracker({
+  userId,
+  spendLimitDollars = 10,
+  hubClient,
+  hubCostBuffer,
+  parentCostTracker,
+  promptNotification = createPromptNotification(),
+}: {
+  userId: number;
+  spendLimitDollars?: number;
+  hubClient?: HubClient;
+  hubCostBuffer?: HubCostBuffer;
+  parentCostTracker?: CostTracker;
+  promptNotification?: PromptNotificationService;
+}) {
+  const globalConfig = {
+    globalConfig: () => ({
+      spendLimitDollars,
+      spendLimitHours: undefined,
+      variableMap: {},
+    }),
+  } as unknown as GlobalConfig;
+
+  const agentConfig = {
+    agentConfig: () => ({
+      username: `agent-${userId}`,
+      spendLimitDollars,
+      spendLimitHours: undefined,
+    }),
+  } as unknown as AgentConfig;
+
+  const modelService = {
+    getLlmModel: vi.fn(() => ({ inputCost: 1, outputCost: 1 })),
+  } as unknown as ModelService;
+
+  const runService = {
+    getRunId: () => 1,
+    getSessionId: () => 1,
+  } as unknown as RunService;
+
+  return createCostTracker(
+    globalConfig,
+    agentConfig,
+    modelService,
+    runService,
+    hubClient,
+    hubCostBuffer,
+    userId,
+    promptNotification,
+    parentCostTracker,
+  );
+}
+
+function createPromptNotification() {
+  return {
+    notify: vi.fn(),
+  } as unknown as PromptNotificationService;
+}
+
+function createMockHubClient(connected = true) {
+  const handlers = new Map<string, (data: unknown) => void>();
+  const hubClient = {
+    registerEvent: vi.fn((event: string, handler: (data: unknown) => void) => {
+      handlers.set(event, handler);
+    }),
+    isConnected: vi.fn(() => connected),
+  } as unknown as HubClient;
+
+  return {
+    hubClient,
+    emit: (event: string, data: unknown) => handlers.get(event)?.(data),
+  };
+}
+
+function createMockHubCostBuffer() {
+  const callbacks = new Map<number, (budgetLeft: number) => void>();
+  const hubCostBuffer = {
+    pushEntry: vi.fn(),
+    registerBudgetCallback: vi.fn(
+      (userId: number, callback: (budgetLeft: number) => void) => {
+        callbacks.set(userId, callback);
+      },
+    ),
+    unregisterBudgetCallback: vi.fn((userId: number) => {
+      callbacks.delete(userId);
+    }),
+    cleanup: vi.fn(),
+  } as unknown as HubCostBuffer;
+
+  return {
+    hubCostBuffer,
+    setBudgetLeft: (userId: number, budgetLeft: number) =>
+      callbacks.get(userId)?.(budgetLeft),
+  };
+}
 
 describe("calculatePeriodBoundaries", () => {
   test.each([
@@ -222,5 +331,83 @@ describe("calculateModelCacheSavings", () => {
     expect(result?.actualCacheSpend).toBeCloseTo(0.0015, 6);
     expect(result?.totalCost).toBeCloseTo(0.1065, 6);
     expect(result?.costWithoutCaching).toBeCloseTo(0.108, 6);
+  });
+});
+
+describe("createCostTracker cost controls", () => {
+  test("without a hub, subagent spend rolls into the parent's local spend limit", () => {
+    const parent = createTracker({ userId: 1, spendLimitDollars: 1 });
+    const subagent = createTracker({
+      userId: -1,
+      spendLimitDollars: 1,
+      parentCostTracker: parent,
+    });
+
+    subagent.recordCost(1.25, "genimg", "mock-image");
+
+    expect(subagent.getTotalCost()).toBeCloseTo(1.25);
+    expect(parent.getTotalCost()).toBeCloseTo(1.25);
+    expect(() => parent.checkSpendLimit()).toThrow(SpendLimitError);
+    expect(() => subagent.checkSpendLimit()).toThrow(SpendLimitError);
+
+    subagent.cleanup();
+    parent.cleanup();
+  });
+
+  test("with a hub, subagents share parent budget and cost-control suspension state", () => {
+    const { hubClient, emit } = createMockHubClient();
+    const { hubCostBuffer, setBudgetLeft } = createMockHubCostBuffer();
+    const promptNotification = createPromptNotification();
+
+    const parent = createTracker({
+      userId: 1,
+      hubClient,
+      hubCostBuffer,
+      promptNotification,
+    });
+    const subagent = createTracker({
+      userId: -1,
+      parentCostTracker: parent,
+      promptNotification,
+    });
+
+    setBudgetLeft(1, 2);
+    expect(parent.getBudgetLeft()).toBe(2);
+    expect(subagent.getBudgetLeft()).toBe(2);
+
+    subagent.recordCost(0.5, "genimg", "mock-image");
+    expect(parent.getBudgetLeft()).toBe(1.5);
+    expect(subagent.getBudgetLeft()).toBe(1.5);
+
+    emit(HubEvents.COST_CONTROL, {
+      userId: 1,
+      enabled: false,
+      reason: "Spend limit exceeded",
+    });
+
+    expect(parent.getCostControlReason()).toBe("Spend limit exceeded");
+    expect(() => parent.checkSpendLimit()).toThrow("LLM Spend limit exceeded");
+    expect(() => subagent.checkSpendLimit()).toThrow(
+      "LLM Spend limit exceeded",
+    );
+
+    emit(HubEvents.COST_CONTROL, {
+      userId: 1,
+      enabled: true,
+      reason: "Spend limit exceeded",
+    });
+
+    expect(parent.getCostControlReason()).toBeUndefined();
+    expect(() => parent.checkSpendLimit()).not.toThrow();
+    expect(() => subagent.checkSpendLimit()).not.toThrow();
+    expect(promptNotification.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 1, wake: "always" }),
+    );
+    expect(promptNotification.notify).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: -1, wake: "always" }),
+    );
+
+    subagent.cleanup();
+    parent.cleanup();
   });
 });

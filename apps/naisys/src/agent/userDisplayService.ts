@@ -132,12 +132,6 @@ export function createUserDisplayService(
   localUserId: number,
 ) {
   function handleCommand(cmdArgs: string): string {
-    const allUsers = userService.getUsers();
-
-    if (allUsers.length === 0) {
-      return "No users found.";
-    }
-
     const targetUsername = cmdArgs.trim();
     let perspectiveUserId = localUserId;
 
@@ -147,6 +141,14 @@ export function createUserDisplayService(
         return `Error: user '${targetUsername}' not found`;
       }
       perspectiveUserId = targetUser.userId;
+    }
+
+    // Filter ephemerals to those owned by this perspective so foreign
+    // ephemerals are not counted in the hidden-children rollup either.
+    const allUsers = userService.getVisibleUsers(perspectiveUserId);
+
+    if (allUsers.length === 0) {
+      return "No users found.";
     }
 
     const userItems = allUsers.map((u) => ({

@@ -55,6 +55,7 @@ export const RunSessionLog: React.FC<{
     run.sessionId,
     true,
     run.isOnline,
+    run.subagentId ?? null,
   );
 
   // Mark panel as ready once logs arrive

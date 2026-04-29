@@ -59,7 +59,10 @@ import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import { refreshUserLookup } from "./services/agentService.js";
 import { initBrowserSocket } from "./services/browserSocketService.js";
-import { initHubConnection } from "./services/hubConnectionService.js";
+import {
+  cleanupHubConnection,
+  initHubConnection,
+} from "./services/hubConnectionService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -161,6 +164,10 @@ export const supervisorPlugin: FastifyPluginAsync<
   if (hubUrl) {
     initHubConnection(hubUrl);
   }
+  fastify.addHook("onClose", (_instance, done) => {
+    cleanupHubConnection();
+    done();
+  });
 
   // Set Zod validator and serializer compilers
   fastify.setValidatorCompiler(validatorCompiler);

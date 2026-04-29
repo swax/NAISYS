@@ -353,6 +353,7 @@ export function createHubAgentService(
             {
               userId: parsed.userId,
               runId: parsed.runId,
+              subagentId: parsed.subagentId,
               sessionId: parsed.sessionId,
               sourceHostId: hostId,
             },
@@ -413,6 +414,7 @@ export function createHubAgentService(
             {
               userId: parsed.userId,
               runId: parsed.runId,
+              subagentId: parsed.subagentId,
               sessionId: parsed.sessionId,
               command: parsed.command,
               sourceHostId: hostId,

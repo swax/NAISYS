@@ -201,4 +201,5 @@ export interface UserEntry {
   leadUserId?: number;
   assignedHostIds?: number[];
   config: AgentConfigFile;
+  isEphemeral?: boolean;
 }

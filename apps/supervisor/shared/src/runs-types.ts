@@ -10,6 +10,7 @@ export const RunSessionSchema = z.object({
   userId: z.number(),
   username: z.string().optional(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   createdAt: z.string(),
   lastActive: z.string(),
@@ -45,6 +46,14 @@ export const ContextLogParamsSchema = z.object({
   sessionId: z.coerce.number(),
 });
 
+export const SubagentSessionParamsSchema = z.object({
+  username: z.string(),
+  runId: z.coerce.number(),
+  // Synthetic subagent ids are always negative on the host side.
+  subagentId: z.coerce.number().negative(),
+  sessionId: z.coerce.number(),
+});
+
 export const CONTEXT_LOG_MAX_LIMIT = 1000;
 
 export const ContextLogRequestSchema = z.object({
@@ -75,5 +84,6 @@ export type RunSession = z.infer<typeof RunSessionSchema>;
 export type RunsDataRequest = z.infer<typeof RunsDataRequestSchema>;
 export type RunsDataResponse = z.infer<typeof RunsDataResponseSchema>;
 export type ContextLogParams = z.infer<typeof ContextLogParamsSchema>;
+export type SubagentSessionParams = z.infer<typeof SubagentSessionParamsSchema>;
 export type ContextLogRequest = z.infer<typeof ContextLogRequestSchema>;
 export type ContextLogResponse = z.infer<typeof ContextLogResponseSchema>;

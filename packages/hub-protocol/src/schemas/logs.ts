@@ -16,6 +16,7 @@ export const LogTypeEnum = z.enum(["comment", "error", "system", "tool"]);
 export const LogWriteEntrySchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   role: LogRoleEnum,
   source: LogSourceEnum.nullable(),
@@ -39,6 +40,7 @@ export const LogPushEntrySchema = z.object({
   previousId: z.number().nullable(),
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   role: LogRoleEnum,
   source: LogSourceEnum.nullable(),
@@ -55,6 +57,7 @@ export type LogPushEntry = z.infer<typeof LogPushEntrySchema>;
 export const LogPushSessionUpdateSchema = z.object({
   userId: z.number(),
   runId: z.number(),
+  subagentId: z.number().nullable().optional(),
   sessionId: z.number(),
   lastActive: z.string(),
   latestLogId: z.number(),

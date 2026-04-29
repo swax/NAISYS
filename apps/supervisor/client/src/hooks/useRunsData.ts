@@ -23,6 +23,13 @@ import { useTick } from "./useTick";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
+const runKey = (run: {
+  userId: number;
+  runId: number;
+  subagentId?: number | null;
+  sessionId: number;
+}) => `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
+
 // Module-level caches (shared across all hook instances and persist across remounts)
 const runsCache = new Map<string, CachedRunSession[]>();
 const updatedSinceCache = new Map<string, string | undefined>();
@@ -56,27 +63,30 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       const existingRuns = runsCache.get(agentUsername) || [];
 
       const mergeMap = new Map<string, CachedRunSession>(
-        existingRuns.map((run) => [
-          `${run.userId}-${run.runId}-${run.sessionId}`,
-          run,
-        ]),
+        existingRuns.map((run) => [runKey(run), run]),
       );
 
       const existingCount = mergeMap.size;
 
       updatedRuns.forEach((run: CachedRunSession) => {
-        mergeMap.set(`${run.userId}-${run.runId}-${run.sessionId}`, run);
+        mergeMap.set(runKey(run), run);
       });
 
       const mergedRuns = Array.from(mergeMap.values());
       const newCount = mergedRuns.length - existingCount;
 
-      // Sort by created date (most recent first) so rows don't shift as
-      // lastActive updates stream in.
-      mergedRuns.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
+      // Mirror the server's run_id desc → subagent_id desc → created_at desc
+      // ordering so parent rows stay grouped with their subagents and rows
+      // don't shift as lastActive updates stream in.
+      mergedRuns.sort((a, b) => {
+        if (a.runId !== b.runId) return b.runId - a.runId;
+        const aSub = a.subagentId ?? 0;
+        const bSub = b.subagentId ?? 0;
+        if (aSub !== bSub) return bSub - aSub;
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
 
       runsCache.set(agentUsername, mergedRuns);
 
@@ -99,11 +109,15 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       userId: number,
       runId: number,
       sessionId: number,
+      subagentId: number | null | undefined,
       patch: Partial<CachedRunSession>,
     ) => {
       const existing = (runsCache.get(agentUsername) || []).find(
         (r) =>
-          r.userId === userId && r.runId === runId && r.sessionId === sessionId,
+          r.userId === userId &&
+          r.runId === runId &&
+          r.sessionId === sessionId &&
+          (r.subagentId ?? 0) === (subagentId ?? 0),
       );
       if (!existing) return;
       mergeRuns([{ ...existing, ...patch }]);
@@ -114,13 +128,14 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   const handleRunsEvent = useCallback(
     (event: RunsEvent) => {
       const existingRuns = runsCache.get(agentUsername) || [];
-      const key = `${event.userId}-${event.runId}-${event.sessionId}`;
+      const key = runKey(event);
 
       if (event.type === "new-session") {
         // Add new session as a full RunSession
         const newRun: CachedRunSession = {
           userId: event.userId,
           runId: event.runId,
+          subagentId: event.subagentId,
           sessionId: event.sessionId,
           modelName: event.modelName,
           createdAt: event.createdAt,
@@ -134,9 +149,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       }
 
       // Find existing run to update
-      const existing = existingRuns.find(
-        (r) => `${r.userId}-${r.runId}-${r.sessionId}` === key,
-      );
+      const existing = existingRuns.find((r) => runKey(r) === key);
       if (!existing) return;
 
       if (event.type === "log-update") {

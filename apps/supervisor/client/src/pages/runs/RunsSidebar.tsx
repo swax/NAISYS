@@ -1,5 +1,6 @@
 import {
   Badge,
+  Box,
   Button,
   Group,
   Loader,
@@ -20,7 +21,9 @@ interface RunsSidebarProps {
   totalRuns: number;
   runsLoading: boolean;
   agentName: string;
-  activeRunKey: string | undefined;
+  activeRunId: number | undefined;
+  activeSessionId: number | undefined;
+  activeSubagentId: number | null;
   onNavLinkClick?: () => void;
   hasUnreadLogs: (run: RunSession) => boolean;
   hasMore: boolean;
@@ -85,9 +88,22 @@ export const getRunIdLabel = (run: RunSession) => {
 };
 
 export const getRowKey = (run: RunSession) =>
-  `${run.userId}-${run.runId}-${run.sessionId}`;
+  `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
 
-export const getRunKey = (run: RunSession) => `${run.runId}-${run.sessionId}`;
+export const runUrl = (
+  agentName: string,
+  run: { runId: number; sessionId: number; subagentId?: number | null },
+) => {
+  if (run.subagentId != null) {
+    return `/agents/${agentName}/runs/${run.runId}/subagents/${run.subagentId}/sessions/${run.sessionId}`;
+  }
+  return `/agents/${agentName}/runs/${run.runId}/sessions/${run.sessionId}`;
+};
+
+const belongsToSameRunGroup = (
+  a: RunSession | null | undefined,
+  b: RunSession,
+) => a != null && a.runId === b.runId && a.userId === b.userId;
 
 export { formatCost, formatDuration, formatPrimaryTime };
 
@@ -96,7 +112,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   totalRuns,
   runsLoading,
   agentName,
-  activeRunKey,
+  activeRunId,
+  activeSessionId,
+  activeSubagentId,
   onNavLinkClick,
   hasUnreadLogs,
   hasMore,
@@ -119,40 +137,78 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
           let groupIndex = 0;
           return runs.map((run, index) => {
             const rowKey = getRowKey(run);
-            const runKey = getRunKey(run);
-            const unread = hasUnreadLogs(run) && activeRunKey !== runKey;
+            const isSubagent = run.subagentId != null;
+            const isActive =
+              activeRunId === run.runId &&
+              activeSessionId === run.sessionId &&
+              (run.subagentId ?? null) === activeSubagentId;
+            const unread = hasUnreadLogs(run) && !isActive;
 
             // Detect multi-session run grouping
             const prevRun = index > 0 ? runs[index - 1] : null;
             const nextRun = index < runs.length - 1 ? runs[index + 1] : null;
+            const prevInGroup = belongsToSameRunGroup(prevRun, run);
+            const nextInGroup = belongsToSameRunGroup(nextRun, run);
             const isMultiSession =
-              run.sessionId > 1 ||
-              (nextRun &&
-                nextRun.runId === run.runId &&
-                nextRun.userId === run.userId) ||
-              (prevRun &&
-                prevRun.runId === run.runId &&
-                prevRun.userId === run.userId);
-            const isFirstInGroup =
-              isMultiSession &&
-              (!prevRun ||
-                prevRun.runId !== run.runId ||
-                prevRun.userId !== run.userId);
-            const isLastInGroup =
-              isMultiSession &&
-              (!nextRun ||
-                nextRun.runId !== run.runId ||
-                nextRun.userId !== run.userId);
+              run.sessionId > 1 || isSubagent || prevInGroup || nextInGroup;
+            const isFirstInGroup = isMultiSession && !prevInGroup;
+            const isLastInGroup = isMultiSession && !nextInGroup;
 
             if (isFirstInGroup) groupIndex++;
             const groupColor = groupIndex % 2 === 0 ? "violet" : "blue";
 
+            if (isSubagent) {
+              // Compact, clickable row nested under the parent run. Same group
+              // border so it visually belongs to the parent's session group.
+              return (
+                <Box
+                  key={rowKey}
+                  component={Link}
+                  to={runUrl(agentName, run)}
+                  onClick={onNavLinkClick}
+                  pl="md"
+                  pr="sm"
+                  py={4}
+                  style={{
+                    borderBottom: isLastInGroup
+                      ? "1px solid var(--mantine-color-dark-6)"
+                      : "none",
+                    borderLeft: `3px solid var(--mantine-color-${groupColor}-7)`,
+                    borderBottomLeftRadius: isLastInGroup ? 4 : 0,
+                    backgroundColor: isActive
+                      ? "var(--mantine-color-dark-5)"
+                      : undefined,
+                    color: "inherit",
+                    textDecoration: "none",
+                    display: "block",
+                  }}
+                >
+                  <Group gap="xs" justify="space-between" wrap="nowrap">
+                    <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
+                      ↳ subagent ·{" "}
+                      {formatDuration(run.createdAt, run.lastActive)}
+                    </Text>
+                    <Group gap={6} wrap="nowrap">
+                      {run.isOnline && (
+                        <Badge size="xs" variant="dot" color="green">
+                          {run.paused ? "Paused" : "Online"}
+                        </Badge>
+                      )}
+                      <Text size="xs" fw={500} c="green">
+                        {formatCost(run.totalCost)}
+                      </Text>
+                    </Group>
+                  </Group>
+                </Box>
+              );
+            }
+
             return (
               <NavLink
                 key={rowKey}
-                active={activeRunKey === runKey}
+                active={isActive}
                 component={Link}
-                to={`/agents/${agentName}/runs/${runKey}`}
+                to={runUrl(agentName, run)}
                 onClick={onNavLinkClick}
                 label={
                   <Stack gap={2}>
