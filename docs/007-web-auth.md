@@ -4,9 +4,11 @@
 
 ## Overview
 
-NAISYS has two web applications — **Supervisor** and **ERP** — that can run independently or co-hosted under the same Fastify server. Both need user authentication, but the design respects their independence while enabling cross-app session sharing when co-hosted.
+NAISYS has two web applications — **Supervisor** and **ERP** — that can run independently or co-hosted under the same Fastify server. Both need user authentication, but the design must respect their independence while enabling cross-app session sharing when co-hosted.
 
-Supervisor login is **passkey-only** (WebAuthn). New accounts are bootstrapped through one-time **registration links** rather than admin-set credentials. Sensitive admin actions are gated by **step-up auth** that re-proves credential possession on the live session. ERP keeps the legacy username + password flow for standalone deployments; in SSO mode it inherits whatever passkey session the operator established in Supervisor.
+Supervisor login is **passkey-first** (WebAuthn) with an **optional password fallback** behind a feature flag. New accounts are bootstrapped through one-time **registration links** rather than admin-set passwords. Sensitive admin actions are gated by **step-up auth** that re-proves credential possession on the live session.
+
+ERP keeps the legacy username + password flow for standalone deployments. When co-hosted with Supervisor, ERP delegates session resolution to Supervisor's session store and inherits whatever credential the user signed in with there.
 
 ## Design Principles
 
@@ -14,10 +16,10 @@ Supervisor login is **passkey-only** (WebAuthn). New accounts are bootstrapped t
 
 - **Supervisor** stores users in its SQLite database (`supervisor.db`, `users` + `sessions` + `passkey_credentials` + `registration_tokens` tables, Prisma-managed)
 - **ERP** stores users in its Prisma-managed SQLite database (`naisys_erp.db`, `users` + `sessions` tables)
-- Each app manages its own user CRUD and seed scripts. Supervisor handles passkey credentials and registration tokens; ERP keeps its standalone bcrypt password path.
-- The hub database is only used for agent API key lookups (`findAgentByApiKey`) — not for human web users.
+- Each app manages its own user CRUD and seed scripts. Supervisor handles credential persistence (passkey credentials, optional bcrypt password hashes) and registration tokens; ERP keeps its standalone bcrypt password path.
+- The hub database is only used for agent API key lookups (`findAgentByApiKey`) — not for human web users
 
-Either app can run fully standalone without depending on the other or on the hub.
+This means either app can run fully standalone without depending on the other or on the hub.
 
 ### Unified Session Model
 
@@ -47,9 +49,9 @@ All three Fastify instances (hub, supervisor, ERP) set `trustProxy: true`. Behin
 
 ## Supervisor Auth Flows
 
-### Passkey Login
+### Passkey Login (primary)
 
-WebAuthn / `@simplewebauthn` with usernameless, discoverable credentials and required user verification (biometric or PIN gesture every time). The flow is split into options + verify so a server-issued challenge protects each ceremony:
+WebAuthn / `@simplewebauthn` with usernameless, discoverable credentials and required user verification (biometric or PIN gesture every time). The flow is split into options + verify so that a server-issued challenge protects each ceremony:
 
 1. `POST /supervisor/api/auth/passkey/login-options` → server returns assertion options and sets `naisys_passkey_auth_chal` (httpOnly, 5-min, scoped to `/supervisor/api/auth/passkey/`).
 2. Browser runs `navigator.credentials.get()`.
@@ -57,26 +59,37 @@ WebAuthn / `@simplewebauthn` with usernameless, discoverable credentials and req
 
 `allowCredentials: []` lets the browser show every discoverable passkey for the RP — no username needed at the prompt. `userVerification: "required"` is set on both registration and authentication so a stolen device can't silently assert.
 
+### Password Login (optional fallback)
+
+Disabled by default. Set `ALLOW_PASSWORD_LOGIN=true` to expose `POST /supervisor/api/auth/password/login` and reveal the "Use password instead" link on the login page. Passwords are bcrypt-hashed (`bcryptjs`, 12 salt rounds) and capped at 72 bytes (the bcrypt input ceiling). Verification always runs bcrypt — even for unknown usernames, against a dummy hash — so response time doesn't reveal whether a username exists.
+
+The password column on `users` is nullable; a user only has a password if they explicitly set one through the registration flow. Disabling the flag makes the password endpoints return 404 even for users that already have a hash on file.
+
 ### Registration Tokens
 
-Accounts never start with a credential. Admins (and the bootstrap flow) issue a one-time **registration token** that the operator opens in their browser to enroll their first passkey.
+New accounts never start with a credential. Admins (and bootstrap) issue a one-time **registration token** that the operator opens in their browser to set their first credential.
 
 ```
-POST /supervisor/api/users                                   → creates user, returns registrationUrl
-POST /supervisor/api/users/:username/registration-token      → re-issues a token (admin or self)
-POST /supervisor/api/users/:username/reset-passkeys          → wipes all passkeys + issues a fresh token (admin)
-GET  /supervisor/api/auth/registration-token/lookup?token=…  → validates a token, returns the username
+POST /supervisor/api/users                          → creates user + returns registrationUrl
+POST /supervisor/api/users/:username/registration-token  → re-issues a token (admin or self)
+POST /supervisor/api/users/:username/reset-passkeys      → wipes credentials + issues a token
+GET  /supervisor/api/auth/registration-token/lookup?token=…  → validates a token and returns the username
 ```
 
-Tokens are 32 random bytes, hex-encoded, stored as SHA-256 hashes in `registration_tokens`, with a 7-day TTL and a `usedAt` field. Issuing a new token deletes any prior unused tokens for that user.
+Tokens are 32 random bytes hex-encoded, stored as SHA-256 hashes in `registration_tokens`, with a 7-day TTL and a `usedAt` field. Issuing a new token deletes any prior unused tokens for that user.
 
-The registration page (`/supervisor/register?token=…`) calls the lookup endpoint, then drives a passkey enrollment ceremony via `POST /auth/passkey/register-options` → WebAuthn → `POST /auth/passkey/register-verify`. The verify step **consumes the token and stores the credential atomically in a single transaction** — either both happen or neither does — closing the race where two parallel requests carrying the same one-time token could otherwise each enroll a credential. On success the user is signed in immediately (session minted, cookie set).
+The registration page (`/supervisor/register?token=…`) calls the lookup endpoint, then drives one of two flows:
+
+- **Passkey enrollment** — `POST /auth/passkey/register-options` → WebAuthn ceremony → `POST /auth/passkey/register-verify`. Server consumes the token and stores the credential **atomically in a single transaction** — either both happen or neither does — closing the race where two parallel requests carrying the same one-time token could otherwise each enroll a credential.
+- **Password enrollment** — `POST /auth/password/register` (only when `ALLOW_PASSWORD_LOGIN=true`). Same atomic consume + set; password minimum 8 chars, max 128 chars / 72 bytes.
+
+Either flow signs the user in immediately on success (mints a session, sets the cookie).
 
 ### Adding More Credentials Later
 
-A signed-in user can add another passkey from the user-detail page without a registration token — but only if they already have at least one passkey on file (and step-up succeeds). First-passkey enrollment from an authenticated session is _forbidden_; that case must come through an admin-issued registration link, otherwise a hijacked session on a fresh account could mint the first credential without proving the legitimate human is present.
+A user already signed in can add another passkey from the user-detail page without a registration token — but only if they already have one passkey on file (and step-up succeeds). First-passkey enrollment from an authenticated session is _forbidden_; that case must come through an admin-issued registration link, otherwise a hijacked session on a fresh account could mint the first credential without ever proving the legitimate human is present.
 
-To enroll on a different device, the user calls `POST /users/:self/registration-token` and uses the returned URL on that device. Self-issuance also requires step-up.
+To mint another registration link instead (e.g. for a new device), the user can call `POST /users/:self/registration-token` and use the returned URL on that device. Self-issuance also requires step-up.
 
 ### QR Code for Registration Links
 
@@ -86,7 +99,7 @@ The QR is suppressed when the link points at a loopback host (`localhost`, `127.
 
 ### Step-Up Auth
 
-Sensitive endpoints — issuing a registration link, deleting a passkey, wiping all passkeys, creating a user — re-prove credential possession on the live session before they run. This defends against session-cookie hijack: a stolen cookie alone can't drain credentials or mint replacement registration links.
+Sensitive endpoints — issuing a registration link, deleting a passkey, wiping all passkeys, removing a password, creating a user — re-prove credential possession on the live session before they run. This defends against session-cookie hijack: a stolen cookie alone can't drain credentials or mint replacement registration links.
 
 Server side (`apps/supervisor/server/src/services/stepUpService.ts`):
 
@@ -94,31 +107,36 @@ Server side (`apps/supervisor/server/src/services/stepUpService.ts`):
 requireStepUp(request, reply, body): Promise<{ ok: true } | { ok: false; status; message }>
 ```
 
-Rules:
+Precedence and bypass rules:
 
 1. **Caller has a passkey** → require a fresh WebAuthn assertion in `body.stepUpAssertion`. Verifier advances the credential's signature counter so the same assertion can't be replayed against another step-up attempt.
-2. **No passkey on file** → bypass step-up. The alternative would lock recovery sessions out (a bootstrap superadmin who has lost all credentials still needs a way back in). Endpoints that create new credentials add their own state guards on top of this — see below.
+2. **No passkey, but has a password and `ALLOW_PASSWORD_LOGIN=true`** → require `body.stepUpPassword` and re-bcrypt-verify it.
+3. **No passkey and no enabled password** → bypass step-up. The alternative would lock recovery sessions out (a bootstrap superadmin who has lost all credentials still needs a way back in). The `clear-password` and `passkey-delete` endpoints add their own state guards on top of this — see below.
 
-Replay safety: the passkey path is replay-proof per call because the challenge cookie is single-use and the signature counter advances on every verify.
+Replay tradeoff: the passkey path is replay-proof per call; the password path is not. An attacker who has both the cookie and the password (e.g. via keylogger or phishing) can satisfy step-up indefinitely. Passkey users keep the stronger guarantee; the password path is an opt-in usability fallback.
 
 Client side (`apps/supervisor/client/src/lib/apiAuth.ts`):
 
-- `performStepUp()` — fetches `POST /auth/passkey/stepup-options`, runs the WebAuthn assertion ceremony, returns the body shape the server expects.
+- `performStepUp()` — fetches `POST /auth/passkey/stepup-options`, runs the matching ceremony (WebAuthn assertion or password modal), returns the body shape the server expects.
 - `postWithStepUp(endpoint)` — wraps a sensitive POST: runs step-up, sends the proof in the body.
+- `StepUpPasswordPromptProvider` (`components/StepUpPasswordPrompt.tsx`) — global modal that resolves a registered prompt callback. Only opens when the user is on the password-only path.
 
 ### Self-Action State Guards
 
 Beyond step-up, a few endpoints have additional state guards:
 
-- **`POST /users/:username/passkeys/:id/delete`** — after delete, sessions for that user are revoked. The actor's own current session is preserved only if they still have a passkey; otherwise their cookie is cleared client-side too. Without this, an attacker holding a stolen cookie could drain a victim's passkeys to zero — `requireStepUp` then bypasses on the empty set, letting them mint a registration link and enroll their own credential.
-- **`POST /users/:username/registration-token`** (self) — refuses self-issuance when the caller has no passkey. The legitimate path in that case is an admin-issued link.
+- **`POST /users/:username/passkeys/:id/delete`** — after delete, sessions for that user are revoked. The actor's own current session is preserved only if they still have a passkey _or_ an enabled password; otherwise their cookie is cleared client-side too. Without this, an attacker holding a stolen cookie could drain a victim's passkeys to zero — `requireStepUp` then bypasses on the empty set, letting them mint a registration link and enroll their own credential.
+- **`POST /users/:username/password/clear`** — refuses to remove the password if the user has no passkeys. Also short-circuits when there's no password to remove.
+- **`POST /users/:username/registration-token`** (self) — refuses self-issuance when the caller has no passkey _and_ no enabled password. The legitimate path in that case is an admin-issued link.
 
 ### API Key Authentication
 
-Both middlewares accept `Authorization: Bearer <apiKey>` for machine/agent access:
+Both middlewares also accept `Authorization: Bearer <apiKey>` for machine/agent access:
 
-- **Supervisor**: `findUserByApiKey` (supervisor DB) → fallback `findAgentByApiKey` (hub DB). Unknown agents are auto-provisioned into the supervisor `users` table via `createUserForAgent()` with no passkeys.
+- **Supervisor**: `findUserByApiKey` (supervisor DB) → fallback `findAgentByApiKey` (hub DB). Unknown agents are auto-provisioned into the supervisor `users` table via `createUserForAgent()`.
 - **ERP**: In SSO mode, the same supervisor-then-hub lookup; unknown matches are auto-provisioned into the local ERP `users` table with `passwordHash: "!api-key-only"` and `isAgent: true`. In standalone mode, looks up `api_key` on the local ERP user row directly.
+
+Agent users created via `createUserForAgent()` have no `passwordHash` and no passkeys — only the API key authenticates them.
 
 ## Database Schema (Supervisor)
 
@@ -126,8 +144,9 @@ Both middlewares accept `Authorization: Bearer <apiKey>` for machine/agent acces
 model User {
   id                  Int                 @id @default(autoincrement())
   username            String              @unique
-  uuid                String              @unique  // WebAuthn user handle
+  uuid                String              @default("")
   isAgent             Boolean             @default(false)
+  passwordHash        String?             // null = no password set
   apiKey              String?             @unique
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -167,24 +186,31 @@ model RegistrationToken {
 }
 ```
 
+The `password_hash` column was added by `20260427000000_optional_password_login` and is nullable specifically so passkey-only users (the default) leave it `NULL`.
+
 ## Endpoint Surface (Supervisor)
 
-| Method | Path                                                     | Purpose                                        | Auth                       |
-| ------ | -------------------------------------------------------- | ---------------------------------------------- | -------------------------- |
-| POST   | `/supervisor/api/auth/passkey/login-options`             | Begin WebAuthn login (issues challenge cookie) | public                     |
-| POST   | `/supervisor/api/auth/passkey/login-verify`              | Complete WebAuthn login → session              | public                     |
-| POST   | `/supervisor/api/auth/passkey/stepup-options`            | Begin step-up assertion ceremony               | session                    |
-| POST   | `/supervisor/api/auth/passkey/register-options`          | Begin passkey registration (token or step-up)  | token _or_ session+step-up |
-| POST   | `/supervisor/api/auth/passkey/register-verify`           | Complete passkey registration                  | token _or_ session         |
-| GET    | `/supervisor/api/auth/registration-token/lookup?token=…` | Validate a registration token, return username | public                     |
-| POST   | `/supervisor/api/auth/logout`                            | Delete session, clear cookie                   | (any)                      |
-| GET    | `/supervisor/api/auth/me`                                | Current authenticated user                     | session                    |
-| GET    | `/supervisor/api/users/:username/passkeys`               | List a user's passkeys                         | admin or self              |
-| POST   | `/supervisor/api/users/:username/passkeys/:id/delete`    | Delete a passkey (POST so step-up body fits)   | admin or self + step-up    |
-| POST   | `/supervisor/api/users/:username/registration-token`     | Issue a one-time registration link             | admin or self + step-up    |
-| POST   | `/supervisor/api/users/:username/reset-passkeys`         | Wipe all passkeys + issue a fresh link         | admin (not self) + step-up |
+| Method | Path                                                     | Purpose                                               | Auth                       |
+| ------ | -------------------------------------------------------- | ----------------------------------------------------- | -------------------------- |
+| POST   | `/supervisor/api/auth/passkey/login-options`             | Begin WebAuthn login (issues challenge cookie)        | public                     |
+| POST   | `/supervisor/api/auth/passkey/login-verify`              | Complete WebAuthn login → session                     | public                     |
+| POST   | `/supervisor/api/auth/passkey/stepup-options`            | Begin step-up (passkey or password depending on user) | session                    |
+| POST   | `/supervisor/api/auth/passkey/register-options`          | Begin passkey registration (token or step-up)         | token _or_ session+step-up |
+| POST   | `/supervisor/api/auth/passkey/register-verify`           | Complete passkey registration                         | token _or_ session         |
+| POST   | `/supervisor/api/auth/password/login`                    | Username + password → session                         | public, flag-gated         |
+| POST   | `/supervisor/api/auth/password/register`                 | Set password from a registration token                | token, flag-gated          |
+| POST   | `/supervisor/api/auth/password/verify`                   | Re-verify own password (UX pre-flight for step-up)    | session, flag-gated        |
+| GET    | `/supervisor/api/auth/registration-token/lookup?token=…` | Validate a registration token, return username        | public                     |
+| POST   | `/supervisor/api/auth/logout`                            | Delete session, clear cookie                          | (any)                      |
+| GET    | `/supervisor/api/auth/me`                                | Current authenticated user                            | session                    |
+| GET    | `/supervisor/api/users/:username/passkeys`               | List a user's passkeys                                | admin or self              |
+| POST   | `/supervisor/api/users/:username/passkeys/:id/delete`    | Delete a passkey (POST so step-up body fits)          | admin or self + step-up    |
+| POST   | `/supervisor/api/users/:username/passkeys/:id/rename`    | Rename a passkey's device label                       | admin or self              |
+| POST   | `/supervisor/api/users/:username/registration-token`     | Issue a one-time registration link                    | admin or self + step-up    |
+| POST   | `/supervisor/api/users/:username/reset-passkeys`         | Wipe all passkeys + issue a fresh link                | admin (not self) + step-up |
+| POST   | `/supervisor/api/users/:username/password/clear`         | Remove the user's password credential                 | admin or self + step-up    |
 
-Login + register endpoints are rate-limited per IP (10–30/min depending on shape); 429 is documented in each endpoint's response schema.
+Login + register endpoints are rate-limited per IP (10–30/min depending on shape).
 
 ## Operator Setup & Recovery
 
@@ -192,22 +218,21 @@ Login + register endpoints are rate-limited per IP (10–30/min depending on sha
 
 1. Deploys migrations and connects to `supervisor.db`.
 2. Calls `ensureSuperAdmin()` — creates the `superadmin` user with `supervisor_admin` if missing. **No credential is set.**
-3. If `--setup` was passed, asks whether to wipe the superadmin's passkeys + sessions.
-4. Issues a registration link if any of: just bootstrapped, operator asked to reset, or the superadmin has no passkey and no unexpired token. Prints the URL to stdout and waits on TTY for the operator to acknowledge.
-
-The reset prompt's default flips based on context: explicit `--setup` runs default to "no" (so tweaking env vars doesn't lock you out), while implicit first-run setup defaults to "yes" (so the operator gets a fresh link without typing `y`). If a reset is performed, sessions are also wiped so an old browser cookie can't outlive the credential it was minted from.
+3. If `--setup` was passed, asks whether to wipe the superadmin's credentials (passkeys + password).
+4. Issues a registration link if any of: just bootstrapped, operator asked to reset, or the superadmin has no enabled credential and no unexpired token. Prints the URL to stdout and waits on TTY for the operator to acknowledge.
 
 The printed URL uses `SUPERVISOR_WEBAUTHN_ORIGIN` when set so it lands on a host the browser will accept; otherwise it falls back to `http://localhost:<SERVER_PORT>`.
 
-If you're locked out, restart the supervisor with `--setup` to re-issue a superadmin registration link. The login page surfaces this hint behind a "Trouble signing in?" link.
+If everyone is locked out, restart the supervisor with `--setup` to re-issue a superadmin registration link. The login page surfaces this hint behind a "Trouble signing in?" link.
 
 ## Configuration
 
 ```
+ALLOW_PASSWORD_LOGIN=false           # opt-in alternate password path; default off
+
 # Optional WebAuthn hardening — when unset, RP ID and origin derive from request
-# headers (fine for dev; requires trusting your reverse proxy in production).
-# Set these to lock the relying-party identity to fixed values regardless of
-# Host/Origin headers.
+# headers (fine for dev; trusts the reverse proxy). Set in production to lock the
+# relying-party identity to fixed values regardless of Host/Origin headers.
 SUPERVISOR_WEBAUTHN_RP_ID=supervisor.example.com
 SUPERVISOR_WEBAUTHN_ORIGIN=https://supervisor.example.com   # or comma-list for multi-origin
 ```
@@ -226,9 +251,9 @@ SUPERVISOR_WEBAUTHN_ORIGIN=https://<tunnel-host>
 
 The tunnel host becomes the WebAuthn relying-party origin, so registrations and assertions both work from any device that can resolve it. Without this, dev passkey testing is restricted to the same machine the server runs on.
 
-## ERP Auth (legacy password)
+## ERP Auth (unchanged)
 
-ERP retains the username + password flow via bcrypt:
+ERP retains the legacy `username + password` flow via bcrypt:
 
 | Component       | Location                                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------------------------- |
@@ -260,7 +285,11 @@ When supervisor and ERP are co-hosted, a user previously had to log in to each a
 
 ### Solution: Supervisor DB as Session Source of Truth
 
-Both apps read/write the same `naisys_session` cookie. In SSO mode, **supervisor's own `sessions` table** (in `supervisor.db`) is the single source of truth for session tokens — there is no shared hub session table. ERP imports `findSession` and `findUserByApiKey` from `@naisys/supervisor-database`. When running standalone, ERP falls back to its local session storage and its local password-based login route; supervisor always uses its own DB and its own passkey routes.
+Both apps read/write the same `naisys_session` cookie. In SSO mode, **supervisor's own `sessions` table** (in `supervisor.db`) is the single source of truth for session tokens — there is no shared hub session table. ERP imports `findSession` and `findUserByApiKey` from `@naisys/supervisor-database`. When running standalone, ERP falls back to its local session storage and its local password-based login route; supervisor always uses its own DB and its own credential routes.
+
+#### Single Cookie
+
+Both apps read/write the same `naisys_session` cookie.
 
 #### Enabling SSO Mode
 
@@ -273,7 +302,7 @@ Supervisor is always in "SSO mode" from its own perspective — it's the canonic
 
 #### SSO Mode (Supervisor Available)
 
-Login happens in the Supervisor app via passkey — there is no separate ERP login UI when SSO is on. The supervisor mints a session row in `supervisor.db.sessions` and sets the cookie.
+Login happens in the Supervisor app via passkey or (if enabled) password — there is no separate ERP login UI when SSO is on. The supervisor mints a session row in `supervisor.db.sessions` and sets the cookie.
 
 On each ERP request, ERP's middleware looks the session up in the supervisor table. If valid, it resolves (or auto-creates) the local ERP user by `uuid` and loads permissions from the local `user_permissions` table. Logging out from either app deletes the row from `supervisor.db.sessions`, effectively logging the user out of both.
 
@@ -297,10 +326,10 @@ When a valid supervisor session is found but the ERP user doesn't exist locally,
 
 ### Public Routes
 
-| App        | Public routes                                                                                                                                                                       |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Supervisor | `/supervisor/api/auth/passkey/{login,register}-{options,verify}`, `/supervisor/api/auth/registration-token/lookup`, `/supervisor/api/` (root), anything not under `/supervisor/api` |
-| ERP        | `/erp/api/auth/login`, `/erp/api/client-config`, `/erp/api/schemas/*`, `/erp/api/` (root), anything not under `/erp/api`                                                            |
+| App        | Public routes                                                                                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Supervisor | `/supervisor/api/auth/passkey/{login,register}-{options,verify}`, `/supervisor/api/auth/password/{login,register}`, `/supervisor/api/auth/registration-token/lookup`, `/supervisor/api/` (root), anything not under `/supervisor/api` |
+| ERP        | `/erp/api/auth/login`, `/erp/api/client-config`, `/erp/api/schemas/*`, `/erp/api/` (root), anything not under `/erp/api`                                                                                                              |
 
 ### Supervisor Database Surface (`@naisys/supervisor-database`)
 
@@ -328,30 +357,22 @@ issueRegistrationToken(userId)           // → { token, expiresAt }; revokes pr
 lookupRegistrationToken(token)           // non-consuming
 hasActiveRegistrationToken(userId)
 consumeTokenAndStoreCredential({...})    // atomic consume + passkey insert
+consumeTokenAndSetPassword({...})        // atomic consume + password hash
+
+// Optional password
+hashPassword(plaintext)
+verifyPassword(plaintext, hashOrNull)    // constant-time-ish via dummy hash on missing user
+verifyUserPassword(userId, plaintext)
+userHasPassword(userId)
+clearUserPassword(userId)
 ```
 
 Session tokens are `randomUUID()` values, hashed with SHA-256 (`hashToken()` from `@naisys/common-node`) before storage. Registration tokens are 32 random bytes, hex-encoded, also hashed before storage. Passkey credentials store the WebAuthn public key base64url-encoded and a signature counter that's advanced on every successful authentication.
-
-## Considered Alternatives
-
-### Optional password fallback (rejected)
-
-A version that added an opt-in password login path alongside passkeys was prototyped and lives on the `password-fallback` branch — `ALLOW_PASSWORD_LOGIN=true` exposed `/auth/password/{login,register,verify}` plus a password fallback through step-up. It was rolled back before merge.
-
-The deciding argument was that a passkey-and-password account has the security of `max(passkey_strength, password_strength)` from the attacker's side — they pick the easier path. A user who picks a weak password downgrades their entire account to password-tier security and the passkey becomes decorative. Mitigations like length floors / zxcvbn / HIBP push the floor up but don't change the shape of the problem; they're new code to maintain for an outcome that contradicts the reason passkeys were adopted.
-
-The recovery cases that motivated a fallback have better answers:
-
-- **Different device with no enrolled passkey** — use the WebAuthn cross-device flow (browser shows its own QR; phone authenticates over Bluetooth proximity), or enroll a second passkey on each device the user actually uses.
-- **All devices lost** — admin re-issues a registration link; lone-admin lockout is recovered via `--setup` on the server.
-- **Future: self-service recovery without admin** — if and when this becomes a real need, the cleaner option than passwords is **email-based registration links**: the user enters their email, the server emails them a fresh registration token. Email security becomes the dependency (universally trusted as the recovery channel), no per-account weak-credential floor. NAISYS doesn't have email infrastructure today; building it is the work to do _then_, not now.
-
-The `password-fallback` branch is preserved for reference. If email recovery ever lands, some of the structural changes (step-up `method` discriminator, atomic `consume-token-and-set-credential`) may be useful to cherry-pick.
 
 ## Notes / Non-goals
 
 - No CSRF tokens — relies on `sameSite: lax` and `httpOnly` cookies.
 - No session-expiry refresh — sessions are fixed 30-day and require re-login after expiry.
-- No password reset / username-password recovery for supervisor — operators issue a fresh registration link instead. Lone-admin lockout is recovered through `--setup` on the server.
+- No password reset flow per se — operators issue a fresh registration link instead. Self-service password change does not exist; users either set a password through registration or have one cleared by an admin.
 - ERP UI does not yet expose passkey enrollment. In SSO mode users register passkeys in Supervisor and the cookie carries them into ERP; in standalone mode ERP keeps username + password.
 - ERP permissions are independent per app; granting a role in supervisor does not grant it in ERP.

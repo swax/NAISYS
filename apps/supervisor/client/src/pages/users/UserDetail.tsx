@@ -20,10 +20,17 @@ import { SecretField } from "@naisys/common-browser";
 import { type UserDetailResponse } from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 
+import type { AppOutletContext } from "../../App";
 import { useSession } from "../../contexts/SessionContext";
 import {
+  clearUserPassword,
   deleteUser,
   getUser,
   rotateUserApiKey,
@@ -36,6 +43,7 @@ export const UserDetail: React.FC = () => {
   const { username: routeUsername } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useSession();
+  const { allowPasswordLogin } = useOutletContext<AppOutletContext>();
   const [user, setUser] = useState<UserDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
@@ -44,6 +52,7 @@ export const UserDetail: React.FC = () => {
   const [editError, setEditError] = useState("");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
+  const [clearingPassword, setClearingPassword] = useState(false);
 
   const isSelf = currentUser?.username === routeUsername;
 
@@ -110,6 +119,31 @@ export const UserDetail: React.FC = () => {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleClearPassword = async () => {
+    if (!routeUsername) return;
+    if (
+      !confirm(
+        `Remove password sign-in for ${routeUsername}? Passkey sign-in will remain available.`,
+      )
+    ) {
+      return;
+    }
+    setClearingPassword(true);
+    try {
+      await clearUserPassword(routeUsername);
+      void fetchUser();
+    } catch (err) {
+      notifications.show({
+        title: "Remove Password Failed",
+        message:
+          err instanceof Error ? err.message : "Failed to remove password",
+        color: "red",
+      });
+    } finally {
+      setClearingPassword(false);
     }
   };
 
@@ -256,6 +290,26 @@ export const UserDetail: React.FC = () => {
               )}
             </Group>
           )}
+          {allowPasswordLogin && !user.isAgent && (
+            <Group>
+              <Text fw={600} w={120}>
+                Password:
+              </Text>
+              <Text>{user.hasPassword ? "Set" : "Not set"}</Text>
+              {user.hasPassword &&
+                hasAction(user._actions, "clear-password") && (
+                  <Button
+                    size="xs"
+                    color="red"
+                    variant="subtle"
+                    loading={clearingPassword}
+                    onClick={handleClearPassword}
+                  >
+                    Remove
+                  </Button>
+                )}
+            </Group>
+          )}
         </Stack>
       </Card>
 
@@ -264,6 +318,8 @@ export const UserDetail: React.FC = () => {
           routeUsername={user.username}
           isSelf={isSelf}
           userActions={user._actions}
+          hasPassword={user.hasPassword}
+          allowPasswordLogin={allowPasswordLogin}
         />
       )}
 

@@ -8,6 +8,11 @@ import type {
   PasskeyRegistrationOptionsResponse,
   PasskeyRegistrationVerify,
   PasskeyRegistrationVerifyResponse,
+  PasswordLoginRequest,
+  PasswordRegistrationRequest,
+  PasswordRegistrationResponse,
+  PasswordVerifyRequest,
+  PasswordVerifyResponse,
   RegistrationTokenLookupResponse,
   RegistrationTokenResponse,
   StepUpAssertionBody,
@@ -15,7 +20,6 @@ import type {
   UserActionResult,
 } from "@naisys/supervisor-shared";
 import {
-  type AuthenticationResponseJSON,
   type PublicKeyCredentialCreationOptionsJSON,
   type PublicKeyCredentialRequestOptionsJSON,
   startAuthentication,
@@ -23,6 +27,16 @@ import {
 } from "@simplewebauthn/browser";
 
 import { api, apiEndpoints } from "./apiClient";
+
+type StepUpPasswordPrompt = () => Promise<string | null>;
+
+let stepUpPasswordPrompt: StepUpPasswordPrompt | null = null;
+
+export function setStepUpPasswordPrompt(
+  prompt: StepUpPasswordPrompt | null,
+): void {
+  stepUpPasswordPrompt = prompt;
+}
 
 export const getMe = async (): Promise<AuthUser> => {
   return await api.get<AuthUser>(apiEndpoints.me);
@@ -41,12 +55,27 @@ export const passkeyLogin = async (): Promise<{ user: AuthUser }> => {
     apiEndpoints.passkeyLoginOptions,
     {},
   );
-  const response = await startAuthentication({
-    optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
-  });
+  const response = await runPasskeyCeremony(
+    () =>
+      startAuthentication({
+        optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
+      }),
+    "Passkey sign-in was canceled or timed out.",
+  );
   const user = await api.post<PasskeyAuthenticationVerify, AuthUser>(
     apiEndpoints.passkeyLoginVerify,
     { response },
+  );
+  return { user };
+};
+
+export const passwordLogin = async (input: {
+  username: string;
+  password: string;
+}): Promise<{ user: AuthUser }> => {
+  const user = await api.post<PasswordLoginRequest, AuthUser>(
+    apiEndpoints.passwordLogin,
+    input,
   );
   return { user };
 };
@@ -65,19 +94,23 @@ export const passkeyRegister = async (input: {
   token?: string;
   deviceLabel?: string;
 }): Promise<PasskeyRegistrationVerifyResponse> => {
-  const stepUpAssertion = input.token ? null : await performStepUp();
+  const stepUp = input.token ? {} : await performStepUp();
 
   const { options, username } = await api.post<
     PasskeyRegistrationOptionsRequest,
     PasskeyRegistrationOptionsResponse
   >(apiEndpoints.passkeyRegisterOptions, {
     token: input.token,
-    stepUpAssertion: stepUpAssertion ?? undefined,
+    stepUpAssertion: stepUp.stepUpAssertion,
   });
 
-  const response = await startRegistration({
-    optionsJSON: options as PublicKeyCredentialCreationOptionsJSON,
-  });
+  const response = await runPasskeyCeremony(
+    () =>
+      startRegistration({
+        optionsJSON: options as PublicKeyCredentialCreationOptionsJSON,
+      }),
+    "Passkey registration was canceled or timed out.",
+  );
 
   return await api.post<
     PasskeyRegistrationVerify,
@@ -87,6 +120,24 @@ export const passkeyRegister = async (input: {
     response,
     deviceLabel: input.deviceLabel ?? defaultDeviceLabel(username),
   });
+};
+
+export const passwordRegister = async (input: {
+  token: string;
+  password: string;
+}): Promise<PasswordRegistrationResponse> => {
+  return await api.post<
+    PasswordRegistrationRequest,
+    PasswordRegistrationResponse
+  >(apiEndpoints.passwordRegister, input);
+};
+
+/** Pre-flight verify the current user's password (for the step-up modal). */
+export const verifyOwnPassword = async (password: string): Promise<void> => {
+  await api.post<PasswordVerifyRequest, PasswordVerifyResponse>(
+    apiEndpoints.passwordVerify,
+    { password },
+  );
 };
 
 export const lookupRegistrationToken = async (
@@ -128,33 +179,41 @@ export const renameUserPasskey = async (
 /**
  * Run the step-up dance: ask the server for an assertion challenge scoped to
  * the *current* user's credentials, drive the WebAuthn prompt, and return the
- * resulting assertion (or null if the server says step-up isn't required).
+ * resulting step-up body (or an empty body when step-up isn't required).
  *
  * Used to wrap sensitive admin actions so a hijacked session cookie can't
  * silently mint credentials or wipe passkeys.
  */
-export const performStepUp =
-  async (): Promise<AuthenticationResponseJSON | null> => {
-    const { needsStepUp, options } = await api.post<{}, StepUpOptionsResponse>(
-      apiEndpoints.passkeyStepUpOptions,
-      {},
-    );
-    if (!needsStepUp) return null;
-    return await startAuthentication({
-      optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
-    });
-  };
+export const performStepUp = async (): Promise<StepUpAssertionBody> => {
+  const { needsStepUp, options } = await api.post<{}, StepUpOptionsResponse>(
+    apiEndpoints.passkeyStepUpOptions,
+    {},
+  );
+  if (!needsStepUp) return {};
+  if (!options) {
+    const password = await stepUpPasswordPrompt?.();
+    if (!password) {
+      throw new Error("Password required to continue");
+    }
+    return { stepUpPassword: password };
+  }
+  const stepUpAssertion = await runPasskeyCeremony(
+    () =>
+      startAuthentication({
+        optionsJSON: options as PublicKeyCredentialRequestOptionsJSON,
+      }),
+    "Passkey verification was canceled or timed out.",
+  );
+  return { stepUpAssertion };
+};
 
 /**
  * POST a step-up-gated endpoint: run the step-up dance, then send the
- * assertion in the body. Used for the four sensitive endpoints that can't
- * be reached on a hijacked cookie alone.
+ * step-up proof in the body. Used for the sensitive endpoints that can't be
+ * reached on a hijacked cookie alone.
  */
 export const postWithStepUp = async <R>(endpoint: string): Promise<R> => {
-  const stepUpAssertion = await performStepUp();
-  return api.post<StepUpAssertionBody, R>(endpoint, {
-    stepUpAssertion: stepUpAssertion ?? undefined,
-  });
+  return api.post<StepUpAssertionBody, R>(endpoint, await performStepUp());
 };
 
 export const issueRegistrationLink = async (
@@ -186,4 +245,44 @@ function defaultDeviceLabel(_username: string): string {
   if (/Windows/.test(ua)) return "Windows";
   if (/Linux/.test(ua)) return "Linux";
   return "";
+}
+
+async function runPasskeyCeremony<T>(
+  ceremony: () => Promise<T>,
+  canceledMessage: string,
+): Promise<T> {
+  try {
+    return await ceremony();
+  } catch (error) {
+    throw normalizePasskeyError(error, canceledMessage);
+  }
+}
+
+function normalizePasskeyError(error: unknown, canceledMessage: string): Error {
+  if (isPasskeyCancelOrTimeout(error)) {
+    return new Error(canceledMessage);
+  }
+  if (error instanceof Error) return error;
+  return new Error("Passkey operation failed.");
+}
+
+function isPasskeyCancelOrTimeout(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    name?: unknown;
+    code?: unknown;
+    cause?: unknown;
+    message?: unknown;
+  };
+  const cause =
+    candidate.cause && typeof candidate.cause === "object"
+      ? (candidate.cause as { name?: unknown })
+      : null;
+
+  return (
+    candidate.name === "NotAllowedError" ||
+    cause?.name === "NotAllowedError" ||
+    candidate.code === "ERROR_CEREMONY_ABORTED" ||
+    candidate.code === "ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY"
+  );
 }

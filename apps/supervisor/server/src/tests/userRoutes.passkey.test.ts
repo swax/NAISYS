@@ -10,12 +10,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authCacheClear: vi.fn(),
+  clearUserPassword: vi.fn(),
   deleteAllPasskeyCredentialsForUser: vi.fn(),
   deleteAllSessionsForUser: vi.fn(),
   deletePasskeyCredential: vi.fn(),
   listPasskeyCredentialsForUser: vi.fn(),
   renamePasskeyDeviceLabel: vi.fn(),
   userHasPasskey: vi.fn(),
+  userHasPassword: vi.fn(),
   issueRegistrationLink: vi.fn(),
   requireStepUp: vi.fn(),
   createPasskeyUser: vi.fn(),
@@ -35,12 +37,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@naisys/supervisor-database", () => ({
+  clearUserPassword: mocks.clearUserPassword,
   deleteAllPasskeyCredentialsForUser: mocks.deleteAllPasskeyCredentialsForUser,
   deleteAllSessionsForUser: mocks.deleteAllSessionsForUser,
   deletePasskeyCredential: mocks.deletePasskeyCredential,
   listPasskeyCredentialsForUser: mocks.listPasskeyCredentialsForUser,
   renamePasskeyDeviceLabel: mocks.renamePasskeyDeviceLabel,
   userHasPasskey: mocks.userHasPasskey,
+  userHasPassword: mocks.userHasPassword,
 }));
 
 vi.mock("../auth-middleware.js", () => ({
@@ -136,6 +140,7 @@ async function buildApp(supervisorUser?: AuthUser): Promise<FastifyInstance> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.ALLOW_PASSWORD_LOGIN;
   mocks.requireStepUp.mockResolvedValue({ ok: true });
   mocks.createPasskeyUser.mockResolvedValue({
     id: 23,
@@ -151,6 +156,7 @@ beforeEach(() => {
     username: "admin",
     uuid: "admin-uuid",
     isAgent: false,
+    passwordHash: "$2b$10$hash",
   });
   mocks.listPasskeyCredentialsForUser.mockResolvedValue([
     {
@@ -166,6 +172,8 @@ beforeEach(() => {
   mocks.userHasPasskey.mockResolvedValue(false);
   mocks.hasUserApiKey.mockResolvedValue(false);
   mocks.rotateUserApiKey.mockResolvedValue("generated-api-key");
+  mocks.userHasPassword.mockResolvedValue(false);
+  mocks.clearUserPassword.mockResolvedValue(undefined);
   mocks.deleteAllSessionsForUser.mockResolvedValue(undefined);
   mocks.deleteAllPasskeyCredentialsForUser.mockResolvedValue(2);
 });
@@ -425,6 +433,32 @@ describe("passkey user routes", () => {
     }
   });
 
+  test("deleting the last self passkey preserves the actor session when a password remains", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.userHasPasskey.mockResolvedValue(false);
+    mocks.userHasPassword.mockResolvedValue(true);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/passkeys/10/delete",
+        headers: { cookie: `${SESSION_COOKIE_NAME}=actor-token` },
+        payload: { stepUpAssertion: { id: "assertion-id" } },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mocks.userHasPasskey).toHaveBeenCalledWith(7);
+      expect(mocks.userHasPassword).toHaveBeenCalledWith(7);
+      expect(mocks.deleteAllSessionsForUser).toHaveBeenCalledWith(
+        7,
+        hashToken("actor-token"),
+      );
+      expect(response.headers["set-cookie"]).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
   test("issues a registration link for self after step-up", async () => {
     mocks.userHasPasskey.mockResolvedValue(true);
     const app = await buildApp(adminUser);
@@ -472,11 +506,132 @@ describe("passkey user routes", () => {
       expect(response.json()).toEqual({
         success: false,
         message:
-          "First passkey enrollment requires an admin-issued registration link.",
+          "First credential setup requires an admin-issued registration link.",
       });
       expect(mocks.userHasPasskey).toHaveBeenCalledWith(7);
       expect(mocks.requireStepUp).not.toHaveBeenCalled();
       expect(mocks.issueRegistrationLink).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password-only self registration-link issuance requires password step-up", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.userHasPasskey.mockResolvedValue(false);
+    mocks.userHasPassword.mockResolvedValue(true);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/registration-token",
+        headers: { host: "supervisor.example" },
+        payload: { stepUpPassword: "password123" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        username: "admin",
+        registrationUrl:
+          "https://supervisor.example/supervisor/register?token=invite-token",
+        expiresAt: "2030-01-01T00:00:00.000Z",
+      });
+      expect(mocks.userHasPassword).toHaveBeenCalledWith(7);
+      expect(mocks.requireStepUp).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        { stepUpPassword: "password123" },
+      );
+      expect(mocks.issueRegistrationLink).toHaveBeenCalledWith({
+        userId: 7,
+        protocol: "http",
+        hostHeader: "supervisor.example",
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("clears a password after step-up when the user has a passkey", async () => {
+    mocks.userHasPasskey.mockResolvedValue(true);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/password/clear",
+        headers: { cookie: `${SESSION_COOKIE_NAME}=actor-token` },
+        payload: { stepUpAssertion: { id: "assertion-id" } },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        success: true,
+        message: "Password removed",
+      });
+      expect(mocks.userHasPasskey).toHaveBeenCalledWith(7);
+      expect(mocks.requireStepUp).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        { stepUpAssertion: { id: "assertion-id" } },
+      );
+      expect(mocks.clearUserPassword).toHaveBeenCalledWith(7);
+      expect(mocks.deleteAllSessionsForUser).toHaveBeenCalledWith(
+        7,
+        hashToken("actor-token"),
+      );
+      expect(mocks.authCacheClear).toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("clearing another user's password revokes all of their sessions", async () => {
+    mocks.userHasPasskey.mockResolvedValue(true);
+    mocks.getUserByUsername.mockResolvedValue({
+      id: 42,
+      username: "target",
+      uuid: "target-uuid",
+      isAgent: false,
+      passwordHash: "$2b$10$target",
+    });
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/target/password/clear",
+        headers: { cookie: `${SESSION_COOKIE_NAME}=actor-token` },
+        payload: { stepUpAssertion: { id: "assertion-id" } },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mocks.clearUserPassword).toHaveBeenCalledWith(42);
+      expect(mocks.deleteAllSessionsForUser).toHaveBeenCalledWith(
+        42,
+        undefined,
+      );
+      expect(response.headers["set-cookie"]).toBeUndefined();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("refuses to clear a password when no passkey remains", async () => {
+    mocks.userHasPasskey.mockResolvedValue(false);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/users/admin/password/clear",
+        payload: { stepUpPassword: "password123" },
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Add a passkey before removing this user's password.",
+      });
+      expect(mocks.requireStepUp).not.toHaveBeenCalled();
+      expect(mocks.clearUserPassword).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

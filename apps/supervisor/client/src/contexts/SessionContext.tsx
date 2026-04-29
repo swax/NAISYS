@@ -2,7 +2,12 @@ import type { AuthUser, Permission } from "@naisys/supervisor-shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { disconnectSocket, reconnectSocket } from "../hooks/useSocket";
-import { getMe, logout as apiLogout, passkeyLogin } from "../lib/apiAuth";
+import {
+  getMe,
+  logout as apiLogout,
+  passkeyLogin,
+  passwordLogin,
+} from "../lib/apiAuth";
 import { queryClient } from "../lib/queryClient";
 
 interface SessionContextType {
@@ -11,6 +16,7 @@ interface SessionContextType {
   isCheckingSession: boolean;
   hasPermission: (permission: Permission) => boolean;
   loginWithPasskey: () => Promise<void>;
+  loginWithPassword: (username: string, password: string) => Promise<void>;
   /** Called by the registration flow once the server has signed the user in. */
   setAuthenticatedUser: (user: AuthUser) => void;
   logout: () => Promise<void>;
@@ -41,6 +47,13 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loginWithPasskey = async () => {
     const result = await passkeyLogin();
+    setUser(result.user);
+    reconnectSocket();
+    void queryClient.invalidateQueries();
+  };
+
+  const loginWithPassword = async (username: string, password: string) => {
+    const result = await passwordLogin({ username, password });
     setUser(result.user);
     reconnectSocket();
     void queryClient.invalidateQueries();
@@ -77,6 +90,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
         isCheckingSession,
         hasPermission,
         loginWithPasskey,
+        loginWithPassword,
         setAuthenticatedUser,
         logout,
       }}

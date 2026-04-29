@@ -7,7 +7,7 @@ import {
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
-  promptResetSuperAdminPasskey,
+  promptResetSuperAdminAccount,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -30,6 +30,7 @@ import {
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
+  clearUserPassword,
   createSupervisorDatabaseClient,
   deleteAllPasskeyCredentialsForUser,
   deleteAllSessionsForUser,
@@ -63,6 +64,10 @@ import {
   cleanupHubConnection,
   initHubConnection,
 } from "./services/hubConnectionService.js";
+import {
+  isPasswordLoginAllowed,
+  userHasEnabledPassword,
+} from "./services/passwordLoginConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -74,7 +79,7 @@ interface SupervisorPluginOptions {
   hosted?: boolean;
 }
 
-/** DB init + superadmin setup + passkey-registration prompt. Runs before the plugin so the operator-input wait isn't bounded by pluginTimeout and the prompt doesn't interleave with hub connection logs. */
+/** DB init + superadmin setup + registration-link prompt. Runs before the plugin so the operator-input wait isn't bounded by pluginTimeout and the prompt doesn't interleave with hub connection logs. */
 export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
   await deploySupervisorMigrations();
 
@@ -96,8 +101,9 @@ export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
 
   const superAdminResult = await ensureSuperAdmin();
 
-  if (opts.resetSuperAdminPasskey) {
+  if (opts.resetSuperAdminAccount) {
     await deleteAllPasskeyCredentialsForUser(superAdminResult.user.id);
+    await clearUserPassword(superAdminResult.user.id);
     // Drop any lingering sessions so an old browser cookie can't outlive the
     // credential it was minted from.
     await deleteAllSessionsForUser(superAdminResult.user.id);
@@ -106,11 +112,14 @@ export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
   // Issue a fresh registration token if the superadmin has no way in:
   //  - Just created (first-run bootstrap), or
   //  - Operator asked to reset (--setup), or
-  //  - Has no passkeys AND no unexpired token (recovery / failed prior setup).
+  //  - Has no enabled credential AND no unexpired token (recovery / failed prior setup).
+  const hasCredential =
+    (await userHasPasskey(superAdminResult.user.id)) ||
+    (await userHasEnabledPassword(superAdminResult.user.id));
   const needsToken =
-    opts.resetSuperAdminPasskey ||
+    opts.resetSuperAdminAccount ||
     superAdminResult.created ||
-    (!(await userHasPasskey(superAdminResult.user.id)) &&
+    (!hasCredential &&
       !(await hasActiveRegistrationToken(superAdminResult.user.id)));
 
   if (!needsToken) return;
@@ -233,6 +242,7 @@ export const supervisorPlugin: FastifyPluginAsync<
     () => ({
       plugins: opts.plugins,
       publicRead: process.env.PUBLIC_READ === "true",
+      allowPasswordLogin: isPasswordLoginAllowed(),
       permissions: PermissionEnum.options,
     }),
   );
@@ -341,13 +351,13 @@ export const startServer: StartServer = async (
           },
   }).withTypeProvider<ZodTypeProvider>();
 
-  const resetSuperAdminPasskey = wizardRan
-    ? await promptResetSuperAdminPasskey("Supervisor Setup", {
+  const resetSuperAdminAccount = wizardRan
+    ? await promptResetSuperAdminAccount("Supervisor Setup", {
         defaultReset: !process.argv.includes("--setup"),
       })
     : false;
 
-  await bootstrapSupervisor({ resetSuperAdminPasskey });
+  await bootstrapSupervisor({ resetSuperAdminAccount });
 
   await fastify.register(supervisorPlugin, {
     plugins,

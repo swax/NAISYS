@@ -10,9 +10,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authCacheInvalidate: vi.fn(),
+  consumeTokenAndSetPassword: vi.fn(),
   createSessionForUser: vi.fn(),
   deleteSession: vi.fn(),
   userHasPasskey: vi.fn(),
+  userHasPassword: vi.fn(),
+  verifyPassword: vi.fn(),
+  verifyUserPassword: vi.fn(),
+  PasswordValidationError: class PasswordValidationError extends Error {},
   consumeTokenAndStoreVerifiedCredential: vi.fn(),
   generatePasskeyAuthenticationOptions: vi.fn(),
   generatePasskeyRegistrationOptions: vi.fn(),
@@ -25,13 +30,19 @@ const mocks = vi.hoisted(() => ({
   verifyRegistration: vi.fn(),
   requireStepUp: vi.fn(),
   getUserById: vi.fn(),
+  getUserByUsername: vi.fn(),
   getUserPermissions: vi.fn(),
 }));
 
 vi.mock("@naisys/supervisor-database", () => ({
+  consumeTokenAndSetPassword: mocks.consumeTokenAndSetPassword,
   createSessionForUser: mocks.createSessionForUser,
   deleteSession: mocks.deleteSession,
+  PasswordValidationError: mocks.PasswordValidationError,
   userHasPasskey: mocks.userHasPasskey,
+  userHasPassword: mocks.userHasPassword,
+  verifyPassword: mocks.verifyPassword,
+  verifyUserPassword: mocks.verifyUserPassword,
 }));
 
 vi.mock("../auth-middleware.js", () => ({
@@ -62,6 +73,7 @@ vi.mock("../services/stepUpService.js", () => ({
 
 vi.mock("../services/userService.js", () => ({
   getUserById: mocks.getUserById,
+  getUserByUsername: mocks.getUserByUsername,
   getUserPermissions: mocks.getUserPermissions,
 }));
 
@@ -99,6 +111,7 @@ async function buildApp(supervisorUser?: AuthUser): Promise<FastifyInstance> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete process.env.ALLOW_PASSWORD_LOGIN;
   mocks.rpIdFromHost.mockReturnValue("supervisor.example");
   mocks.getExpectedOrigin.mockReturnValue("https://supervisor.example");
   mocks.generatePasskeyAuthenticationOptions.mockResolvedValue({
@@ -148,6 +161,18 @@ beforeEach(() => {
     uuid: "target-uuid",
   });
   mocks.userHasPasskey.mockResolvedValue(true);
+  mocks.userHasPassword.mockResolvedValue(false);
+  mocks.verifyPassword.mockResolvedValue(true);
+  mocks.verifyUserPassword.mockResolvedValue(true);
+  mocks.getUserByUsername.mockResolvedValue({
+    id: 42,
+    username: "target",
+    passwordHash: "$2b$10$hash",
+  });
+  mocks.consumeTokenAndSetPassword.mockResolvedValue({
+    userId: 42,
+    username: "target",
+  });
   mocks.requireStepUp.mockResolvedValue({ ok: true });
 });
 
@@ -181,6 +206,30 @@ describe("passkey auth routes", () => {
       expect(response.headers["set-cookie"]).toContain(
         "Path=/supervisor/api/auth/passkey/",
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("stepup-options returns password fallback for password-only users when enabled", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.generatePasskeyStepUpOptions.mockResolvedValue(null);
+    mocks.userHasPassword.mockResolvedValue(true);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/passkey/stepup-options",
+        headers: { host: "supervisor.example:3301" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        needsStepUp: true,
+        method: "password",
+      });
+      expect(mocks.userHasPassword).toHaveBeenCalledWith(7);
+      expect(response.headers["set-cookie"]).toBeUndefined();
     } finally {
       await app.close();
     }
@@ -246,6 +295,79 @@ describe("passkey auth routes", () => {
     }
   });
 
+  test("password login is disabled by default", async () => {
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/login",
+        payload: { username: "target", password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Password login is disabled",
+      });
+      expect(mocks.getUserByUsername).not.toHaveBeenCalled();
+      expect(mocks.createSessionForUser).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password login creates a session when the flag is enabled", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/login",
+        payload: { username: "target", password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        id: 42,
+        username: "target",
+        permissions: ["manage_agents"],
+      });
+      expect(mocks.getUserByUsername).toHaveBeenCalledWith("target");
+      expect(mocks.verifyPassword).toHaveBeenCalledWith(
+        "password123",
+        "$2b$10$hash",
+      );
+      expect(mocks.createSessionForUser).toHaveBeenCalledWith(42);
+      expect(String(response.headers["set-cookie"])).toContain(
+        `${SESSION_COOKIE_NAME}=session-token`,
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password login rejects a bad password without creating a session", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.verifyPassword.mockResolvedValue(false);
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/login",
+        payload: { username: "target", password: "wrong-password" },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Invalid username or password",
+      });
+      expect(mocks.createSessionForUser).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   test("register-options rejects an invite token for a different signed-in user", async () => {
     const app = await buildApp(adminUser);
     try {
@@ -262,6 +384,158 @@ describe("passkey auth routes", () => {
           "Sign out of the current session before opening a registration link for a different user.",
       });
       expect(mocks.generatePasskeyRegistrationOptions).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password registration consumes a token, sets the password, and signs in", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/register",
+        payload: { token: "target-token", password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        success: true,
+        user: {
+          id: 42,
+          username: "target",
+          permissions: ["manage_agents"],
+        },
+      });
+      expect(mocks.consumeTokenAndSetPassword).toHaveBeenCalledWith({
+        token: "target-token",
+        password: "password123",
+      });
+      expect(mocks.createSessionForUser).toHaveBeenCalledWith(42);
+      expect(String(response.headers["set-cookie"])).toContain(
+        `${SESSION_COOKIE_NAME}=session-token`,
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password registration rejects token reuse", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.consumeTokenAndSetPassword.mockResolvedValue(null);
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/register",
+        payload: { token: "target-token", password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Registration link is no longer valid — request a new one.",
+      });
+      expect(mocks.createSessionForUser).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password registration rejects an invite token for a different signed-in user", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/register",
+        payload: { token: "target-token", password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        success: false,
+        message:
+          "Sign out of the current session before opening a registration link for a different user.",
+      });
+      expect(mocks.consumeTokenAndSetPassword).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password verify is disabled when ALLOW_PASSWORD_LOGIN is unset", async () => {
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/verify",
+        payload: { password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Password login is disabled",
+      });
+      expect(mocks.verifyUserPassword).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password verify accepts the caller's password when correct", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/verify",
+        payload: { password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ success: true });
+      expect(mocks.verifyUserPassword).toHaveBeenCalledWith(7, "password123");
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password verify rejects a bad password with 401", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    mocks.verifyUserPassword.mockResolvedValue(false);
+    const app = await buildApp(adminUser);
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/verify",
+        payload: { password: "wrong-password" },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({
+        success: false,
+        message: "Incorrect password",
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("password verify requires authentication", async () => {
+    process.env.ALLOW_PASSWORD_LOGIN = "true";
+    const app = await buildApp();
+    try {
+      const response = await app.inject({
+        method: "POST",
+        url: "/supervisor/api/auth/password/verify",
+        payload: { password: "password123" },
+      });
+
+      expect(response.statusCode).toBe(401);
+      expect(mocks.verifyUserPassword).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

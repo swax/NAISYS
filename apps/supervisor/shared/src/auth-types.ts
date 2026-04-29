@@ -82,6 +82,46 @@ export type PasskeyRegistrationVerifyResponse = z.infer<
   typeof PasskeyRegistrationVerifyResponseSchema
 >;
 
+export const PasswordLoginRequestSchema = z
+  .object({
+    username: z.string().min(1).max(64),
+    password: z.string().min(1).max(128),
+  })
+  .strict();
+export type PasswordLoginRequest = z.infer<typeof PasswordLoginRequestSchema>;
+
+export const PasswordRegistrationRequestSchema = z
+  .object({
+    token: z.string(),
+    password: z.string().min(8).max(128),
+  })
+  .strict();
+export type PasswordRegistrationRequest = z.infer<
+  typeof PasswordRegistrationRequestSchema
+>;
+
+export const PasswordRegistrationResponseSchema = z.object({
+  success: z.boolean(),
+  user: AuthUserSchema.optional(),
+});
+export type PasswordRegistrationResponse = z.infer<
+  typeof PasswordRegistrationResponseSchema
+>;
+
+export const PasswordVerifyRequestSchema = z
+  .object({
+    password: z.string().min(1).max(128),
+  })
+  .strict();
+export type PasswordVerifyRequest = z.infer<typeof PasswordVerifyRequestSchema>;
+
+export const PasswordVerifyResponseSchema = z.object({
+  success: z.literal(true),
+});
+export type PasswordVerifyResponse = z.infer<
+  typeof PasswordVerifyResponseSchema
+>;
+
 export const PasskeyCredentialSchema = z.object({
   id: z.number(),
   deviceLabel: z.string(),
@@ -120,16 +160,19 @@ export type RegistrationTokenLookupResponse = z.infer<
 >;
 
 /**
- * Step-up auth: a fresh passkey assertion required to authorize sensitive
+ * Step-up auth: a fresh credential proof required to authorize sensitive
  * actions (issuing registration links, wiping passkeys, creating users).
  * Defends against session-cookie hijack by re-proving "the human is here."
  *
- * `needsStepUp: false` means the caller has no passkey on file — the only
- * case where step-up is silently skipped (otherwise they'd be locked out of
- * actions they can perform with no second factor available).
+ * Precedence: `method: "passkey"` when the caller has any passkey, else
+ * `method: "password"` when ALLOW_PASSWORD_LOGIN=true and the caller has a
+ * password on file. `needsStepUp: false` is the no-credential bypass — the
+ * only case where step-up is silently skipped (otherwise a legitimately
+ * privileged user with no second factor would be locked out).
  */
 export const StepUpOptionsResponseSchema = z.object({
   needsStepUp: z.boolean(),
+  method: z.enum(["passkey", "password"]).optional(),
   options: z.any().optional(),
 });
 export type StepUpOptionsResponse = z.infer<typeof StepUpOptionsResponseSchema>;
@@ -141,6 +184,7 @@ export type StepUpOptionsResponse = z.infer<typeof StepUpOptionsResponseSchema>;
 export const StepUpAssertionBodySchema = z
   .object({
     stepUpAssertion: z.any().optional(),
+    stepUpPassword: z.string().optional(),
   })
   .strict();
 export type StepUpAssertionBody = z.infer<typeof StepUpAssertionBodySchema>;

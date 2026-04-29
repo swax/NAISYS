@@ -26,9 +26,9 @@ export type StartServer = (
   wizardRan?: boolean,
 ) => Promise<number>;
 
-/** DB init + superadmin setup + passkey-registration prompt. Exported by @naisys/supervisor; must run before registering supervisorPlugin. */
+/** DB init + superadmin setup + registration-link prompt. Exported by @naisys/supervisor; must run before registering supervisorPlugin. */
 export type BootstrapSupervisor = (opts: {
-  resetSuperAdminPasskey?: boolean;
+  resetSuperAdminAccount?: boolean;
 }) => Promise<void>;
 
 /** Dynamic import surface exported by @naisys/supervisor for hosted hub mode. */
