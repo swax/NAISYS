@@ -1,10 +1,14 @@
 import Database from "better-sqlite3";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { existsSync, mkdirSync, unlinkSync } from "fs";
+import { createRequire } from "module";
 import { dirname, join, resolve } from "path";
 import { promisify } from "util";
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// Maximum time to wait for `prisma migrate deploy` to finish.
+const MIGRATION_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Shared helper that runs `prisma migrate deploy` with a version-checked fast path.
@@ -76,24 +80,43 @@ export async function deployPrismaMigrations(options: {
     );
   }
 
-  // Run prisma migrate deploy
+  // Run prisma migrate deploy. Resolve the prisma CLI from the caller's
+  // package and invoke it via node directly — this avoids the OS shell
+  // entirely (no injection from interpolated paths) and sidesteps the
+  // npx.cmd / shell:true requirement on Windows.
   const schemaPath = join(packageDir, "prisma", "schema.prisma");
   const absoluteDbPath = resolve(databasePath).replace(/\\/g, "/");
+  const requireFromCaller = createRequire(join(packageDir, "package.json"));
+  const prismaCli = join(
+    dirname(requireFromCaller.resolve("prisma/package.json")),
+    "build",
+    "index.js",
+  );
+  const migrateArgs = [
+    prismaCli,
+    "migrate",
+    "deploy",
+    `--schema=${schemaPath}`,
+  ];
+  const migrateOptions = {
+    cwd: packageDir,
+    env: {
+      ...process.env,
+      // Resolve to absolute so prisma.config.ts gets a correct path
+      // regardless of this subprocess's cwd (which is packageDir)
+      NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
+      ...envOverrides,
+    },
+    timeout: MIGRATION_TIMEOUT_MS,
+  };
+
   let stdout: string;
   let stderr: string;
   try {
-    ({ stdout, stderr } = await execAsync(
-      `npx prisma migrate deploy --schema="${schemaPath}"`,
-      {
-        cwd: packageDir,
-        env: {
-          ...process.env,
-          // Resolve to absolute so prisma.config.ts gets a correct path
-          // regardless of this subprocess's cwd (which is packageDir)
-          NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
-          ...envOverrides,
-        },
-      },
+    ({ stdout, stderr } = await execFileAsync(
+      process.execPath,
+      migrateArgs,
+      migrateOptions,
     ));
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -111,16 +134,10 @@ export async function deployPrismaMigrations(options: {
       }
       if (removed) {
         console.log("Retrying migration after removing stale WAL files...");
-        ({ stdout, stderr } = await execAsync(
-          `npx prisma migrate deploy --schema="${schemaPath}"`,
-          {
-            cwd: packageDir,
-            env: {
-              ...process.env,
-              NAISYS_FOLDER: resolve(process.env.NAISYS_FOLDER || ""),
-              ...envOverrides,
-            },
-          },
+        ({ stdout, stderr } = await execFileAsync(
+          process.execPath,
+          migrateArgs,
+          migrateOptions,
         ));
       } else {
         throw new Error(
