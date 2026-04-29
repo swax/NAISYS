@@ -119,6 +119,7 @@ let hubClient: HubClient | undefined;
 let hubClientConfig: HubClientConfig | undefined;
 let hubCostBuffer: HubCostBuffer | undefined;
 let hubLogBuffer: HubLogBuffer | undefined;
+let heartbeatService: ReturnType<typeof createHeartbeatService> | undefined;
 if (hubUrl) {
   hubClientConfig = createHubClientConfig(hubUrl);
   const hubClientLog = createDualLogger("hub-client.log");
@@ -146,6 +147,20 @@ const userService = createUserService(
 );
 const modelService = createModelService(hubClient);
 
+async function shutdown(): Promise<void> {
+  try {
+    hubLogBuffer?.cleanup();
+    hubCostBuffer?.cleanup();
+    heartbeatService?.cleanup();
+    hubClient?.cleanup();
+    if (integratedHubShutdown) {
+      await integratedHubShutdown();
+    }
+  } catch (err) {
+    console.error("[NAISYS] Error during shutdown:", err);
+  }
+}
+
 if (hubClient) {
   try {
     await hubClient.waitForConnection();
@@ -153,6 +168,7 @@ if (hubClient) {
     await modelService.waitForModels();
   } catch (error) {
     console.error(`Failed to connect to hub: ${error}`);
+    await shutdown();
     process.exit(1);
   }
 }
@@ -171,7 +187,7 @@ const agentManager = new AgentManager(
   promptNotification,
 );
 
-const heartbeatService = createHeartbeatService(
+heartbeatService = createHeartbeatService(
   hubClient,
   agentManager,
   userService,
@@ -195,20 +211,16 @@ const handleShutdown = (signal: "SIGINT" | "SIGTERM") => {
   }
   shuttingDown = true;
   console.log(`\n[NAISYS] Shutting down (${signal})...`);
-  agentManager.stopAll(signal).catch(() => {});
+  agentManager.stopAll(signal).catch((err) => {
+    console.error("[NAISYS] Error stopping agents:", err);
+  });
 };
 process.on("SIGINT", () => handleShutdown("SIGINT"));
 process.on("SIGTERM", () => handleShutdown("SIGTERM"));
 
 await agentManager.waitForAllAgentsToComplete();
 
-hubLogBuffer?.cleanup();
-hubCostBuffer?.cleanup();
-heartbeatService.cleanup();
-hubClient?.cleanup();
-if (integratedHubShutdown) {
-  await integratedHubShutdown();
-}
+await shutdown();
 
 if (updateService?.isUpdateInProgress()) {
   // Update handler exits after handing off restart management to the wrapper or PM2

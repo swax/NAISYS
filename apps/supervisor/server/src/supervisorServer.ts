@@ -288,6 +288,10 @@ export const supervisorPlugin: FastifyPluginAsync<
   initBrowserSocket(fastify.server, isProd);
 };
 
+export const cleanupSupervisor = () => {
+  cleanupHubConnection();
+};
+
 export const startServer: StartServer = async (
   startupType,
   plugins = [],
