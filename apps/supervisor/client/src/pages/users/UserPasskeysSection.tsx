@@ -68,6 +68,8 @@ interface UserPasskeysSectionProps {
   userActions: UserDetailResponse["_actions"];
   hasPassword?: boolean;
   allowPasswordLogin?: boolean;
+  issuedLink: RegistrationTokenResponse | null;
+  setIssuedLink: (link: RegistrationTokenResponse | null) => void;
 }
 
 export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
@@ -76,6 +78,8 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
   userActions,
   hasPassword = false,
   allowPasswordLogin = false,
+  issuedLink,
+  setIssuedLink,
 }) => {
   const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([]);
   const [passkeysLoading, setPasskeysLoading] = useState(false);
@@ -89,8 +93,6 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
   );
   const [renameDraft, setRenameDraft] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
-  const [issuedLink, setIssuedLink] =
-    useState<RegistrationTokenResponse | null>(null);
 
   const fetchPasskeys = useCallback(async () => {
     setPasskeysLoading(true);
@@ -234,15 +236,20 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
             </Button>
           )}
           {/* Self-issuance is server-rejected for zero-passkey callers
-              (an admin must bootstrap the first credential). Hide the
-              button rather than letting it 403. */}
-          {canIssueRegistration && !(isSelf && passkeys.length === 0) && (
-            <Button variant="light" onClick={handleIssueRegistrationLink}>
-              {isSelf
-                ? "Issue registration link for new device"
-                : "Issue registration link"}
-            </Button>
-          )}
+              unless they have a password to step up with. Hide the button
+              rather than letting it 403. */}
+          {canIssueRegistration &&
+            !(
+              isSelf &&
+              passkeys.length === 0 &&
+              !(allowPasswordLogin && hasPassword)
+            ) && (
+              <Button variant="light" onClick={handleIssueRegistrationLink}>
+                {isSelf
+                  ? "Issue registration link for new device"
+                  : "Issue registration link"}
+              </Button>
+            )}
           {canResetPasskeys && (
             <Button color="red" variant="outline" onClick={handleResetPasskeys}>
               Reset all passkeys

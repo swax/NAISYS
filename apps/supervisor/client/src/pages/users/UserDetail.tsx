@@ -17,7 +17,10 @@ import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { hasAction } from "@naisys/common";
 import { SecretField } from "@naisys/common-browser";
-import { type UserDetailResponse } from "@naisys/supervisor-shared";
+import {
+  type RegistrationTokenResponse,
+  type UserDetailResponse,
+} from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -29,6 +32,7 @@ import {
 
 import type { AppOutletContext } from "../../App";
 import { useSession } from "../../contexts/SessionContext";
+import { issueRegistrationLink } from "../../lib/apiAuth";
 import {
   clearUserPassword,
   deleteUser,
@@ -53,6 +57,9 @@ export const UserDetail: React.FC = () => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [rotating, setRotating] = useState(false);
   const [clearingPassword, setClearingPassword] = useState(false);
+  const [issuingPasswordLink, setIssuingPasswordLink] = useState(false);
+  const [issuedLink, setIssuedLink] =
+    useState<RegistrationTokenResponse | null>(null);
 
   const isSelf = currentUser?.username === routeUsername;
 
@@ -144,6 +151,23 @@ export const UserDetail: React.FC = () => {
       });
     } finally {
       setClearingPassword(false);
+    }
+  };
+
+  const handleIssuePasswordLink = async () => {
+    if (!routeUsername) return;
+    setIssuingPasswordLink(true);
+    try {
+      const result = await issueRegistrationLink(routeUsername);
+      setIssuedLink(result);
+    } catch (err) {
+      notifications.show({
+        title: "Issue Link Failed",
+        message: err instanceof Error ? err.message : "Failed to issue link",
+        color: "red",
+      });
+    } finally {
+      setIssuingPasswordLink(false);
     }
   };
 
@@ -296,6 +320,16 @@ export const UserDetail: React.FC = () => {
                 Password:
               </Text>
               <Text>{user.hasPassword ? "Set" : "Not set"}</Text>
+              {hasAction(user._actions, "issue-registration") && (
+                <Button
+                  size="xs"
+                  variant="light"
+                  loading={issuingPasswordLink}
+                  onClick={handleIssuePasswordLink}
+                >
+                  {user.hasPassword ? "Change" : "Add"}
+                </Button>
+              )}
               {user.hasPassword &&
                 hasAction(user._actions, "clear-password") && (
                   <Button
@@ -320,6 +354,8 @@ export const UserDetail: React.FC = () => {
           userActions={user._actions}
           hasPassword={user.hasPassword}
           allowPasswordLogin={allowPasswordLogin}
+          issuedLink={issuedLink}
+          setIssuedLink={setIssuedLink}
         />
       )}
 
