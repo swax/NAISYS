@@ -4,9 +4,14 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const testNaisysFolder = path.join(__dirname, ".test-naisys");
+const serverCommand =
+  process.platform === "win32"
+    ? "node --import tsx src/erpServer.ts"
+    : "exec node --import tsx src/erpServer.ts";
 
 export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   projects: [
     {
       name: "api",
@@ -23,8 +28,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Run via `exec node --import tsx` so SIGTERM reaches node directly
-      // and NODE_V8_COVERAGE flushes request-handler coverage on shutdown.
+      // Run via `exec node --import tsx` on POSIX so SIGTERM reaches node
+      // directly and NODE_V8_COVERAGE flushes request-handler coverage on
+      // shutdown. Windows cmd.exe has no `exec`, so run node directly there.
       // Why each piece:
       //   - `exec`: Playwright's webServer always spawns through a shell.
       //     Without `exec` the shell is the parent of node and intercepts
@@ -36,13 +42,14 @@ export default defineConfig({
       //     clean tree without a prior build step. The graceful-shutdown
       //     flush is what makes coverage work; src vs dist is irrelevant
       //     to it (c8 attributes both back to src/ via source maps).
-      command: "exec node --import tsx src/erpServer.ts",
+      command: serverCommand,
       // Default Playwright kills with SIGKILL, which skips the server's
       // SIGTERM handler and the NODE_V8_COVERAGE on-exit flush. Send SIGTERM
       // and give it a few seconds to drain.
       gracefulShutdown: { signal: "SIGTERM", timeout: 5000 },
       port: 3302,
       env: {
+        NAISYS_SKIP_DOTENV_CHECK: "1",
         NAISYS_FOLDER: testNaisysFolder,
         SUPERVISOR_AUTH: "false",
         SERVER_PORT: "3302",

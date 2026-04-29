@@ -29,6 +29,21 @@ const repoRoot = resolve(import.meta.dirname, "..");
 const rawDir = resolve(repoRoot, "coverage", "raw");
 const clientRawDir = resolve(repoRoot, "coverage", "client-raw");
 const reportDir = resolve(repoRoot, "coverage", "merged");
+const normalizedRepoRoot = repoRoot.replaceAll("\\", "/");
+
+function toRepoRelativePath(filePath) {
+  const normalized = filePath.replaceAll("\\", "/");
+  const normalizedRoot = normalizedRepoRoot.toLowerCase() + "/";
+  return normalized.toLowerCase().startsWith(normalizedRoot)
+    ? normalized.slice(normalizedRepoRoot.length + 1)
+    : normalized;
+}
+
+function workspaceForCoveragePath(filePath) {
+  const rel = toRepoRelativePath(filePath);
+  const idx = rel.indexOf("/src/");
+  return idx < 0 ? undefined : rel.slice(0, idx);
+}
 
 rmSync(rawDir, { recursive: true, force: true });
 rmSync(clientRawDir, { recursive: true, force: true });
@@ -113,12 +128,8 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
 
   for (const [path, data] of Object.entries(summary)) {
     if (path === "total") continue;
-    const rel = path.startsWith(repoRoot + "/")
-      ? path.slice(repoRoot.length + 1)
-      : path;
-    const idx = rel.indexOf("/src/");
-    if (idx < 0) continue;
-    const workspace = rel.slice(0, idx);
+    const workspace = workspaceForCoveragePath(path);
+    if (!workspace) continue;
     const t = totals.get(workspace) ?? { covered: 0, total: 0 };
     t.covered += data.statements.covered;
     t.total += data.statements.total;
@@ -143,12 +154,8 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       }
     }
     for (const filePath of map.files()) {
-      const rel = filePath.startsWith(repoRoot + "/")
-        ? filePath.slice(repoRoot.length + 1)
-        : filePath;
-      const idx = rel.indexOf("/src/");
-      if (idx < 0) continue;
-      const workspace = rel.slice(0, idx);
+      const workspace = workspaceForCoveragePath(filePath);
+      if (!workspace) continue;
       const fileSummary = map.fileCoverageFor(filePath).toSummary();
       const t = totals.get(workspace) ?? { covered: 0, total: 0 };
       t.covered += fileSummary.statements.covered;

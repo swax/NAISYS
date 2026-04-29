@@ -22,6 +22,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  formatDotenvValue,
   getFreePort,
   getTestDir,
   setupTestDir,
@@ -53,7 +54,7 @@ describe("ERP API Key Auth E2E", () => {
 
   function createIntegratedEnvFile(dir: string) {
     const envContent = `
-NAISYS_FOLDER="${dir}"
+NAISYS_FOLDER=${formatDotenvValue(dir)}
 NAISYS_HOSTNAME="TEST-ERP"
 SPEND_LIMIT_DOLLARS=10
 SERVER_PORT=${SERVER_PORT}
@@ -84,18 +85,25 @@ SERVER_PORT=${SERVER_PORT}
     await naisys.startAgent("testbot", "erp api key test");
     await naisys.switchAgent("testbot");
 
-    // --- Send curl command using $api_key variable ---
+    // --- Send curl command using the shell's API key environment variable ---
+    const responseStart = "__ERP_AUTH_ME_START__";
+    const responseEnd = "__ERP_AUTH_ME_END__";
+    const curlCommand =
+      process.platform === "win32"
+        ? `Write-Output "${responseStart}"; curl.exe -s -H "Authorization: Bearer $env:NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me; Write-Output "${responseEnd}"`
+        : `printf '%s\\n' "${responseStart}"; curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me; printf '\\n%s\\n' "${responseEnd}"`;
     const output = await naisys.runCommand(
-      `curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me`,
-      { waitFor: "testbot", timeoutMs: 30000 },
+      curlCommand,
+      { waitFor: responseEnd, timeoutMs: 30000 },
     );
 
-    // Verify ERP returned the auto-provisioned agent user
-    expect(output).toContain("testbot");
+    const responseMatch = output.match(
+      new RegExp(`${responseStart}\\s*([\\s\\S]*?)\\s*${responseEnd}`),
+    );
+    expect(responseMatch).not.toBeNull();
 
-    // The response should be JSON with id and username
-    const jsonMatch = output.match(/\{[^}]*"username"\s*:\s*"testbot"[^}]*\}/);
-    expect(jsonMatch).not.toBeNull();
+    const me = JSON.parse(responseMatch![1]) as { username?: string };
+    expect(me.username).toBe("testbot");
 
     // --- Log errors for debugging ---
     naisys.dumpStderrIfAny("NAISYS");

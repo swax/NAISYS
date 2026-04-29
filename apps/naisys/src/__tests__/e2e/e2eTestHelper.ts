@@ -157,6 +157,10 @@ export function cleanupTestDir(testDir: string): void {
   }
 }
 
+export function formatDotenvValue(value: string): string {
+  return JSON.stringify(value.replaceAll("\\", "/"));
+}
+
 /**
  * Create a .env file for testing
  */
@@ -165,7 +169,7 @@ export function createEnvFile(
   options?: { naisysFolder?: string; hostname?: string },
 ): void {
   const envContent = `
-NAISYS_FOLDER="${options?.naisysFolder ?? ""}"
+NAISYS_FOLDER=${formatDotenvValue(options?.naisysFolder ?? "")}
 NAISYS_HOSTNAME="${options?.hostname ?? "TEST-HOST"}"
 SPEND_LIMIT_DOLLARS=10
 `.trim();
@@ -224,7 +228,7 @@ export function createHubEnvFile(
   options: { port: number; naisysFolder: string },
 ): void {
   const envContent = `
-NAISYS_FOLDER=${options.naisysFolder}
+NAISYS_FOLDER=${formatDotenvValue(options.naisysFolder)}
 SERVER_PORT=${options.port}
 `.trim();
   writeFileSync(join(testDir, ".env"), envContent);
@@ -250,6 +254,28 @@ export interface HubTestProcess {
   waitForOutput: (text: string, timeoutMs?: number) => Promise<void>;
   getFullOutput: () => string;
   cleanup: () => Promise<void>;
+}
+
+async function waitForProcessExit(
+  proc: ChildProcess,
+  timeoutMs: number,
+): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    if (proc.exitCode !== null) {
+      resolve(true);
+      return;
+    }
+
+    const onExit = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      proc.off("exit", onExit);
+      resolve(false);
+    }, timeoutMs);
+    proc.once("exit", onExit);
+  });
 }
 
 /**
@@ -311,23 +337,17 @@ export function spawnHub(testDir: string, debug = false): HubTestProcess {
 
   const cleanup = async (): Promise<void> => {
     proc.stdin?.end();
+
+    if (!proc.killed && proc.exitCode === null) {
+      proc.kill("SIGTERM");
+    }
+
+    await waitForProcessExit(proc, 2000);
+
     proc.stdin?.removeAllListeners();
     proc.stdout?.removeAllListeners();
     proc.stderr?.removeAllListeners();
     proc.removeAllListeners();
-
-    if (!proc.killed) {
-      proc.kill("SIGTERM");
-    }
-
-    await new Promise<void>((resolve) => {
-      if (proc.exitCode !== null) {
-        resolve();
-      } else {
-        proc.on("exit", () => resolve());
-        setTimeout(resolve, 2000);
-      }
-    });
   };
 
   return {
@@ -527,28 +547,38 @@ export function spawnNaisys(
     runCommand(`ns-mail read ${messageId}`, { timeoutMs: 10000 });
 
   const cleanup = async (): Promise<void> => {
-    // Close stdin first
+    if (
+      process.env.NODE_V8_COVERAGE &&
+      proc.exitCode === null &&
+      !proc.killed
+    ) {
+      try {
+        proc.stdin?.write("exit all\n");
+        if (await waitForProcessExit(proc, 10_000)) {
+          proc.stdin?.removeAllListeners();
+          proc.stdout?.removeAllListeners();
+          proc.stderr?.removeAllListeners();
+          proc.removeAllListeners();
+          return;
+        }
+      } catch {
+        // Fall through to hard cleanup below.
+      }
+    }
+
     proc.stdin?.end();
+
+    if (!proc.killed && proc.exitCode === null) {
+      proc.kill("SIGTERM");
+    }
+
+    await waitForProcessExit(proc, 2000);
 
     // Remove all listeners to prevent Jest open handle warnings
     proc.stdin?.removeAllListeners();
     proc.stdout?.removeAllListeners();
     proc.stderr?.removeAllListeners();
     proc.removeAllListeners();
-
-    if (!proc.killed) {
-      proc.kill("SIGTERM");
-    }
-
-    // Wait for process to fully exit
-    await new Promise<void>((resolve) => {
-      if (proc.exitCode !== null) {
-        resolve();
-      } else {
-        proc.on("exit", () => resolve());
-        setTimeout(resolve, 2000);
-      }
-    });
   };
 
   return {

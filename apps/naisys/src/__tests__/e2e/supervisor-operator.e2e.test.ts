@@ -49,6 +49,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  formatDotenvValue,
   getFreePort,
   getTestDir,
   setupTestDir,
@@ -84,7 +85,7 @@ describe("Supervisor Operator E2E", () => {
 
   function createIntegratedEnvFile(dir: string) {
     const envContent = `
-NAISYS_FOLDER="${dir}"
+NAISYS_FOLDER=${formatDotenvValue(dir)}
 NAISYS_HOSTNAME="${HOSTNAME}"
 SPEND_LIMIT_DOLLARS=10
 SERVER_PORT=${SERVER_PORT}

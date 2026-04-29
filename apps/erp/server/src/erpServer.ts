@@ -40,6 +40,7 @@ import {
 } from "fastify-type-provider-zod";
 import path from "path";
 import { fileURLToPath } from "url";
+import { takeCoverage } from "v8";
 
 import { registerApiReference } from "./api-reference.js";
 import { registerAuthMiddleware } from "./auth-middleware.js";
@@ -232,6 +233,17 @@ async function startServer(wizardRan?: boolean) {
     return reply.redirect("/erp/");
   });
 
+  if (process.env.NODE_V8_COVERAGE) {
+    fastify.post(
+      "/erp/api/__coverage/flush",
+      { schema: { hide: true } },
+      async () => {
+        takeCoverage();
+        return { ok: true };
+      },
+    );
+  }
+
   const superAdminPassword =
     wizardRan && !isSupervisorAuth()
       ? await promptSuperAdminPassword("ERP Setup")
@@ -296,7 +308,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     );
     expandNaisysFolder();
   }
-  wizardRan = (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
+  if (process.env.NAISYS_SKIP_DOTENV_CHECK !== "1") {
+    wizardRan =
+      (await ensureDotEnv(erpExampleUrl, erpWizardConfig)) || wizardRan;
+  }
   const fastify = await startServer(wizardRan);
   let shuttingDown = false;
   const handleShutdown = async (signal: "SIGINT" | "SIGTERM") => {

@@ -18,6 +18,7 @@ import type { NaisysTestProcess } from "./e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
+  formatDotenvValue,
   getFreePort,
   getTestDir,
   setupTestDir,
@@ -57,7 +58,7 @@ describe("Supervisor ephemeral subagent E2E", () => {
     // alex.yaml, and ephemeral subagents must inherit that delegation rather
     // than tripping config validation.
     const envContent = `
-NAISYS_FOLDER="${dir}"
+NAISYS_FOLDER=${formatDotenvValue(dir)}
 NAISYS_HOSTNAME="${HOSTNAME}"
 SERVER_PORT=${SERVER_PORT}
 `.trim();

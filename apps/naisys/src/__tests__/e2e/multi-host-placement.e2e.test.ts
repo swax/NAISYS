@@ -36,6 +36,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   extractAccessKey,
+  formatDotenvValue,
   getFreePort,
   getTestDir,
   setupTestDir,
@@ -101,7 +102,7 @@ describe("Multi-Host Agent Placement and Failover E2E", () => {
 
   function createIntegratedEnvFile() {
     const envContent = `
-NAISYS_FOLDER="${integratedDir}"
+NAISYS_FOLDER=${formatDotenvValue(integratedDir)}
 NAISYS_HOSTNAME="${SUPERVISOR_HOST}"
 SPEND_LIMIT_DOLLARS=10
 SERVER_PORT=${SERVER_PORT}

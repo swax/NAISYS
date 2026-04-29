@@ -25,6 +25,7 @@ import {
   cleanupTestDir,
   createAgentYaml,
   dumpClientCoverage,
+  formatDotenvValue,
   getFreePort,
   getTestDir,
   setupTestDir,
@@ -67,7 +68,7 @@ describe("Supervisor UI E2E", () => {
 
   function createIntegratedEnvFile(dir: string) {
     const envContent = `
-NAISYS_FOLDER="${dir}"
+NAISYS_FOLDER=${formatDotenvValue(dir)}
 NAISYS_HOSTNAME="TEST-SUPERVISOR-UI"
 SPEND_LIMIT_DOLLARS=10
 SERVER_PORT=${SERVER_PORT}
