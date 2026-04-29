@@ -4,7 +4,7 @@ import {
   cwdWithTilde,
   ensureDotEnv,
   expandNaisysFolder,
-  promptResetSuperAdminPasskey,
+  promptResetSuperAdminAccount,
   runSetupWizard,
   type WizardConfig,
 } from "@naisys/common-node";
@@ -46,7 +46,9 @@ export const startHub: StartHub = async (
 ) => {
   try {
     const agentPath = startupAgentPath || ".";
-    let cleanupSupervisor: HostedSupervisorModule["cleanupSupervisor"] | undefined;
+    let cleanupSupervisor:
+      | HostedSupervisorModule["cleanupSupervisor"]
+      | undefined;
 
     // Create log service first
     const logService = createDualLogger("hub-server.log");
@@ -181,14 +183,14 @@ export const startHub: StartHub = async (
       )) as HostedSupervisorModule;
       const { supervisorPlugin, bootstrapSupervisor } = hostedSupervisor;
       cleanupSupervisor = hostedSupervisor.cleanupSupervisor;
-      const resetSuperAdminPasskey = wizardRan
-        ? await promptResetSuperAdminPasskey("Supervisor Setup", {
+      const resetSuperAdminAccount = wizardRan
+        ? await promptResetSuperAdminAccount("Supervisor Setup", {
             defaultReset: !process.argv.includes("--setup"),
           })
         : false;
 
       // Bootstrap before plugin register so the operator prompt isn't bounded by pluginTimeout and doesn't interleave with hub connection logs.
-      await bootstrapSupervisor({ resetSuperAdminPasskey });
+      await bootstrapSupervisor({ resetSuperAdminAccount });
 
       await fastify.register(supervisorPlugin, {
         plugins,

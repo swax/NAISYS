@@ -19,6 +19,7 @@ import {
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
 import { RouteErrorPage } from "./components/RouteErrorPage";
+import { StepUpPasswordPromptProvider } from "./components/StepUpPasswordPrompt";
 import { NAV_HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
@@ -54,6 +55,7 @@ import { VariablesPage } from "./pages/variables/VariablesPage";
 
 export interface AppOutletContext {
   permissions: Permission[];
+  allowPasswordLogin: boolean;
 }
 
 const AppContent: React.FC = () => {
@@ -62,6 +64,7 @@ const AppContent: React.FC = () => {
   const [opened, { toggle, close }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
   const [publicRead, setPublicRead] = React.useState(false);
+  const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(false);
   const [permissions, setPermissions] = React.useState<Permission[]>([]);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
@@ -73,6 +76,7 @@ const AppContent: React.FC = () => {
       .then((d) => {
         setPlugins(d.plugins);
         setPublicRead(d.publicRead);
+        setAllowPasswordLogin(d.allowPasswordLogin === true);
         setPermissions(d.permissions);
       })
       .catch(() => {})
@@ -93,12 +97,12 @@ const AppContent: React.FC = () => {
     ? path.slice(ROUTER_BASENAME.length)
     : path;
   if (basenameStripped.startsWith("/register")) {
-    return <Outlet context={{ permissions: [] }} />;
+    return <Outlet context={{ permissions: [], allowPasswordLogin }} />;
   }
 
   // Show full-page login when not authenticated and public read is disabled
   if (!isAuthenticated && !publicRead) {
-    return <LoginPage />;
+    return <LoginPage allowPasswordLogin={allowPasswordLogin} />;
   }
 
   return (
@@ -141,7 +145,7 @@ const AppContent: React.FC = () => {
                 overflow: "auto",
               }}
             >
-              <Outlet context={{ permissions }} />
+              <Outlet context={{ permissions, allowPasswordLogin }} />
             </Box>
           </AppShell.Main>
         </AppShell>
@@ -283,9 +287,11 @@ const AppRoot: React.FC = () => {
   return (
     <>
       <Notifications />
-      <SessionProvider>
-        <RouterProvider router={router} />
-      </SessionProvider>
+      <StepUpPasswordPromptProvider>
+        <SessionProvider>
+          <RouterProvider router={router} />
+        </SessionProvider>
+      </StepUpPasswordPromptProvider>
     </>
   );
 };

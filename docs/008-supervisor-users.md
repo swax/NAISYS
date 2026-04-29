@@ -68,14 +68,15 @@ Human-readable descriptions for each permission are maintained alongside the Zod
 
 ### User Model
 
-Instead of an `AuthType` enum, the User model uses an `isAgent` boolean together with an optional `apiKey` string. Humans authenticate with passkeys (WebAuthn); agent users have `isAgent=true`, no passkeys, and look up their API key in the hub database by uuid (see _Hub API User Auto-Provisioning_).
+Instead of an `AuthType` enum, the User model uses an `isAgent` boolean together with an optional `apiKey` string and an optional `passwordHash`. Humans authenticate with passkeys by default; an opt-in feature flag (`ALLOW_PASSWORD_LOGIN=true`) also lets them set a bcrypt password. Agent users have `isAgent=true`, no `passwordHash`, no passkeys, and look up their API key in the hub database by uuid (see _Hub API User Auto-Provisioning_).
 
 ```prisma
 model User {
   id                 Int                 @id @default(autoincrement())
   username           String              @unique
-  uuid               String              @unique  // WebAuthn user handle; see doc 007
+  uuid               String              @default("")
   isAgent            Boolean             @default(false) @map("is_agent")
+  passwordHash       String?             @map("password_hash")  // nullable; null = no password
   createdAt          DateTime            @default(now()) @map("created_at")
   apiKey             String?             @unique @map("api_key")
   updatedAt          DateTime            @updatedAt @map("updated_at")
@@ -89,7 +90,7 @@ model User {
 }
 ```
 
-Credential storage lives in companion tables — `passkey_credentials` (WebAuthn public keys + signature counters + device labels) and `registration_tokens` (one-time bootstrap links). See [doc 007](./007-web-auth.md) for the full schema and ceremony details.
+Credential storage lives in companion tables — `passkey_credentials` (WebAuthn public keys + signature counters + device labels) and `registration_tokens` (one-time bootstrap links). See [doc 007](./007-web-auth.md) for the full schema.
 
 ### UserPermission Model
 
@@ -112,15 +113,15 @@ model UserPermission {
 
 ### Admin Bootstrap
 
-`ensureSuperAdmin()` in `packages/supervisor-database/src/sessionService.ts` creates the `superadmin` user on boot if missing and grants it `supervisor_admin`. **No credential is set** — `bootstrapSupervisor()` issues a one-time registration token and prints the URL to stdout so the operator can register a passkey on first launch. No other permissions are granted by default — because `supervisor_admin` is a superset, the admin user has full access without needing the other seven permissions explicitly. It is called from `supervisorServer.ts` after migrations, before routes register.
+`ensureSuperAdmin()` in `packages/supervisor-database/src/sessionService.ts` creates the `superadmin` user on boot if missing and grants it `supervisor_admin`. **No credential is set** — `bootstrapSupervisor()` issues a one-time registration token and prints the URL to stdout so the operator can register a passkey (or set a password if `ALLOW_PASSWORD_LOGIN=true`) on first launch. No other permissions are granted by default — because `supervisor_admin` is a superset, the admin user has full access without needing the other seven permissions explicitly. It is called from `supervisorServer.ts` after migrations, before routes register.
 
-A registration link is also re-issued automatically when the operator runs with `--setup` and confirms a reset, or when the superadmin has no passkey and no unexpired token (recovery / failed prior setup). See [doc 007](./007-web-auth.md) for the full bootstrap and recovery flow.
+A registration link is also re-issued automatically when the operator runs with `--setup` and confirms a reset, or when the superadmin has no enabled credential and no unexpired token (recovery / failed prior setup).
 
 ## API Design
 
 **Base path**: `/supervisor/api/users` (mounted in `routes/api.ts` with prefix `/users`).
 
-All endpoints require authentication. Write endpoints require `supervisor_admin` via the `requirePermission("supervisor_admin")` preHandler. Credential-management endpoints (passkey list/delete, registration-token issuance) use `requireAdminOrSelf` so a user can manage their own credentials without admin. Sensitive actions (create user, registration-token issuance, passkey delete, passkey reset) additionally call `requireStepUp()`; see [doc 007](./007-web-auth.md) for the step-up flow.
+All endpoints require authentication. Write endpoints require `supervisor_admin` via the `requirePermission("supervisor_admin")` preHandler. A few endpoints — passkey list/delete, registration token issuance, password clear — use `requireAdminOrSelf` so a user can manage their own credentials without needing admin. Sensitive actions (create user, registration token issuance, passkey delete, passkey reset, password clear) additionally call `requireStepUp()`; see [doc 007](./007-web-auth.md) for the step-up flow.
 
 ### API Root Discovery
 
@@ -237,6 +238,7 @@ GET /supervisor/api/users/:username
   "updatedAt": "2025-01-01T00:00:00.000Z",
   "apiKey": "...",
   "hasApiKey": true,
+  "hasPassword": false,
   "permissions": [
     {
       "permission": "supervisor_admin",
@@ -279,7 +281,8 @@ GET /supervisor/api/users/:username
       "method": "POST",
       "title": "Issue Registration Link"
     }
-    // "reset-passkeys" is emitted only for admin viewing another user
+    // "clear-password" is emitted only when hasPassword is true (admin or self)
+    // "reset-passkeys" is emitted for admin viewing another user
     // "delete" is omitted entirely when isSelf
   ]
 }
@@ -287,10 +290,11 @@ GET /supervisor/api/users/:username
 
 Notes on the response shape:
 
-- `apiKey` is only included when the **caller** is `supervisor_admin`; non-admins never see anyone's key (including their own) via this endpoint. `hasApiKey` is always included.
+- `apiKey` is only included when the **caller** is `supervisor_admin`; non-admins never see anyone's key (including their own) via this endpoint. `hasApiKey` and `hasPassword` are always included.
 - For agent users (`isAgent: true`) the server looks up the key in the hub DB via `getUserApiKey()` — agent keys are stored in the hub `users` table, not the supervisor `users` table.
 - If the user is an agent, `_links` also includes `{ "rel": "agent", "href": "/supervisor/api/agents/<agent-username>" }`.
-- `issue-registration` is emitted to admin (any user) and self (own row), so anyone can mint a fresh registration link for adding a passkey on a new device.
+- `issue-registration` is emitted to admin (any user) and self (own row), so anyone can mint a fresh registration link for adding a credential on a new device.
+- `clear-password` is only emitted when `hasPassword: true` and the caller is admin or self; the endpoint additionally refuses if the user has no passkeys (so you can't strip a user down to zero credentials).
 - `reset-passkeys` is admin-only and never emitted on self (admins use `issue-registration` on themselves).
 - The `delete` action is omitted when viewing self. The `revoke` action on a permission entry is omitted for `(self, supervisor_admin)` — you cannot revoke your own supervisor_admin.
 
@@ -319,10 +323,10 @@ POST /supervisor/api/users
 ```
 
 ```json
-{ "username": "operator", "stepUpAssertion": { ... } }
+{ "username": "operator" }
 ```
 
-Requires `supervisor_admin` and step-up auth (the body carries a `stepUpAssertion` proving the caller still holds a passkey — see [doc 007](./007-web-auth.md)). Username must be url-safe (`URL_SAFE_KEY_REGEX`, 1–64 chars). Server generates a `uuid` and a 32-byte hex `apiKey`. **No credential is set on the new user** — the response includes a one-time registration URL the operator must open to register a passkey.
+Requires `supervisor_admin` and step-up auth (the body may include `stepUpAssertion` or `stepUpPassword` — see [doc 007](./007-web-auth.md)). Username must be url-safe (`URL_SAFE_KEY_REGEX`, 1–64 chars). Server generates a `uuid` and a 32-byte hex `apiKey`. **No credential is set on the new user** — the response includes a one-time registration URL the operator must open to register a passkey or set a password.
 
 Response: `201 { success, message, id, username, registrationUrl, registrationExpiresAt }`. A `409` is returned on username conflict; a `412` is returned when step-up is required but missing.
 
@@ -336,7 +340,7 @@ POST /supervisor/api/users/from-agent
 { "agentId": 42 }
 ```
 
-Imports an existing hub agent as a supervisor user, linking by uuid. Creates a local `User` with `isAgent: true` and no passkeys. Conflicts on duplicate uuid or username. Requires `supervisor_admin`. This is the same shape as the lazy auto-provision path (see below), just driven explicitly.
+Imports an existing hub agent as a supervisor user, linking by uuid. Creates a local `User` with `isAgent: true` and no passwordHash. Conflicts on duplicate uuid or username. Requires `supervisor_admin`. This is the same shape as the lazy auto-provision path (see below), just driven explicitly.
 
 Response: `201 { success, message, id, username }`.
 
@@ -350,7 +354,7 @@ PUT /supervisor/api/users/:username
 { "username": "new-name" }
 ```
 
-Username-only. Requires `supervisor_admin`. Credentials are managed through the dedicated endpoints (`registration-token`, `passkeys/:id/delete`, `reset-passkeys`); this endpoint never accepts a credential field. On success the auth cache is cleared wholesale (see _Auth Cache Integration_).
+Username-only. Requires `supervisor_admin`. Credentials are managed through the dedicated endpoints (`registration-token`, `password/clear`, `passkeys/:id/delete`, `reset-passkeys`); this endpoint never accepts a credential field. On success the auth cache is cleared wholesale (see _Auth Cache Integration_).
 
 Response: `{ success, message }`. Conflicts on duplicate username return `409`.
 
@@ -361,10 +365,10 @@ POST /supervisor/api/users/:username/registration-token
 ```
 
 ```json
-{ "stepUpAssertion": { ... } }
+{ "stepUpAssertion": { ... } }   // or { "stepUpPassword": "..." } for password-only callers
 ```
 
-Issues a one-time registration link (and revokes any prior unused link for that user). Returned URL points at `/supervisor/register?token=…`; the recipient opens it in a browser to register a passkey. The supervisor UI displays the URL alongside a QR code for easy phone enrollment (suppressed when the URL is loopback-only — see [doc 007](./007-web-auth.md)). Guarded by `requireAdminOrSelf` plus step-up. Self-issuance is refused when the caller has no passkey — the legitimate path in that case is an admin-issued link.
+Issues a one-time registration link (and revokes any prior unused link for that user). Returned URL points at `/supervisor/register?token=…`; the recipient opens it in a browser to register a passkey or set a password. Guarded by `requireAdminOrSelf` plus step-up. Self-issuance is refused when the caller has no enabled credential (passkey or, when the flag is on, password) — the legitimate path in that case is an admin-issued link.
 
 Response: `{ username, registrationUrl, expiresAt }`.
 
@@ -378,17 +382,22 @@ Wipes every passkey for the user, revokes all of their sessions, and issues a fr
 
 Response: `{ username, registrationUrl, expiresAt }`.
 
-#### List / Delete / Rename Passkeys
+#### List / Delete Passkeys
 
 ```
 GET  /supervisor/api/users/:username/passkeys
 POST /supervisor/api/users/:username/passkeys/:id/delete
-POST /supervisor/api/users/:username/passkeys/:id/rename
 ```
 
-`GET` returns each credential's `id`, `deviceLabel`, `createdAt`, and `lastUsedAt`. `POST .../delete` (POST not DELETE so the step-up body fits) removes a single passkey; after deletion all sessions for the target user are revoked except the actor's own — and even the actor's session is dropped if the deletion left them with no passkey. `POST .../rename` updates the device label only (`{ deviceLabel: string }`, max 64 chars) and skips step-up since label changes have no security impact. All three endpoints accept admin or self.
+`GET` returns each credential's `id`, `deviceLabel`, `createdAt`, and `lastUsedAt`. `POST .../delete` (POST not DELETE so the step-up body fits) removes a single passkey; both endpoints accept admin or self. After deletion, all sessions for the target user are revoked except the actor's own — and even the actor's session is dropped if the deletion left them with no enabled credential.
 
-The browser never tells the page which authenticator was actually used at registration (no fingerprinting allowed by WebAuthn), so the auto-derived label is just a UA sniff (`"Windows"`, `"Mac"`, etc.). The rename endpoint exists so users can fix it after the fact — or the create flow can prompt for a label first (the user-detail page surfaces a "Device label" input in its "Add passkey" modal).
+#### Clear Password
+
+```
+POST /supervisor/api/users/:username/password/clear
+```
+
+Removes a user's password credential when `ALLOW_PASSWORD_LOGIN` is on. Requires admin or self plus step-up, and refuses if the user has no passkeys (so you can never strip a user down to zero credentials this way). No-op when the user already had no password.
 
 #### Delete User
 
@@ -445,7 +454,7 @@ GET /supervisor/api/schemas/        → { "schemas": [...names] }
 GET /supervisor/api/schemas/:name   → JSON Schema (via Zod's z.toJSONSchema)
 ```
 
-Names contributed by the users module: `CreateUser`, `UpdateUser`, `GrantPermission`, `CreateAgentUser`. Auth-flow schemas (`StepUpAssertionBody`, `RegistrationToken*`, etc.) are contributed separately by the auth module.
+Names contributed by the users module: `CreateUser`, `UpdateUser`, `GrantPermission`, `CreateAgentUser`. Auth schemas (`PasswordLoginRequest`, `PasswordRegistrationRequest`, `StepUpAssertionBody`, etc.) are contributed separately by the auth module.
 
 ## Permission Enforcement
 
@@ -470,7 +479,7 @@ export function requirePermission(permission: Permission) {
 }
 ```
 
-Most write routes on `/supervisor/api/users` use `requirePermission("supervisor_admin")` as their preHandler. The credential-management endpoints (passkey list/delete, registration-token issuance) use `requireAdminOrSelf` so users can manage their own credentials. Step-up is layered on top of those for the sensitive flows. GETs are authenticated but open to any logged-in user — the list endpoint deliberately returns compact rows with no sensitive fields so non-admins can see who else exists.
+Most write routes on `/supervisor/api/users` use `requirePermission("supervisor_admin")` as their preHandler. The credential-management endpoints (passkey list/delete, registration-token issuance, password clear) use `requireAdminOrSelf` so users can manage their own credentials. Step-up is layered on top of those for the sensitive flows. GETs are authenticated but open to any logged-in user — the list endpoint deliberately returns compact rows with no sensitive fields so non-admins can see who else exists.
 
 Permissions other than `supervisor_admin` are enforced on their respective feature endpoints (for example, `manage_agents` on agent lifecycle routes). Those live outside this module and are out of scope here.
 
@@ -494,6 +503,7 @@ A handful of cases are handled by **omission** instead of gating:
 - `delete` is omitted from user actions when viewing self.
 - `revoke` is omitted from permission actions when the target is `(self, supervisor_admin)`.
 - `issue-registration` is omitted unless the caller is admin or self.
+- `clear-password` is omitted unless `hasPassword: true` and the caller is admin or self.
 - `reset-passkeys` is omitted when viewing self.
 
 State-dependent guards (self-protection, "credential exists") are omitted outright; permission-dependent guards use `permGate()`.
@@ -504,7 +514,7 @@ When an API-key-based agent from the hub makes a request to the supervisor, the 
 
 1. `resolveUserFromApiKey(apiKey)` looks up the key in the supervisor DB (`findUserByApiKey`) first, then falls back to the hub DB (`findAgentByApiKey`).
 2. If the match is from the hub, `getUserByUuid(match.uuid)` checks for a pre-existing local supervisor user.
-3. If absent, `createUserForAgent(username, uuid)` creates a local `User` row with `isAgent: true`, no passkeys, and null `apiKey` (the key stays in the hub).
+3. If absent, `createUserForAgent(username, uuid)` creates a local `User` row with `isAgent: true`, no passwordHash, and null `apiKey` (the key stays in the hub).
 4. Permissions are loaded from the local supervisor DB via `getUserPermissions(id)`. Auto-provisioned agents get **no** permissions by default — an admin must grant them explicitly before they can do anything beyond reading public data.
 
 The same flow is available as the explicit `POST /users/from-agent` endpoint (admin-driven, picks an agent by hub id).
@@ -524,7 +534,7 @@ interface SupervisorUser {
 
 Cache keys are `cookie:${hashToken(token)}` or `apikey:${hashToken(apiKey)}`. `null` is cached for unknown tokens (short TTL) to short-circuit floods of bad requests.
 
-Any mutation that changes users or permissions (update, delete, grant, revoke, rotate-key, passkey delete, reset-passkeys) calls `authCache.clear()`. This is coarser than per-user invalidation but keeps the logic simple, and the cache rebuilds on the next request. Logout invalidates the single cache entry tied to the cookie.
+Any mutation that changes users or permissions (update, delete, grant, revoke, rotate-key, passkey delete, password clear, reset-passkeys) calls `authCache.clear()`. This is coarser than per-user invalidation but keeps the logic simple, and the cache rebuilds on the next request. Logout invalidates the single cache entry tied to the cookie.
 
 ## HATEOAS Implementation
 
@@ -566,7 +576,12 @@ Domain-specific action/link builders are **co-located with their route file**, n
 ```ts
 // apps/supervisor/server/src/routes/users.ts
 function userItemLinks(username, agentUsername?): HateoasLink[];
-function userActions(username, isSelf, isAdmin): HateoasAction[];
+function userActions(
+  username,
+  isSelf,
+  isAdmin,
+  hasPassword,
+): HateoasAction[];
 function permissionActions(
   username,
   permission,
@@ -596,6 +611,7 @@ function formatUser(user, currentUserId, currentUserPermissions, options) {
     updatedAt: user.updatedAt.toISOString(),
     apiKey: isAdmin ? apiKeyValue : undefined,
     hasApiKey: apiKeyValue !== null,
+    hasPassword: Boolean(user.passwordHash),
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
@@ -603,7 +619,12 @@ function formatUser(user, currentUserId, currentUserPermissions, options) {
       _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
     _links: userItemLinks(user.username, options?.agentUsername),
-    _actions: userActions(user.username, isSelf, isAdmin),
+    _actions: userActions(
+      user.username,
+      isSelf,
+      isAdmin,
+      Boolean(user.passwordHash),
+    ),
   };
 }
 ```
@@ -628,13 +649,13 @@ Clicking a row navigates to `/users/:username` (resolved from the `item` link te
 - **Edit username**: inline edit (gated by `_actions.update`).
 - **Permissions list**: each entry has a revoke button rendered from its `_actions.revoke`.
 - **Grant permission**: dropdown of not-yet-granted permissions + button (gated by `_actions.grant-permission`). The dropdown options are fed by `GET /permissions` and filtered against the current `permissions[]`.
-- **Passkeys list**: per-credential rename (inline pencil → text input → save) and delete buttons. Delete runs the step-up dance; rename is a plain metadata update.
-- **Add passkey on this device**: opens a modal that prompts for a device label first, then runs the WebAuthn registration ceremony. Useful when a previous "Add" auto-named the credential after the OS (`"Windows"`, etc.) instead of the actual authenticator.
-- **Issue Registration Link**: gated by `_actions.issue-registration`. Triggers step-up, then surfaces the URL alongside a QR code (suppressed for loopback URLs — see [doc 007](./007-web-auth.md)).
+- **Passkeys list**: per-credential delete buttons; each delete runs the step-up dance.
+- **Issue Registration Link**: gated by `_actions.issue-registration`. Triggers step-up, then surfaces the URL for the operator to copy.
 - **Reset Passkeys**: admin-only on other users (`_actions.reset-passkeys`); same surfacing.
+- **Remove Password**: gated by `_actions.clear-password` (only when the user has a password). Step-up required.
 - **Delete**: delete button gated by `_actions.delete` (omitted for self).
 
-All buttons use `hasAction()` + action `disabled`/`disabledReason` for rendering — no component imports `useSession().hasPermission()` to decide what to show in the users UI. Sensitive actions go through `postWithStepUp()` which transparently runs a passkey assertion before the request.
+All buttons use `hasAction()` + action `disabled`/`disabledReason` for rendering — no component imports `useSession().hasPermission()` to decide what to show in the users UI. Sensitive actions go through `postWithStepUp()` (see [doc 007](./007-web-auth.md)) which transparently runs a passkey assertion or opens the password-confirm modal as needed.
 
 ### Client Routing
 
@@ -663,30 +684,32 @@ revokePermission(username, p)   → DELETE /users/:username/permissions/:p
 rotateUserApiKey(username)      → POST /users/:username/rotate-key
 ```
 
-`apiAuth.ts` handles login/logout/getMe and the WebAuthn / step-up / registration plumbing — see [doc 007](./007-web-auth.md). `getMe()` returns `AuthUser` with `{ id, username, permissions }`.
+`apiAuth.ts` handles login/logout/getMe and the WebAuthn / password / step-up / registration plumbing — see [doc 007](./007-web-auth.md). `getMe()` returns `AuthUser` with `{ id, username, permissions }`.
 
 ## Implementation Layout
 
 ### Server
 
-| Path                                                                   | Purpose                                                                                                           |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `packages/supervisor-database/prisma/schema.prisma`                    | `Permission` enum, `User`, `UserPermission`, `Session`, `PasskeyCredential`, `RegistrationToken`                  |
-| `packages/supervisor-database/src/sessionService.ts::ensureSuperAdmin` | Admin bootstrap (grants `supervisor_admin` only, no credentials)                                                  |
-| `packages/supervisor-database/src/passkeyService.ts`                   | Passkey CRUD + registration-token issuance and atomic consume                                                     |
-| `apps/supervisor/server/src/routes/users.ts`                           | Users + permissions + credential management endpoints, domain HATEOAS builders, formatters                        |
-| `apps/supervisor/server/src/routes/auth.ts`                            | Passkey login/register endpoints, step-up options                                                                 |
-| `apps/supervisor/server/src/routes/schemas.ts`                         | Schema discovery                                                                                                  |
-| `apps/supervisor/server/src/routes/root.ts`                            | API root `_links` + `/permissions` enum endpoint                                                                  |
-| `apps/supervisor/server/src/services/userService.ts`                   | User + permission business logic                                                                                  |
-| `apps/supervisor/server/src/services/passkeyService.ts`                | WebAuthn options/verify, registration-link helpers                                                                |
-| `apps/supervisor/server/src/services/stepUpService.ts`                 | `requireStepUp()` — gates sensitive routes with a fresh credential proof                                          |
-| `apps/supervisor/server/src/auth-middleware.ts`                        | `SupervisorUser`, authCache, `requirePermission`, auto-provisioning                                               |
-| `apps/supervisor/server/src/hateoas.ts`                                | Generic HATEOAS helpers                                                                                           |
-| `apps/supervisor/server/src/route-helpers.ts`                          | `permGate` + `resolveActions` wrappers                                                                            |
-| `apps/supervisor/server/src/schema-registry.ts`                        | Registry backing `/schemas/*`                                                                                     |
-| `apps/supervisor/shared/src/user-types.ts`                             | Zod: `PermissionEnum`, `CreateUser`, `UpdateUser`, `GrantPermission`, `CreateAgentUser`, `PermissionDescriptions` |
-| `apps/supervisor/shared/src/auth-types.ts`                             | Zod: passkey + step-up + registration-token request/response schemas, `AuthUser` (id, username, permissions[])    |
+| Path                                                                   | Purpose                                                                                                                             |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/supervisor-database/prisma/schema.prisma`                    | `Permission` enum, `User`, `UserPermission`, `Session`, `PasskeyCredential`, `RegistrationToken`                                    |
+| `packages/supervisor-database/src/sessionService.ts::ensureSuperAdmin` | Admin bootstrap (grants `supervisor_admin` only, no credentials)                                                                    |
+| `packages/supervisor-database/src/passwordService.ts`                  | Optional bcrypt password helpers (hash, verify, clear, atomic consume-token-and-set)                                                |
+| `packages/supervisor-database/src/passkeyService.ts`                   | Passkey CRUD + registration-token issuance and atomic consume                                                                       |
+| `apps/supervisor/server/src/routes/users.ts`                           | Users + permissions + credential management endpoints, domain HATEOAS builders, formatters                                          |
+| `apps/supervisor/server/src/routes/auth.ts`                            | Passkey + password login/register endpoints, step-up options                                                                        |
+| `apps/supervisor/server/src/services/stepUpService.ts`                 | `requireStepUp()` — gates sensitive routes with a fresh credential proof                                                            |
+| `apps/supervisor/server/src/services/passkeyService.ts`                | WebAuthn options/verify, registration-link helpers                                                                                  |
+| `apps/supervisor/server/src/services/passwordLoginConfig.ts`           | `ALLOW_PASSWORD_LOGIN` feature gate + `userHasEnabledPassword()`                                                                    |
+| `apps/supervisor/server/src/routes/schemas.ts`                         | Schema discovery                                                                                                                    |
+| `apps/supervisor/server/src/routes/root.ts`                            | API root `_links` + `/permissions` enum endpoint                                                                                    |
+| `apps/supervisor/server/src/services/userService.ts`                   | User + permission business logic                                                                                                    |
+| `apps/supervisor/server/src/auth-middleware.ts`                        | `SupervisorUser`, authCache, `requirePermission`, auto-provisioning                                                                 |
+| `apps/supervisor/server/src/hateoas.ts`                                | Generic HATEOAS helpers                                                                                                             |
+| `apps/supervisor/server/src/route-helpers.ts`                          | `permGate` + `resolveActions` wrappers                                                                                              |
+| `apps/supervisor/server/src/schema-registry.ts`                        | Registry backing `/schemas/*`                                                                                                       |
+| `apps/supervisor/shared/src/user-types.ts`                             | Zod: `PermissionEnum`, `CreateUser`, `UpdateUser`, `GrantPermission`, `CreateAgentUser`, `PermissionDescriptions`                   |
+| `apps/supervisor/shared/src/auth-types.ts`                             | Zod: passkey + password + step-up + registration-token request/response schemas, `AuthUser` (id, username, permissions[])           |
 
 ### Client
 
@@ -711,26 +734,26 @@ rotateUserApiKey(username)      → POST /users/:username/rotate-key
 
 ## API Endpoints Summary
 
-| Method | Path                                                  | Description                                 | Permission                                      |
-| ------ | ----------------------------------------------------- | ------------------------------------------- | ----------------------------------------------- |
-| GET    | `/supervisor/api/`                                    | API discovery root                          | (authenticated)                                 |
-| GET    | `/supervisor/api/permissions`                         | Enumerate available permissions             | (authenticated)                                 |
-| GET    | `/supervisor/api/users`                               | List users (paginated)                      | (authenticated)                                 |
-| POST   | `/supervisor/api/users`                               | Create user (returns registration link)     | `supervisor_admin` + step-up                    |
-| POST   | `/supervisor/api/users/from-agent`                    | Import hub agent as user                    | `supervisor_admin`                              |
-| GET    | `/supervisor/api/users/:username`                     | Get user detail                             | (authenticated)                                 |
-| PUT    | `/supervisor/api/users/:username`                     | Update username                             | `supervisor_admin`                              |
-| DELETE | `/supervisor/api/users/:username`                     | Delete user                                 | `supervisor_admin` (not self)                   |
-| POST   | `/supervisor/api/users/:username/rotate-key`          | Rotate API key                              | `supervisor_admin`                              |
-| POST   | `/supervisor/api/users/:username/permissions`         | Grant permission                            | `supervisor_admin`                              |
-| DELETE | `/supervisor/api/users/:username/permissions/:perm`   | Revoke permission                           | `supervisor_admin` (not own `supervisor_admin`) |
-| POST   | `/supervisor/api/users/:username/registration-token`  | Issue one-time registration link            | admin or self + step-up                         |
-| POST   | `/supervisor/api/users/:username/reset-passkeys`      | Wipe passkeys + issue link (admin recovery) | `supervisor_admin` (not self) + step-up         |
-| GET    | `/supervisor/api/users/:username/passkeys`            | List a user's registered passkeys           | admin or self                                   |
-| POST   | `/supervisor/api/users/:username/passkeys/:id/delete` | Delete a single passkey                     | admin or self + step-up                         |
-| POST   | `/supervisor/api/users/:username/passkeys/:id/rename` | Rename a passkey's device label             | admin or self                                   |
-| GET    | `/supervisor/api/schemas/`                            | List all supervisor schema names            | (authenticated)                                 |
-| GET    | `/supervisor/api/schemas/:name`                       | Get a single JSON Schema                    | (authenticated)                                 |
+| Method | Path                                                       | Description                                          | Permission                                       |
+| ------ | ---------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
+| GET    | `/supervisor/api/`                                         | API discovery root                                   | (authenticated)                                  |
+| GET    | `/supervisor/api/permissions`                              | Enumerate available permissions                      | (authenticated)                                  |
+| GET    | `/supervisor/api/users`                                    | List users (paginated)                               | (authenticated)                                  |
+| POST   | `/supervisor/api/users`                                    | Create user (returns registration link)              | `supervisor_admin` + step-up                     |
+| POST   | `/supervisor/api/users/from-agent`                         | Import hub agent as user                             | `supervisor_admin`                               |
+| GET    | `/supervisor/api/users/:username`                          | Get user detail                                      | (authenticated)                                  |
+| PUT    | `/supervisor/api/users/:username`                          | Update username                                      | `supervisor_admin`                               |
+| DELETE | `/supervisor/api/users/:username`                          | Delete user                                          | `supervisor_admin` (not self)                    |
+| POST   | `/supervisor/api/users/:username/rotate-key`               | Rotate API key                                       | `supervisor_admin`                               |
+| POST   | `/supervisor/api/users/:username/permissions`              | Grant permission                                     | `supervisor_admin`                               |
+| DELETE | `/supervisor/api/users/:username/permissions/:perm`        | Revoke permission                                    | `supervisor_admin` (not own `supervisor_admin`)  |
+| POST   | `/supervisor/api/users/:username/registration-token`       | Issue one-time registration link                     | admin or self + step-up                          |
+| POST   | `/supervisor/api/users/:username/reset-passkeys`           | Wipe passkeys + issue link (recovery)                | `supervisor_admin` (not self) + step-up          |
+| GET    | `/supervisor/api/users/:username/passkeys`                 | List a user's registered passkeys                    | admin or self                                    |
+| POST   | `/supervisor/api/users/:username/passkeys/:id/delete`      | Delete a single passkey                              | admin or self + step-up                          |
+| POST   | `/supervisor/api/users/:username/password/clear`           | Remove a user's password (refuses if no passkey)     | admin or self + step-up                          |
+| GET    | `/supervisor/api/schemas/`                                 | List all supervisor schema names                     | (authenticated)                                  |
+| GET    | `/supervisor/api/schemas/:name`                            | Get a single JSON Schema                             | (authenticated)                                  |
 
 Login + registration endpoints (`/supervisor/api/auth/...`) are documented in [doc 007](./007-web-auth.md).
 
@@ -745,16 +768,16 @@ Login + registration endpoints (`/supervisor/api/auth/...`) are documented in [d
       (with disabledReason if caller lacks supervisor_admin)
 
 3. GET /supervisor/api/schemas/CreateUser
-   → Learn required fields: username (+ optional stepUpAssertion)
+   → Learn required fields: username (+ optional stepUpAssertion / stepUpPassword)
 
 4. POST /supervisor/api/users { "username": "operator", "stepUpAssertion": {...} }
    → 201 { success, id, username, registrationUrl, registrationExpiresAt }
 
 5. Forward registrationUrl to the new user out-of-band.
-   → They open it in a browser and register a passkey.
+   → They open it in a browser and register a passkey (or set a password).
 
 6. GET /supervisor/api/users/operator
-   → See detail (hasApiKey, ...), _actions includes update,
+   → See detail (hasPassword, hasApiKey, ...), _actions includes update,
      grant-permission, rotate-key, issue-registration, reset-passkeys,
      delete; each permission entry has its own revoke action
 
@@ -772,3 +795,4 @@ Login + registration endpoints (`/supervisor/api/auth/...`) are documented in [d
 - Per-user auth-cache invalidation instead of wholesale `authCache.clear()` on every mutation
 - More granular permissions as new features land (so far `manage_agents`, `remote_execution`, `manage_hosts`, `agent_communication`, `manage_models`, `manage_variables`, `view_run_logs` have been added beyond the original two)
 - Sync permissions across hub for multi-supervisor deployments
+- Passkey enrollment UI for the ERP app (currently only Supervisor enrolls credentials; ERP inherits the session through SSO)

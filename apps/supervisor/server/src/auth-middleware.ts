@@ -33,6 +33,8 @@ const PUBLIC_PREFIXES = [
   "/supervisor/api/auth/passkey/login-verify",
   "/supervisor/api/auth/passkey/register-options",
   "/supervisor/api/auth/passkey/register-verify",
+  "/supervisor/api/auth/password/login",
+  "/supervisor/api/auth/password/register",
   "/supervisor/api/auth/registration-token/lookup",
 ];
 

@@ -95,19 +95,20 @@ export async function promptSuperAdminPassword(title: string): Promise<string> {
 }
 
 /**
- * Ask the operator whether to wipe the existing superadmin passkey and start
- * fresh. Explicit --setup runs default to "no" so tweaking env vars doesn't
- * accidentally lock the operator out. First-run implicit setup can default to
- * "yes" so the operator gets a fresh registration link.
+ * Ask the operator whether to wipe the existing superadmin account credentials
+ * (passkeys and password) and start fresh. Explicit --setup runs default to
+ * "no" so tweaking env vars doesn't accidentally lock the operator out.
+ * First-run implicit setup can default to "yes" so the operator gets a fresh
+ * registration link.
  */
-export async function promptResetSuperAdminPasskey(
+export async function promptResetSuperAdminAccount(
   title: string,
   options: { defaultReset?: boolean } = {},
 ): Promise<boolean> {
   console.log(`\n  === ${title} ===\n`);
   const defaultReset = options.defaultReset === true;
   const answer = await askQuestion(
-    `  Reset ${SUPER_ADMIN_USERNAME} passkey and issue a new registration link? ${
+    `  Reset ${SUPER_ADMIN_USERNAME} account and issue a new registration link? ${
       defaultReset ? "(Y/n)" : "(y/N)"
     } `,
   );

@@ -66,12 +66,16 @@ interface UserPasskeysSectionProps {
   routeUsername: string;
   isSelf: boolean;
   userActions: UserDetailResponse["_actions"];
+  hasPassword?: boolean;
+  allowPasswordLogin?: boolean;
 }
 
 export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
   routeUsername,
   isSelf,
   userActions,
+  hasPassword = false,
+  allowPasswordLogin = false,
 }) => {
   const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([]);
   const [passkeysLoading, setPasskeysLoading] = useState(false);
@@ -160,11 +164,13 @@ export const UserPasskeysSection: React.FC<UserPasskeysSectionProps> = ({
   };
 
   const handleDeletePasskey = async (id: number) => {
+    const onlySelfPasskey = passkeys.length === 1 && isSelf;
     if (
-      passkeys.length === 1 &&
-      isSelf &&
+      onlySelfPasskey &&
       !confirm(
-        "This is your only passkey. After removing it you'll have no way to sign in until an admin issues a new registration link. Continue?",
+        allowPasswordLogin && hasPassword
+          ? "This is your only passkey. Password sign-in will remain available. Continue?"
+          : "This is your only passkey. After removing it you'll have no way to sign in until an admin issues a new registration link. Continue?",
       )
     )
       return;

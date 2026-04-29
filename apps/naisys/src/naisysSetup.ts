@@ -115,6 +115,7 @@ export function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
         fields: [
           { key: "SERVER_PORT", label: "Server Port" },
           { key: "PUBLIC_READ", label: "Public Read Access" },
+          { key: "ALLOW_PASSWORD_LOGIN", label: "Allow Password Sign-in" },
         ],
       },
     ],

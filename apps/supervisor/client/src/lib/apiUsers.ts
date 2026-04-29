@@ -7,7 +7,7 @@ import type {
   UserListResponse,
 } from "@naisys/supervisor-shared";
 
-import { performStepUp } from "./apiAuth";
+import { performStepUp, postWithStepUp } from "./apiAuth";
 import { api, apiEndpoints } from "./apiClient";
 
 export const getUsers = async (params: {
@@ -27,13 +27,13 @@ export const getUser = async (
 export const createUser = async (data: {
   username: string;
 }): Promise<CreateUserResponse> => {
-  const stepUpAssertion = await performStepUp();
+  const stepUp = await performStepUp();
   return api.post<
     { username: string } & StepUpAssertionBody,
     CreateUserResponse
   >(apiEndpoints.users(), {
     username: data.username,
-    stepUpAssertion: stepUpAssertion ?? undefined,
+    ...stepUp,
   });
 };
 
@@ -78,6 +78,14 @@ export const rotateUserApiKey = async (
   return api.post<{}, UserActionResult>(
     apiEndpoints.userRotateKey(username),
     {},
+  );
+};
+
+export const clearUserPassword = async (
+  username: string,
+): Promise<UserActionResult> => {
+  return postWithStepUp<UserActionResult>(
+    apiEndpoints.userClearPassword(username),
   );
 };
 

@@ -46,6 +46,16 @@ export {
   updatePasskeyCounter,
   userHasPasskey,
 } from "./passkeyService.js";
+// Re-export optional password credential helpers
+export {
+  clearUserPassword,
+  consumeTokenAndSetPassword,
+  hashPassword,
+  PasswordValidationError,
+  userHasPassword,
+  verifyPassword,
+  verifyUserPassword,
+} from "./passwordService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
 export { PrismaClient } from "./generated/prisma/client.js";

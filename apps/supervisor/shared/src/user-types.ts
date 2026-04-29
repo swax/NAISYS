@@ -47,6 +47,7 @@ export const CreateUserSchema = z
      * Pass-through; simplewebauthn validates the structure.
      */
     stepUpAssertion: z.any().optional(),
+    stepUpPassword: z.string().optional(),
   })
   .strict();
 
@@ -113,6 +114,7 @@ export const UserDetailResponseSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   hasApiKey: z.boolean(),
+  hasPassword: z.boolean(),
   permissions: z.array(UserPermissionSchema),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),

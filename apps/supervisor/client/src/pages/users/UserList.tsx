@@ -22,8 +22,14 @@ import type {
   UserListResponse,
 } from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useOutletContext,
+  useSearchParams,
+} from "react-router-dom";
 
+import type { AppOutletContext } from "../../App";
 import { AgentModelIcon } from "../../components/AgentModelIcon";
 import { HelpTooltip } from "../../components/HelpTooltip";
 import { getAgentData } from "../../lib/apiAgents";
@@ -38,6 +44,7 @@ const cellLinkStyle = {
 export const UserList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { allowPasswordLogin } = useOutletContext<AppOutletContext>();
 
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
@@ -287,7 +294,10 @@ export const UserList: React.FC = () => {
             <>
               <Text size="sm">
                 User <b>{createdLink.username}</b> created. Send this one-time
-                registration link so they can enroll a passkey:
+                registration link so they can{" "}
+                {allowPasswordLogin
+                  ? "set up a credential:"
+                  : "enroll a passkey:"}
               </Text>
               <Code
                 block

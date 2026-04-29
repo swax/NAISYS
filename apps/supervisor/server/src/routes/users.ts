@@ -1,6 +1,7 @@
 import type { HateoasAction, HateoasLink } from "@naisys/common";
 import { hashToken, SESSION_COOKIE_NAME } from "@naisys/common-node";
 import {
+  clearUserPassword,
   deleteAllPasskeyCredentialsForUser,
   deleteAllSessionsForUser,
   deletePasskeyCredential,
@@ -53,6 +54,7 @@ import {
   getHubAgentByUuid,
 } from "../services/agentService.js";
 import { issueRegistrationLink } from "../services/passkeyService.js";
+import { userHasEnabledPassword } from "../services/passwordLoginConfig.js";
 import { requireStepUp } from "../services/stepUpService.js";
 import * as userService from "../services/userService.js";
 
@@ -79,6 +81,7 @@ function userActions(
   username: string,
   isSelf: boolean,
   isAdmin: boolean,
+  hasPassword: boolean,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/users/${username}`;
   const adminGate = permGate(isAdmin, "supervisor_admin");
@@ -122,6 +125,15 @@ function userActions(
       href: `${href}/registration-token`,
       method: "POST",
       title: "Issue Registration Link",
+    });
+  }
+
+  if (hasPassword && (isSelf || isAdmin)) {
+    actions.push({
+      rel: "clear-password",
+      href: `${href}/password/clear`,
+      method: "POST",
+      title: "Remove Password",
     });
   }
 
@@ -190,6 +202,7 @@ function formatUser(
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
     hasApiKey,
+    hasPassword: Boolean(user.passwordHash),
     permissions: user.permissions.map((p) => ({
       permission: p.permission,
       grantedAt: p.grantedAt.toISOString(),
@@ -197,7 +210,12 @@ function formatUser(
       _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
     _links: userItemLinks(user.username, options?.agentUsername),
-    _actions: userActions(user.username, isSelf, isAdmin),
+    _actions: userActions(
+      user.username,
+      isSelf,
+      isAdmin,
+      Boolean(user.passwordHash),
+    ),
   };
 }
 
@@ -297,14 +315,14 @@ export default function userRoutes(
     },
   );
 
-  // CREATE USER (returns a registration link instead of accepting a password)
+  // CREATE USER (returns a registration link instead of accepting a credential)
   app.post(
     "/",
     {
       preHandler: adminPreHandler,
       schema: {
         description:
-          "Create a new user. Returns a one-time registration URL the new user must open to enroll a passkey.",
+          "Create a new user. Returns a one-time registration URL the new user must open to set up a credential.",
         tags: ["Users"],
         body: CreateUserSchema,
         response: {
@@ -703,18 +721,16 @@ export default function userRoutes(
       );
       if (!removed) return notFound(reply, "Passkey not found");
 
-      // Two cleanup modes depending on what's left:
-      //   - Last passkey gone: kill every session, including the actor's.
-      //     The account has no credentials behind it anymore, so leaving
-      //     any cookie alive is exactly the bypass we're trying to close.
-      //   - Still has at least one passkey: kill all sessions except the
-      //     self-actor's current cookie, preserving the prune workflow's UX.
-      //     Any non-actor session (i.e. attacker on another device) is
-      //     evicted, and step-up still gates further sensitive actions.
+      // Preserve the self-actor's current session only if the account still
+      // has a step-up credential after deletion: another passkey, or a
+      // password when optional password login is enabled. Any non-actor
+      // session is evicted, and step-up still gates further sensitive actions.
       const stillHasPasskey = await userHasPasskey(targetUser.id);
+      const stillHasPassword = await userHasEnabledPassword(targetUser.id);
       const actingOnSelf = targetUser.id === request.supervisorUser?.id;
       const cookieToken = request.cookies?.[SESSION_COOKIE_NAME];
-      const preserveActorSession = stillHasPasskey && actingOnSelf;
+      const preserveActorSession =
+        (stillHasPasskey || stillHasPassword) && actingOnSelf;
       await deleteAllSessionsForUser(
         targetUser.id,
         preserveActorSession && cookieToken
@@ -722,10 +738,9 @@ export default function userRoutes(
           : undefined,
       );
 
-      // If the actor just invalidated their own session (last-passkey case),
-      // tell the browser to drop the now-dead cookie so it doesn't keep
-      // presenting it on subsequent requests. Server-side it was already
-      // gone after deleteAllSessionsForUser; this is purely UX cleanup.
+      // If the actor just invalidated their own session, tell the browser to
+      // drop the now-dead cookie so it doesn't keep presenting it on later
+      // requests. Server-side it was already gone after deleteAllSessionsForUser.
       if (actingOnSelf && !preserveActorSession) {
         reply.clearCookie(SESSION_COOKIE_NAME, { path: "/" });
       }
@@ -790,13 +805,73 @@ export default function userRoutes(
     },
   );
 
+  // CLEAR PASSWORD (admin or self) — only when a passkey remains available.
+  app.post(
+    "/:username/password/clear",
+    {
+      preHandler: [requireAdminOrSelf],
+      schema: {
+        description:
+          "Remove a user's password credential. Refuses to remove the password when the user has no passkeys.",
+        tags: ["Users"],
+        params: usernameParams,
+        body: StepUpAssertionBodySchema,
+        response: {
+          200: UserActionResultSchema,
+          401: ErrorResponseSchema,
+          403: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          409: ErrorResponseSchema,
+          412: ErrorResponseSchema,
+          429: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const targetUser = await userService.getUserByUsername(
+        request.params.username,
+      );
+      if (!targetUser) return notFound(reply, "User not found");
+
+      if (!targetUser.passwordHash) {
+        return { success: true, message: "Password already removed" };
+      }
+
+      if (!(await userHasPasskey(targetUser.id))) {
+        return conflict(
+          reply,
+          "Add a passkey before removing this user's password.",
+        );
+      }
+
+      const stepUp = await requireStepUp(request, reply, request.body);
+      if (!stepUp.ok) {
+        reply.code(stepUp.status);
+        return { success: false as const, message: stepUp.message };
+      }
+
+      await clearUserPassword(targetUser.id);
+      // The 409 above guarantees the target had a passkey; clearing the
+      // password doesn't touch passkeys, so the actor's current cookie can
+      // safely stay alive when self-clearing. All other sessions go.
+      const actingOnSelf = targetUser.id === request.supervisorUser?.id;
+      const cookieToken = request.cookies?.[SESSION_COOKIE_NAME];
+      await deleteAllSessionsForUser(
+        targetUser.id,
+        actingOnSelf && cookieToken ? hashToken(cookieToken) : undefined,
+      );
+
+      authCache.clear();
+      return { success: true, message: "Password removed" };
+    },
+  );
+
   // ISSUE REGISTRATION TOKEN (admin to invite/reset, or self to add a device)
   //
-  // Self-issuance is blocked when the caller has zero passkeys: otherwise a
-  // stolen session for a zero-passkey user could mint a token here (step-up
-  // bypasses with no passkey to verify against) and use it to enroll the
-  // attacker's own passkey. First enrollment must come through an admin or
-  // the bootstrap setup wizard, never a self-issued link.
+  // Self-issuance is blocked when the caller has no enabled step-up
+  // credential. Passkey users step up with passkeys; password-only users can
+  // step up with a password only when ALLOW_PASSWORD_LOGIN=true.
   app.post(
     "/:username/registration-token",
     {
@@ -823,10 +898,12 @@ export default function userRoutes(
       const isSelf =
         request.params.username === request.supervisorUser!.username;
       if (isSelf && !(await userHasPasskey(callerId))) {
-        return forbidden(
-          reply,
-          "First passkey enrollment requires an admin-issued registration link.",
-        );
+        if (!(await userHasEnabledPassword(callerId))) {
+          return forbidden(
+            reply,
+            "First credential setup requires an admin-issued registration link.",
+          );
+        }
       }
       const stepUp = await requireStepUp(request, reply, request.body);
       if (!stepUp.ok) {

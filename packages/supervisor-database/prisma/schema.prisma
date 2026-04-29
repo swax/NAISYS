@@ -23,6 +23,7 @@ model User {
   username            String              @unique
   uuid                String              @unique
   isAgent             Boolean             @default(false) @map("is_agent")
+  passwordHash        String?             @map("password_hash")
   createdAt           DateTime            @default(now()) @map("created_at")
   apiKeyHash          String?             @unique @map("api_key_hash")
   updatedAt           DateTime            @updatedAt @map("updated_at")
