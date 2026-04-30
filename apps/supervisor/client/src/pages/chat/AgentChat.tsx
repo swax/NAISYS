@@ -21,6 +21,7 @@ import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { useChatMessages } from "../../hooks/useChatMessages";
+import { buildAgentCandidates } from "../../lib/agentCandidates";
 import { archiveAllChat, sendChatMessage } from "../../lib/apiChat";
 import { ChatConversationList } from "./ChatConversationList";
 import { ChatInput } from "./ChatInput";
@@ -58,17 +59,48 @@ export const AgentChat: React.FC = () => {
     refresh: refreshConversations,
   } = useChatConversations(username ?? "", Boolean(username));
 
-  // Auto-select first conversation when no URL param and conversations exist
+  // Build list of agents to show under "Start a chat with", excluding
+  // partners we already have a 1:1 conversation with.
+  const chatCandidates = useMemo(() => {
+    if (!username) return [];
+    const existingPartners = new Set<string>();
+    for (const conv of conversations) {
+      if (conv.participantNames.length === 2) {
+        const other = conv.participantNames.find((n) => n !== username);
+        if (other) existingPartners.add(other);
+      }
+    }
+    return buildAgentCandidates({
+      agents,
+      currentAgentName: username,
+      excludeNames: existingPartners,
+    });
+  }, [agents, conversations, username]);
+
+  // Auto-select first conversation when no URL param. If there are no
+  // conversations yet, fall back to the first "start a chat with" candidate.
   useEffect(() => {
-    if (!participantsParam && conversations.length > 0 && username) {
+    if (participantsParam || !username) return;
+    if (conversations.length > 0) {
       const first = conversations[0].participants;
       const others = first
         .split(",")
         .filter((n) => n !== username)
         .join(",");
       void navigate(`/agents/${username}/chat/${others}`, { replace: true });
+    } else if (!convLoading && chatCandidates.length > 0) {
+      void navigate(`/agents/${username}/chat/${chatCandidates[0].name}`, {
+        replace: true,
+      });
     }
-  }, [conversations, participantsParam, username, navigate]);
+  }, [
+    conversations,
+    participantsParam,
+    username,
+    navigate,
+    convLoading,
+    chatCandidates,
+  ]);
 
   const {
     messages,
@@ -203,6 +235,7 @@ export const AgentChat: React.FC = () => {
       onLoadMore={loadMoreConversations}
       canArchive={canArchive}
       onArchiveAll={handleArchiveAll}
+      chatCandidates={chatCandidates}
     />
   );
 

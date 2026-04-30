@@ -11,6 +11,7 @@ import { IconArchive, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
+import { AgentCandidatesSection } from "../../components/AgentCandidatesSection";
 import { AgentModelIcon } from "../../components/AgentModelIcon";
 import type { Agent } from "../../types/agent";
 import type { MailConversation } from "./mailConversations";
@@ -33,6 +34,8 @@ interface MailConversationListProps {
   onLoadMore: () => void;
   canArchive: boolean;
   onArchiveAll: () => void;
+  mailCandidates: Agent[];
+  onMailCandidateClick: (agent: Agent) => void;
 }
 
 export const MailConversationList: React.FC<MailConversationListProps> = ({
@@ -53,6 +56,8 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
   onLoadMore,
   canArchive,
   onArchiveAll,
+  mailCandidates,
+  onMailCandidateClick,
 }) => {
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -101,96 +106,107 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
       </Group>
 
       <ScrollArea style={{ flex: 1 }}>
-        {conversations.length === 0 ? (
+        {conversations.length === 0 && mailCandidates.length === 0 ? (
           <Text c="dimmed" ta="center" size="sm" p="md">
             No conversations
           </Text>
         ) : (
-          conversations.map((conv) => {
-            // Show other participants (exclude current agent)
-            const otherIndices = conv.participantNames
-              .map((n, i) => (n !== currentAgentName ? i : -1))
-              .filter((i) => i >= 0);
-            const displayNames =
-              otherIndices.length === 1
-                ? `${conv.participantNames[otherIndices[0]]} (${conv.participantTitles[otherIndices[0]]})`
-                : otherIndices.length > 0
-                  ? otherIndices.map((i) => conv.participantNames[i]).join(", ")
-                  : conv.participantNames.join(", ");
+          <>
+            {conversations.map((conv) => {
+              // Show other participants (exclude current agent)
+              const otherIndices = conv.participantNames
+                .map((n, i) => (n !== currentAgentName ? i : -1))
+                .filter((i) => i >= 0);
+              const displayNames =
+                otherIndices.length === 1
+                  ? `${conv.participantNames[otherIndices[0]]} (${conv.participantTitles[otherIndices[0]]})`
+                  : otherIndices.length > 0
+                    ? otherIndices
+                        .map((i) => conv.participantNames[i])
+                        .join(", ")
+                    : conv.participantNames.join(", ");
 
-            // Build link URL based on grouping mode
-            const to = groupBySubject
-              ? `/agents/${agentName}/mail/about/${encodeURIComponent(conv.normalizedSubject)}`
-              : `/agents/${agentName}/mail/with/${conv.participantNames
-                  .filter((n) => n !== currentAgentName)
-                  .sort()
-                  .join(",")}`;
-            const iconName =
-              conv.participantNames.find((n) => n !== currentAgentName) ??
-              conv.participantNames[0];
-            const iconAgent = agents.find((a) => a.name === iconName);
+              // Build link URL based on grouping mode
+              const to = groupBySubject
+                ? `/agents/${agentName}/mail/about/${encodeURIComponent(conv.normalizedSubject)}`
+                : `/agents/${agentName}/mail/with/${conv.participantNames
+                    .filter((n) => n !== currentAgentName)
+                    .sort()
+                    .join(",")}`;
+              const iconName =
+                conv.participantNames.find((n) => n !== currentAgentName) ??
+                conv.participantNames[0];
+              const iconAgent = agents.find((a) => a.name === iconName);
 
-            return (
-              <NavLink
-                key={conv.key}
-                active={activeKey === conv.key}
-                component={Link}
-                to={to}
-                onClick={onNavLinkClick}
-                label={
-                  <Group gap={6} wrap="nowrap">
-                    {conv.isArchived && (
-                      <IconArchive
+              return (
+                <NavLink
+                  key={conv.key}
+                  active={activeKey === conv.key}
+                  component={Link}
+                  to={to}
+                  onClick={onNavLinkClick}
+                  label={
+                    <Group gap={6} wrap="nowrap">
+                      {conv.isArchived && (
+                        <IconArchive
+                          size={14}
+                          style={{ opacity: 0.5, flexShrink: 0 }}
+                        />
+                      )}
+                      <AgentModelIcon
+                        shellModel={iconAgent?.shellModel}
                         size={14}
-                        style={{ opacity: 0.5, flexShrink: 0 }}
+                        style={{
+                          flexShrink: 0,
+                          opacity: conv.isArchived ? 0.5 : undefined,
+                        }}
                       />
-                    )}
-                    <AgentModelIcon
-                      shellModel={iconAgent?.shellModel}
-                      size={14}
-                      style={{
-                        flexShrink: 0,
-                        opacity: conv.isArchived ? 0.5 : undefined,
-                      }}
-                    />
+                      <Text
+                        size="sm"
+                        lineClamp={1}
+                        style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                      >
+                        {groupBySubject ? conv.normalizedSubject : displayNames}
+                      </Text>
+                    </Group>
+                  }
+                  description={
                     <Text
-                      size="sm"
+                      size="xs"
+                      c="dimmed"
                       lineClamp={1}
                       style={conv.isArchived ? { opacity: 0.5 } : undefined}
                     >
-                      {groupBySubject ? conv.normalizedSubject : displayNames}
+                      {groupBySubject
+                        ? `${displayNames} (${conv.messageCount})`
+                        : `${conv.lastMessageFrom}: ${conv.lastMessagePreview}`}
                     </Text>
-                  </Group>
-                }
-                description={
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    lineClamp={1}
-                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
-                  >
-                    {groupBySubject
-                      ? `${displayNames} (${conv.messageCount})`
-                      : `${conv.lastMessageFrom}: ${conv.lastMessagePreview}`}
-                  </Text>
-                }
-                rightSection={
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
-                  >
-                    {formatTime(conv.lastMessageAt)}
-                  </Text>
-                }
-                styles={{
-                  root: {
-                    borderBottom: "1px solid var(--mantine-color-dark-6)",
-                  },
-                }}
-              />
-            );
-          })
+                  }
+                  rightSection={
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                    >
+                      {formatTime(conv.lastMessageAt)}
+                    </Text>
+                  }
+                  styles={{
+                    root: {
+                      borderBottom: "1px solid var(--mantine-color-dark-6)",
+                    },
+                  }}
+                />
+              );
+            })}
+
+            <AgentCandidatesSection
+              candidates={mailCandidates}
+              header="Start a message to"
+              getCandidateProps={() => ({ active: false })}
+              onCandidateClick={onMailCandidateClick}
+            />
+          </>
         )}
       </ScrollArea>
 
