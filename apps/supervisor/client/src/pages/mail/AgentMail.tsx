@@ -21,7 +21,9 @@ import { ParticipantInfo } from "../../components/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useMailData } from "../../hooks/useMailData";
+import { buildAgentCandidates } from "../../lib/agentCandidates";
 import { archiveAllMail, sendMail } from "../../lib/apiMail";
+import type { Agent } from "../../types/agent";
 import { MailConversationList } from "./MailConversationList";
 import {
   getConversationMessages,
@@ -117,6 +119,37 @@ export const AgentMail: React.FC = () => {
         agentName,
       ),
     [allMail, lastReadMailId, groupBySubject, agentName],
+  );
+
+  // Build list of agents to show under "Start a message to", excluding
+  // partners we already have a 1:1 mail thread with.
+  const mailCandidates = useMemo(() => {
+    if (!agentName) return [];
+    const existingPartners = new Set<string>();
+    for (const conv of conversations) {
+      if (conv.participantNames.length === 2) {
+        const other = conv.participantNames.find((n) => n !== agentName);
+        if (other) existingPartners.add(other);
+      }
+    }
+    return buildAgentCandidates({
+      agents,
+      currentAgentName: agentName,
+      excludeNames: existingPartners,
+    });
+  }, [agents, conversations, agentName]);
+
+  const handleMailCandidateClick = useCallback(
+    (candidate: Agent) => {
+      setReplyData({
+        recipientId: candidate.id,
+        subject: "",
+        body: "",
+      });
+      setNewMessageModalOpened(true);
+      closeDrawer();
+    },
+    [closeDrawer],
   );
 
   // Derive selectedKey from URL
@@ -293,6 +326,8 @@ export const AgentMail: React.FC = () => {
       onLoadMore={loadMore}
       canArchive={canArchive}
       onArchiveAll={handleArchiveAll}
+      mailCandidates={mailCandidates}
+      onMailCandidateClick={handleMailCandidateClick}
     />
   );
 

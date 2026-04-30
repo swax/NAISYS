@@ -11,9 +11,11 @@ import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { AgentCandidatesSection } from "../../components/AgentCandidatesSection";
 import { AgentModelIcon } from "../../components/AgentModelIcon";
 import { RecipientMultiSelect } from "../../components/RecipientMultiSelect";
-import type { Agent, ChatConversation } from "../../lib/apiClient";
+import type { ChatConversation } from "../../lib/apiClient";
+import type { Agent } from "../../types/agent";
 
 interface ChatConversationListProps {
   conversations: ChatConversation[];
@@ -30,6 +32,7 @@ interface ChatConversationListProps {
   onLoadMore: () => void;
   canArchive: boolean;
   onArchiveAll: () => void;
+  chatCandidates: Agent[];
 }
 
 export const ChatConversationList: React.FC<ChatConversationListProps> = ({
@@ -47,6 +50,7 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
   onLoadMore,
   canArchive,
   onArchiveAll,
+  chatCandidates,
 }) => {
   const [newChatOpened, setNewChatOpened] = useState(false);
   const [newChatRecipientIds, setNewChatRecipientIds] = useState<string[]>([]);
@@ -99,82 +103,96 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
       )}
 
       <ScrollArea style={{ flex: 1 }}>
-        {conversations.length === 0 ? (
+        {conversations.length === 0 && chatCandidates.length === 0 ? (
           <Text c="dimmed" ta="center" size="sm" p="md">
             No conversations yet
           </Text>
         ) : (
-          conversations.map((conv) => {
-            const otherParticipants = conv.participants
-              .split(",")
-              .filter((n) => n !== agentName)
-              .join(",");
-            const iconName =
-              conv.participantNames.find((n) => n !== agentName) ??
-              conv.participantNames[0];
-            const iconAgent = agents.find((a) => a.name === iconName);
+          <>
+            {conversations.map((conv) => {
+              const otherParticipants = conv.participants
+                .split(",")
+                .filter((n) => n !== agentName)
+                .join(",");
+              const iconName =
+                conv.participantNames.find((n) => n !== agentName) ??
+                conv.participantNames[0];
+              const iconAgent = agents.find((a) => a.name === iconName);
 
-            return (
-              <NavLink
-                key={conv.participants}
-                active={activeParticipants === conv.participants}
-                component={Link}
-                to={`/agents/${agentName}/chat/${otherParticipants}`}
-                onClick={onNavLinkClick}
-                label={
-                  <Group gap={6} wrap="nowrap">
-                    {conv.isArchived && (
-                      <IconArchive
+              return (
+                <NavLink
+                  key={conv.participants}
+                  active={activeParticipants === conv.participants}
+                  component={Link}
+                  to={`/agents/${agentName}/chat/${otherParticipants}`}
+                  onClick={onNavLinkClick}
+                  label={
+                    <Group gap={6} wrap="nowrap">
+                      {conv.isArchived && (
+                        <IconArchive
+                          size={14}
+                          style={{ opacity: 0.5, flexShrink: 0 }}
+                        />
+                      )}
+                      <AgentModelIcon
+                        shellModel={iconAgent?.shellModel}
                         size={14}
-                        style={{ opacity: 0.5, flexShrink: 0 }}
+                        style={{
+                          flexShrink: 0,
+                          opacity: conv.isArchived ? 0.5 : undefined,
+                        }}
                       />
-                    )}
-                    <AgentModelIcon
-                      shellModel={iconAgent?.shellModel}
-                      size={14}
-                      style={{
-                        flexShrink: 0,
-                        opacity: conv.isArchived ? 0.5 : undefined,
-                      }}
-                    />
+                      <Text
+                        size="sm"
+                        lineClamp={1}
+                        style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                      >
+                        {conv.participantNames.length === 1
+                          ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
+                          : conv.participantNames.join(", ")}
+                      </Text>
+                    </Group>
+                  }
+                  description={
                     <Text
-                      size="sm"
+                      size="xs"
+                      c="dimmed"
                       lineClamp={1}
                       style={conv.isArchived ? { opacity: 0.5 } : undefined}
                     >
-                      {conv.participantNames.length === 1
-                        ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
-                        : conv.participantNames.join(", ")}
+                      {conv.lastMessageFrom}: {conv.lastMessage}
                     </Text>
-                  </Group>
-                }
-                description={
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    lineClamp={1}
-                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
-                  >
-                    {conv.lastMessageFrom}: {conv.lastMessage}
-                  </Text>
-                }
-                rightSection={
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    style={conv.isArchived ? { opacity: 0.5 } : undefined}
-                  >
-                    {formatTime(conv.lastMessageAt)}
-                  </Text>
-                }
-                styles={{
-                  root: {
-                    borderBottom: "1px solid var(--mantine-color-dark-6)",
-                  },
-                }}
-              />
-            );
-          })
+                  }
+                  rightSection={
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                    >
+                      {formatTime(conv.lastMessageAt)}
+                    </Text>
+                  }
+                  styles={{
+                    root: {
+                      borderBottom: "1px solid var(--mantine-color-dark-6)",
+                    },
+                  }}
+                />
+              );
+            })}
+
+            <AgentCandidatesSection
+              candidates={chatCandidates}
+              header="Start a chat with"
+              getCandidateProps={(candidate) => ({
+                active:
+                  [candidate.name, agentName].sort().join(",") ===
+                  activeParticipants,
+                to: `/agents/${agentName}/chat/${candidate.name}`,
+              })}
+              onCandidateClick={onNavLinkClick}
+            />
+          </>
         )}
       </ScrollArea>
 

@@ -1,6 +1,7 @@
-import { ActionIcon, Group, Text } from "@mantine/core";
+import { ActionIcon, Anchor, Group, Text } from "@mantine/core";
 import { IconArrowsLeftRight } from "@tabler/icons-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 import type { Agent } from "../types/agent";
 import { AgentModelIcon } from "./AgentModelIcon";
@@ -50,9 +51,16 @@ export const ParticipantInfo: React.FC<ParticipantInfoProps> = ({
               size={14}
               style={{ flexShrink: 0 }}
             />
-            <Text size="sm" fw={600}>
+            <Anchor
+              component={Link}
+              to={`/agents/${name}`}
+              size="sm"
+              fw={600}
+              c="inherit"
+              underline="hover"
+            >
               {name}
-            </Text>
+            </Anchor>
             {a?.title && (
               <Text size="sm" c="dimmed">
                 ({a.title})
