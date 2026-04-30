@@ -55,8 +55,6 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
   const [saving, setSaving] = useState(false);
 
-  const hasGitHosts = hosts.some((h) => h.version?.includes("/"));
-
   const fetchNpmVersions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -308,7 +306,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             description="Applied to hosts installed from the npm package"
           >
             <Stack gap="xs" mt="xs">
-              {hasGitHosts && <Radio value="none" label="None" />}
+              <Radio value="none" label="None" />
               <Radio
                 value="latest"
                 label={`Latest stable (${npmData.latest})`}
@@ -365,20 +363,19 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             onChange={(e) => setAllowNewer(e.currentTarget.checked)}
           />
 
-          {hasGitHosts && (
-            <TextInput
-              label="git hosts — commit hash"
-              description="Applied to hosts installed from a git checkout. Full 40-character commit hash."
-              placeholder="e.g. a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
-              value={commitHash}
-              onChange={(e) => setCommitHash(e.currentTarget.value)}
-              error={
-                commitHash.trim() && !isValidFullHash(commitHash.trim())
-                  ? "Must be a full 40-character hex hash"
-                  : undefined
-              }
-            />
-          )}
+          <TextInput
+            label="git hosts — commit hash"
+            description="Applied to hosts installed from a git checkout. Full 40-character commit hash."
+            placeholder="e.g. a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0"
+            value={commitHash}
+            onChange={(e) => setCommitHash(e.currentTarget.value)}
+            error={
+              commitHash.trim() && !isValidFullHash(commitHash.trim())
+                ? "Must be a full 40-character hex hash"
+                : undefined
+            }
+          />
+
 
           <Title order={5} mt="xs">
             Hosts
