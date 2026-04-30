@@ -392,7 +392,7 @@ export async function createAgentRuntime(
 export type AgentRuntime = Awaited<ReturnType<typeof createAgentRuntime>>;
 
 // Re-stamp entries with the parent's identity tuple before forwarding to the
-// host buffer. sessionId rides through unchanged. cleanup is a no-op — the
+// host buffer. sessionId rides through unchanged. flushFinal is a no-op: the
 // host owns the underlying buffer's lifecycle.
 function wrapLogBufferForSubagent(
   parent: HubLogBuffer | undefined,
@@ -410,7 +410,7 @@ function wrapLogBufferForSubagent(
         },
         resolveAttachment,
       ),
-    cleanup: () => {},
+    flushFinal: () => Promise.resolve(),
   };
 }
 
@@ -431,6 +431,6 @@ function wrapCostBufferForSubagent(
       }),
     registerBudgetCallback: () => {},
     unregisterBudgetCallback: () => {},
-    cleanup: () => {},
+    flushFinal: () => Promise.resolve(),
   };
 }

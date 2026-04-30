@@ -36,6 +36,7 @@ export function createHubClient(
   let activeConnection: HubConnection | null = null;
   let hasConnectedOnce = false;
   let disconnectNotified = false;
+  let connectErrorNotified = false;
   let connectedHandler: (() => void) | null = null;
   let connectErrorHandler: ((error: HubConnectErrorInfo) => void) | null = null;
 
@@ -73,6 +74,7 @@ export function createHubClient(
     }
     hasConnectedOnce = true;
     disconnectNotified = false;
+    connectErrorNotified = false;
   }
 
   function handleConnectError(error: HubConnectErrorInfo) {
@@ -80,13 +82,17 @@ export function createHubClient(
 
     if (error.data?.fatal) {
       activeConnection?.disconnect();
+    }
 
-      if (hasConnectedOnce) {
-        promptNotification.notify({
-          wake: "always",
-          errorOutput: [getUserFacingConnectError(error)],
-        });
-      }
+    // Surface the reason once per disconnected interval so the user knows why
+    // retries aren't succeeding (e.g. invalid access key after rotation).
+    // File logging always captures every attempt; this is for the prompt UI.
+    if (hasConnectedOnce && !connectErrorNotified) {
+      connectErrorNotified = true;
+      promptNotification.notify({
+        wake: "always",
+        errorOutput: [getUserFacingConnectError(error)],
+      });
     }
   }
 
@@ -153,8 +159,7 @@ export function createHubClient(
       );
       return false;
     }
-    activeConnection.sendMessage(event, payload);
-    return true;
+    return activeConnection.sendMessage(event, payload);
   }
 
   /** Send a message to the hub and await a response via ack */
@@ -182,6 +187,7 @@ export function createHubClient(
           ),
         );
       }, REQUEST_TIMEOUT_MS);
+      timeout.unref?.();
 
       const sent = activeConnection!.sendMessage(
         event,

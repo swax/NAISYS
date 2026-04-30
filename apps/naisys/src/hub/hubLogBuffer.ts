@@ -21,7 +21,7 @@ export function createHubLogBuffer(hubClient: HubClient) {
   const buffer: BufferedLogEntry[] = [];
   let isFlushing = false;
 
-  const flushInterval = setInterval(() => void flush(), LOG_FLUSH_INTERVAL_MS);
+  setInterval(() => void flush(), LOG_FLUSH_INTERVAL_MS);
 
   function pushEntry(
     entry: LogWriteEntry,
@@ -35,16 +35,15 @@ export function createHubLogBuffer(hubClient: HubClient) {
     if (isFlushing) return;
 
     isFlushing = true;
+    const items = buffer.splice(0, buffer.length);
     try {
-      const items = buffer.splice(0, buffer.length);
-
-      // Resolve any pending attachment uploads
+      // Resolve any pending attachment uploads.
       for (const item of items) {
         if (item.resolveAttachment) {
           try {
             item.entry.attachmentId = await item.resolveAttachment();
           } catch {
-            // Upload failed — log entry will be sent without attachment
+            // Upload failed; log entry will be sent without attachment.
           }
         }
       }
@@ -56,14 +55,9 @@ export function createHubLogBuffer(hubClient: HubClient) {
     }
   }
 
-  function cleanup() {
-    clearInterval(flushInterval);
-    void flush();
-  }
-
   return {
     pushEntry,
-    cleanup,
+    flushFinal: flush,
   };
 }
 

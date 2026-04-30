@@ -8,6 +8,10 @@
 
 import { appendFileSync } from "fs";
 import { join } from "path";
+import {
+  io as createSocketIoClient,
+  type Socket as SocketIoClient,
+} from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NaisysTestProcess } from "./e2eTestHelper.js";
@@ -20,6 +24,7 @@ import {
   spawnNaisys,
   waitForExit,
 } from "./e2eTestHelper.js";
+import { generateSupervisorUserApiKey } from "./supervisorApiHelper.js";
 
 vi.setConfig({ testTimeout: 60000 });
 
@@ -27,6 +32,7 @@ describe("Integrated Hub Shutdown E2E", () => {
   let testDir: string;
   let naisys: NaisysTestProcess | null = null;
   let serverPort: number;
+  let browserSocket: SocketIoClient | null = null;
 
   beforeEach(async () => {
     testDir = getTestDir("integrated_hub_shutdown");
@@ -35,6 +41,8 @@ describe("Integrated Hub Shutdown E2E", () => {
   });
 
   afterEach(async () => {
+    browserSocket?.disconnect();
+    browserSocket = null;
     if (naisys) {
       await naisys.cleanup();
       naisys = null;
@@ -78,6 +86,21 @@ describe("Integrated Hub Shutdown E2E", () => {
     await naisys.waitForOutput("AGENT STARTED", 60000);
     await naisys.waitForPrompt();
 
+    const apiKey = await generateSupervisorUserApiKey(naisys, "superadmin");
+    // Connect a browser socket so server-side connection state is non-empty at
+    // shutdown — guards against handlers/intervals on the server side keeping
+    // the process alive after exit.
+    browserSocket = createSocketIoClient(`http://localhost:${serverPort}`, {
+      path: "/supervisor/api/ws",
+      transports: ["websocket"],
+      reconnection: false,
+      extraHeaders: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+    await waitForBrowserSocketConnect(browserSocket);
+    browserSocket.emit("subscribe", { room: "hub-status" });
+
     await naisys.runCommand("exit", {
       waitFor: "AGENT EXITED",
       waitForPrompt: false,
@@ -93,3 +116,33 @@ describe("Integrated Hub Shutdown E2E", () => {
     naisys.dumpStderrIfAny("Integrated hub supervisor/ERP shutdown");
   });
 });
+
+function waitForBrowserSocketConnect(
+  socket: SocketIoClient,
+  timeoutMs = 15000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error("Timed out waiting for browser socket connect")),
+      timeoutMs,
+    );
+    timer.unref();
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.off("connect", onConnect);
+      socket.off("connect_error", onConnectError);
+    };
+    const onConnect = () => {
+      cleanup();
+      resolve();
+    };
+    const onConnectError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+
+    socket.once("connect", onConnect);
+    socket.once("connect_error", onConnectError);
+  });
+}

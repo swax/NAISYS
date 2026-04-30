@@ -167,8 +167,19 @@ export async function registerSuperAdminPasskeyViaUi(
     .waitFor({ state: "visible", timeout: 15000 });
   await page.getByLabel("Device label").fill("E2E virtual authenticator");
   await page.getByRole("button", { name: "Register passkey" }).click();
-  await page.getByText("Passkey registered").waitFor({ timeout: 15000 });
-  await page.waitForURL(/\/supervisor\/agents/, { timeout: 15000 });
+  try {
+    await page.waitForURL(/\/supervisor\/agents/, { timeout: 15000 });
+  } catch (error) {
+    const alerts = (await page.getByRole("alert").allTextContents())
+      .map((text) => text.trim())
+      .filter(Boolean);
+    const alertText = alerts.length ? ` Alerts: ${alerts.join(" | ")}` : "";
+    const errorText =
+      error instanceof Error && error.message ? ` ${error.message}` : "";
+    throw new Error(
+      `Timed out waiting for passkey registration redirect. Current URL: ${page.url()}.${alertText}${errorText}`,
+    );
+  }
 }
 
 export async function waitFor<T>(
