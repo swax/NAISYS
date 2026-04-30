@@ -291,7 +291,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           },
           { key: "SERVER_PORT", label: "Server Port" },
           { key: "SUPERVISOR_AUTH", label: "Use Supervisor for Auth" },
-          { key: "PUBLIC_READ", label: "Public Read Access" },
         ],
       },
     ],

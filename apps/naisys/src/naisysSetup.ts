@@ -114,7 +114,6 @@ export function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
           "Integrated server configuration if the --integrated-hub option is used on startup",
         fields: [
           { key: "SERVER_PORT", label: "Server Port" },
-          { key: "PUBLIC_READ", label: "Public Read Access" },
           { key: "ALLOW_PASSWORD_LOGIN", label: "Allow Password Sign-in" },
         ],
       },

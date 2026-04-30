@@ -420,7 +420,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
           },
           { key: "HUB_URL", label: "NAISYS Hub URL" },
           { key: "SERVER_PORT", label: "Server Port" },
-          { key: "PUBLIC_READ", label: "Public Read Access" },
         ],
       },
     ],
