@@ -15,6 +15,11 @@ export type StartHub = (
   wizardRan?: boolean,
 ) => Promise<{
   serverPort: number;
+  /**
+   * Process-exit cleanup: stops timers and disconnects the DB so the integrated
+   * hub doesn't keep the parent process alive. Does NOT close the HTTP/Socket.IO
+   * server — the caller must `process.exit()` after awaiting this.
+   */
   shutdown: () => Promise<void>;
 }>;
 
@@ -35,6 +40,6 @@ export type BootstrapSupervisor = (opts: {
 export type HostedSupervisorModule = {
   supervisorPlugin: any;
   bootstrapSupervisor: BootstrapSupervisor;
-  /** Pre-shutdown cleanup the embedded hub calls before tearing down its own services. */
-  cleanupSupervisor: () => void;
+  /** Synchronous cleanup for hosted supervisor clients/timers; callers should not await web server shutdown. */
+  cleanupSupervisor?: () => void;
 };

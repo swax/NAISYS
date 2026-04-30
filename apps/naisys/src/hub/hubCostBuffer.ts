@@ -24,7 +24,7 @@ export function createHubCostBuffer(hubClient: HubClient) {
   // Per-user callbacks for budget updates
   const budgetCallbacks = new Map<number, BudgetCallback>();
 
-  const flushInterval = setInterval(() => void flush(), COST_FLUSH_INTERVAL_MS);
+  setInterval(() => void flush(), COST_FLUSH_INTERVAL_MS);
 
   function pushEntry(entry: CostWriteEntry) {
     buffer.push(entry);
@@ -58,22 +58,17 @@ export function createHubCostBuffer(hubClient: HubClient) {
         }
       }
     } catch {
-      // Silently ignore flush errors — costs are best-effort
+      // Silently ignore flush errors; costs are best-effort.
     } finally {
       isFlushing = false;
     }
-  }
-
-  function cleanup() {
-    clearInterval(flushInterval);
-    void flush();
   }
 
   return {
     pushEntry,
     registerBudgetCallback,
     unregisterBudgetCallback,
-    cleanup,
+    flushFinal: flush,
   };
 }
 

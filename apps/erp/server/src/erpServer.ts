@@ -237,7 +237,7 @@ async function startServer(wizardRan?: boolean) {
     fastify.post(
       "/erp/api/__coverage/flush",
       { schema: { hide: true } },
-      async () => {
+      () => {
         takeCoverage();
         return { ok: true };
       },

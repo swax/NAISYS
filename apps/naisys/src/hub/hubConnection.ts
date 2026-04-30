@@ -84,7 +84,9 @@ export function createHubConnection(
       );
       onDisconnected();
 
-      // Server-initiated disconnects don't auto-reconnect in Socket.IO
+      // Server-initiated disconnects don't auto-reconnect in Socket.IO.
+      // Always retry; the server's connect_error (fatal vs non-fatal) decides
+      // whether to give up — covers key rotation, supersede, same-instance replace.
       if (reason === "io server disconnect") {
         socket?.connect();
       }

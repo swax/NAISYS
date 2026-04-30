@@ -1,4 +1,4 @@
-import type { StartHub } from "@naisys/common";
+import { sleep, type StartHub } from "@naisys/common";
 import {
   createDualLogger,
   ensureDotEnv,
@@ -147,20 +147,6 @@ const userService = createUserService(
 );
 const modelService = createModelService(hubClient);
 
-async function shutdown(): Promise<void> {
-  try {
-    hubLogBuffer?.cleanup();
-    hubCostBuffer?.cleanup();
-    heartbeatService?.cleanup();
-    hubClient?.cleanup();
-    if (integratedHubShutdown) {
-      await integratedHubShutdown();
-    }
-  } catch (err) {
-    console.error("[NAISYS] Error during shutdown:", err);
-  }
-}
-
 if (hubClient) {
   try {
     await hubClient.waitForConnection();
@@ -187,15 +173,7 @@ const agentManager = new AgentManager(
   promptNotification,
 );
 
-heartbeatService = createHeartbeatService(
-  hubClient,
-  agentManager,
-  userService,
-);
-
-const updateService = program.opts().autoUpdate
-  ? createUpdateService(globalConfig, agentManager)
-  : undefined;
+heartbeatService = createHeartbeatService(hubClient, agentManager, userService);
 
 // Resolve the agent path to a username (or admin if no path) and start the agent
 const startupUserIds = userService.getStartupUserIds();
@@ -203,8 +181,12 @@ for (const userId of startupUserIds) {
   await agentManager.startAgent(userId);
 }
 
+const updateService = program.opts().autoUpdate
+  ? createUpdateService(globalConfig, agentManager)
+  : undefined;
+
 let shuttingDown = false;
-const handleShutdown = (signal: "SIGINT" | "SIGTERM") => {
+const handleShutdownSignal = (signal: "SIGINT" | "SIGTERM") => {
   if (shuttingDown) {
     console.log("\nForce exit");
     process.exit(1);
@@ -215,18 +197,45 @@ const handleShutdown = (signal: "SIGINT" | "SIGTERM") => {
     console.error("[NAISYS] Error stopping agents:", err);
   });
 };
-process.on("SIGINT", () => handleShutdown("SIGINT"));
-process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+process.on("SIGINT", () => handleShutdownSignal("SIGINT"));
+process.on("SIGTERM", () => handleShutdownSignal("SIGTERM"));
 
 await agentManager.waitForAllAgentsToComplete();
 
+// Auto-update may still be running its git/npm install when agents drain
+// (e.g. user signaled mid-install). Wait so we don't kill the spawned
+// processes mid-step. Second Ctrl+C still force-exits via handleShutdownSignal.
+if (shuttingDown && updateService?.isInProgress()) {
+  console.log(
+    "[NAISYS] Waiting for in-flight update to finish (Ctrl+C again to force exit)...",
+  );
+}
+await updateService?.waitForCompletion();
+
 await shutdown();
 
-if (updateService?.isUpdateInProgress()) {
-  // Update handler exits after handing off restart management to the wrapper or PM2
-  await new Promise(() => {});
-}
-
 console.log(`[NAISYS] Exited`);
+process.exit(updateService?.getExitCode() ?? 0);
 
-process.exit(0);
+// Shutdown is process-owned: process.exit() reaps timers, sockets, Fastify,
+// and Socket.IO. Drain pending log/cost entries while the socket and hub are
+// still alive, disconnect the hub client, then wait only for the integrated
+// hub database disconnect.
+async function shutdown(): Promise<void> {
+  await Promise.allSettled([
+    hubLogBuffer?.flushFinal(),
+    hubCostBuffer?.flushFinal(),
+  ]);
+
+  heartbeatService?.cleanup();
+  hubClient?.cleanup();
+
+  if (integratedHubShutdown) {
+    await Promise.race([
+      integratedHubShutdown().catch((err) =>
+        console.error("[NAISYS] Hub shutdown:", err),
+      ),
+      sleep(5_000).then(() => console.error("[NAISYS] Hub shutdown timed out")),
+    ]);
+  }
+}

@@ -9,18 +9,33 @@ import type { GlobalConfig } from "../globalConfig.js";
 import { getInstallPath } from "./pathService.js";
 import { isRestartWrapperActive, RESTART_EXIT_CODE } from "./restartManager.js";
 
+interface UpdateExitPlan {
+  exitCode: number;
+  description: string;
+}
+
 export function createUpdateService(
   globalConfig: GlobalConfig,
   agentManager: AgentManager,
 ) {
   let updateInProgress = false;
+  let activeUpdate: Promise<void> | undefined;
+  let exitCode = 0;
   const repoRoot = getGitRepoRoot(getInstallPath());
 
-  // Check for updates on startup and whenever config changes
-  void checkForUpdate();
-  globalConfig.onConfigChanged(() => void checkForUpdate());
+  // Check for updates on startup and whenever config changes. Drop overlapping
+  // triggers — if the target changes again mid-install, the restart wrapper
+  // picks up the newer target on the next launch.
+  const startSync = () => {
+    if (activeUpdate) return;
+    activeUpdate = syncToTargetVersion().finally(() => {
+      activeUpdate = undefined;
+    });
+  };
+  startSync();
+  globalConfig.onConfigChanged(startSync);
 
-  async function checkForUpdate() {
+  async function syncToTargetVersion() {
     if (updateInProgress) return;
 
     const targetVersion =
@@ -50,59 +65,84 @@ export function createUpdateService(
 
     updateInProgress = true;
 
-    // Grab admin agent's output for hub-visible logging (before we stop agents)
-    const output = (
-      agentManager.runningAgents.find(
-        (a) => a.agentUsername === ADMIN_USERNAME,
-      ) ?? agentManager.runningAgents[0]
-    )?.output;
-
-    const log = (msg: string) =>
-      output ? output.commentAndLog(msg) : console.log(`[NAISYS] ${msg}`);
-    const logError = (msg: string) =>
-      output ? output.errorAndLog(msg) : console.error(`[NAISYS] ${msg}`);
-
-    let success: boolean;
-    if (repoRoot) {
-      success = await performGitUpdate(commitHash, repoRoot, log, logError);
-    } else {
-      success = await performNpmUpdate(npmVersion, log, logError);
-    }
-
-    if (!success) {
-      logError(`Version change failed, continuing on current version.`);
-      updateInProgress = false;
-      return;
-    }
-
-    log(`Update installed. Stopping agents for restart...`);
-
     try {
-      await agentManager.stopAll(`Switching to version ${targetVersion}`);
-    } catch (error) {
-      logError(`Error stopping agents: ${error}`);
-    }
+      // Grab admin agent's output for hub-visible logging (before we stop agents)
+      const output = (
+        agentManager.runningAgents.find(
+          (a) => a.agentUsername === ADMIN_USERNAME,
+        ) ?? agentManager.runningAgents[0]
+      )?.output;
 
-    if (process.env.pm_id) {
-      log(`Exiting — PM2 will restart`);
-      process.exit(0);
-    }
+      const log = (msg: string) =>
+        output ? output.commentAndLog(msg) : console.log(`[NAISYS] ${msg}`);
+      const logError = (msg: string) =>
+        output ? output.errorAndLog(msg) : console.error(`[NAISYS] ${msg}`);
 
-    if (isRestartWrapperActive()) {
-      log(`Requesting wrapper restart...`);
-      log(`Exiting — wrapper will restart`);
-      process.exit(RESTART_EXIT_CODE);
-    }
+      let success: boolean;
+      try {
+        if (repoRoot) {
+          success = await performGitUpdate(commitHash, repoRoot, log, logError);
+        } else {
+          success = await performNpmUpdate(npmVersion, log, logError);
+        }
+      } catch (error) {
+        logError(`Version change failed: ${error}`);
+        success = false;
+      }
 
-    log(
-      `No restart manager active. Restart NAISYS manually to use the update.`,
-    );
-    process.exit(0);
+      if (!success) {
+        logError(`Version change failed, continuing on current version.`);
+        return;
+      }
+
+      log(`Update installed. Stopping agents for restart...`);
+      const exitPlan = resolveUpdateExitPlan();
+      exitCode = exitPlan.exitCode;
+      log(exitPlan.description);
+
+      try {
+        await agentManager.stopAll(`Switching to version ${targetVersion}`);
+      } catch (error) {
+        logError(`Error stopping agents: ${error}`);
+      }
+
+      // The top-level NAISYS shutdown path owns final service cleanup and exit.
+    } finally {
+      updateInProgress = false;
+    }
   }
 
   return {
-    isUpdateInProgress: () => updateInProgress,
+    getExitCode: () => exitCode,
+    isInProgress: () => activeUpdate !== undefined,
+    waitForCompletion: () =>
+      activeUpdate?.catch(() => {
+        // syncToTargetVersion swallows internally; defensive only.
+      }) ?? Promise.resolve(),
   };
+
+  function resolveUpdateExitPlan(): UpdateExitPlan {
+    if (process.env.pm_id) {
+      return {
+        exitCode: 0,
+        description: "Exiting after graceful shutdown — PM2 will restart",
+      };
+    }
+
+    if (isRestartWrapperActive()) {
+      return {
+        exitCode: RESTART_EXIT_CODE,
+        description:
+          "Exiting after graceful shutdown — wrapper will restart",
+      };
+    }
+
+    return {
+      exitCode: 0,
+      description:
+        "No restart manager active. Restart NAISYS manually to use the update.",
+    };
+  }
 
   async function performGitUpdate(
     targetHash: string,

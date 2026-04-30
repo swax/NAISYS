@@ -210,14 +210,14 @@ export const startHub: StartHub = async (
     }
 
     let shutdownPromise: Promise<void> | null = null;
+    // Like NAISYS: process exit reaps sockets and Fastify. Clear known timers
+    // synchronously, but only wait for the DB disconnect.
     async function runShutdown(): Promise<void> {
       try {
         cleanupSupervisor?.();
         heartbeatService.cleanup();
         costService.cleanup();
         mailService.cleanup();
-        await io.close();
-        await fastify.close();
       } finally {
         await hubDatabaseService.disconnect();
       }

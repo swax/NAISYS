@@ -192,8 +192,11 @@ export function createNaisysServer(
       logService.log(
         `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`,
       );
+      // Non-fatal: keys can rotate while a client is in retry; the client's
+      // auth callback re-reads the key on each attempt so the next try picks
+      // up the new value.
       return next(
-        createConnectError("Invalid access key", "invalid_access_key"),
+        createConnectError("Invalid access key", "invalid_access_key", false),
       );
     }
 
@@ -282,10 +285,13 @@ export function createNaisysServer(
       logService.error(
         `[Hub] Connection rejected: failed to register host ${hostName}: ${err}`,
       );
+      // Non-fatal: registration touches the DB and can hit transient failures
+      // (pool timeout, deadlock); let the client keep retrying.
       return next(
         createConnectError(
           "NAISYS instance registration failed",
           "registration_failed",
+          false,
         ),
       );
     }
