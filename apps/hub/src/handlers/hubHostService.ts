@@ -64,6 +64,10 @@ export function createHubHostService(
     },
   );
 
+  naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, () => {
+    broadcastHostList();
+  });
+
   naisysServer.registerEvent(HubEvents.HOSTS_CHANGED, async () => {
     logService.log("[Hub:Hosts] Received HOSTS_CHANGED, refreshing cache...");
     await hostRegistrar.refreshHosts();
