@@ -291,7 +291,7 @@ export const subagentCmd: CommandDef = {
     create: {
       usage: 'create "<title>" "<task>"',
       description:
-        "Create and start an ephemeral subagent with a task description. The subagent is local to this NAISYS instance and is removed when it terminates",
+        "Create and start an ephemeral subagent with a task description on this this host",
     },
     start: {
       usage: 'start <name> "<task>"',
@@ -303,11 +303,11 @@ export const subagentCmd: CommandDef = {
         "Stop an agent by name. Use -r to recursively stop subordinate agents",
     },
     local: {
-      usage: "!local",
+      usage: "local",
       description: "List agents running locally in this process",
     },
     switch: {
-      usage: "!switch <name>",
+      usage: "switch <name>",
       description: "Switch session to a local running agent",
     },
     peek: {

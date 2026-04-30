@@ -61,12 +61,12 @@ export function createSubagentService(
   ${subs.peek.usage}: ${subs.peek.description}`;
 
         if (inputMode.isDebug()) {
+          helpOutput += `\n\nDebug commands:`;
           helpOutput += `\n  ${subs.local.usage}: ${subs.local.description}`;
           helpOutput += `\n  ${subs.switch.usage}: ${subs.switch.description}`;
         }
 
-        helpOutput += `\n\n* Use ns-mail to communicate with subagents once started`;
-        helpOutput += `\n! Debug mode only`;
+        helpOutput += `\n\n* Use ns-chat to communicate with subagents once started`;
 
         return helpOutput;
       }
@@ -305,14 +305,14 @@ export function createSubagentService(
         `When finished, use ns-session to end your session.`,
       commandProtection:
         parentConfig.commandProtection == "auto" ? "auto" : "none",
+      wakeOnMessage: true,
+      completeSessionEnabled: true,
       // spendLimitDollars omitted: subagent defers checkSpendLimit to parent.
       // spendLimitHours kept: drives ns-cost period display.
       spendLimitHours: parentConfig.spendLimitHours,
       shellModel: parentConfig.shellModel,
       imageModel: parentConfig.imageModel,
       tokenMax: parentConfig.tokenMax,
-      wakeOnMessage: true,
-      completeSessionEnabled: true,
       webEnabled: parentConfig.webEnabled,
       mailEnabled: parentConfig.mailEnabled,
       chatEnabled: parentConfig.chatEnabled,
