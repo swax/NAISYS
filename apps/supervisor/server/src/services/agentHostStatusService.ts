@@ -49,9 +49,7 @@ export function updateAgentsStatus(
   notifications?: Record<string, { latestLogId: number; latestMailId: number }>,
 ): void {
   activeAgentIds.clear();
-  connectedHostIds.clear();
-  for (const [hostId, userIds] of Object.entries(hostActiveAgents)) {
-    connectedHostIds.add(Number(hostId));
+  for (const userIds of Object.values(hostActiveAgents)) {
     for (const id of userIds) {
       activeAgentIds.add(id);
     }
