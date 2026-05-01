@@ -67,6 +67,7 @@ enum CostSource {
   look
   listen
   genimg
+  websearch
 }
 
 // --- Models ---

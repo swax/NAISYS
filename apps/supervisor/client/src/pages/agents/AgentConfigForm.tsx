@@ -411,6 +411,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={`${desc("browserEnabled") ?? ""} Often blocked for being a bot — use a browser through desktop mode to get around that.`.trim()}
           {...form.getInputProps("browserEnabled", { type: "checkbox" })}
         />
+        <Text size="xs" c="dimmed">
+          With Text Web or Headless Browser enabled and the GOOGLE_API_KEY +
+          GOOGLE_SEARCH_ENGINE_ID env vars set, the agent gets ns-websearch — a
+          Google Custom Search command that isn&apos;t bot-blocked.
+        </Text>
         <Switch
           label="Control Desktop"
           description={desc("controlDesktop")}
