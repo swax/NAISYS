@@ -60,14 +60,14 @@ export const AgentChat: React.FC = () => {
   } = useChatConversations(username ?? "", Boolean(username));
 
   // Build list of agents to show under "Start a chat with", excluding
-  // partners we already have a 1:1 conversation with.
+  // partners we already have a 1:1 conversation with. Server strips the
+  // current user from participantNames, so a 1:1 has length 1.
   const chatCandidates = useMemo(() => {
     if (!username) return [];
     const existingPartners = new Set<string>();
     for (const conv of conversations) {
-      if (conv.participantNames.length === 2) {
-        const other = conv.participantNames.find((n) => n !== username);
-        if (other) existingPartners.add(other);
+      if (conv.participantNames.length === 1) {
+        existingPartners.add(conv.participantNames[0]);
       }
     }
     return buildAgentCandidates({
@@ -342,6 +342,11 @@ export const AgentChat: React.FC = () => {
                 hasMore={hasMoreMessages}
                 loadingMore={loadingMoreMessages}
                 onLoadMore={loadMoreMessages}
+                participants={
+                  selectedParticipants
+                    ? selectedParticipants.split(",").filter(Boolean)
+                    : []
+                }
               />
             )}
             {canSend && (

@@ -37,6 +37,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const shouldRefocusRef = useRef(false);
 
   // Auto-focus when conversation changes
   useEffect(() => {
@@ -45,10 +46,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [focusKey]);
 
+  // Disabling the textarea while sending strips focus; restore it once the
+  // input is re-enabled so the user can keep typing without re-clicking.
+  useEffect(() => {
+    if (sending || !shouldRefocusRef.current) return;
+
+    shouldRefocusRef.current = false;
+    const frame = requestAnimationFrame(() => {
+      const input = inputRef.current;
+      if (!input || input.disabled) return;
+
+      input.focus();
+      const cursor = input.value.length;
+      input.setSelectionRange(cursor, cursor);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [sending]);
+
   const handleSend = async () => {
     const trimmed = message.trim();
     if ((!trimmed && files.length === 0) || sending) return;
 
+    shouldRefocusRef.current = true;
     setSending(true);
     setError(null);
     try {

@@ -175,9 +175,12 @@ export function buildDefaultAgentConfig(username: string): AgentConfigFile {
     mailEnabled: true,
     chatEnabled: true,
     webEnabled: true,
+    browserEnabled: true,
     wakeOnMessage: true,
     completeSessionEnabled: true,
     multipleCommandsEnabled: true,
+    // Gives agent memory a light memory of recent interactions
+    initialCommands: ["ns-chat help", "ns-chat recent"],
   };
 }
 

@@ -10,10 +10,14 @@ import {
   Text,
 } from "@mantine/core";
 import { formatFileSize, isImageFilename } from "@naisys/common";
+import { CompactMarkdown } from "@naisys/common-browser";
 import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 
+import { RunDividerLine } from "../../components/RunDividerLine";
+import { useThreadRuns } from "../../hooks/useThreadRuns";
 import type { ChatMessage } from "../../lib/apiClient";
+import { buildThreadDividers } from "../../lib/threadRunDividers";
 
 interface ChatThreadProps {
   messages: ChatMessage[];
@@ -22,6 +26,7 @@ interface ChatThreadProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
+  participants: string[];
 }
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
@@ -31,6 +36,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   hasMore,
   loadingMore,
   onLoadMore,
+  participants,
 }) => {
   const viewport = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(0);
@@ -46,6 +52,24 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     }
     prevMessageCount.current = messages.length;
   }, [messages.length]);
+
+  const oldestMessageTime = useMemo(() => {
+    if (messages.length === 0) return null;
+    let oldest = messages[0].createdAt;
+    for (const m of messages) {
+      if (new Date(m.createdAt).getTime() < new Date(oldest).getTime()) {
+        oldest = m.createdAt;
+      }
+    }
+    return oldest;
+  }, [messages]);
+
+  const { runs } = useThreadRuns(participants, oldestMessageTime);
+
+  const { beforeMessage: runDividers, trailing: trailingDivider } = useMemo(
+    () => buildThreadDividers(messages, runs),
+    [messages, runs],
+  );
 
   if (messages.length === 0) {
     return (
@@ -113,6 +137,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     {msgDate}
                   </Text>
                 )}
+                {runDividers.get(msg.id) && (
+                  <RunDividerLine divider={runDividers.get(msg.id)!} />
+                )}
                 <Box
                   style={{
                     display: "flex",
@@ -138,12 +165,11 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     <Text
                       size="sm"
                       style={{
-                        whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         color: isOwn ? "white" : undefined,
                       }}
                     >
-                      {msg.body}
+                      <CompactMarkdown>{msg.body}</CompactMarkdown>
                     </Text>
                     {msg.attachments && msg.attachments.length > 0 && (
                       <Stack gap={4} mt="xs">
@@ -226,6 +252,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
               </React.Fragment>
             );
           })}
+          {trailingDivider && <RunDividerLine divider={trailingDivider} />}
         </Stack>
       </Container>
     </ScrollArea>
