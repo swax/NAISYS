@@ -12,7 +12,13 @@ import {
 import { formatFileSize, isImageFilename } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 
 import { RunDividerLine } from "../../components/RunDividerLine";
 import { useThreadRuns } from "../../hooks/useThreadRuns";
@@ -29,6 +35,8 @@ interface ChatThreadProps {
   participants: string[];
 }
 
+const BOTTOM_STICKINESS_PX = 24;
+
 export const ChatThread: React.FC<ChatThreadProps> = ({
   messages,
   currentAgentId,
@@ -39,19 +47,116 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   participants,
 }) => {
   const viewport = useRef<HTMLDivElement>(null);
-  const prevMessageCount = useRef(0);
+  const content = useRef<HTMLDivElement>(null);
+  const shouldStickToBottom = useRef(true);
+  const lastScrollTop = useRef(0);
+  const scrollFrame = useRef<number | null>(null);
+  const previousThread = useRef<{
+    threadKey: string;
+    lastMessageId: number | null;
+  }>({
+    threadKey: "",
+    lastMessageId: null,
+  });
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (messages.length > prevMessageCount.current && viewport.current) {
-      viewport.current.scrollTo({
-        top: viewport.current.scrollHeight,
-        behavior:
-          messages.length - prevMessageCount.current > 5 ? "instant" : "smooth",
-      });
+  const threadKey = participants.join(",");
+  const lastMessageId = messages[messages.length - 1]?.id ?? null;
+
+  const scrollToBottom = useCallback(() => {
+    const applyScroll = () => {
+      const node = viewport.current;
+      if (!node) return;
+
+      node.scrollTop = node.scrollHeight;
+      lastScrollTop.current = node.scrollTop;
+    };
+
+    applyScroll();
+
+    if (scrollFrame.current !== null) {
+      window.cancelAnimationFrame(scrollFrame.current);
     }
-    prevMessageCount.current = messages.length;
-  }, [messages.length]);
+
+    scrollFrame.current = window.requestAnimationFrame(() => {
+      scrollFrame.current = null;
+      applyScroll();
+    });
+  }, []);
+
+  const handleScrollPositionChange = useCallback(() => {
+    const node = viewport.current;
+    if (!node) return;
+
+    const distanceFromBottom =
+      node.scrollHeight - node.clientHeight - node.scrollTop;
+    const isAtBottom = distanceFromBottom <= BOTTOM_STICKINESS_PX;
+    const movedUp = node.scrollTop < lastScrollTop.current - 1;
+
+    // Late content growth can move the bottom without a user action. Only an
+    // actual upward scroll should disable bottom stickiness.
+    if (isAtBottom) {
+      shouldStickToBottom.current = true;
+    } else if (movedUp) {
+      shouldStickToBottom.current = false;
+    }
+
+    lastScrollTop.current = node.scrollTop;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrame.current !== null) {
+        window.cancelAnimationFrame(scrollFrame.current);
+      }
+    };
+  }, []);
+
+  // Auto-scroll on conversation load and when newer messages append. Loading
+  // older messages keeps the same last message id, so it does not pull the
+  // viewport back down.
+  useLayoutEffect(() => {
+    const previous = previousThread.current;
+    const threadChanged = previous.threadKey !== threadKey;
+    const lastMessageChanged = lastMessageId !== previous.lastMessageId;
+
+    if (threadChanged) {
+      shouldStickToBottom.current = true;
+    }
+
+    if (
+      messages.length > 0 &&
+      (threadChanged || (lastMessageChanged && shouldStickToBottom.current))
+    ) {
+      scrollToBottom();
+    }
+
+    previousThread.current = {
+      threadKey,
+      lastMessageId,
+    };
+  }, [lastMessageId, messages.length, scrollToBottom, threadKey]);
+
+  // Keep the latest message visible when content height changes after the
+  // initial scroll, for example when image attachments or run dividers load.
+  useEffect(() => {
+    if (
+      messages.length === 0 ||
+      !content.current ||
+      typeof ResizeObserver === "undefined"
+    ) {
+      return;
+    }
+
+    const node = content.current;
+    const observer = new ResizeObserver(() => {
+      if (shouldStickToBottom.current) {
+        scrollToBottom();
+      }
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [messages.length, scrollToBottom, threadKey]);
 
   const oldestMessageTime = useMemo(() => {
     if (messages.length === 0) return null;
@@ -106,8 +211,12 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   let lastDate = "";
 
   return (
-    <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
-      <Container size="md" w="100%" p="md">
+    <ScrollArea
+      style={{ flex: 1 }}
+      viewportRef={viewport}
+      onScrollPositionChange={handleScrollPositionChange}
+    >
+      <Container ref={content} size="md" w="100%" p="md">
         <Stack gap="xs">
           {hasMore && (
             <Stack gap={4} align="center" py="xs">
