@@ -16,8 +16,9 @@ import {
   IconSettings,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 
+import type { AppOutletContext } from "../App";
 import { AgentModelIcon } from "../components/AgentModelIcon";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
@@ -35,6 +36,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
+  const { mailServiceEnabled } = useOutletContext<AppOutletContext>();
   const [links, setLinks] = useState<{ rel: string; href: string }[]>([]);
   const [linksLoaded, setLinksLoaded] = useState(false);
 
@@ -72,7 +74,9 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   // Show info message when viewing a disabled mail/chat tab (only after links loaded)
   const disabledTabMessage =
     linksLoaded && currentSection === "mail" && !hasMailLink
-      ? "Mail can be sent to this agent, but the agent isn't configured to use mail."
+      ? !mailServiceEnabled
+        ? "The mail service is disabled (set MAIL_ENABLED=true to enable)."
+        : "Mail can be sent to this agent, but the agent isn't configured to use mail."
       : linksLoaded && currentSection === "chat" && !hasChatLink
         ? "Chat messages can be sent to this agent, but the agent isn't configured to use chat."
         : null;
@@ -164,6 +168,44 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
                 Detail
               </Text>
             </Tabs.Tab>
+            {mailServiceEnabled && (
+              <Indicator
+                disabled={!hasUnreadMail}
+                color="blue"
+                size={8}
+                offset={7}
+                processing
+              >
+                <Tabs.Tab
+                  value="mail"
+                  leftSection={<IconMail size="1rem" />}
+                  component="a"
+                  // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+                  href={getAbsoluteUrl("mail")}
+                  onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
+                  style={
+                    !hasMailLink && linksLoaded ? { opacity: 0.4 } : undefined
+                  }
+                >
+                  <Text visibleFrom="sm" span>
+                    Mail
+                  </Text>
+                </Tabs.Tab>
+              </Indicator>
+            )}
+            <Tabs.Tab
+              value="chat"
+              leftSection={<IconMessageCircle size="1rem" />}
+              component="a"
+              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+              href={getAbsoluteUrl("chat")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
+              style={!hasChatLink && linksLoaded ? { opacity: 0.4 } : undefined}
+            >
+              <Text visibleFrom="sm" span>
+                Chat
+              </Text>
+            </Tabs.Tab>
             <Indicator
               disabled={!hasUnreadLogs}
               color="pink"
@@ -184,42 +226,6 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
                 </Text>
               </Tabs.Tab>
             </Indicator>
-            <Indicator
-              disabled={!hasUnreadMail}
-              color="blue"
-              size={8}
-              offset={7}
-              processing
-            >
-              <Tabs.Tab
-                value="mail"
-                leftSection={<IconMail size="1rem" />}
-                component="a"
-                // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-                href={getAbsoluteUrl("mail")}
-                onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
-                style={
-                  !hasMailLink && linksLoaded ? { opacity: 0.4 } : undefined
-                }
-              >
-                <Text visibleFrom="sm" span>
-                  Mail
-                </Text>
-              </Tabs.Tab>
-            </Indicator>
-            <Tabs.Tab
-              value="chat"
-              leftSection={<IconMessageCircle size="1rem" />}
-              component="a"
-              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-              href={getAbsoluteUrl("chat")}
-              onClick={(e: React.MouseEvent) => handleTabClick(e, "chat")}
-              style={!hasChatLink && linksLoaded ? { opacity: 0.4 } : undefined}
-            >
-              <Text visibleFrom="sm" span>
-                Chat
-              </Text>
-            </Tabs.Tab>
             <Tabs.Tab
               value="config"
               leftSection={<IconSettings size="1rem" />}

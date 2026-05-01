@@ -96,7 +96,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "Allow the agent to end its session. Once ended, it can only be restarted explicitly or via mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive",
+      "Allow the agent to end its session. Once ended, it can only be restarted explicitly or via chat/mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive",
     ),
 
   debugPauseSeconds: z
@@ -172,7 +172,7 @@ export function buildDefaultAgentConfig(username: string): AgentConfigFile {
     agentPrompt:
       "You are ${agent.username} a ${agent.title} with the job of helping out the admin with what they want to do.",
     tokenMax: 30000,
-    mailEnabled: true,
+    mailEnabled: false,
     chatEnabled: true,
     webEnabled: true,
     browserEnabled: true,

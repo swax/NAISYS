@@ -54,7 +54,7 @@ export function createSystemMessage(
   }
 
   let mailStr = "";
-  if (agentConfig().mailEnabled) {
+  if (globalConfig().mailServiceEnabled && agentConfig().mailEnabled) {
     mailStr += `\n  ${usersCmd.name}: ${usersCmd.description}`;
     mailStr += `\n  ${mailCmd.name}: ${mailCmd.description}`;
   }

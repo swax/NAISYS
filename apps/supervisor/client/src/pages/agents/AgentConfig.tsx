@@ -246,41 +246,6 @@ export const AgentConfig: React.FC = () => {
 
   return (
     <Stack p="md" maw={1000}>
-      <Group>
-        {hasAction(actions, "export-config") && (
-          <Button
-            variant="outline"
-            leftSection={<IconFileExport size={16} />}
-            onClick={() => setConfigDialogMode("export")}
-          >
-            Export
-          </Button>
-        )}
-        {hasAction(actions, "import-config") && (
-          <Button
-            variant="outline"
-            leftSection={<IconFileImport size={16} />}
-            onClick={() => setConfigDialogMode("import")}
-          >
-            Import
-          </Button>
-        )}
-      </Group>
-
-      {hasAction(actions, "update") && (
-        <Select
-          label="Lead Agent"
-          placeholder="None (top-level agent)"
-          data={leadAgentOptions}
-          value={currentLeadValue ?? null}
-          onChange={handleSetLead}
-          clearable
-          searchable
-          disabled={settingLead}
-          maw={300}
-        />
-      )}
-
       {saveError && (
         <Alert
           color="red"
@@ -309,7 +274,51 @@ export const AgentConfig: React.FC = () => {
           onUnassignHost={
             hasAction(actions, "update") ? handleUnassignHost : undefined
           }
+          afterTitle={
+            hasAction(actions, "update") ? (
+              <Select
+                label="Lead Agent"
+                placeholder="None (top-level agent)"
+                data={leadAgentOptions}
+                value={currentLeadValue ?? null}
+                onChange={handleSetLead}
+                clearable
+                searchable
+                disabled={settingLead}
+                maw={300}
+              />
+            ) : undefined
+          }
         />
+      )}
+
+      {(hasAction(actions, "export-config") ||
+        hasAction(actions, "import-config")) && (
+        <>
+          <Text fw={600} size="sm" c="dimmed">
+            Configuration File
+          </Text>
+          <Group>
+            {hasAction(actions, "export-config") && (
+              <Button
+                variant="outline"
+                leftSection={<IconFileExport size={16} />}
+                onClick={() => setConfigDialogMode("export")}
+              >
+                Export
+              </Button>
+            )}
+            {hasAction(actions, "import-config") && (
+              <Button
+                variant="outline"
+                leftSection={<IconFileImport size={16} />}
+                onClick={() => setConfigDialogMode("import")}
+              >
+                Import
+              </Button>
+            )}
+          </Group>
+        </>
       )}
 
       {username && configDialogMode && (

@@ -43,6 +43,8 @@ interface AgentConfigFormProps {
   hostActionInProgress?: boolean;
   onAssignHost?: (hostname: string) => void;
   onUnassignHost?: (hostname: string) => void;
+  /** Optional element rendered inside Identity, after the Title field. */
+  afterTitle?: React.ReactNode;
 }
 
 /** Convert form values to AgentConfigFile, omitting empty optionals. */
@@ -169,6 +171,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   hostActionInProgress,
   onAssignHost,
   onUnassignHost,
+  afterTitle,
 }) => {
   const showHostsSection = assignedHosts !== undefined;
   const unassignedHosts = useMemo(() => {
@@ -243,22 +246,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   return (
     <form onSubmit={form.onSubmit(handleSubmit)}>
       <Stack gap="lg">
-        {/* Identity */}
-        <Text fw={600} size="sm" c="dimmed">
-          Identity
-        </Text>
-        <TextInput
-          label="Username"
-          description={desc("username")}
-          withAsterisk
-          {...form.getInputProps("username")}
-        />
-        <TextInput
-          label="Title"
-          description={desc("title")}
-          {...form.getInputProps("title")}
-        />
-
         {/* Assigned Hosts */}
         {showHostsSection && (
           <>
@@ -296,7 +283,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
             <Group gap="xs" wrap="wrap">
               {assignedHosts.length === 0 ? (
                 <Text size="sm" c="dimmed">
-                  Any host (unrestricted)
+                  None assigned, agent can run on any host
                 </Text>
               ) : (
                 assignedHosts.map((h) => (
@@ -333,10 +320,29 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           </>
         )}
 
+        {/* Identity */}
+        <TextInput
+          label="Username"
+          description={desc("username")}
+          withAsterisk
+          {...form.getInputProps("username")}
+        />
+        <TextInput
+          label="Title"
+          description={desc("title")}
+          {...form.getInputProps("title")}
+        />
+        {afterTitle}
+
+        <ModelSelect
+          label="Shell Model"
+          description={desc("shellModel")}
+          withAsterisk
+          data={llmModelOptions}
+          {...form.getInputProps("shellModel")}
+        />
+
         {/* Prompt */}
-        <Text fw={600} size="sm" c="dimmed">
-          Prompt
-        </Text>
         <Textarea
           label="Agent Prompt"
           description={desc("agentPrompt")}
@@ -347,25 +353,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
             input: { fontFamily: "monospace", fontSize: "0.875rem" },
           }}
           {...form.getInputProps("agentPrompt")}
-        />
-
-        {/* Models */}
-        <Text fw={600} size="sm" c="dimmed">
-          Models
-        </Text>
-        <ModelSelect
-          label="Shell Model"
-          description={desc("shellModel")}
-          withAsterisk
-          data={llmModelOptions}
-          {...form.getInputProps("shellModel")}
-        />
-        <ModelSelect
-          label="Image Model"
-          description={desc("imageModel")}
-          clearable
-          data={imageModelOptions}
-          {...form.getInputProps("imageModel")}
         />
 
         {/* Limits */}
@@ -398,24 +385,9 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           Features
         </Text>
         <Switch
-          label="Mail Enabled"
-          description={desc("mailEnabled")}
-          {...form.getInputProps("mailEnabled", { type: "checkbox" })}
-        />
-        <Switch
           label="Chat Enabled"
           description={desc("chatEnabled")}
           {...form.getInputProps("chatEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Web Enabled"
-          description={desc("webEnabled")}
-          {...form.getInputProps("webEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Browser Enabled"
-          description={desc("browserEnabled")}
-          {...form.getInputProps("browserEnabled", { type: "checkbox" })}
         />
         <Switch
           label="Complete Session Enabled"
@@ -430,6 +402,50 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           {...form.getInputProps("wakeOnMessage", { type: "checkbox" })}
         />
         <Switch
+          label="Text Web"
+          description={desc("webEnabled")}
+          {...form.getInputProps("webEnabled", { type: "checkbox" })}
+        />
+        <Switch
+          label="Headless Browser"
+          description={`${desc("browserEnabled") ?? ""} Often blocked for being a bot — use a browser through desktop mode to get around that.`.trim()}
+          {...form.getInputProps("browserEnabled", { type: "checkbox" })}
+        />
+        <Switch
+          label="Control Desktop"
+          description={desc("controlDesktop")}
+          {...form.getInputProps("controlDesktop", { type: "checkbox" })}
+        />
+
+        {/* Initial Commands */}
+        <Textarea
+          label="Initial Commands"
+          description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
+          autosize
+          minRows={2}
+          styles={{
+            input: { fontFamily: "monospace", fontSize: "0.875rem" },
+          }}
+          {...form.getInputProps("initialCommands")}
+        />
+
+        {/* Advanced */}
+        <Text fw={600} size="sm" c="dimmed">
+          Advanced
+        </Text>
+        <ModelSelect
+          label="Image Model"
+          description={desc("imageModel")}
+          clearable
+          data={imageModelOptions}
+          {...form.getInputProps("imageModel")}
+        />
+        <Switch
+          label="Mail Enabled"
+          description={`${desc("mailEnabled") ?? ""} The MAIL_ENABLED variable must be set to true as well.`.trim()}
+          {...form.getInputProps("mailEnabled", { type: "checkbox" })}
+        />
+        <Switch
           label="Workspaces Enabled"
           description={desc("workspacesEnabled")}
           {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
@@ -441,16 +457,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
             type: "checkbox",
           })}
         />
-        <Switch
-          label="Control Desktop"
-          description={desc("controlDesktop")}
-          {...form.getInputProps("controlDesktop", { type: "checkbox" })}
-        />
-
-        {/* Advanced */}
-        <Text fw={600} size="sm" c="dimmed">
-          Advanced
-        </Text>
         <Select
           label="Command Protection"
           description={desc("commandProtection")}
@@ -466,16 +472,6 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           description={desc("debugPauseSeconds")}
           min={0}
           {...form.getInputProps("debugPauseSeconds")}
-        />
-        <Textarea
-          label="Initial Commands"
-          description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
-          autosize
-          minRows={2}
-          styles={{
-            input: { fontFamily: "monospace", fontSize: "0.875rem" },
-          }}
-          {...form.getInputProps("initialCommands")}
         />
       </Stack>
 

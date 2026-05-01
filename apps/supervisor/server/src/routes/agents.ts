@@ -39,6 +39,7 @@ import {
   getAgents,
   resolveAgentId,
 } from "../services/agentService.js";
+import { getVariableCachedValue } from "../services/variableService.js";
 
 type AgentCtx = {
   user: SupervisorUser | undefined;
@@ -164,6 +165,7 @@ function agentActions(
 function agentLinks(
   username: string,
   config: AgentConfigFile | null | undefined,
+  mailServiceEnabled: boolean,
 ) {
   const links = [
     selfLink(`/agents/${username}`),
@@ -171,13 +173,17 @@ function agentLinks(
     { rel: "runs", href: `${API_PREFIX}/agents/${username}/runs` },
     collectionLink("agents"),
   ];
-  if (config?.mailEnabled) {
+  if (mailServiceEnabled && config?.mailEnabled) {
     links.push({ rel: "mail", href: `${API_PREFIX}/agents/${username}/mail` });
   }
   if (config?.chatEnabled) {
     links.push({ rel: "chat", href: `${API_PREFIX}/agents/${username}/chat` });
   }
   return links;
+}
+
+async function isMailServiceEnabled(): Promise<boolean> {
+  return (await getVariableCachedValue("MAIL_ENABLED")) === "true";
 }
 
 export default function agentsRoutes(
@@ -281,7 +287,7 @@ export default function agentsRoutes(
           success: true,
           message: `Agent '${name}' created successfully`,
           name,
-          _links: agentLinks(name, config),
+          _links: agentLinks(name, config, await isMailServiceEnabled()),
           _actions: agentActions(name, request.supervisorUser, true, false),
         };
       } catch (error) {
@@ -333,7 +339,7 @@ export default function agentsRoutes(
       return {
         ...agent,
         status: getAgentStatus(id),
-        _links: agentLinks(username, agent.config),
+        _links: agentLinks(username, agent.config, await isMailServiceEnabled()),
         _actions: agentActions(
           username,
           request.supervisorUser,

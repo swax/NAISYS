@@ -317,6 +317,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       packageVersion: "1.0.0",
       supervisorUrl: undefined,
       autoStartAgentsOnMessage: true,
+      mailServiceEnabled: true,
     }),
   };
 }

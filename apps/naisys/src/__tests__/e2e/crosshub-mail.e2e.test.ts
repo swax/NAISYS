@@ -17,7 +17,7 @@
  */
 
 import { sleep } from "@naisys/common";
-import { mkdirSync, writeFileSync } from "fs";
+import { appendFileSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -99,6 +99,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
   test("should send mail from alex on HOST-A to bob on HOST-B via hub", async () => {
     // --- Setup Hub with agent configs ---
     createHubEnvFile(hubDir, { port: SERVER_PORT, naisysFolder: hubDir });
+    appendFileSync(join(hubDir, ".env"), `\nMAIL_ENABLED=true`);
     createAgentYaml(hubDir, "alex.yaml", {
       username: "alex",
       title: "Test Agent Alex",

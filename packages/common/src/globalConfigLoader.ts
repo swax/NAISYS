@@ -18,6 +18,7 @@ export interface ClientConfig {
   shellVariableMap: Record<string, string>;
   useToolsForLlmConsoleResponses: boolean;
   autoStartAgentsOnMessage: boolean;
+  mailServiceEnabled: boolean;
 }
 
 /** Keys that should never be distributed to clients */
@@ -70,6 +71,8 @@ export function buildClientConfig(
   const spendLimitDollars = sanitizeSpendLimit(variableMap.SPEND_LIMIT_DOLLARS);
   const spendLimitHours = sanitizeSpendLimit(variableMap.SPEND_LIMIT_HOURS);
 
+  const mailServiceEnabled = variableMap.MAIL_ENABLED === "true";
+
   const useToolsForLlmConsoleResponses = true;
   const autoStartAgentsOnMessage = true;
 
@@ -87,5 +90,6 @@ export function buildClientConfig(
     spendLimitHours,
     useToolsForLlmConsoleResponses,
     autoStartAgentsOnMessage,
+    mailServiceEnabled,
   };
 }
