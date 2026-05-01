@@ -20,8 +20,8 @@
  *     search (default / -archived / -subject / no-terms), unknown
  *     subcommand.
  *  8. Exercise every hub-only chat subcommand: help, send (+ \n escape),
- *     recent (default / filtered / skip+take / invalid skip / invalid
- *     take), missing-arg usage error.
+ *     recent (default / filtered / take+skip / invalid take / invalid
+ *     skip), missing-arg usage error.
  *  9. Switch back to alex; ns-agent list shows bob running, ns-agent
  *     stop bob round-trips through the hub.
  * 10. exit all → both agents stop, naisys exits cleanly.
@@ -337,30 +337,30 @@ MAIL_ENABLED=true
     }
     // Recent filtered to alex (conversation mode).
     {
-      const out = await naisys.runCommand('ns-chat recent "alex"', {
+      const out = await naisys.runCommand('ns-chat recent 10 0 "alex"', {
         timeoutMs: 15000,
       });
       expect(out).toContain("first line");
     }
-    // Recent with skip+take (numeric branches).
+    // Recent with take+skip (numeric branches).
     {
-      const out = await naisys.runCommand('ns-chat recent "alex" 0 5', {
+      const out = await naisys.runCommand('ns-chat recent 5 0 "alex"', {
         timeoutMs: 15000,
       });
       expect(out).toContain("first line");
     }
-    // Invalid skip and take — both branches throw.
+    // Invalid take and skip — both branches throw.
     {
-      const out = await naisys.runCommand('ns-chat recent "alex" abc', {
-        timeoutMs: 15000,
-      });
-      expect(out.toLowerCase()).toContain("invalid skip");
-    }
-    {
-      const out = await naisys.runCommand('ns-chat recent "alex" 0 abc', {
+      const out = await naisys.runCommand("ns-chat recent abc", {
         timeoutMs: 15000,
       });
       expect(out.toLowerCase()).toContain("invalid take");
+    }
+    {
+      const out = await naisys.runCommand("ns-chat recent 5 abc", {
+        timeoutMs: 15000,
+      });
+      expect(out.toLowerCase()).toContain("invalid skip");
     }
     // Unknown subcommand goes through the default branch (echoes help).
     {

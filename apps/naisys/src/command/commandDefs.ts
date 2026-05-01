@@ -252,7 +252,7 @@ export const chatCmd: CommandDef = {
       description: "Send a chat message, optionally attach files",
     },
     recent: {
-      usage: 'recent ["<users>"] [skip] [take]',
+      usage: 'recent [take] [skip] ["<users>"]',
       description:
         "Show recent chat messages, optionally filtered by user(s) (* = unread)",
     },

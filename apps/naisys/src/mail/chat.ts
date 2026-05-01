@@ -103,19 +103,19 @@ export function createChatService(
           throw "Not available in local mode.";
         }
 
-        const withUserIds = argv[1]
-          ? userService.resolveUsernames(argv[1]).map((r) => r.userId)
-          : undefined;
-
+        const take = argv[1] ? parseInt(argv[1]) : undefined;
         const skip = argv[2] ? parseInt(argv[2]) : undefined;
-        const take = argv[3] ? parseInt(argv[3]) : undefined;
 
+        if (argv[1] && isNaN(take!)) {
+          throw `Invalid take parameter. Must be a number. ${usageError("recent")}`;
+        }
         if (argv[2] && isNaN(skip!)) {
           throw `Invalid skip parameter. Must be a number. ${usageError("recent")}`;
         }
-        if (argv[3] && isNaN(take!)) {
-          throw `Invalid take parameter. Must be a number. ${usageError("recent")}`;
-        }
+
+        const withUserIds = argv[3]
+          ? userService.resolveUsernames(argv[3]).map((r) => r.userId)
+          : undefined;
 
         return recentMessages(withUserIds, skip, take);
       }
