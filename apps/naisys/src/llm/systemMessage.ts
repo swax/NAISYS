@@ -24,6 +24,7 @@ import {
   sessionCmd,
   subagentCmd,
   usersCmd,
+  webSearchCmd,
   workspaceCmd,
 } from "../command/commandDefs.js";
 import type { GlobalConfig } from "../globalConfig.js";
@@ -72,6 +73,16 @@ export function createSystemMessage(
   let browserStr = "";
   if (agentConfig().browserEnabled) {
     browserStr = `\n  ${browserCmd.name}: ${browserCmd.description}`;
+  }
+
+  let webSearchStr = "";
+  const webSearchEnabled =
+    agentConfig().webEnabled || agentConfig().browserEnabled;
+  const hasGoogleSearchEnvVars =
+    !!globalConfig().variableMap["GOOGLE_API_KEY"] &&
+    !!globalConfig().googleSearchEngineId;
+  if (webSearchEnabled && hasGoogleSearchEnvVars) {
+    webSearchStr = `\n  ${webSearchCmd.name} ${webSearchCmd.usage}: ${webSearchCmd.description}`;
   }
 
   let workspaceStr = "";
@@ -164,7 +175,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
+NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
   ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;

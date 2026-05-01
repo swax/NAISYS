@@ -17,6 +17,7 @@ import { createLynxService } from "../features/lynx.js";
 import { createPtyService } from "../features/pty.js";
 import { createSessionService } from "../features/session.js";
 import { createSubagentService } from "../features/subagent.js";
+import { createWebSearchService } from "../features/webSearch.js";
 import { createWorkspacesFeature } from "../features/workspaces.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
@@ -229,7 +230,7 @@ export async function createAgentRuntime(
     runService,
     costTracker,
   );
-  const lynxService = createLynxService(globalConfig, costTracker, output);
+  const lynxService = createLynxService(globalConfig, output);
   const browserService = createBrowserService(
     globalConfig,
     agentConfig,
@@ -237,6 +238,13 @@ export async function createAgentRuntime(
     output,
     modelService,
   );
+  const webSearchService = createWebSearchService(
+    globalConfig,
+    agentConfig,
+    costTracker,
+    lynxService,
+  );
+
   // Command dispatch and main loop.
   const platformConfig = getPlatformConfig();
   const promptBuilder = createPromptBuilder(
@@ -297,6 +305,7 @@ export async function createAgentRuntime(
     commentCommand,
     lynxService,
     browserService,
+    webSearchService,
     genimg,
     desktopService,
     lookService,

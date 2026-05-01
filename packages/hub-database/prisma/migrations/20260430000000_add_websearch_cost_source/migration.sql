@@ -1,0 +1,4 @@
+-- SQLite has no enum types; Prisma stores CostSource as text.
+-- No ALTER TYPE needed — 'websearch' is valid as soon as it's inserted.
+-- No backfill: ns-websearch was previously billed under the 'lynx' source
+-- (when it lived as `ns-lynx search`), so historical rows stay as 'lynx'.

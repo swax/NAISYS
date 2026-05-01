@@ -181,15 +181,18 @@ export const browserCmd: CommandDef = {
   },
 };
 
+export const webSearchCmd: CommandDef = {
+  name: "ns-websearch",
+  usage: "<query>",
+  description:
+    "Search Google for the given query (requires GOOGLE_API_KEY and GOOGLE_SEARCH_ENGINE_ID env vars)",
+};
+
 export const lynxCmd: CommandDef = {
   name: "ns-lynx",
   description:
     "A context optimized web browser. Use `ns-lynx help` to learn how to use it",
   subcommands: {
-    search: {
-      usage: "search <query>",
-      description: "Search Google for the given query",
-    },
     open: {
       usage: "open <url>",
       description:

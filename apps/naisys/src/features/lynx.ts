@@ -3,14 +3,12 @@
  */
 
 import { execFile } from "child_process";
-import * as https from "https";
 import * as os from "os";
 import stringArgv from "string-argv";
 
 import { lynxCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { GlobalConfig } from "../globalConfig.js";
-import type { CostTracker } from "../llm/costTracker.js";
 import type { OutputService } from "../utils/output.js";
 import * as utilities from "../utils/utilities.js";
 import {
@@ -20,7 +18,6 @@ import {
 
 export function createLynxService(
   { globalConfig }: GlobalConfig,
-  costTracker: CostTracker,
   output: OutputService,
 ) {
   let debugMode = false;
@@ -46,23 +43,12 @@ export function createLynxService(
       case "help": {
         const subs = lynxCmd.subcommands!;
         return `${lynxCmd.name} <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
-  ${subs.search.usage}: ${subs.search.description}
   ${subs.open.usage}: ${subs.open.description}
   ${subs.follow.usage}: ${subs.follow.description}
   ${subs.links.usage}: ${subs.links.description}
   ${subs.more.usage}: ${subs.more.description}
 
 *${lynxCmd.name} does not support input. Use ${lynxCmd.name} or curl to call APIs directly*`;
-      }
-      case "search": {
-        const query = argv.slice(1).join(" ");
-
-        return await callGoogleSearchApi(query);
-        /*return await loadUrlContent(
-        "https://www.google.com/search?q=" + encodeURIComponent(query),
-        true,
-        true,
-      );*/
       }
       case "open": {
         const url = argv[1];
@@ -369,86 +355,6 @@ export function createLynxService(
     return storeMapSetLinks(result, "");
   }
 
-  async function callGoogleSearchApi(query: string): Promise<string> {
-    const googleApiKey = globalConfig().variableMap["GOOGLE_API_KEY"];
-
-    if (!googleApiKey) {
-      throw "Error, set GOOGLE_API_KEY env var";
-    }
-
-    if (!globalConfig().googleSearchEngineId) {
-      throw "Error, googleSearchEngineId is not defined";
-    }
-
-    const runSearchPromise = new Promise<string>((resolve, reject) => {
-      const queryParams = new URLSearchParams({
-        key: googleApiKey,
-        cx: globalConfig().googleSearchEngineId!,
-        q: query,
-      }).toString();
-
-      const options = {
-        hostname: "www.googleapis.com",
-        port: 443,
-        path: `/customsearch/v1?${queryParams}`,
-        method: "GET",
-      };
-
-      const req = https.request(options, (res) => {
-        let data = "";
-
-        res.on("data", (chunk) => {
-          data += chunk;
-        });
-
-        res.on("end", () => {
-          try {
-            const response = JSON.parse(data);
-
-            if (res.statusCode === 200) {
-              // Format search results
-              let output = `Search results for: ${query}\n\n`;
-
-              if (response.items && response.items.length > 0) {
-                for (const item of response.items) {
-                  const url = item.link;
-                  const globalLinkNum = registerUrl(url);
-
-                  output += `[${globalLinkNum}] ${item.title}\n`;
-                  output += `${item.snippet}\n`;
-                  output += `${url}\n\n`;
-                }
-
-                output += `\nUse 'ns-lynx follow <link number>' to open a result.`;
-              } else {
-                output += "No results found.";
-              }
-
-              resolve(output);
-            } else {
-              reject(`Search failed with status ${res.statusCode}: ${data}`);
-            }
-          } catch (error) {
-            reject(`Error parsing response: ${error}`);
-          }
-        });
-      });
-
-      req.on("error", (error) => {
-        reject(`Request error: ${error.message}`);
-      });
-
-      req.end();
-    });
-
-    const result = await runSearchPromise;
-
-    // https://developers.google.com/custom-search/v1/overview
-    costTracker.recordCost(0.005, "lynx", "search");
-
-    return result;
-  }
-
   const registrableCommand: RegistrableCommand = {
     command: lynxCmd,
     handleCommand,
@@ -457,6 +363,7 @@ export function createLynxService(
   return {
     ...registrableCommand,
     clear,
+    registerUrl,
   };
 }
 

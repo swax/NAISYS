@@ -153,6 +153,7 @@ export function createMockLynxService() {
     command: lynxCmd,
     handleCommand: vi.fn(() => ""),
     clear: vi.fn(),
+    registerUrl: vi.fn(() => 1),
   };
 
   return lynxService;
