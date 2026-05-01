@@ -446,6 +446,7 @@ export const AgentMail: React.FC = () => {
               currentAgentName={agentName}
               lastReadMailId={lastReadMailId}
               showSubject={!groupBySubject}
+              participants={selectedConversation?.participantNames ?? []}
             />
           </>
         )}

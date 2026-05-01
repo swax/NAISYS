@@ -73,10 +73,15 @@ export const useChatConversations = (
       const allIds = [
         ...new Set([...event.recipientUserIds, event.fromUserId]),
       ];
+      // Match server: exclude the current user from participantNames so a 1:1
+      // conversation has length 1 (used by the sidebar title and candidate filter).
+      const otherIds = allIds.filter(
+        (id) => userLookup.get(id) !== agentUsername,
+      );
       const conv: ChatConversation = {
         participants: event.participants,
-        participantNames: allIds.map((id) => userLookup.get(id) ?? String(id)),
-        participantTitles: allIds.map((id) => titleLookup.get(id) ?? ""),
+        participantNames: otherIds.map((id) => userLookup.get(id) ?? String(id)),
+        participantTitles: otherIds.map((id) => titleLookup.get(id) ?? ""),
         lastMessage: event.body,
         lastMessageAt: event.createdAt,
         lastMessageFrom:
@@ -84,7 +89,7 @@ export const useChatConversations = (
       };
       mergeConversations([conv]);
     },
-    [mergeConversations, userLookup, titleLookup],
+    [mergeConversations, userLookup, titleLookup, agentUsername],
   );
 
   const query = useQuery({
