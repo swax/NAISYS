@@ -27,7 +27,7 @@
  *  8. Clean shutdown via `exit all`, killing both agents.
  */
 
-import { writeFileSync } from "fs";
+import { appendFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -63,6 +63,7 @@ describe("CLI Session/Workspace E2E", () => {
 
   test("standalone debug-mode CLI exercises commands, workspace, session, agents, mail, and shell", async () => {
     createEnvFile(testDir);
+    appendFileSync(join(testDir, ".env"), `\nMAIL_ENABLED=true`);
 
     createAgentYaml(testDir, "alex.yaml", {
       username: "alex",

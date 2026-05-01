@@ -93,13 +93,17 @@ describe("Basic Mail E2E", () => {
 
   test("standalone: send mail from alex to bob", async () => {
     createEnvFile(testDir);
+    appendFileSync(join(testDir, ".env"), `\nMAIL_ENABLED=true`);
     await runMailTest();
   });
 
   test("integrated-hub: send mail from alex to bob", async () => {
     createEnvFile(testDir);
     const serverPort = await getFreePort();
-    appendFileSync(join(testDir, ".env"), `\nSERVER_PORT=${serverPort}`);
+    appendFileSync(
+      join(testDir, ".env"),
+      `\nSERVER_PORT=${serverPort}\nMAIL_ENABLED=true`,
+    );
     await runMailTest(["--integrated-hub"], true);
   });
 });

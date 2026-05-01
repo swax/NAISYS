@@ -61,6 +61,7 @@ export async function createHubConfigService(
     { key: "SPEND_LIMIT_DOLLARS" },
     { key: "SPEND_LIMIT_HOURS" },
     { key: "TARGET_VERSION" },
+    { key: "MAIL_ENABLED" },
   ]);
 
   /** Read variables from DB and build a ConfigResponse */

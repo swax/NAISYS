@@ -23,6 +23,7 @@ export const ConfigResponseSchema = z.object({
       spendLimitHours: z.number().optional(),
       useToolsForLlmConsoleResponses: z.boolean(),
       autoStartAgentsOnMessage: z.boolean(),
+      mailServiceEnabled: z.boolean(),
     })
     .optional(),
 });

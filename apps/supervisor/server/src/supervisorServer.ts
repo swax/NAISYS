@@ -68,6 +68,7 @@ import {
   isPasswordLoginAllowed,
   userHasEnabledPassword,
 } from "./services/passwordLoginConfig.js";
+import { getVariableCachedValue } from "./services/variableService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -239,11 +240,13 @@ export const supervisorPlugin: FastifyPluginAsync<
   fastify.get(
     "/supervisor/api/client-config",
     { schema: { hide: true } },
-    () => ({
+    async () => ({
       plugins: opts.plugins,
       publicRead: process.env.PUBLIC_READ === "true",
       allowPasswordLogin: isPasswordLoginAllowed(),
       permissions: PermissionEnum.options,
+      mailServiceEnabled:
+        (await getVariableCachedValue("MAIL_ENABLED")) === "true",
     }),
   );
 

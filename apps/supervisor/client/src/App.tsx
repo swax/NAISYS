@@ -56,6 +56,7 @@ import { VariablesPage } from "./pages/variables/VariablesPage";
 export interface AppOutletContext {
   permissions: Permission[];
   allowPasswordLogin: boolean;
+  mailServiceEnabled: boolean;
 }
 
 const AppContent: React.FC = () => {
@@ -66,6 +67,7 @@ const AppContent: React.FC = () => {
   const [publicRead, setPublicRead] = React.useState(false);
   const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(false);
   const [permissions, setPermissions] = React.useState<Permission[]>([]);
+  const [mailServiceEnabled, setMailServiceEnabled] = React.useState(false);
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
 
@@ -78,6 +80,7 @@ const AppContent: React.FC = () => {
         setPublicRead(d.publicRead);
         setAllowPasswordLogin(d.allowPasswordLogin === true);
         setPermissions(d.permissions);
+        setMailServiceEnabled(d.mailServiceEnabled === true);
       })
       .catch(() => {})
       .finally(() => setClientConfigLoaded(true));
@@ -97,7 +100,11 @@ const AppContent: React.FC = () => {
     ? path.slice(ROUTER_BASENAME.length)
     : path;
   if (basenameStripped.startsWith("/register")) {
-    return <Outlet context={{ permissions: [], allowPasswordLogin }} />;
+    return (
+      <Outlet
+        context={{ permissions: [], allowPasswordLogin, mailServiceEnabled }}
+      />
+    );
   }
 
   // Show full-page login when not authenticated and public read is disabled
@@ -145,7 +152,9 @@ const AppContent: React.FC = () => {
                 overflow: "auto",
               }}
             >
-              <Outlet context={{ permissions, allowPasswordLogin }} />
+              <Outlet
+                context={{ permissions, allowPasswordLogin, mailServiceEnabled }}
+              />
             </Box>
           </AppShell.Main>
         </AppShell>

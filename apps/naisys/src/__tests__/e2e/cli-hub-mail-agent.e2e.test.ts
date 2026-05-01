@@ -74,6 +74,7 @@ NAISYS_FOLDER=${formatDotenvValue(dir)}
 NAISYS_HOSTNAME="${HOSTNAME}"
 SPEND_LIMIT_DOLLARS=10
 SERVER_PORT=${SERVER_PORT}
+MAIL_ENABLED=true
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }

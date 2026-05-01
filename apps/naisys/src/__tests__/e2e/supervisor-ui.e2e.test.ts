@@ -106,6 +106,10 @@ SERVER_PORT=${SERVER_PORT}
 
     // --- Navigate to agent detail ---
     await page.getByText("uibot").first().click();
+    await page.getByRole("tab", { name: "Detail" }).click();
+    await page.waitForURL(/\/supervisor\/agents\/uibot$/, {
+      timeout: 15000,
+    });
 
     // --- Wait for Start button to become enabled ---
     const startButton = page.getByRole("button", { name: "Start" });

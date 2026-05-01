@@ -1,19 +1,11 @@
-import {
-  Button,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Textarea,
-  TextInput,
-} from "@mantine/core";
+import { Button, Group, Modal, Select, Stack, TextInput } from "@mantine/core";
 import React, { useState } from "react";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import {
   createAgent,
-  exportAgentConfig,
-  importAgentConfig,
+  getAgentConfig,
+  updateAgentConfig,
 } from "../../lib/apiAgents";
 
 interface AddAgentDialogProps {
@@ -28,54 +20,41 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   const { agents } = useAgentDataContext();
   const [newAgentName, setNewAgentName] = useState("");
   const [newAgentTitle, setNewAgentTitle] = useState("");
-  const [yamlConfig, setYamlConfig] = useState("");
+  const [copyFromAgent, setCopyFromAgent] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [loadingCopy, setLoadingCopy] = useState(false);
-
-  const handleCopyFrom = async (agentName: string | null) => {
-    if (!agentName) return;
-    setLoadingCopy(true);
-    try {
-      const data = await exportAgentConfig(agentName);
-      setYamlConfig(data.yaml);
-    } catch (error) {
-      console.error("Error exporting agent config:", error);
-      alert(
-        error instanceof Error ? error.message : "Failed to load agent config",
-      );
-    } finally {
-      setLoadingCopy(false);
-    }
-  };
 
   const handleCreateAgent = async () => {
-    if (!newAgentName.trim()) return;
+    const name = newAgentName.trim();
+    const title = newAgentTitle.trim();
+    if (!name) return;
 
     setIsCreating(true);
     try {
-      const result = await createAgent(
-        newAgentName.trim(),
-        newAgentTitle.trim() || undefined,
-      );
+      // Fetch source config first so creation is aborted if the copy fails.
+      const sourceConfig = copyFromAgent
+        ? (await getAgentConfig(copyFromAgent)).config
+        : null;
 
+      const result = await createAgent(name, title || undefined);
       if (!result.success) {
         throw new Error(result.message || "Failed to create agent");
       }
 
-      // If YAML config was provided, import it
-      if (yamlConfig.trim() && result.name) {
-        const importResult = await importAgentConfig(result.name, yamlConfig);
-        if (!importResult.success) {
+      if (sourceConfig && result.name) {
+        const merged = {
+          ...sourceConfig,
+          username: result.name,
+          title: title || sourceConfig.title,
+        };
+        const updateResult = await updateAgentConfig(result.name, merged);
+        if (!updateResult.success) {
           throw new Error(
-            importResult.message || "Agent created but config import failed",
+            updateResult.message || "Agent created but config copy failed",
           );
         }
       }
 
-      // Close modal and reset form
       handleClose();
-
-      // The AgentDataContext should pick up the new agent on next refresh
     } catch (error) {
       console.error("Error creating agent:", error);
       alert(error instanceof Error ? error.message : "Failed to create agent");
@@ -87,7 +66,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   const handleClose = () => {
     setNewAgentName("");
     setNewAgentTitle("");
-    setYamlConfig("");
+    setCopyFromAgent(null);
     onClose();
   };
 
@@ -128,21 +107,11 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
           label="Copy config from"
           placeholder="None"
           data={copyFromOptions}
-          onChange={handleCopyFrom}
+          value={copyFromAgent}
+          onChange={setCopyFromAgent}
           clearable
           searchable
-          disabled={isCreating || loadingCopy}
-        />
-        <Textarea
-          label="YAML Configuration"
-          placeholder="Leave empty to use default configuration"
-          value={yamlConfig}
-          onChange={(e) => setYamlConfig(e.currentTarget.value)}
-          disabled={isCreating || loadingCopy}
-          minRows={6}
-          autosize
-          spellCheck={false}
-          styles={{ input: { fontFamily: "monospace" } }}
+          disabled={isCreating}
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={handleClose} disabled={isCreating}>
