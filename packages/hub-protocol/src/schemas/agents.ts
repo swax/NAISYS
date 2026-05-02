@@ -8,7 +8,9 @@ export const AgentStartInboundSchema = z.object({
 });
 export type AgentStartInbound = z.infer<typeof AgentStartInboundSchema>;
 
-/** Hub → target host. runtimeApiKey is issued by the hub per dispatch. */
+/** Hub → target host. Runtime key is minted up front so the agent's
+ *  authenticated from its first command; RUNTIME_KEY_REISSUE handles
+ *  later hash mismatches. */
 export const AgentStartDispatchSchema = z.object({
   startUserId: z.number(),
   taskDescription: z.string().optional(),
@@ -101,3 +103,11 @@ export const AgentPeekResponseSchema = z.object({
   totalLines: z.number().optional(),
 });
 export type AgentPeekResponse = z.infer<typeof AgentPeekResponseSchema>;
+
+/** Hub → host push: hand the host a freshly minted runtime key. Fired when
+ *  a heartbeat plaintext doesn't match the stored hash. */
+export const RuntimeKeyReissueSchema = z.object({
+  userId: z.number(),
+  runtimeApiKey: z.string(),
+});
+export type RuntimeKeyReissue = z.infer<typeof RuntimeKeyReissueSchema>;

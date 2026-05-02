@@ -1,4 +1,4 @@
-import type { DualLogger } from "@naisys/common-node";
+import { type DualLogger, hashToken } from "@naisys/common-node";
 import { type HubDatabaseService } from "@naisys/hub-database";
 import type {
   AgentsStatus,
@@ -12,12 +12,16 @@ import {
 } from "@naisys/hub-protocol";
 
 import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubRedactionService } from "./hubRedactionService.js";
+import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
 
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
+  redactionService: HubRedactionService,
+  runtimeKeyService: HubRuntimeKeyService,
 ) {
   // Active agent user ids per host. Subagents ride under the parent's userId.
   const hostActiveAgents = new Map<number, number[]>();
@@ -116,6 +120,53 @@ export function createHubHeartbeatService(
         });
       }
       hostActiveSessions.set(hostId, sessionMap);
+
+      // Self-heal: register each plaintext with the redactor (idempotent),
+      // then mint + push a fresh key if the hash is missing or mismatched.
+      // Old plaintexts accumulate per user so leaks during the rotate
+      // transition window still get scrubbed; AGENT_STOP clears the set.
+      if (parsed.runtimeApiKeys?.length) {
+        const userIds = parsed.runtimeApiKeys.map((k) => k.userId);
+        const users = await hubDb.users.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, api_key_hash: true, enabled: true, archived: true },
+        });
+        const userMap = new Map(users.map((u) => [u.id, u]));
+
+        for (const claim of parsed.runtimeApiKeys) {
+          if (claim.runtimeApiKey) {
+            redactionService.registerRuntimeApiKey(
+              claim.userId,
+              claim.runtimeApiKey,
+            );
+          }
+
+          const user = userMap.get(claim.userId);
+          if (!user || !user.enabled || user.archived) continue;
+
+          if (
+            claim.runtimeApiKey &&
+            user.api_key_hash &&
+            hashToken(claim.runtimeApiKey) === user.api_key_hash
+          ) {
+            continue; // hub already knows this key — nothing to do
+          }
+
+          try {
+            const runtimeApiKey = await runtimeKeyService.issueRuntimeApiKey(
+              claim.userId,
+            );
+            naisysServer.sendMessage(hostId, HubEvents.RUNTIME_KEY_REISSUE, {
+              userId: claim.userId,
+              runtimeApiKey,
+            });
+          } catch (err) {
+            logService.error(
+              `[Hub:Heartbeat] Failed to reissue runtime key for user ${claim.userId}: ${err}`,
+            );
+          }
+        }
+      }
     } catch (error) {
       logService.error(
         `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
@@ -123,9 +174,8 @@ export function createHubHeartbeatService(
     }
   });
 
-  // Clean up tracking when a host disconnects. Runtime API keys are not
-  // touched here — they're rotated on the next AGENT_START and revoked
-  // explicitly on user disable/archive/delete.
+  // Runtime keys aren't touched on disconnect — the DB hash stays valid;
+  // if the agent reconnects, heartbeat re-registers the plaintext.
   naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
     hostActiveAgents.delete(hostId);
     hostActiveSessions.delete(hostId);

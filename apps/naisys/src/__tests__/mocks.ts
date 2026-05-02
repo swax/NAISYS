@@ -96,6 +96,7 @@ export function createMockShellWrapper() {
     isSecureContinuation: vi.fn(() => false),
     getCommandElapsedTimeString: vi.fn(() => ""),
     getCurrentCommandName: vi.fn(() => ""),
+    applyRuntimeApiKey: vi.fn(),
   };
 
   return shellWrapper;

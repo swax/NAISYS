@@ -27,13 +27,12 @@ const PATTERN_REPLACEMENTS: { pattern: RegExp; replacement: string }[] = [
 ];
 
 /**
- * Strips sensitive values from strings before they hit the DB or are
- * rebroadcast. Two sources feed the redactor:
- *  - DB-sourced: variables flagged sensitive (API keys, etc.)
- *  - Runtime: per-user NAISYS_API_KEY plaintext, registered when issued by
- *    hubAgentService and forgotten on revoke. Plaintext is otherwise never
- *    persisted, so a hub restart drops these — the rotate-on-reconnect flow
- *    is responsible for repopulating.
+ * Strips sensitive values before they hit the DB or get rebroadcast. Two
+ * sources:
+ *  - DB variables flagged sensitive
+ *  - Runtime NAISYS_API_KEY plaintexts, registered by issueRuntimeApiKey
+ *    and accumulated per-user as a Set. Heartbeat-driven re-registration
+ *    self-heals across hub restarts; AGENT_STOP clears the Set.
  */
 export async function createHubRedactionService(
   naisysServer: NaisysServer,
@@ -43,7 +42,7 @@ export async function createHubRedactionService(
   // Sorted longest-first so a secret that is a prefix of another doesn't
   // get partially replaced before the longer match runs.
   let dbSecrets: { value: string; key: string }[] = [];
-  const runtimeApiKeys = new Map<number, string>();
+  const runtimeApiKeys = new Map<number, Set<string>>();
 
   async function rebuildDbSecrets() {
     const rows = await hubDb.variables.findMany({ where: { sensitive: true } });
@@ -61,11 +60,13 @@ export async function createHubRedactionService(
         out = out.split(value).join(`[REDACTED:${key}]`);
       }
     }
-    for (const [userId, plaintext] of runtimeApiKeys) {
-      if (out.includes(plaintext)) {
-        out = out
-          .split(plaintext)
-          .join(`[REDACTED:NAISYS_API_KEY:${userId}]`);
+    for (const [userId, plaintexts] of runtimeApiKeys) {
+      for (const plaintext of plaintexts) {
+        if (out.includes(plaintext)) {
+          out = out
+            .split(plaintext)
+            .join(`[REDACTED:NAISYS_API_KEY:${userId}]`);
+        }
       }
     }
     for (const { pattern, replacement } of PATTERN_REPLACEMENTS) {
@@ -76,7 +77,12 @@ export async function createHubRedactionService(
 
   function registerRuntimeApiKey(userId: number, plaintext: string): void {
     if (!plaintext || plaintext.length < MIN_SECRET_LENGTH) return;
-    runtimeApiKeys.set(userId, plaintext);
+    let set = runtimeApiKeys.get(userId);
+    if (!set) {
+      set = new Set();
+      runtimeApiKeys.set(userId, set);
+    }
+    set.add(plaintext);
   }
 
   function revokeRuntimeApiKey(userId: number): void {

@@ -71,7 +71,7 @@ function uploadFileToHub(
  */
 export function createAttachmentService(
   hubClient: HubClient | undefined,
-  runtimeApiKey?: string,
+  getRuntimeApiKey: () => string | undefined,
 ) {
   /**
    * Upload a file to the hub and return the attachment ID.
@@ -84,6 +84,7 @@ export function createAttachmentService(
       throw `File not found: ${filepath}`;
     }
 
+    const runtimeApiKey = getRuntimeApiKey();
     if (!runtimeApiKey) throw "No API key configured for this user.";
 
     return uploadFileToHub(

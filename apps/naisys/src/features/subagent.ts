@@ -341,8 +341,8 @@ export function createSubagentService(
     try {
       await agentManager.startAgent(
         subagentUserId,
-        (stopReason) => handleAgentTermination(subagent, stopReason),
         undefined,
+        (stopReason) => handleAgentTermination(subagent, stopReason),
         {
           parentUserId: localUserId,
           parentRunId: runService.getRunId(),
@@ -396,8 +396,10 @@ export function createSubagentService(
     }
     // Non-hub mode: start agent locally
     else {
-      await agentManager.startAgent(subagent.userId, (stopReason) =>
-        handleAgentTermination(subagent, stopReason),
+      await agentManager.startAgent(
+        subagent.userId,
+        undefined,
+        (stopReason) => handleAgentTermination(subagent, stopReason),
       );
       resultMessage = `Subagent '${agentName}' started`;
     }
