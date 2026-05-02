@@ -211,19 +211,14 @@ export function createLynxService(
       const modeParams: string[] = [];
 
       const isWindows = os.platform() === "win32";
-      const timeoutSecs = globalConfig().shellCommand.timeoutSeconds;
+      const timeoutMs = globalConfig().shellCommand.timeoutSeconds * 1000;
 
-      const timeoutArgs = [
-        `${timeoutSecs}s`,
-        "lynx",
-        "-dump",
-        ...modeParams,
-        url,
-      ];
-      const cmd = isWindows ? "wsl" : "timeout";
-      const cmdArgs = isWindows ? ["timeout", ...timeoutArgs] : timeoutArgs;
+      const cmd = isWindows ? "wsl" : "lynx";
+      const cmdArgs = isWindows
+        ? ["lynx", "-dump", ...modeParams, url]
+        : ["-dump", ...modeParams, url];
 
-      execFile(cmd, cmdArgs, (error, stdout, stderr) => {
+      execFile(cmd, cmdArgs, { timeout: timeoutMs }, (error, stdout, stderr) => {
         let output = "";
 
         if (stdout) {
@@ -239,11 +234,22 @@ export function createLynxService(
           output += stderr;
         }
 
-        // The cmd is `timeout`/`wsl`, not lynx itself, so a missing lynx
-        // binary surfaces in stderr from timeout rather than as ENOENT here.
-        if (/lynx.*(?:not found|No such file or directory)/i.test(output)) {
+        // On Linux/macOS, ENOENT here means `lynx` itself isn't on PATH.
+        // On Windows, ENOENT means `wsl` isn't available; lynx-inside-WSL
+        // missing instead surfaces from wsl's stderr (handled below).
+        if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
           reject(
-            "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro)",
+            isWindows
+              ? "WSL is not available. ns-lynx on Windows requires WSL with lynx installed inside it (`wsl apt install lynx`)."
+              : "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
+          );
+          return;
+        }
+
+        // Windows path: wsl ran but couldn't find lynx inside the distro.
+        if (/lynx.*(?:not found|No such file or directory|command not found)/i.test(output)) {
+          reject(
+            "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
           );
           return;
         }
