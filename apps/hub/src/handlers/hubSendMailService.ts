@@ -8,12 +8,14 @@ import {
 
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubRedactionService } from "./hubRedactionService.js";
 
 /** Pure send-mail service with no auto-start logic, breaking the circular dependency */
 export function createHubSendMailService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   heartbeatService: HubHeartbeatService,
+  redactionService: HubRedactionService,
 ) {
   /** Send a mail message directly by user IDs */
   async function sendMail(params: {
@@ -26,6 +28,10 @@ export function createHubSendMailService(
     attachmentIds?: number[];
   }) {
     const now = new Date();
+    // Redact once at entry — DB row, supervisor push, and any future fan-out
+    // all read from these locals.
+    const subject = redactionService.redact(params.subject);
+    const body = redactionService.redact(params.body);
 
     // Build participants string from usernames (sorted alphabetically)
     const allUserIds = [
@@ -48,8 +54,8 @@ export function createHubSendMailService(
           host_id: params.hostId,
           kind: params.kind,
           participants,
-          subject: params.subject,
-          body: params.body,
+          subject,
+          body,
           created_at: now,
         },
       });
@@ -161,8 +167,8 @@ export function createHubSendMailService(
       fromUserId: params.fromUserId,
       kind: params.kind,
       messageId: message.id,
-      subject: params.subject,
-      body: params.body,
+      subject,
+      body,
       createdAt: now.toISOString(),
       participants,
       attachments,

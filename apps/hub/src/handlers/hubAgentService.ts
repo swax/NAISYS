@@ -14,6 +14,7 @@ import { randomBytes } from "crypto";
 import type { HostRegistrar } from "../services/hostRegistrar.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubRedactionService } from "./hubRedactionService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
 
 type AgentResponse = { success: boolean; error?: string };
@@ -30,6 +31,7 @@ export function createHubAgentService(
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
+  redactionService: HubRedactionService,
 ) {
   /**
    * Mint a fresh runtime API key for a user, rotating any prior key. Plaintext
@@ -44,6 +46,7 @@ export function createHubAgentService(
       where: { id: userId },
       data: { api_key_hash: hashToken(token) },
     });
+    redactionService.registerRuntimeApiKey(userId, token);
     return token;
   }
 
@@ -52,6 +55,7 @@ export function createHubAgentService(
       where: { id: userId },
       data: { api_key_hash: null },
     });
+    redactionService.revokeRuntimeApiKey(userId);
   }
   /** Find the least-loaded eligible host for a given user */
   async function findBestHost(startUserId: number): Promise<number | null> {

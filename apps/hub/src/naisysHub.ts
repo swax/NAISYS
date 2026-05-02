@@ -25,6 +25,7 @@ import { createHubHostService } from "./handlers/hubHostService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubModelsService } from "./handlers/hubModelsService.js";
+import { createHubRedactionService } from "./handlers/hubRedactionService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
@@ -111,6 +112,16 @@ export const startHub: StartHub = async (
     // Register hub models service for seeding and broadcasting models
     await createHubModelsService(naisysServer, hubDatabaseService, logService);
 
+    // Register redaction service so log/mail ingest can scrub sensitive values
+    // before they hit the DB or get rebroadcast. Must come after the models
+    // service since that upgrades built-in model API key variables to sensitive
+    // — initializing the redactor earlier would snapshot them as non-sensitive.
+    const redactionService = await createHubRedactionService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+    );
+
     // Register hub host service for broadcasting connected host list
     createHubHostService(naisysServer, hostRegistrar, logService);
 
@@ -130,6 +141,7 @@ export const startHub: StartHub = async (
       hubDatabaseService,
       logService,
       heartbeatService,
+      redactionService,
     );
 
     // Register hub cost service for cost_write events from NAISYS instances
@@ -146,6 +158,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       heartbeatService,
+      redactionService,
     );
 
     // Register hub agent service for agent_start requests routed to target hosts
@@ -156,6 +169,7 @@ export const startHub: StartHub = async (
       heartbeatService,
       sendMailService,
       hostRegistrar,
+      redactionService,
     );
 
     // Register hub mail service for mail events from NAISYS instances
