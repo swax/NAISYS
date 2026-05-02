@@ -9,6 +9,7 @@ import {
 
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubRedactionService } from "./hubRedactionService.js";
 
 /** Handles log_write events from NAISYS instances (fire-and-forget) */
 export function createHubLogService(
@@ -16,6 +17,7 @@ export function createHubLogService(
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
   heartbeatService: HubHeartbeatService,
+  redactionService: HubRedactionService,
 ) {
   // Track last pushed log ID per session for gap detection
   const lastPushedLogId = new Map<string, number>();
@@ -30,7 +32,8 @@ export function createHubLogService(
 
       for (const entry of parsed.entries) {
         const now = new Date().toISOString();
-        const lineCount = entry.message.split("\n").length;
+        const message = redactionService.redact(entry.message);
+        const lineCount = message.split("\n").length;
         const subagentId = entry.subagentId ?? 0;
         // Wire format: undefined for parent (subagent_id 0 in DB), number otherwise
         const wireSubagentId = subagentId === 0 ? undefined : subagentId;
@@ -45,7 +48,7 @@ export function createHubLogService(
             role: entry.role,
             source: entry.source ?? null,
             type: entry.type ?? null,
-            message: entry.message,
+            message,
             created_at: entry.createdAt,
             attachment_id: entry.attachmentId ?? null,
           },
@@ -116,7 +119,7 @@ export function createHubLogService(
           role: entry.role,
           source: entry.source,
           type: entry.type,
-          message: entry.message,
+          message,
           createdAt: entry.createdAt,
           attachmentId: attachmentPublicId,
           attachmentFilename,
