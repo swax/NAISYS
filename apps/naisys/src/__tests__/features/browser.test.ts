@@ -17,6 +17,7 @@ import {
   mockLaunch,
   openPaginatedTextPage,
 } from "../builders/browser.js";
+import { createMockContextManager } from "../mocks.js";
 
 // Isolate browser screenshot writes to a per-run temp dir so tests don't
 // leak PNG files into the repo's working tree.
@@ -403,5 +404,39 @@ describe("ns-browser lifecycle", () => {
     const svc = buildBrowserService();
     await expect(svc.cleanup()).resolves.toBeUndefined();
     expect(launchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("ns-browser popup handling", () => {
+  test("popup is closed and the URL is appended to context", async () => {
+    const { page } = makeMockPage();
+    mockLaunch(launchMock, page);
+    const contextManager = createMockContextManager();
+    const svc = buildBrowserService({ contextManager });
+    await svc.handleCommand("open https://example.com");
+
+    // The service registers a 'popup' listener on page creation. Grab it from
+    // the mock and invoke it with a fake popup to simulate target=_blank.
+    const popupListener = page.on.mock.calls.find(
+      ([event]) => event === "popup",
+    )?.[1] as ((p: unknown) => void) | undefined;
+    expect(popupListener).toBeDefined();
+
+    const popupClose = vi.fn(() => Promise.resolve());
+    const popup = {
+      url: vi.fn(() => "https://example.com/new-tab"),
+      waitForLoadState: vi.fn(() => Promise.resolve()),
+      close: popupClose,
+    };
+    await popupListener!(popup);
+
+    expect(popupClose).toHaveBeenCalled();
+    const appendCall = (contextManager.append as any).mock.calls.find(
+      (c: unknown[]) =>
+        typeof c[0] === "string" && c[0].includes("popup opened"),
+    );
+    expect(appendCall).toBeDefined();
+    expect(appendCall[0]).toContain("https://example.com/new-tab");
+    expect(appendCall[0]).toContain("ns-browser open https://example.com/new-tab");
   });
 });
