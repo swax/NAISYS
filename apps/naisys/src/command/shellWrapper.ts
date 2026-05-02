@@ -27,7 +27,7 @@ export function createShellWrapper(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
   output: OutputService,
-  runtimeApiKey?: string,
+  runtimeKeyRef: { current: string | undefined } = { current: undefined },
 ) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
@@ -54,6 +54,11 @@ export function createShellWrapper(
    *  sensitive input (passwords, keys). While set, callers redact input lines
    *  in logs/context. Cleared on command completion via resetCommand. */
   let _secureContinuation = false;
+  /** Holds the next NAISYS_API_KEY when the shell is busy — writing the
+   *  export to stdin while an interactive command (sudo, vi, `read`) owns
+   *  it could leak the secret as program input. Drained in _completeCommand
+   *  once the shell idles. */
+  let _pendingRuntimeApiKey: string | undefined;
 
   const _queuedOutput: {
     rawDataStr: Buffer;
@@ -75,8 +80,8 @@ export function createShellWrapper(
    */
   function getCleanEnv() {
     const cleanEnv = { ...process.env, ...globalConfig().shellVariableMap };
-    if (runtimeApiKey) {
-      cleanEnv.NAISYS_API_KEY = runtimeApiKey;
+    if (runtimeKeyRef.current) {
+      cleanEnv.NAISYS_API_KEY = runtimeKeyRef.current;
     }
     return cleanEnv;
   }
@@ -636,6 +641,22 @@ ${command.trim()}`;
 
     _resolveCurrentCommand(output);
     _resolveCurrentCommand = undefined;
+
+    // We're sync-ahead of the agent's awaiting continuation (which runs
+    // as a microtask), so writing now lands cleanly between commands.
+    // Skip if suspended — the long-running command is still in the shell.
+    if (
+      _pendingRuntimeApiKey &&
+      !_wrapperSuspended &&
+      _process?.stdin.writable
+    ) {
+      const cmd = platformConfig.exportEnvCommand(
+        "NAISYS_API_KEY",
+        _pendingRuntimeApiKey,
+      );
+      _process.stdin.write(`${cmd}\n`);
+      _pendingRuntimeApiKey = undefined;
+    }
   }
 
   function isShellSuspended() {
@@ -711,6 +732,21 @@ ${command.trim()}`;
     return _currentCommandText?.split(/\s/)[0] ?? "";
   }
 
+  /** Update the captured key (for next respawn) and push the export into the
+   *  running shell's stdin so child processes pick it up. Queues until idle
+   *  if a command is in flight — see _pendingRuntimeApiKey for why. */
+  function applyRuntimeApiKey(newKey: string) {
+    runtimeKeyRef.current = newKey;
+    if (!_process || !_process.stdin.writable) return;
+    if (_resolveCurrentCommand || _wrapperSuspended) {
+      _pendingRuntimeApiKey = newKey;
+      return;
+    }
+    const cmd = platformConfig.exportEnvCommand("NAISYS_API_KEY", newKey);
+    _process.stdin.write(`${cmd}\n`);
+    _pendingRuntimeApiKey = undefined;
+  }
+
   return {
     executeCommand,
     continueCommand,
@@ -721,6 +757,7 @@ ${command.trim()}`;
     isSecureContinuation,
     getCommandElapsedTimeString,
     getCurrentCommandName,
+    applyRuntimeApiKey,
   };
 }
 

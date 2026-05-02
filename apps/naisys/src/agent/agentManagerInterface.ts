@@ -14,8 +14,8 @@ export interface SubagentContext {
 export interface IAgentManager {
   startAgent: (
     userId: number,
-    onStop?: (reason: string) => void,
     runtimeApiKey?: string,
+    onStop?: (reason: string) => void,
     subagentContext?: SubagentContext,
   ) => Promise<number>;
   stopAgent: (agentUserId: number, reason: string) => Promise<void>;
@@ -29,6 +29,7 @@ export interface IAgentManager {
     isPaused: () => boolean;
     setPaused: (paused: boolean) => boolean;
     getState: () => CommandLoopState;
+    getRuntimeApiKey: () => string | undefined;
   }>;
   getBufferLines: (agentUserId: number) => string[];
   setActiveConsoleAgent: (agentUserId: number) => void;

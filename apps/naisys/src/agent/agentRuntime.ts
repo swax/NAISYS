@@ -61,7 +61,6 @@ export async function createAgentRuntime(
   userService: UserService,
   modelService: ModelService,
   promptNotification: PromptNotificationService,
-  runtimeApiKey?: string,
   subagentContext?: SubagentContext,
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
@@ -90,7 +89,13 @@ export async function createAgentRuntime(
     localUserId,
     subagentContext,
   );
-  const attachmentService = createAttachmentService(hubClient, runtimeApiKey);
+  // Shared ref so attachmentService (built before shellWrapper) and
+  // shellWrapper read the same current key.
+  const runtimeKeyRef: { current: string | undefined } = { current: undefined };
+  const attachmentService = createAttachmentService(
+    hubClient,
+    () => runtimeKeyRef.current,
+  );
   const logService = createLogService(
     hubLogBuffer,
     runService,
@@ -104,7 +109,7 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     output,
-    runtimeApiKey,
+    runtimeKeyRef,
   );
   const workspaces = createWorkspacesFeature(shellWrapper);
 
@@ -377,6 +382,8 @@ export async function createAgentRuntime(
     getState: commandLoopState.getState,
     output,
     subagentService,
+    getRuntimeApiKey: () => runtimeKeyRef.current,
+    rotateApiKey: shellWrapper.applyRuntimeApiKey,
     runCommandLoop: async () => {
       try {
         return await commandLoop.run(abortController.signal);

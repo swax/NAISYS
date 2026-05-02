@@ -27,6 +27,7 @@ import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubModelsService } from "./handlers/hubModelsService.js";
 import { createHubRedactionService } from "./handlers/hubRedactionService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
+import { createHubRuntimeKeyService } from "./handlers/hubRuntimeKeyService.js";
 import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
 import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
@@ -122,6 +123,12 @@ export const startHub: StartHub = async (
       logService,
     );
 
+    // Shared mint/revoke for runtime API keys (agent service + heartbeat).
+    const runtimeKeyService = createHubRuntimeKeyService(
+      hubDatabaseService,
+      redactionService,
+    );
+
     // Register hub host service for broadcasting connected host list
     createHubHostService(naisysServer, hostRegistrar, logService);
 
@@ -133,6 +140,8 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
+      redactionService,
+      runtimeKeyService,
     );
 
     // Register hub log service for log_write events from NAISYS instances
@@ -169,7 +178,7 @@ export const startHub: StartHub = async (
       heartbeatService,
       sendMailService,
       hostRegistrar,
-      redactionService,
+      runtimeKeyService,
     );
 
     // Register hub mail service for mail events from NAISYS instances

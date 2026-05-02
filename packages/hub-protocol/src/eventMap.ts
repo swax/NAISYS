@@ -22,6 +22,7 @@ import type {
   AgentStartResponse,
   AgentStopRequest,
   AgentStopResponse,
+  RuntimeKeyReissue,
 } from "./schemas/agents.js";
 import type { ConfigResponse } from "./schemas/config.js";
 import type {
@@ -164,6 +165,7 @@ export interface HubPushEvents {
   [HubEvents.AGENTS_STATUS]: AgentsStatus;
   [HubEvents.COST_CONTROL]: CostControl;
   [HubEvents.MAIL_RECEIVED]: MailReceivedPush;
+  [HubEvents.RUNTIME_KEY_REISSUE]: RuntimeKeyReissue;
 }
 
 // ---------------------------------------------------------------------------

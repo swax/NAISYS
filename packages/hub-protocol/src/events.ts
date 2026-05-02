@@ -59,6 +59,9 @@ export const HubEvents = {
   COST_CONTROL: "cost_control",
   /** New mail notification, pushed to hosts running recipient agents */
   MAIL_RECEIVED: "mail_received",
+  /** Hand the host a freshly minted runtime API key. Fired when a heartbeat
+   *  plaintext doesn't match the stored hash. Host applies via shell env. */
+  RUNTIME_KEY_REISSUE: "runtime_key_reissue",
 
   // ---------------------------------------------------------------------------
   // NAISYS -> Hub (fire-and-forget)

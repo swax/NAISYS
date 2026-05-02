@@ -130,7 +130,7 @@ describe("hubRedactionService", () => {
     );
   });
 
-  test("registering a new key for the same user replaces the prior", async () => {
+  test("accumulates plaintexts per user so old keys stay redactable mid-rotation", async () => {
     const { hubDb } = createHubDb([]);
     const svc = await createHubRedactionService(
       server,
@@ -142,7 +142,12 @@ describe("hubRedactionService", () => {
     svc.registerRuntimeApiKey(7, "newkey7654321");
 
     expect(svc.redact("oldkey1234567 and newkey7654321")).toBe(
-      "oldkey1234567 and [REDACTED:NAISYS_API_KEY:7]",
+      "[REDACTED:NAISYS_API_KEY:7] and [REDACTED:NAISYS_API_KEY:7]",
+    );
+
+    svc.revokeRuntimeApiKey(7);
+    expect(svc.redact("oldkey1234567 and newkey7654321")).toBe(
+      "oldkey1234567 and newkey7654321",
     );
   });
 

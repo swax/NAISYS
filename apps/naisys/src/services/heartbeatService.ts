@@ -1,4 +1,7 @@
-import type { HeartbeatSession } from "@naisys/hub-protocol";
+import type {
+  HeartbeatRuntimeKey,
+  HeartbeatSession,
+} from "@naisys/hub-protocol";
 import {
   AgentsStatusSchema,
   HubEvents,
@@ -29,6 +32,9 @@ export function createHeartbeatService(
     // enters hub-user tracking. The subagentId still distinguishes the row.
     // Skip an entry rather than ever emitting a synthetic id as `userId`.
     const activeSessions: HeartbeatSession[] = [];
+    // Top-level agents only — subagents inherit via the parent's shell env.
+    const runtimeApiKeys: HeartbeatRuntimeKey[] = [];
+    const seenKeyUserIds = new Set<number>();
     for (const a of agentManager.runningAgents) {
       const user = userService.getUserById(a.agentUserId);
       let userId: number;
@@ -51,10 +57,21 @@ export function createHeartbeatService(
         paused: a.isPaused(),
         state: a.getState(),
       });
+
+      if (subagentId === undefined && !seenKeyUserIds.has(userId)) {
+        runtimeApiKeys.push({
+          userId,
+          runtimeApiKey: a.getRuntimeApiKey(),
+        });
+        seenKeyUserIds.add(userId);
+      }
     }
 
     if (hubClient) {
-      hubClient.sendMessage(HubEvents.HEARTBEAT, { activeSessions });
+      hubClient.sendMessage(HubEvents.HEARTBEAT, {
+        activeSessions,
+        runtimeApiKeys: runtimeApiKeys.length > 0 ? runtimeApiKeys : undefined,
+      });
     } else {
       const uniqueUserIds = [...new Set(activeSessions.map((s) => s.userId))];
       userService.setActiveUsers({ "": uniqueUserIds });

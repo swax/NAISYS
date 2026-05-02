@@ -6,6 +6,7 @@ import {
   AgentStartDispatchSchema,
   AgentStopRequestSchema,
   HubEvents,
+  RuntimeKeyReissueSchema,
 } from "@naisys/hub-protocol";
 import stripAnsi from "strip-ansi";
 
@@ -57,7 +58,6 @@ export class AgentManager {
 
           await this.startAgent(
             parsed.startUserId,
-            undefined,
             parsed.runtimeApiKey,
           );
 
@@ -200,6 +200,15 @@ export class AgentManager {
           ack({ success: false, error: String(error) });
         }
       });
+
+      hubClient.registerEvent(HubEvents.RUNTIME_KEY_REISSUE, (data) => {
+        const parsed = RuntimeKeyReissueSchema.parse(data);
+        const agent = this.runningAgents.find(
+          (a) => a.agentUserId === parsed.userId,
+        );
+        if (!agent) return;
+        agent.rotateApiKey(parsed.runtimeApiKey);
+      });
     }
   }
 
@@ -219,8 +228,8 @@ export class AgentManager {
 
   async startAgent(
     userId: number,
-    onStop?: (reason: string) => void,
     runtimeApiKey?: string,
+    onStop?: (reason: string) => void,
     subagentContext?: SubagentContext,
   ) {
     // Check if agent is already running
@@ -240,9 +249,15 @@ export class AgentManager {
       this.userService,
       this.modelService,
       this.promptNotification,
-      runtimeApiKey,
       subagentContext,
     );
+
+    // Apply before push so the immediate onHeartbeatNeeded fires with the
+    // key already in runtimeKeyRef — otherwise the heartbeat sends an
+    // empty claim and the hub mints a redundant key.
+    if (runtimeApiKey) {
+      agent.rotateApiKey(runtimeApiKey);
+    }
 
     this.runningAgents.push(agent);
     this.onHeartbeatNeeded?.();

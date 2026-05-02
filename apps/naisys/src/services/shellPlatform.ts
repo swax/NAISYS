@@ -32,6 +32,9 @@ export interface PlatformConfig {
   pathSeparator: string;
   /** Dot-source/source a script so variable/cwd changes persist */
   sourceScript: (scriptPath: string) => string;
+  /** Set an env var in the running shell so subsequently spawned child
+   *  processes pick up the new value. */
+  exportEnvCommand: (key: string, value: string) => string;
   /** One-liner that installs a shell-level handler intercepting any `ns-*`
    *  command that leaks into the shell (e.g. `echo foo && ns-mail ...`) and
    *  reminds the LLM that NAISYS commands must run on their own line.
@@ -77,6 +80,9 @@ function getWindowsConfig(): PlatformConfig {
     scriptSetError: "$ErrorActionPreference = 'Stop'",
     pathSeparator: ";",
     sourceScript: (scriptPath: string) => `. "${scriptPath}"`,
+    exportEnvCommand: (key: string, value: string) =>
+      // Backtick-escape `$` and `"` so PS doesn't expand or terminate the literal
+      `$env:${key} = "${value.replace(/`/g, "``").replace(/\$/g, "`$").replace(/"/g, '`"')}"`,
     // Empty CommandScriptBlock + StopSearch suppresses PS's native "not
     // recognized" block so the LLM only sees our single clean message.
     // Cost: $? stays True, so PS7 &&/|| chains continue past an ns-* line
@@ -107,6 +113,10 @@ function getLinuxConfig(): PlatformConfig {
     scriptSetError: "set -e",
     pathSeparator: ":",
     sourceScript: (scriptPath: string) => `source "${scriptPath}"`,
+    exportEnvCommand: (key: string, value: string) =>
+      // Single-quote the value so bash treats it literally; escape embedded
+      // single quotes by closing → escaped quote → reopening.
+      `export ${key}='${value.replace(/'/g, "'\\''")}'`,
     nsCommandNotFoundHandler: `command_not_found_handle() { case "$1" in ns-*) echo "NAISYS: '$1' ${nsCommandHandlerMessage}" >&2; return 127 ;; *) echo "bash: $1: command not found" >&2; return 127 ;; esac; }`,
     displayName: "LINUX",
     shellName: "bash",

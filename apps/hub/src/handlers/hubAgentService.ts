@@ -1,4 +1,4 @@
-import { type DualLogger, hashToken } from "@naisys/common-node";
+import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
   AgentPeekRequestSchema,
@@ -9,12 +9,11 @@ import {
   AgentStopRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
-import { randomBytes } from "crypto";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
-import type { HubRedactionService } from "./hubRedactionService.js";
+import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
 
 type AgentResponse = { success: boolean; error?: string };
@@ -31,32 +30,9 @@ export function createHubAgentService(
   heartbeatService: HubHeartbeatService,
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
-  redactionService: HubRedactionService,
+  runtimeKeyService: HubRuntimeKeyService,
 ) {
-  /**
-   * Mint a fresh runtime API key for a user, rotating any prior key. Plaintext
-   * is returned only here and travels once over the AGENT_START message; the
-   * DB only stores the hash. Keys persist across hub restarts/crashes/updates;
-   * revocation lives on the user disable/archive/delete paths and on graceful
-   * AGENT_STOP.
-   */
-  async function issueRuntimeApiKey(userId: number): Promise<string> {
-    const token = randomBytes(32).toString("hex");
-    await hubDb.users.update({
-      where: { id: userId },
-      data: { api_key_hash: hashToken(token) },
-    });
-    redactionService.registerRuntimeApiKey(userId, token);
-    return token;
-  }
-
-  async function revokeRuntimeApiKey(userId: number): Promise<void> {
-    await hubDb.users.update({
-      where: { id: userId },
-      data: { api_key_hash: null },
-    });
-    redactionService.revokeRuntimeApiKey(userId);
-  }
+  const { issueRuntimeApiKey, revokeRuntimeApiKey } = runtimeKeyService;
   /** Find the least-loaded eligible host for a given user */
   async function findBestHost(startUserId: number): Promise<number | null> {
     // Look up which hosts this user is assigned to
@@ -136,11 +112,9 @@ export function createHubAgentService(
   }
 
   /**
-   * Issue a runtime key and send AGENT_START. Stranded keys from a failed
-   * send or failed response stay in the DB until the next AGENT_START for
-   * that user rotates them, or the user is disabled/archived/deleted — the
-   * agent process that would have used the key never started, so there's
-   * nobody to authenticate with it in the meantime.
+   * Mint and ship a key with AGENT_START so the agent's authenticated from
+   * spawn time, avoiding the one-RTT window heartbeat-only would create.
+   * Heartbeat-driven reissue covers later hash mismatches.
    */
   async function dispatchAgentStart(args: {
     bestHostId: number;

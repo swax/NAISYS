@@ -30,9 +30,19 @@ export const HeartbeatSessionSchema = z.object({
 });
 export type HeartbeatSession = z.infer<typeof HeartbeatSessionSchema>;
 
+/** Per-agent runtime key claim. Plaintext is optional — absent on freshly
+ *  started agents. Sent for every top-level agent (subagents inherit via
+ *  parent shell env). */
+export const HeartbeatRuntimeKeySchema = z.object({
+  userId: z.number(),
+  runtimeApiKey: z.string().optional(),
+});
+export type HeartbeatRuntimeKey = z.infer<typeof HeartbeatRuntimeKeySchema>;
+
 /** Sent by NAISYS instance to hub with each running agent's current session */
 export const HeartbeatSchema = z.object({
   activeSessions: z.array(HeartbeatSessionSchema),
+  runtimeApiKeys: z.array(HeartbeatRuntimeKeySchema).optional(),
 });
 export type Heartbeat = z.infer<typeof HeartbeatSchema>;
 
