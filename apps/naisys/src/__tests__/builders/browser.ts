@@ -32,6 +32,7 @@ export function makeMockPage(overrides: MockPageOverrides = {}) {
   const close = vi.fn(() => Promise.resolve());
   const isClosed = vi.fn(() => false);
   const on = vi.fn();
+  const waitForLoadState = vi.fn(() => Promise.resolve());
   const mouse = {
     click: vi.fn(() => Promise.resolve()),
     dblclick: vi.fn(() => Promise.resolve()),
@@ -55,6 +56,7 @@ export function makeMockPage(overrides: MockPageOverrides = {}) {
     close,
     isClosed,
     on,
+    waitForLoadState,
     mouse,
     keyboard,
   };

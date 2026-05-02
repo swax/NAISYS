@@ -88,6 +88,13 @@ export function createBrowserService(
       );
     }
 
+    lines.push("");
+    lines.push(
+      `Tip: chain ${browserCmd.name} commands on separate lines in one ` +
+        "response (e.g., 'click 100 200' then 'screenshot') to act and " +
+        "observe in a single turn.",
+    );
+
     return lines.join("\n");
   }
 
@@ -174,6 +181,20 @@ export function createBrowserService(
       ]);
     } finally {
       if (timer) clearTimeout(timer);
+    }
+  }
+
+  // Mirror ns-desktop's post-action UI-settle pause (computerService.ts:325)
+  // so a chained screenshot/text dump observes a stable page. networkidle
+  // returns fast on static pages and waits up to the cap on dynamic ones.
+  // Swallow timeouts: long-polling, websockets, and analytics beacons keep
+  // the network busy indefinitely on some pages.
+  async function waitForSettle(p: Page): Promise<void> {
+    try {
+      await p.waitForLoadState("networkidle", { timeout: 2000 });
+    } catch {
+      // Cap matches the desktop settle window; pages that never go idle
+      // shouldn't block the agent forever.
     }
   }
 
@@ -347,6 +368,7 @@ export function createBrowserService(
         const msg = e instanceof Error ? e.message : String(e);
         throw `Failed to click (${x}, ${y}): ${msg}`;
       }
+      await waitForSettle(p);
       // The visual click likely changed the DOM — invalidate any prior text
       // pagination so a later `more` can't return stale snapshot chunks.
       pagination.clear();
@@ -365,6 +387,7 @@ export function createBrowserService(
       const msg = e instanceof Error ? e.message : String(e);
       throw `Failed to click ${selector}: ${msg}`;
     }
+    await waitForSettle(p);
     return dumpCurrentPage();
   }
 
@@ -397,6 +420,7 @@ export function createBrowserService(
       const msg = e instanceof Error ? e.message : String(e);
       throw `Failed to scroll: ${msg}`;
     }
+    await waitForSettle(p);
     // Scrolling reveals different content; any prior text pagination is now
     // disconnected from what the agent can see.
     pagination.clear();
@@ -412,6 +436,7 @@ export function createBrowserService(
       const msg = e instanceof Error ? e.message : String(e);
       throw `Failed to type: ${msg}`;
     }
+    await waitForSettle(p);
     // Typing can trigger JS handlers that change the DOM — clear text-mode
     // pagination so a stale `more` can't return chunks from a pre-type snapshot.
     pagination.clear();
@@ -433,6 +458,7 @@ export function createBrowserService(
       const msg = e instanceof Error ? e.message : String(e);
       throw `Failed to press ${combo}: ${msg}`;
     }
+    await waitForSettle(p);
     // A key press (especially Enter) can submit forms or navigate.
     pagination.clear();
     return `Pressed: ${combo}`;
@@ -452,6 +478,7 @@ export function createBrowserService(
       const msg = e instanceof Error ? e.message : String(e);
       throw `Failed to fill ${selector}: ${msg}`;
     }
+    await waitForSettle(p);
     pagination.clear();
     return `Filled: ${selector} = ${text}`;
   }

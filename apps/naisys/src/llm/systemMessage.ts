@@ -141,6 +141,13 @@ export function createSystemMessage(
 
   const subagentStr = `\n  ${subagentCmd.name}: ${subagentCmd.description}`;
 
+  // ns-* commands and shell commands take different code paths, so mixing them
+  // in one response is error-prone. Chaining ns-* with ns-* stays in the
+  // registered-command path and is fine when multipleCommands is on.
+  const naisysChainNote = agentConfig().multipleCommandsEnabled
+    ? "(multiple ns-* commands can be chained on separate lines as long as they come before any standard shell commands)"
+    : "(cannot be used with other commands on the same prompt)";
+
   // Fill out the templates in the agent prompt and stick it to the front of the system message
   // A lot of the stipulations in here are to prevent common LLM mistakes
   // Like we can't jump between standard and special commands in a single prompt, which the LLM will try to do if not warned
@@ -175,7 +182,7 @@ ${platformConfig.displayName} Commands:
   Read files with cat. Write files with \`cat > filename << 'EOF'\``
   }
   Do not input notes after the prompt. Only valid commands.
-NAISYS Commands: (cannot be used with other commands on the same prompt)${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
+NAISYS Commands: ${naisysChainNote}${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
   ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;

@@ -199,6 +199,16 @@ export function createDesktopService(
         lines.push(`  ${s.usage.padEnd(usageWidth)}  ${s.description}`);
       }
     }
+    // The chaining tip only matters when click/type are visible — models with
+    // computer-use tooling auto-screenshot per action and don't see them.
+    if (!shellModel.supportsComputerUse) {
+      lines.push(
+        "",
+        `Tip: chain ${desktopCmd.name} commands on separate lines in one ` +
+          "response (e.g., 'click 100 200' then 'screenshot') to act and " +
+          "observe in a single turn.",
+      );
+    }
     return lines.join("\n");
   }
 
