@@ -1,7 +1,7 @@
 import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
 
-/** 75 = EX_TEMPFAIL, reused here as an internal “restart requested” exit code. */
+/** 75 = EX_TEMPFAIL, reused here as an internal "restart requested" exit code. */
 export const RESTART_EXIT_CODE = 75;
 export const RESTART_WRAPPER_ACTIVE_ENV = "NAISYS_RESTART_WRAPPER_ACTIVE";
 export const RESTART_WRAPPER_CHILD_ENV = "NAISYS_RESTART_WRAPPER_CHILD";
