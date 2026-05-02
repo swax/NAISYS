@@ -19,6 +19,7 @@ import type { RegistrableCommand } from "../command/commandRegistry.js";
 import { toPlaywrightKeyCombo } from "../computer-use/keyCombo.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import type { ModelService } from "../services/modelService.js";
 import type { OutputService } from "../utils/output.js";
 import { createPaginationState } from "./webPagination.js";
@@ -116,7 +117,36 @@ export function createBrowserService(
     }
 
     page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
+    page.on("popup", (popup) => {
+      handlePopup(popup).catch(() => {
+        // Best-effort; the popup gets closed regardless.
+      });
+    });
     return page;
+  }
+
+  async function handlePopup(popup: Page): Promise<void> {
+    // target=_blank links and window.open() create a new Page the agent can't
+    // see. Log the URL and close it — they can `ns-browser open <url>` to
+    // follow it explicitly if they want.
+    let url = popup.url();
+    if (!url || url === "about:blank") {
+      try {
+        await popup.waitForLoadState("domcontentloaded", { timeout: 3000 });
+      } catch {
+        // Fall through with whatever URL we have.
+      }
+      url = popup.url();
+    }
+    const shownUrl = url && url !== "about:blank" ? url : "(unknown URL)";
+    contextManager.append(
+      `Browser popup opened in new tab and was auto-closed: ${shownUrl}. ` +
+        `To follow it, run: ${browserCmd.name} open ${shownUrl}`,
+      ContentSource.Console,
+    );
+    await popup.close().catch(() => {
+      // Already closed or detached.
+    });
   }
 
   function getOperationTimeoutMs(): number {

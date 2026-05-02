@@ -31,6 +31,7 @@ export function makeMockPage(overrides: MockPageOverrides = {}) {
   const screenshot = vi.fn(() => Promise.resolve(Buffer.from("png-bytes")));
   const close = vi.fn(() => Promise.resolve());
   const isClosed = vi.fn(() => false);
+  const on = vi.fn();
   const mouse = {
     click: vi.fn(() => Promise.resolve()),
     dblclick: vi.fn(() => Promise.resolve()),
@@ -53,6 +54,7 @@ export function makeMockPage(overrides: MockPageOverrides = {}) {
     screenshot,
     close,
     isClosed,
+    on,
     mouse,
     keyboard,
   };
@@ -75,6 +77,7 @@ export type BuildBrowserServiceOverrides = {
   browserEnabled?: boolean;
   supportsVision?: boolean;
   webTokenMax?: number;
+  contextManager?: ReturnType<typeof createMockContextManager>;
 };
 
 export function buildBrowserService(
@@ -104,7 +107,7 @@ export function buildBrowserService(
   return createBrowserService(
     globalConfig,
     agentConfig,
-    createMockContextManager(),
+    overrides.contextManager ?? createMockContextManager(),
     createMockOutputService(),
     modelService,
   );
