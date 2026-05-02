@@ -3,7 +3,7 @@ import { Badge } from "@mantine/core";
 import React from "react";
 
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
-  macos: { label: "macOS", color: "gray" },
+  macos: { label: "macOS", color: "red" },
   linux: { label: "Linux", color: "orange" },
   windows: { label: "Windows", color: "blue" },
   wsl: { label: "WSL", color: "teal" },
