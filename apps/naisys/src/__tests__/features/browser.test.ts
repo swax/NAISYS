@@ -440,3 +440,49 @@ describe("ns-browser popup handling", () => {
     expect(appendCall[0]).toContain("ns-browser open https://example.com/new-tab");
   });
 });
+
+describe("ns-browser settle waits", () => {
+  test("visual click waits for networkidle after the action", async () => {
+    const { page } = makeMockPage();
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
+    await svc.handleCommand("open https://example.com");
+    page.waitForLoadState.mockClear();
+
+    await svc.handleCommand("click 100 200");
+
+    expect(page.mouse.click).toHaveBeenCalled();
+    expect(page.waitForLoadState).toHaveBeenCalledWith("networkidle", {
+      timeout: 2000,
+    });
+  });
+
+  test("type, key, and scroll all settle after the action", async () => {
+    const { page } = makeMockPage();
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
+    await svc.handleCommand("open https://example.com");
+    page.waitForLoadState.mockClear();
+
+    await svc.handleCommand('type "hello"');
+    await svc.handleCommand("key Enter");
+    await svc.handleCommand("scroll down 300");
+
+    // 3 actions × 1 settle each = 3 calls (open consumed in mockClear).
+    expect(page.waitForLoadState).toHaveBeenCalledTimes(3);
+  });
+
+  test("settle swallows networkidle timeouts so chained commands proceed", async () => {
+    const { page } = makeMockPage();
+    page.waitForLoadState.mockImplementation(() =>
+      Promise.reject(new Error("Timeout exceeded")),
+    );
+    mockLaunch(launchMock, page);
+    const svc = buildBrowserService();
+    await svc.handleCommand("open https://example.com");
+
+    await expect(svc.handleCommand("click 100 200")).resolves.toContain(
+      "Clicked",
+    );
+  });
+});
