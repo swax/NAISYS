@@ -8,7 +8,11 @@ import type {
   TextBlockParam,
   ToolUnion,
 } from "@anthropic-ai/sdk/resources";
-import { LlmApiType, type LlmModel } from "@naisys/common";
+import {
+  LlmApiType,
+  type LlmModel,
+  type LlmReasoningLevel,
+} from "@naisys/common";
 
 import {
   extractDesktopActions,
@@ -48,6 +52,26 @@ function getClient(apiKey: string, baseURL?: string): Anthropic {
   return client;
 }
 
+function toAnthropicThinkingBudget(
+  level: LlmReasoningLevel | undefined,
+  maxTokens: number,
+): number | undefined {
+  if (!level || level === "none") {
+    return undefined;
+  }
+
+  const maxBudget = Math.max(1024, maxTokens - 512);
+  const budget =
+    level === "low"
+      ? 1024
+      : level === "medium"
+        ? Math.floor(maxTokens / 2)
+        : level === "high"
+          ? Math.floor(maxTokens * 0.75)
+          : maxBudget;
+  return Math.min(maxBudget, Math.max(1024, budget));
+}
+
 export async function sendWithAnthropic(
   deps: VendorDeps,
   modelKey: string,
@@ -62,7 +86,6 @@ export async function sendWithAnthropic(
     costTracker,
     tools,
     useToolsForLlmConsoleResponses,
-    useThinking,
     desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
@@ -103,17 +126,21 @@ export async function sendWithAnthropic(
     ],
   };
 
-  if (useThinking) {
+  const thinkingBudget = toAnthropicThinkingBudget(
+    model.reasoningLevel,
+    createParams.max_tokens!,
+  );
+  if (thinkingBudget !== undefined) {
     createParams.thinking = {
       type: "enabled",
-      budget_tokens: createParams.max_tokens! / 2,
+      budget_tokens: thinkingBudget,
     };
   }
 
   // Build tools array — console and desktop tools can coexist
   if (source === "console" && useToolsForLlmConsoleResponses) {
     createParams.tools = [tools.consoleToolAnthropic];
-    if (useThinking) {
+    if (thinkingBudget !== undefined) {
       createParams.tool_choice = { type: "auto" };
     } else {
       createParams.tool_choice = {

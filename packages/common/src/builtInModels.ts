@@ -1,4 +1,9 @@
-import { type ImageModel, LlmApiType, type LlmModel } from "./modelTypes.js";
+import {
+  type ImageModel,
+  LlmApiType,
+  type LlmModel,
+  type LlmReasoningLevel,
+} from "./modelTypes.js";
 import {
   OPENAI_CODEX_ACCESS_TOKEN_VAR,
   OPENAI_CODEX_RESPONSES_BASE_URL,
@@ -8,6 +13,7 @@ function openAiCodexOAuthModel(params: {
   key: string;
   label: string;
   versionName: string;
+  reasoningLevel?: LlmReasoningLevel;
 }): LlmModel {
   return {
     key: params.key,
@@ -24,6 +30,7 @@ function openAiCodexOAuthModel(params: {
     cacheReadCost: 0,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    reasoningLevel: params.reasoningLevel,
   };
 }
 
@@ -82,6 +89,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.75,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    reasoningLevel: "medium",
   },
   {
     key: "grok4fast",
@@ -97,6 +105,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.05,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    reasoningLevel: "medium",
   },
 
   // ── OpenAI Models ────────────────────────────────────────────────────
@@ -115,6 +124,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
   {
     key: "gpt5mini",
@@ -129,6 +139,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.025,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    reasoningLevel: "medium",
   },
   {
     key: "gpt5nano",
@@ -143,26 +154,31 @@ export const builtInLlmModels: LlmModel[] = [
     cacheReadCost: 0.005,
     cacheTtlSeconds: 300,
     supportsVision: true,
+    reasoningLevel: "medium",
   },
   openAiCodexOAuthModel({
     key: "gpt55oauth",
     label: "GPT 5.5 Codex OAuth",
     versionName: "gpt-5.5",
+    reasoningLevel: "medium",
   }),
   openAiCodexOAuthModel({
     key: "gpt5oauth",
     label: "GPT 5.4 Codex OAuth",
     versionName: "gpt-5.4",
+    reasoningLevel: "medium",
   }),
   openAiCodexOAuthModel({
     key: "gpt54minioauth",
     label: "GPT 5.4 Mini Codex OAuth",
     versionName: "gpt-5.4-mini",
+    reasoningLevel: "medium",
   }),
   openAiCodexOAuthModel({
     key: "gpt52oauth",
     label: "GPT 5.2 Codex OAuth",
     versionName: "gpt-5.2",
+    reasoningLevel: "medium",
   }),
 
   // ── Google Models ────────────────────────────────────────────────────
@@ -181,6 +197,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsHearing: true,
+    reasoningLevel: "medium",
   },
   {
     key: "gemini3flash",
@@ -197,6 +214,7 @@ export const builtInLlmModels: LlmModel[] = [
     supportsVision: true,
     supportsHearing: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
   {
     key: "gemini2pro",
@@ -213,6 +231,7 @@ export const builtInLlmModels: LlmModel[] = [
     supportsVision: true,
     supportsHearing: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
 
   // ── Anthropic Models ─────────────────────────────────────────────────
@@ -232,6 +251,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
   {
     key: "claude4sonnet",
@@ -247,6 +267,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
   {
     key: "claude4haiku",
@@ -262,6 +283,7 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
     supportsComputerUse: true,
+    reasoningLevel: "medium",
   },
 ];
 

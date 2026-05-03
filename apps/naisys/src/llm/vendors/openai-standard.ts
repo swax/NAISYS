@@ -1,4 +1,4 @@
-import { LlmApiType } from "@naisys/common";
+import { LlmApiType, type LlmReasoningLevel } from "@naisys/common";
 import OpenAI from "openai";
 import type {
   FunctionTool,
@@ -13,6 +13,7 @@ import type {
   Tool,
   ToolChoiceFunction,
 } from "openai/resources/responses/responses";
+import type { Reasoning, ReasoningEffort } from "openai/resources/shared";
 
 import {
   extractDesktopActions,
@@ -48,6 +49,18 @@ function formatOpenAiResponseFailure(response: OpenAIResponse): string {
     return `OpenAI Responses incomplete: ${response.incomplete_details.reason}`;
   }
   return "OpenAI Responses stream failed.";
+}
+
+function toOpenAiReasoningEffort(
+  level: LlmReasoningLevel,
+): Exclude<ReasoningEffort, null> {
+  return level === "max" ? "xhigh" : level;
+}
+
+function toOpenAiReasoning(
+  level: LlmReasoningLevel | undefined,
+): Reasoning | undefined {
+  return level ? { effort: toOpenAiReasoningEffort(level) } : undefined;
 }
 
 async function createStreamingOpenAiResponse(
@@ -103,7 +116,6 @@ export async function sendWithOpenAiStandard(
     costTracker,
     tools,
     useToolsForLlmConsoleResponses,
-    useThinking,
     desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
@@ -157,11 +169,7 @@ export async function sendWithOpenAiStandard(
           role: m.role === "assistant" ? "assistant" : "user",
           content: formatContentBlocks(m.content, m.role),
         }))) as ResponseInput,
-    reasoning: isOpenAiOauth
-      ? useThinking
-        ? { effort: "medium" }
-        : undefined
-      : { effort: useThinking ? "medium" : "none" },
+    reasoning: toOpenAiReasoning(model.reasoningLevel),
     tools: toolsDefs.length > 0 ? toolsDefs : undefined,
     tool_choice: toolChoice,
   };

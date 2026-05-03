@@ -10,6 +10,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
+  LLM_REASONING_LEVELS,
   LlmApiType,
   LlmModelSchema,
   MIN_CACHE_TTL_SECONDS,
@@ -35,6 +36,7 @@ interface LlmFormValues {
   supportsVision: boolean;
   supportsHearing: boolean;
   supportsComputerUse: boolean;
+  reasoningLevel: string;
 }
 
 function transformFormValues(values: LlmFormValues): Record<string, unknown> {
@@ -58,6 +60,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
   if (values.supportsVision) result.supportsVision = true;
   if (values.supportsHearing) result.supportsHearing = true;
   if (values.supportsComputerUse) result.supportsComputerUse = true;
+  if (values.reasoningLevel) result.reasoningLevel = values.reasoningLevel;
   return result;
 }
 
@@ -74,6 +77,14 @@ const apiTypeOptions = Object.values(LlmApiType).map((v) => ({
   value: v,
   label: v,
 }));
+
+const reasoningLevelOptions = [
+  { value: "", label: "Not supported" },
+  ...LLM_REASONING_LEVELS.map((level) => ({
+    value: level,
+    label: level === "max" ? "Max" : level[0].toUpperCase() + level.slice(1),
+  })),
+];
 
 export const LlmModelForm: React.FC<LlmModelFormProps> = ({
   model,
@@ -100,6 +111,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       supportsVision: model?.supportsVision ?? false,
       supportsHearing: model?.supportsHearing ?? false,
       supportsComputerUse: model?.supportsComputerUse ?? false,
+      reasoningLevel: model?.reasoningLevel ?? "",
     },
     validate: (values) =>
       zodResolver(LlmModelSchema)(transformFormValues(values)),
@@ -226,6 +238,13 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           description="Model has native tooling to control a computer via screenshots and actions. (Models without computer use, but have vision still have access to all the same computer use functionality through ns-desktop)"
           disabled={readOnly}
           {...form.getInputProps("supportsComputerUse", { type: "checkbox" })}
+        />
+        <Select
+          label="Reasoning Level"
+          description="Provider-specific reasoning effort. Leave as not supported for models that do not accept reasoning settings."
+          disabled={readOnly}
+          data={reasoningLevelOptions}
+          {...form.getInputProps("reasoningLevel")}
         />
       </Stack>
 

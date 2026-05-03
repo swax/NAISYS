@@ -340,6 +340,7 @@ function LlmReadOnlyTable({
     supportsVision?: boolean;
     supportsHearing?: boolean;
     supportsComputerUse?: boolean;
+    reasoningLevel?: string;
   };
 }) {
   const rows: [string, string | number][] = [
@@ -368,6 +369,7 @@ function LlmReadOnlyTable({
     "Supports Computer Use",
     model.supportsComputerUse ? "Yes" : "No",
   ]);
+  rows.push(["Reasoning Level", model.reasoningLevel || "Not supported"]);
 
   return (
     <Table striped style={{ maxWidth: 600 }}>

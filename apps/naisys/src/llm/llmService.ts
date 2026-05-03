@@ -19,8 +19,6 @@ import type {
   VendorDeps,
 } from "./vendors/vendorTypes.js";
 
-const useThinking = true;
-
 export function createLLMService(
   globalConfigService: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -88,7 +86,6 @@ export function createLLMService(
       tools,
       useToolsForLlmConsoleResponses:
         globalConfig().useToolsForLlmConsoleResponses,
-      useThinking,
       desktopConfig: effectiveDesktopConfig,
     };
 

@@ -1,4 +1,8 @@
-import { HateoasActionSchema, MIN_CACHE_TTL_SECONDS } from "@naisys/common";
+import {
+  HateoasActionSchema,
+  LlmReasoningLevelSchema,
+  MIN_CACHE_TTL_SECONDS,
+} from "@naisys/common";
 import { z } from "zod";
 
 const ModelOptionSchema = z.object({
@@ -22,6 +26,7 @@ export const LlmModelDetailSchema = z.object({
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
   supportsComputerUse: z.boolean().optional(),
+  reasoningLevel: LlmReasoningLevelSchema.optional(),
   isCustom: z.boolean(),
 });
 
@@ -70,6 +75,7 @@ export const SaveLlmModelRequestSchema = z.object({
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
     supportsComputerUse: z.boolean().optional(),
+    reasoningLevel: LlmReasoningLevelSchema.optional(),
   }),
 });
 
