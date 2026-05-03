@@ -10,6 +10,7 @@ import {
   FunctionCallingConfigMode,
   GoogleGenAI,
 } from "@google/genai";
+import type { LlmReasoningLevel } from "@naisys/common";
 
 import {
   extractDesktopActions,
@@ -33,6 +34,25 @@ function getClient(apiKey: string, baseUrl?: string): GoogleGenAI {
   return client;
 }
 
+function toGoogleThinkingBudget(
+  level: LlmReasoningLevel | undefined,
+): number | undefined {
+  switch (level) {
+    case undefined:
+      return undefined;
+    case "none":
+      return 0;
+    case "low":
+      return 1024;
+    case "medium":
+      return 8192;
+    case "high":
+      return 16384;
+    case "max":
+      return -1;
+  }
+}
+
 export async function sendWithGoogle(
   deps: VendorDeps,
   modelKey: string,
@@ -47,7 +67,6 @@ export async function sendWithGoogle(
     costTracker,
     tools,
     useToolsForLlmConsoleResponses,
-    useThinking,
     desktopConfig,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
@@ -57,6 +76,7 @@ export async function sendWithGoogle(
   }
 
   const ai = getClient(apiKey, model.baseUrl);
+  const thinkingBudget = toGoogleThinkingBudget(model.reasoningLevel);
 
   const lastMessage = context[context.length - 1];
 
@@ -88,10 +108,13 @@ export async function sendWithGoogle(
     model: model.versionName,
     config: {
       systemInstruction: systemMessage,
-      thinkingConfig: {
-        // -1 is dynamic thinking, 0 is no thinking
-        thinkingBudget: useThinking ? -1 : 0,
-      },
+      thinkingConfig:
+        thinkingBudget !== undefined
+          ? {
+              // -1 is dynamic thinking, 0 disables thinking.
+              thinkingBudget,
+            }
+          : undefined,
     },
     history,
   };

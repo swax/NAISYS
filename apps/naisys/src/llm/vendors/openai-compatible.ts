@@ -1,5 +1,7 @@
+import type { LlmReasoningLevel } from "@naisys/common";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
+import type { ReasoningEffort } from "openai/resources/shared";
 
 import type { ContentBlock, LlmMessage } from "../llmDtos.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
@@ -16,6 +18,13 @@ function getClient(apiKey: string, baseURL?: string): OpenAI {
   return client;
 }
 
+function toOpenAiReasoningEffort(
+  level: LlmReasoningLevel | undefined,
+): Exclude<ReasoningEffort, null> | undefined {
+  if (!level) return undefined;
+  return level === "max" ? "xhigh" : level;
+}
+
 export async function sendWithOpenAiCompatible(
   deps: VendorDeps,
   modelKey: string,
@@ -30,7 +39,6 @@ export async function sendWithOpenAiCompatible(
     costTracker,
     tools,
     useToolsForLlmConsoleResponses,
-    useThinking,
   } = deps;
   const model = modelService.getLlmModel(modelKey);
 
@@ -39,11 +47,12 @@ export async function sendWithOpenAiCompatible(
   }
 
   const openAI = getClient(apiKey, model.baseUrl);
+  const reasoningEffort = toOpenAiReasoningEffort(model.reasoningLevel);
 
   const chatRequest: ChatCompletionCreateParamsNonStreaming = {
     model: model.versionName,
     stream: false,
-    reasoning_effort: useThinking ? "medium" : "none",
+    reasoning_effort: reasoningEffort,
     messages: [
       {
         role: "system",

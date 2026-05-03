@@ -13,6 +13,17 @@ export enum LlmApiType {
   None = "none",
 }
 
+export const LLM_REASONING_LEVELS = [
+  "max",
+  "high",
+  "medium",
+  "low",
+  "none",
+] as const;
+
+export const LlmReasoningLevelSchema = z.enum(LLM_REASONING_LEVELS);
+export type LlmReasoningLevel = z.infer<typeof LlmReasoningLevelSchema>;
+
 // --- Model schemas ---
 
 /** Provider TTLs are typically >= 5 min; lower values are user error and defeat preemptive compaction. */
@@ -35,6 +46,7 @@ export const LlmModelSchema = z
     supportsVision: z.boolean().optional(),
     supportsHearing: z.boolean().optional(),
     supportsComputerUse: z.boolean().optional(),
+    reasoningLevel: LlmReasoningLevelSchema.optional(),
   })
   .superRefine((data, ctx) => {
     if (
@@ -93,6 +105,7 @@ const LlmMetaSchema = z.object({
   supportsVision: z.boolean().optional(),
   supportsHearing: z.boolean().optional(),
   supportsComputerUse: z.boolean().optional(),
+  reasoningLevel: LlmReasoningLevelSchema.optional(),
 });
 
 const ImageMetaSchema = z.object({

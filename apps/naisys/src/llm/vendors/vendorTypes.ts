@@ -112,6 +112,5 @@ export interface VendorDeps {
   costTracker: CostTracker;
   tools: CommandTools;
   useToolsForLlmConsoleResponses: boolean;
-  useThinking: boolean;
   desktopConfig?: DesktopConfig;
 }
