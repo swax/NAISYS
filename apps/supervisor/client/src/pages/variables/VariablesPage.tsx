@@ -18,6 +18,7 @@ import {
   IconEye,
   IconEyeOff,
   IconInfoCircle,
+  IconKey,
   IconLock,
   IconPencil,
   IconTerminal2,
@@ -29,6 +30,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { VariablesResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
 import { deleteVariable, saveVariable } from "../../lib/apiVariables";
+import { OpenAiOAuthSetupDialog } from "./OpenAiOAuthSetupDialog";
 
 interface VariableRow {
   key: string;
@@ -40,6 +42,7 @@ interface VariableRow {
 export const VariablesPage: React.FC = () => {
   const [data, setData] = useState<VariablesResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [oauthOpened, setOauthOpened] = useState(false);
 
   // New row state
   const [newKey, setNewKey] = useState("");
@@ -152,9 +155,18 @@ export const VariablesPage: React.FC = () => {
 
   return (
     <Container size="lg" py="xl" w="100%">
-      <Title order={2} mb="xs">
-        Variables
-      </Title>
+      <Group justify="space-between" align="center" mb="xs">
+        <Title order={2}>Variables</Title>
+        {canManage && (
+          <Button
+            variant="light"
+            leftSection={<IconKey size={16} />}
+            onClick={() => setOauthOpened(true)}
+          >
+            OpenAI Codex OAuth Setup
+          </Button>
+        )}
+      </Group>
       <Text size="sm" c="dimmed" mb="lg">
         Variables are used by NAISYS itself, LLM configurations, and agent
         prompts. You can define your own to share text across agent prompts.
@@ -451,6 +463,11 @@ export const VariablesPage: React.FC = () => {
           </Table.Tbody>
         </Table>
       )}
+      <OpenAiOAuthSetupDialog
+        opened={oauthOpened}
+        onClose={() => setOauthOpened(false)}
+        onComplete={() => void fetchData()}
+      />
     </Container>
   );
 };

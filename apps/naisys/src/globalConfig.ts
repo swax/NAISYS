@@ -99,7 +99,11 @@ export function createGlobalConfig(
    * If the key does not exist, it is appended to the end of the file.
    * Also updates process.env so the change is visible immediately.
    */
-  function updateEnvValue(key: string, value: string): void {
+  function setVariableValue(
+    key: string,
+    value: string,
+    options: { exportToShell?: boolean } = {},
+  ): void {
     const dotenvPath = path.resolve(".env");
     const content = fs.existsSync(dotenvPath)
       ? fs.readFileSync(dotenvPath, "utf-8")
@@ -127,10 +131,26 @@ export function createGlobalConfig(
     fs.writeFileSync(dotenvPath, lines.join("\n"));
     process.env[key] = value;
 
-    // Patch cachedConfig for keys that map to config fields
-    if (cachedConfig && key === "NAISYS_HOSTNAME") {
-      cachedConfig.hostname = value;
+    // Patch cached config so runtime credential refreshes are visible
+    // immediately without waiting for a process restart.
+    if (cachedConfig) {
+      cachedConfig.variableMap[key] = value;
+      const exportToShell =
+        options.exportToShell ??
+        (!hubClient || key in cachedConfig.shellVariableMap);
+      if (exportToShell) {
+        cachedConfig.shellVariableMap[key] = value;
+      } else {
+        delete cachedConfig.shellVariableMap[key];
+      }
+      if (key === "NAISYS_HOSTNAME") {
+        cachedConfig.hostname = value;
+      }
     }
+  }
+
+  function updateEnvValue(key: string, value: string): void {
+    setVariableValue(key, value);
   }
 
   return {
@@ -139,6 +159,7 @@ export function createGlobalConfig(
     onConfigChanged: (handler: () => void) => {
       configChangedHandler = handler;
     },
+    setVariableValue,
     updateEnvValue,
   };
 }

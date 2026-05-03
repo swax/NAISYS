@@ -1,10 +1,15 @@
+import { LlmApiType } from "@naisys/common";
 import OpenAI from "openai";
 import type {
   FunctionTool,
+  Response as OpenAIResponse,
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
   ResponseInput,
   ResponseInputContent,
   ResponseInputText,
   ResponseOutputItem,
+  ResponseStreamEvent,
   Tool,
   ToolChoiceFunction,
 } from "openai/resources/responses/responses";
@@ -33,6 +38,57 @@ function getClient(apiKey: string, baseURL?: string): OpenAI {
   return client;
 }
 
+function formatOpenAiResponseFailure(response: OpenAIResponse): string {
+  if (response.error) {
+    return `OpenAI Responses error: ${response.error.code || "unknown"}: ${
+      response.error.message || "no message"
+    }`;
+  }
+  if (response.incomplete_details?.reason) {
+    return `OpenAI Responses incomplete: ${response.incomplete_details.reason}`;
+  }
+  return "OpenAI Responses stream failed.";
+}
+
+async function createStreamingOpenAiResponse(
+  openAI: OpenAI,
+  params: ResponseCreateParamsStreaming,
+  abortSignal?: AbortSignal,
+): Promise<OpenAIResponse> {
+  const stream = await openAI.responses.create(params, { signal: abortSignal });
+  let response: OpenAIResponse | undefined;
+  let outputText = "";
+  const outputItems: ResponseOutputItem[] = [];
+
+  for await (const event of stream as AsyncIterable<ResponseStreamEvent>) {
+    if (event.type === "response.output_text.delta") {
+      outputText += event.delta;
+    } else if (event.type === "response.output_item.done") {
+      outputItems.push(event.item);
+    } else if (
+      event.type === "response.completed" ||
+      event.type === "response.incomplete"
+    ) {
+      response = event.response;
+    } else if (event.type === "response.failed") {
+      throw new Error(formatOpenAiResponseFailure(event.response));
+    } else if (event.type === "error") {
+      throw new Error(
+        event.code ? `${event.code}: ${event.message}` : event.message,
+      );
+    }
+  }
+
+  if (!response) {
+    throw new Error("OpenAI Responses stream ended without a final response.");
+  }
+  return {
+    ...response,
+    output: response.output.length > 0 ? response.output : outputItems,
+    output_text: response.output_text || outputText,
+  };
+}
+
 export async function sendWithOpenAiStandard(
   deps: VendorDeps,
   modelKey: string,
@@ -57,6 +113,7 @@ export async function sendWithOpenAiStandard(
   }
 
   const openAI = getClient(apiKey, model.baseUrl);
+  const isOpenAiOauth = model.apiType === LlmApiType.OpenAIOAuth;
 
   const useConsoleTools =
     source === "console" && useToolsForLlmConsoleResponses;
@@ -87,26 +144,39 @@ export async function sendWithOpenAiStandard(
     };
   }
 
-  const response = await openAI.responses.create(
-    {
-      model: model.versionName,
-      instructions: systemMessage,
-      input: (desktopConfig
-        ? formatInputWithComputerUse(
-            context,
-            formatContentBlocks,
-            formatSingleBlock,
-          )
-        : context.map((m) => ({
-            role: m.role === "assistant" ? "assistant" : "user",
-            content: formatContentBlocks(m.content, m.role),
-          }))) as ResponseInput,
-      reasoning: { effort: useThinking ? "medium" : "none" },
-      tools: toolsDefs.length > 0 ? toolsDefs : undefined,
-      tool_choice: toolChoice,
-    },
-    { signal: abortSignal },
-  );
+  const createParams: ResponseCreateParamsNonStreaming = {
+    model: model.versionName,
+    instructions: systemMessage,
+    input: (desktopConfig
+      ? formatInputWithComputerUse(
+          context,
+          formatContentBlocks,
+          formatSingleBlock,
+        )
+      : context.map((m) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: formatContentBlocks(m.content, m.role),
+        }))) as ResponseInput,
+    reasoning: isOpenAiOauth
+      ? useThinking
+        ? { effort: "medium" }
+        : undefined
+      : { effort: useThinking ? "medium" : "none" },
+    tools: toolsDefs.length > 0 ? toolsDefs : undefined,
+    tool_choice: toolChoice,
+  };
+
+  const response = isOpenAiOauth
+    ? await createStreamingOpenAiResponse(
+        openAI,
+        {
+          ...createParams,
+          store: false,
+          stream: true,
+        },
+        abortSignal,
+      )
+    : await openAI.responses.create(createParams, { signal: abortSignal });
 
   if (!response.usage) {
     throw "Error, no usage data returned from OpenAI Responses API.";

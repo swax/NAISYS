@@ -1,5 +1,33 @@
-import type { DeleteVariableResponse, SaveVariableResponse } from "./apiClient";
+import type {
+  DeleteVariableResponse,
+  OpenAiCodexOAuthPollResponse,
+  OpenAiCodexOAuthStartResponse,
+  OpenAiCodexOAuthUsageResponse,
+  SaveVariableResponse,
+} from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
+
+export const startOpenAiCodexOAuth =
+  async (): Promise<OpenAiCodexOAuthStartResponse> =>
+    await api.post<Record<string, never>, OpenAiCodexOAuthStartResponse>(
+      apiEndpoints.openAiCodexOAuthStart,
+      {},
+    );
+
+export const pollOpenAiCodexOAuth = async (
+  flowId: string,
+): Promise<OpenAiCodexOAuthPollResponse> =>
+  await api.post<{ flowId: string }, OpenAiCodexOAuthPollResponse>(
+    apiEndpoints.openAiCodexOAuthPoll,
+    { flowId },
+  );
+
+export const checkOpenAiCodexOAuthUsage =
+  async (): Promise<OpenAiCodexOAuthUsageResponse> =>
+    await api.post<Record<string, never>, OpenAiCodexOAuthUsageResponse>(
+      apiEndpoints.openAiCodexOAuthUsage,
+      {},
+    );
 
 export const saveVariable = async (
   key: string,

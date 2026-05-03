@@ -2,6 +2,7 @@ import {
   buildClientConfig,
   builtInImageModels,
   builtInLlmModels,
+  openAiCodexOAuthEnvVars,
 } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
@@ -26,7 +27,8 @@ export async function createHubConfigService(
   const sensitiveKeys = new Set(
     [...builtInLlmModels, ...builtInImageModels]
       .map((m) => m.apiKeyVar)
-      .filter(Boolean),
+      .filter(Boolean)
+      .concat([...openAiCodexOAuthEnvVars]),
   );
 
   // Seed DB from .env on first run

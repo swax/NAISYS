@@ -1,3 +1,4 @@
+import type { GlobalConfig } from "../../globalConfig.js";
 import type { ModelService } from "../../services/modelService.js";
 import type { CommandTools } from "../commandTool.js";
 import type { CostTracker } from "../costTracker.js";
@@ -106,6 +107,7 @@ export interface QueryResult {
 }
 
 export interface VendorDeps {
+  globalConfig: GlobalConfig;
   modelService: ModelService;
   costTracker: CostTracker;
   tools: CommandTools;

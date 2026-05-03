@@ -19,7 +19,11 @@ import type { HubCostBuffer } from "./hub/hubCostBuffer.js";
 import { createHubCostBuffer } from "./hub/hubCostBuffer.js";
 import type { HubLogBuffer } from "./hub/hubLogBuffer.js";
 import { createHubLogBuffer } from "./hub/hubLogBuffer.js";
-import { ensureAgentConfig, getNaisysWizardConfig } from "./naisysSetup.js";
+import {
+  ensureAgentConfig,
+  getNaisysWizardConfig,
+  printOpenAiCodexSubscriptionSetupInstructions,
+} from "./naisysSetup.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
 import { createModelService } from "./services/modelService.js";
@@ -34,7 +38,12 @@ const isHubClient = process.argv.some(
   (a) => a === "--hub" || a.startsWith("--hub="),
 );
 
-const wizardConfig = getNaisysWizardConfig(isHubClient);
+let openAiCodexSubscriptionSelected = false;
+const wizardConfig = getNaisysWizardConfig(isHubClient, {
+  onOpenAiCodexSubscriptionSelected: () => {
+    openAiCodexSubscriptionSelected = true;
+  },
+});
 const exampleUrl = new URL(
   isHubClient ? "../.env.hub-client.example" : "../.env.example",
   import.meta.url,
@@ -76,7 +85,12 @@ program
   .parse();
 
 if (!isHubClient) {
-  await ensureAgentConfig(program.args[0]);
+  await ensureAgentConfig(program.args[0], {
+    useOpenAiCodexSubscription: openAiCodexSubscriptionSelected,
+  });
+  if (openAiCodexSubscriptionSelected) {
+    printOpenAiCodexSubscriptionSetupInstructions();
+  }
 }
 
 const agentPath = program.args[0] || ".";

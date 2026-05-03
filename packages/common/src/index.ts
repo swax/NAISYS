@@ -15,6 +15,7 @@ export * from "./hostedServices.js";
 export * from "./lenientJsonParser.js";
 export * from "./mimeTypes.js";
 export * from "./modelTypes.js";
+export * from "./openAiOAuth.js";
 export * from "./securityHeaders.js";
 export * from "./sleep.js";
 export * from "./templateVars.js";

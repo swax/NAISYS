@@ -3,6 +3,10 @@ import type {
   DeleteVariableParams,
   DeleteVariableResponse,
   ErrorResponse,
+  OpenAiCodexOAuthPollRequest,
+  OpenAiCodexOAuthPollResponse,
+  OpenAiCodexOAuthStartResponse,
+  OpenAiCodexOAuthUsageResponse,
   SaveVariableRequest,
   SaveVariableResponse,
   VariablesResponse,
@@ -11,6 +15,10 @@ import {
   DeleteVariableParamsSchema,
   DeleteVariableResponseSchema,
   ErrorResponseSchema,
+  OpenAiCodexOAuthPollRequestSchema,
+  OpenAiCodexOAuthPollResponseSchema,
+  OpenAiCodexOAuthStartResponseSchema,
+  OpenAiCodexOAuthUsageResponseSchema,
   SaveVariableRequestSchema,
   SaveVariableResponseSchema,
   VariablesResponseSchema,
@@ -21,6 +29,11 @@ import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { permGate } from "../route-helpers.js";
 import { sendVariablesChanged } from "../services/hubConnectionService.js";
+import {
+  checkOpenAiCodexOAuthUsage,
+  pollOpenAiCodexOAuthFlow,
+  startOpenAiCodexOAuthFlow,
+} from "../services/openAiCodexOAuthService.js";
 import {
   deleteVariable,
   getVariables,
@@ -82,6 +95,101 @@ export default function variablesRoutes(
         })),
         _actions: actions,
       };
+    },
+  );
+
+  fastify.post<{ Reply: OpenAiCodexOAuthStartResponse | ErrorResponse }>(
+    "/openai-codex-oauth/start",
+    {
+      preHandler: [requirePermission("manage_variables")],
+      schema: {
+        description: "Start OpenAI Codex OAuth device-code setup",
+        tags: ["Variables"],
+        response: {
+          200: OpenAiCodexOAuthStartResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (_request, reply) => {
+      try {
+        return await startOpenAiCodexOAuthFlow();
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to start OpenAI OAuth setup";
+        return reply.code(500).send({ success: false, message });
+      }
+    },
+  );
+
+  fastify.post<{
+    Body: OpenAiCodexOAuthPollRequest;
+    Reply: OpenAiCodexOAuthPollResponse | ErrorResponse;
+  }>(
+    "/openai-codex-oauth/poll",
+    {
+      preHandler: [requirePermission("manage_variables")],
+      schema: {
+        description: "Poll OpenAI Codex OAuth device-code setup",
+        tags: ["Variables"],
+        body: OpenAiCodexOAuthPollRequestSchema,
+        response: {
+          200: OpenAiCodexOAuthPollResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const result = await pollOpenAiCodexOAuthFlow({
+          flowId: request.body.flowId,
+          userUuid: request.supervisorUser!.uuid,
+        });
+        if (result.status === "complete") {
+          sendVariablesChanged();
+        }
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to complete OpenAI OAuth setup";
+        return reply.code(500).send({ success: false, message });
+      }
+    },
+  );
+
+  fastify.post<{ Reply: OpenAiCodexOAuthUsageResponse | ErrorResponse }>(
+    "/openai-codex-oauth/usage",
+    {
+      preHandler: [requirePermission("manage_variables")],
+      schema: {
+        description: "Check OpenAI Codex OAuth usage windows",
+        tags: ["Variables"],
+        response: {
+          200: OpenAiCodexOAuthUsageResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const result = await checkOpenAiCodexOAuthUsage({
+          userUuid: request.supervisorUser!.uuid,
+        });
+        if (result.refreshed) {
+          sendVariablesChanged();
+        }
+        return result;
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to check OpenAI Codex usage";
+        return reply.code(500).send({ success: false, message });
+      }
     },
   );
 

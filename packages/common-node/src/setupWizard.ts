@@ -16,6 +16,7 @@ export interface WizardField {
 export interface WizardProviderOption {
   name: string;
   fields: WizardField[];
+  onSelected?: () => void;
 }
 
 export interface WizardFieldSection {
@@ -249,6 +250,7 @@ export async function runSetupWizard(
       // Ask for keys of selected providers
       for (const idx of selected) {
         const provider = section.options[idx - 1];
+        provider.onSelected?.();
         for (const field of provider.fields) {
           const effectiveDefault =
             existingValues[field.key] ??
