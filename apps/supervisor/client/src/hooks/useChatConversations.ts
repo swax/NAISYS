@@ -162,6 +162,7 @@ export const useChatConversations = (
     total,
     actions,
     isLoading: query.isLoading,
+    isFetchedAfterMount: query.isFetchedAfterMount,
     error: query.error,
     loadMore,
     loadingMore,

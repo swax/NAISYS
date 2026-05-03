@@ -12,8 +12,9 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { formatFileSize, hasAction, MAX_ATTACHMENT_SIZE } from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { ParticipantInfo } from "../../components/ParticipantInfo";
@@ -32,7 +33,9 @@ export const AgentChat: React.FC = () => {
     username: string;
     participants: string;
   }>();
+  const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { agents } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
@@ -43,15 +46,37 @@ export const AgentChat: React.FC = () => {
   // Derive selectedParticipants from URL param by adding current agent back
   const selectedParticipants = useMemo(() => {
     if (!participantsParam || !username) return null;
-    const others = participantsParam.split(",").filter(Boolean);
-    return [...others, username].sort().join(",");
+    const names = new Set(participantsParam.split(",").filter(Boolean));
+    names.add(username);
+    return [...names].sort().join(",");
   }, [participantsParam, username]);
+
+  // Accept full participant keys in direct links/back history, but keep the
+  // visible URL in the route's "other participants only" format.
+  useEffect(() => {
+    if (!participantsParam || !username) return;
+
+    const canonicalOthers = [
+      ...new Set(participantsParam.split(",").filter(Boolean)),
+    ]
+      .filter((name) => name !== username)
+      .sort()
+      .join(",");
+
+    if (participantsParam === canonicalOthers) return;
+
+    const target = canonicalOthers
+      ? `/agents/${username}/chat/${canonicalOthers}`
+      : `/agents/${username}/chat`;
+    void navigate(target, { replace: true });
+  }, [participantsParam, username, navigate]);
 
   const {
     conversations,
     total: totalConversations,
     actions: convActions,
     isLoading: convLoading,
+    isFetchedAfterMount: convFetchedAfterMount,
     error: convError,
     loadMore: loadMoreConversations,
     loadingMore: loadingMoreConversations,
@@ -81,6 +106,8 @@ export const AgentChat: React.FC = () => {
   // conversations yet, fall back to the first "start a chat with" candidate.
   useEffect(() => {
     if (participantsParam || !username) return;
+    if (!convFetchedAfterMount) return;
+
     if (conversations.length > 0) {
       const first = conversations[0].participants;
       const others = first
@@ -99,6 +126,7 @@ export const AgentChat: React.FC = () => {
     username,
     navigate,
     convLoading,
+    convFetchedAfterMount,
     chatCandidates,
   ]);
 
@@ -114,6 +142,18 @@ export const AgentChat: React.FC = () => {
     selectedParticipants,
     Boolean(selectedParticipants),
   );
+
+  // Browser back/forward can reuse this route component with the module-level
+  // message cache already populated. Revalidate the active thread whenever the
+  // route entry is activated so missed socket pushes are backfilled promptly.
+  useEffect(() => {
+    if (!username || !selectedParticipants) return;
+
+    void queryClient.invalidateQueries({
+      queryKey: ["chat-messages", username, selectedParticipants],
+      refetchType: "active",
+    });
+  }, [location.key, queryClient, selectedParticipants, username]);
 
   const canSend = !!hasAction(convActions, "send");
   const canArchive = !!hasAction(convActions, "archive");
