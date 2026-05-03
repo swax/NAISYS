@@ -422,14 +422,12 @@ export function createCommandLoop(
 
       // If the user is in debug mode and they didn't enter anything, switch to LLM.
       // Also switch immediately if the command requested it (e.g. ns-talk).
-      if (
-        inputMode.isDebug() &&
-        (blankDebugInput || commandResult.triggerLlm)
-      ) {
+      const shouldSwitchToLlm = blankDebugInput || commandResult.triggerLlm;
+      if (inputMode.isDebug() && shouldSwitchToLlm) {
         inputMode.setLLM();
-        // Any debug-initiated LLM switch (blank-line continuation or
-        // triggerLlm) bypasses pause for one cycle so an LLM response can
-        // fire; pause re-engages on the iteration after that.
+        // Blank-line continuation and explicit triggerLlm commands (ns-talk)
+        // bypass pause for one cycle. Ordinary command waits still remain
+        // paused in resolveWait.
         if (paused) {
           bypassPauseOnce = true;
         }
@@ -697,17 +695,17 @@ export function createCommandLoop(
     const bypassPause = bypassPauseOnce;
     bypassPauseOnce = false;
 
-    if (wait === undefined) {
-      // Remote pause — force indefinite debug-mode wait, interruptible via
-      // resume + prompt notifications (the same mechanism that wakes on mail)
-      if (paused && !bypassPause) {
-        inputMode.setDebug();
-        wait = indefiniteWait();
-      }
+    // Remote pause forces indefinite debug-mode wait between iterations,
+    // even when the previous command requested a timed/no wait. It remains
+    // interruptible via resume + prompt notifications.
+    if (paused && !bypassPause) {
+      inputMode.setDebug();
+      wait = indefiniteWait();
+    } else if (wait === undefined) {
       // Remote debug command queued — force debug mode so the drain logic
       // below can consume it even on unfocused agents that would otherwise
       // skip debug mode entirely.
-      else if (hasPendingDebugCommand) {
+      if (hasPendingDebugCommand) {
         inputMode.setDebug();
         wait = noWait();
       }

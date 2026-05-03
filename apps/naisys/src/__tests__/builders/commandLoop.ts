@@ -80,6 +80,7 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
     ...defaultDesktopService(),
     ...overrides.desktopService,
   } as DesktopService;
+  const promptNotification = createPromptNotificationService();
 
   const output = createMockOutputService();
 
@@ -89,6 +90,7 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
     llmService,
     modelService,
     desktopService,
+    promptNotification,
     output,
   };
 
@@ -108,7 +110,7 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
     createMockLogService(),
     createInputMode(),
     createMockRunService(),
-    createPromptNotificationService(),
+    promptNotification,
     1,
     createMockMailService(),
     createMockChatService(),

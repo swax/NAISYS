@@ -513,7 +513,8 @@ export const AgentRuns: React.FC = () => {
                       Send <Code>ns-help</Code> to see available commands.
                     </Text>
                     <Text size="xs">
-                      Prefix with <Code>@</Code> to talk to the LLM directly.
+                      Prefix with <Code>@</Code> to send a message and trigger
+                      the next LLM run.
                     </Text>
                     <Text size="xs">
                       Prefix with <Code>!</Code> to run a shell command the LLM
