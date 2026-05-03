@@ -1,4 +1,31 @@
 import { type ImageModel, LlmApiType, type LlmModel } from "./modelTypes.js";
+import {
+  OPENAI_CODEX_ACCESS_TOKEN_VAR,
+  OPENAI_CODEX_RESPONSES_BASE_URL,
+} from "./openAiOAuth.js";
+
+function openAiCodexOAuthModel(params: {
+  key: string;
+  label: string;
+  versionName: string;
+}): LlmModel {
+  return {
+    key: params.key,
+    label: params.label,
+    versionName: params.versionName,
+    baseUrl: OPENAI_CODEX_RESPONSES_BASE_URL,
+    apiType: LlmApiType.OpenAIOAuth,
+    apiKeyVar: OPENAI_CODEX_ACCESS_TOKEN_VAR,
+    maxTokens: 400_000,
+    // Subscription-backed ChatGPT/Codex OAuth is not metered like API-key usage.
+    inputCost: 0,
+    outputCost: 0,
+    cacheWriteCost: 0,
+    cacheReadCost: 0,
+    cacheTtlSeconds: 300,
+    supportsVision: true,
+  };
+}
 
 // --- Built-in LLM models ---
 // Prices are per 1M tokens in USD. Last updated: February 2026.
@@ -117,6 +144,26 @@ export const builtInLlmModels: LlmModel[] = [
     cacheTtlSeconds: 300,
     supportsVision: true,
   },
+  openAiCodexOAuthModel({
+    key: "gpt55oauth",
+    label: "GPT 5.5 Codex OAuth",
+    versionName: "gpt-5.5",
+  }),
+  openAiCodexOAuthModel({
+    key: "gpt5oauth",
+    label: "GPT 5.4 Codex OAuth",
+    versionName: "gpt-5.4",
+  }),
+  openAiCodexOAuthModel({
+    key: "gpt54minioauth",
+    label: "GPT 5.4 Mini Codex OAuth",
+    versionName: "gpt-5.4-mini",
+  }),
+  openAiCodexOAuthModel({
+    key: "gpt52oauth",
+    label: "GPT 5.2 Codex OAuth",
+    versionName: "gpt-5.2",
+  }),
 
   // ── Google Models ────────────────────────────────────────────────────
   // https://ai.google.dev/gemini-api/docs/pricing

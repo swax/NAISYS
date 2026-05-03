@@ -11,6 +11,7 @@ import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
+import { sendWithOpenAiOauth } from "./vendors/openai-oauth.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import type {
   QueryResult,
@@ -21,13 +22,15 @@ import type {
 const useThinking = true;
 
 export function createLLMService(
-  { globalConfig }: GlobalConfig,
+  globalConfigService: GlobalConfig,
   { agentConfig }: AgentConfig,
   costTracker: CostTracker,
   tools: CommandTools,
   modelService: ModelService,
   computerService?: ComputerService,
 ) {
+  const { globalConfig } = globalConfigService;
+
   async function query(
     modelKey: string,
     systemMessage: string,
@@ -79,6 +82,7 @@ export function createLLMService(
         : undefined;
 
     const deps: VendorDeps = {
+      globalConfig: globalConfigService,
       modelService,
       costTracker,
       tools,
@@ -114,6 +118,16 @@ export function createLLMService(
         : sendWithOpenAiCompatible;
 
       return sendFn(
+        deps,
+        modelKey,
+        systemMessage,
+        context,
+        source,
+        apiKey,
+        abortSignal,
+      );
+    } else if (model.apiType == LlmApiType.OpenAIOAuth) {
+      return sendWithOpenAiOauth(
         deps,
         modelKey,
         systemMessage,

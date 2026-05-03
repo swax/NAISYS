@@ -2,6 +2,7 @@ import {
   buildDefaultAgentConfig,
   builtInLlmModels,
   LlmApiType,
+  OPENAI_CODEX_REFRESH_TOKEN_VAR,
 } from "@naisys/common";
 import {
   askQuestion,
@@ -14,7 +15,16 @@ import yaml from "js-yaml";
 import os from "os";
 import path from "path";
 
-export function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
+const OPENAI_CODEX_SUBSCRIPTION_PROVIDER_NAME = "OpenAI Codex Subscription";
+
+interface NaisysWizardConfigOptions {
+  onOpenAiCodexSubscriptionSelected?: () => void;
+}
+
+export function getNaisysWizardConfig(
+  hubClient: boolean,
+  options: NaisysWizardConfigOptions = {},
+): WizardConfig {
   if (hubClient) {
     return {
       title: "NAISYS Setup (Hub Client)",
@@ -67,12 +77,18 @@ export function getNaisysWizardConfig(hubClient: boolean): WizardConfig {
       },
       {
         type: "providers",
-        comment: "Leave API keys blank if not using the service",
+        comment:
+          "Leave API keys blank if not using the service. OpenAI Codex Subscription is connected later through Supervisor Variables.",
         label: "AI Providers",
         options: [
           {
             name: "OpenAI",
             fields: [{ key: "OPENAI_API_KEY", label: "OpenAI API Key" }],
+          },
+          {
+            name: OPENAI_CODEX_SUBSCRIPTION_PROVIDER_NAME,
+            fields: [],
+            onSelected: options.onOpenAiCodexSubscriptionSelected,
           },
           {
             name: "Google",
@@ -129,13 +145,37 @@ const availableModels = builtInLlmModels.filter(
     m.apiType !== LlmApiType.Mock,
 );
 
+const preferredCodexModel = availableModels.find(
+  (m) => m.apiType === LlmApiType.OpenAIOAuth,
+);
+
+function hasConfiguredCredentials(model: (typeof availableModels)[number]) {
+  return Boolean(
+    process.env[model.apiKeyVar] ||
+      (model.apiType === LlmApiType.OpenAIOAuth &&
+        process.env[OPENAI_CODEX_REFRESH_TOKEN_VAR]),
+  );
+}
+
+export function printOpenAiCodexSubscriptionSetupInstructions() {
+  console.log(
+    "\n  OpenAI Codex Subscription selected. After Supervisor opens, go to Variables and click OpenAI Codex OAuth Setup.",
+  );
+  console.log(
+    "  Finish that flow to connect your subscription and save the required variables.\n",
+  );
+}
+
 /**
  * If no agent path was provided and no agent configs exist in cwd,
- * offer to create a default assistant.yaml using the first model
- * that has an API key configured.
+ * offer to create a default assistant.yaml. Prefer a configured provider, but
+ * use OpenAI Codex when the subscription provider was selected so first-time
+ * users can complete subscription setup from Supervisor's Variables page after
+ * startup.
  */
 export async function ensureAgentConfig(
   agentPath: string | undefined,
+  options: { useOpenAiCodexSubscription?: boolean } = {},
 ): Promise<void> {
   if (agentPath) return;
 
@@ -150,11 +190,14 @@ export async function ensureAgentConfig(
     // No configs found, fall through to offer creation
   }
 
-  const model = availableModels.find((m) => process.env[m.apiKeyVar]);
+  const configuredModel = availableModels.find(hasConfiguredCredentials);
+  const model =
+    (options.useOpenAiCodexSubscription ? preferredCodexModel : undefined) ??
+    configuredModel;
 
   if (!model) {
     console.log(
-      "\n  No agent configs found and no API keys configured. Run with --setup to configure.",
+      "\n  No agent configs found and no AI provider configured. Run with --setup to configure one.",
     );
     return;
   }
@@ -162,7 +205,7 @@ export async function ensureAgentConfig(
   if (!process.stdin.isTTY) return;
 
   const answer = await askQuestion(
-    `\n  No agent config found. Create a default assistant? (Y/n) `,
+    `\n  No agent config found. Create a default assistant using ${model.label}? (Y/n) `,
   );
 
   if (answer && !answer.toLowerCase().startsWith("y")) {

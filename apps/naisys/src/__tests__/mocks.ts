@@ -297,6 +297,7 @@ export function createMockGlobalConfig(): GlobalConfig {
     waitForConfig: vi.fn(() => Promise.resolve()),
     onConfigChanged: vi.fn(),
     updateEnvValue: vi.fn(),
+    setVariableValue: vi.fn(),
     globalConfig: () => ({
       hostname: "test",
       shellCommand: {
