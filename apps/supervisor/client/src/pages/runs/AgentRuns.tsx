@@ -16,15 +16,17 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import {
+  IconHelp,
   IconList,
   IconPlayerPause,
   IconPlayerPlay,
   IconSend,
-  IconTerminal2,
 } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -61,6 +63,8 @@ export const AgentRuns: React.FC = () => {
     subagentId: string;
   }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const { agents, readStatus } = useAgentDataContext();
   const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
   const [searchParams] = useSearchParams();
@@ -162,6 +166,32 @@ export const AgentRuns: React.FC = () => {
             (run.subagentId ?? null) === activeSubagentId,
         )
       : undefined;
+
+  // Browser back/forward can reuse this route component with the module-level
+  // log cache already populated. Revalidate the active session log whenever
+  // the route entry is activated so missed socket pushes are backfilled promptly.
+  useEffect(() => {
+    if (
+      !username ||
+      activeRunId === undefined ||
+      activeSessionId === undefined
+    ) {
+      return;
+    }
+    const subagentKey = activeSubagentId ?? 0;
+    const sessionKey = `${username}-${activeRunId}-${subagentKey}-${activeSessionId}`;
+    void queryClient.invalidateQueries({
+      queryKey: ["context-log", sessionKey],
+      refetchType: "active",
+    });
+  }, [
+    location.key,
+    queryClient,
+    username,
+    activeRunId,
+    activeSessionId,
+    activeSubagentId,
+  ]);
 
   const hasUnreadLogs = useCallback(
     (run: RunSession) => {
@@ -501,7 +531,7 @@ export const AgentRuns: React.FC = () => {
               <HoverCard width={340} shadow="md" withArrow position="top-start">
                 <HoverCard.Target>
                   <ActionIcon variant="subtle" color="gray" size="lg">
-                    <IconTerminal2 size={18} />
+                    <IconHelp size={18} />
                   </ActionIcon>
                 </HoverCard.Target>
                 <HoverCard.Dropdown>

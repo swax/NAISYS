@@ -9,11 +9,11 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import {
-  IconHistory,
   IconInfoCircle,
   IconMail,
   IconMessageCircle,
   IconSettings,
+  IconTerminal2,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
@@ -215,7 +215,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
             >
               <Tabs.Tab
                 value="runs"
-                leftSection={<IconHistory size="1rem" />}
+                leftSection={<IconTerminal2 size="1rem" />}
                 component="a"
                 // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
                 href={getAbsoluteUrl("runs")}

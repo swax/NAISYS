@@ -13,6 +13,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { hasAction } from "@naisys/common";
 import { IconCornerUpLeft, IconMail } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -40,6 +41,7 @@ export const AgentMail: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
@@ -59,6 +61,17 @@ export const AgentMail: React.FC = () => {
     hasMore,
     refresh: refreshMail,
   } = useMailData(username ?? "", Boolean(username));
+
+  // Browser back/forward can reuse this route component with the module-level
+  // mail cache already populated. Revalidate the agent's mail whenever the
+  // route entry is activated so missed socket pushes are backfilled promptly.
+  useEffect(() => {
+    if (!username) return;
+    void queryClient.invalidateQueries({
+      queryKey: ["mail-data", username],
+      refetchType: "active",
+    });
+  }, [location.key, queryClient, username]);
 
   const canSend = !!hasAction(mailActions, "send");
   const canArchive = !!hasAction(mailActions, "archive");
