@@ -73,6 +73,8 @@ export const HubEvents = {
   LOG_WRITE: "log_write",
   /** Batched cost/token entries */
   COST_WRITE: "cost_write",
+  /** Patch selected allowlisted global variables; hub persists and rebroadcasts */
+  VARIABLE_PATCH: "variable_patch",
 
   // ---------------------------------------------------------------------------
   // NAISYS -> Hub (request/response)

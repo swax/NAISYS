@@ -24,7 +24,10 @@ import type {
   AgentStopResponse,
   RuntimeKeyReissue,
 } from "./schemas/agents.js";
-import type { ConfigResponse } from "./schemas/config.js";
+import type {
+  ConfigResponse,
+  VariablePatchRequest,
+} from "./schemas/config.js";
 import type {
   CostControl,
   CostPush,
@@ -149,6 +152,7 @@ export interface HubRequestEvents {
 export interface HubFireAndForgetEvents {
   [HubEvents.HEARTBEAT]: Heartbeat;
   [HubEvents.LOG_WRITE]: LogWriteRequest;
+  [HubEvents.VARIABLE_PATCH]: VariablePatchRequest;
 }
 
 // ---------------------------------------------------------------------------

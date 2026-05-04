@@ -4,6 +4,7 @@ import {
   OPENAI_CODEX_REFRESH_TOKEN_VAR,
 } from "@naisys/common";
 
+import type { GlobalConfig } from "../../globalConfig.js";
 import type { LlmMessage } from "../llmDtos.js";
 import { sendWithOpenAiStandard } from "./openai-standard.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
@@ -133,35 +134,19 @@ export async function refreshOpenAiCodexToken(
   };
 }
 
-function persistOauthValue(
-  variables: Record<string, string>,
-  updateVariable: ((key: string, value: string) => void) | undefined,
-  key: string,
-  value: string,
-) {
-  variables[key] = value;
-  updateVariable?.(key, value);
-}
-
-export async function resolveOpenAiOauthAccessToken(params: {
-  accessToken?: string;
-  variables: Record<string, string>;
-  updateVariable?: (key: string, value: string) => void;
-  fetchFn?: FetchLike;
-  now?: number;
-}): Promise<string | undefined> {
-  const accessToken =
-    trimNonEmpty(params.accessToken) ??
-    trimNonEmpty(params.variables[OPENAI_CODEX_ACCESS_TOKEN_VAR]);
-  const refreshToken = trimNonEmpty(
-    params.variables[OPENAI_CODEX_REFRESH_TOKEN_VAR],
-  );
+export async function resolveOpenAiOauthAccessToken(
+  globalConfig: GlobalConfig,
+  fetchFn: FetchLike = fetch,
+  now = Date.now(),
+): Promise<string | undefined> {
+  const variables = globalConfig.globalConfig().variableMap;
+  const accessToken = trimNonEmpty(variables[OPENAI_CODEX_ACCESS_TOKEN_VAR]);
+  const refreshToken = trimNonEmpty(variables[OPENAI_CODEX_REFRESH_TOKEN_VAR]);
   const expires =
-    parseEpochMilliseconds(params.variables[OPENAI_CODEX_EXPIRES_AT_VAR]) ??
+    parseEpochMilliseconds(variables[OPENAI_CODEX_EXPIRES_AT_VAR]) ??
     (accessToken
       ? resolveOpenAiCodexAccessTokenExpiry(accessToken)
       : undefined);
-  const now = params.now ?? Date.now();
 
   if (
     !refreshToken ||
@@ -170,28 +155,12 @@ export async function resolveOpenAiOauthAccessToken(params: {
     return accessToken;
   }
 
-  const refreshed = await refreshOpenAiCodexToken(
-    refreshToken,
-    params.fetchFn ?? fetch,
-  );
-  persistOauthValue(
-    params.variables,
-    params.updateVariable,
-    OPENAI_CODEX_ACCESS_TOKEN_VAR,
-    refreshed.access,
-  );
-  persistOauthValue(
-    params.variables,
-    params.updateVariable,
-    OPENAI_CODEX_REFRESH_TOKEN_VAR,
-    refreshed.refresh,
-  );
-  persistOauthValue(
-    params.variables,
-    params.updateVariable,
-    OPENAI_CODEX_EXPIRES_AT_VAR,
-    String(refreshed.expires),
-  );
+  const refreshed = await refreshOpenAiCodexToken(refreshToken, fetchFn);
+  await globalConfig.patchVariableValues([
+    { key: OPENAI_CODEX_ACCESS_TOKEN_VAR, value: refreshed.access },
+    { key: OPENAI_CODEX_REFRESH_TOKEN_VAR, value: refreshed.refresh },
+    { key: OPENAI_CODEX_EXPIRES_AT_VAR, value: String(refreshed.expires) },
+  ]);
 
   return refreshed.access;
 }
@@ -202,16 +171,9 @@ export async function sendWithOpenAiOauth(
   systemMessage: string,
   context: LlmMessage[],
   source: QuerySources,
-  apiKey?: string,
   abortSignal?: AbortSignal,
 ): Promise<QueryResult> {
-  const variables = deps.globalConfig.globalConfig().variableMap;
-  const accessToken = await resolveOpenAiOauthAccessToken({
-    accessToken: apiKey,
-    variables,
-    updateVariable: (key, value) =>
-      deps.globalConfig.setVariableValue(key, value, { exportToShell: false }),
-  });
+  const accessToken = await resolveOpenAiOauthAccessToken(deps.globalConfig);
 
   return sendWithOpenAiStandard(
     deps,

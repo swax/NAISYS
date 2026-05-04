@@ -5,7 +5,17 @@ import {
   OPENAI_CODEX_REFRESH_TOKEN_VAR,
   OPENAI_CODEX_RESPONSES_BASE_URL,
 } from "@naisys/common";
+import type { VariablePatchEntry } from "@naisys/hub-protocol";
 import { afterEach, describe, expect, test, vi } from "vitest";
+
+import type { GlobalConfig } from "../../globalConfig.js";
+import {
+  refreshOpenAiCodexToken,
+  resolveOpenAiCodexAccessTokenExpiry,
+  resolveOpenAiOauthAccessToken,
+  sendWithOpenAiOauth,
+} from "../../llm/vendors/openai-oauth.js";
+import type { VendorDeps } from "../../llm/vendors/vendorTypes.js";
 
 const openAiMock = vi.hoisted(() => ({
   create: vi.fn(),
@@ -21,14 +31,6 @@ vi.mock("openai", () => ({
   }),
 }));
 
-import {
-  refreshOpenAiCodexToken,
-  resolveOpenAiCodexAccessTokenExpiry,
-  resolveOpenAiOauthAccessToken,
-  sendWithOpenAiOauth,
-} from "../../llm/vendors/openai-oauth.js";
-import type { VendorDeps } from "../../llm/vendors/vendorTypes.js";
-
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -39,6 +41,23 @@ function makeJwt(payload: Record<string, unknown>): string {
     Buffer.from(JSON.stringify(payload)).toString("base64url"),
     "signature",
   ].join(".");
+}
+
+function createOauthGlobalConfig(
+  variables: Record<string, string>,
+  onPatch?: (updates: VariablePatchEntry[]) => void | Promise<void>,
+) {
+  const patchVariableValues = vi.fn(async (updates: VariablePatchEntry[]) => {
+    for (const { key, value } of updates) {
+      variables[key] = value;
+    }
+    await onPatch?.(updates);
+  });
+  const globalConfig = {
+    globalConfig: () => ({ variableMap: variables }),
+    patchVariableValues,
+  } as unknown as GlobalConfig;
+  return { globalConfig, patchVariableValues };
 }
 
 describe("OpenAI OAuth vendor auth", () => {
@@ -55,16 +74,15 @@ describe("OpenAI OAuth vendor auth", () => {
       [OPENAI_CODEX_EXPIRES_AT_VAR]: String(now + 10 * 60_000),
     };
     const fetchFn = vi.fn(() => Promise.resolve(jsonResponse({})));
+    const { globalConfig, patchVariableValues } =
+      createOauthGlobalConfig(variables);
 
     await expect(
-      resolveOpenAiOauthAccessToken({
-        variables,
-        fetchFn,
-        now,
-      }),
+      resolveOpenAiOauthAccessToken(globalConfig, fetchFn, now),
     ).resolves.toBe("access-token");
 
     expect(fetchFn).not.toHaveBeenCalled();
+    expect(patchVariableValues).not.toHaveBeenCalled();
   });
 
   test("refreshes an expired token and persists the replacement values", async () => {
@@ -77,6 +95,14 @@ describe("OpenAI OAuth vendor auth", () => {
       [OPENAI_CODEX_EXPIRES_AT_VAR]: String(now - 1),
     };
     const updates: Record<string, string> = {};
+    const { globalConfig, patchVariableValues } = createOauthGlobalConfig(
+      variables,
+      (patched) => {
+        for (const { key, value } of patched) {
+          updates[key] = value;
+        }
+      },
+    );
     const fetchFn = vi.fn((_input, init) => {
       expect(init?.method).toBe("POST");
       expect(init?.body).toBeInstanceOf(URLSearchParams);
@@ -93,14 +119,7 @@ describe("OpenAI OAuth vendor auth", () => {
     });
 
     await expect(
-      resolveOpenAiOauthAccessToken({
-        variables,
-        updateVariable: (key, value) => {
-          updates[key] = value;
-        },
-        fetchFn,
-        now,
-      }),
+      resolveOpenAiOauthAccessToken(globalConfig, fetchFn, now),
     ).resolves.toBe("new-access");
 
     expect(variables[OPENAI_CODEX_ACCESS_TOKEN_VAR]).toBe("new-access");
@@ -109,12 +128,21 @@ describe("OpenAI OAuth vendor auth", () => {
       String(now + 3_600_000),
     );
     expect(updates).toEqual(variables);
+    expect(patchVariableValues).toHaveBeenCalledWith([
+      { key: OPENAI_CODEX_ACCESS_TOKEN_VAR, value: "new-access" },
+      { key: OPENAI_CODEX_REFRESH_TOKEN_VAR, value: "new-refresh" },
+      {
+        key: OPENAI_CODEX_EXPIRES_AT_VAR,
+        value: String(now + 3_600_000),
+      },
+    ]);
   });
 
   test("can refresh when only a refresh token is configured", async () => {
     const variables: Record<string, string> = {
       [OPENAI_CODEX_REFRESH_TOKEN_VAR]: "refresh-token",
     };
+    const { globalConfig } = createOauthGlobalConfig(variables);
     const fetchFn = vi.fn(() =>
       Promise.resolve(
         jsonResponse({
@@ -125,10 +153,7 @@ describe("OpenAI OAuth vendor auth", () => {
     );
 
     await expect(
-      resolveOpenAiOauthAccessToken({
-        variables,
-        fetchFn,
-      }),
+      resolveOpenAiOauthAccessToken(globalConfig, fetchFn),
     ).resolves.toBe("new-access");
 
     expect(variables[OPENAI_CODEX_REFRESH_TOKEN_VAR]).toBe("refresh-token");
@@ -190,13 +215,9 @@ describe("OpenAI OAuth vendor auth", () => {
       [OPENAI_CODEX_REFRESH_TOKEN_VAR]: "refresh-token",
       [OPENAI_CODEX_EXPIRES_AT_VAR]: String(Date.now() + 3_600_000),
     };
+    const { globalConfig } = createOauthGlobalConfig(variables);
     const deps = {
-      globalConfig: {
-        globalConfig: () => ({ variableMap: variables }),
-        setVariableValue: (key: string, value: string) => {
-          variables[key] = value;
-        },
-      },
+      globalConfig,
       modelService: {
         getLlmModel: () => ({
           key: "gpt5oauth",
@@ -272,13 +293,9 @@ describe("OpenAI OAuth vendor auth", () => {
       [OPENAI_CODEX_REFRESH_TOKEN_VAR]: "refresh-token",
       [OPENAI_CODEX_EXPIRES_AT_VAR]: String(Date.now() + 3_600_000),
     };
+    const { globalConfig } = createOauthGlobalConfig(variables);
     const deps = {
-      globalConfig: {
-        globalConfig: () => ({ variableMap: variables }),
-        setVariableValue: (key: string, value: string) => {
-          variables[key] = value;
-        },
-      },
+      globalConfig,
       modelService: {
         getLlmModel: () => ({
           key: "gpt5oauth",

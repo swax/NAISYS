@@ -1,6 +1,7 @@
 import type { ClientConfig } from "@naisys/common";
 import { buildClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
+import type { VariablePatchEntry } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import fs from "fs";
 import { readFile } from "fs/promises";
@@ -93,6 +94,32 @@ export function createGlobalConfig(
     }
   }
 
+  /** Patch process.env and the cached config so runtime changes are visible. */
+  function patchRuntimeVariable(
+    key: string,
+    value: string,
+    options: { exportToShell?: boolean } = {},
+  ): void {
+    process.env[key] = value;
+
+    // Patch cached config so runtime credential refreshes are visible
+    // immediately without waiting for a process restart.
+    if (cachedConfig) {
+      cachedConfig.variableMap[key] = value;
+      const exportToShell =
+        options.exportToShell ??
+        (!hubClient || key in cachedConfig.shellVariableMap);
+      if (exportToShell) {
+        cachedConfig.shellVariableMap[key] = value;
+      } else {
+        delete cachedConfig.shellVariableMap[key];
+      }
+      if (key === "NAISYS_HOSTNAME") {
+        cachedConfig.hostname = value;
+      }
+    }
+  }
+
   /**
    * Update a single key in the .env file, preserving comments and ordering.
    * If the key exists, its value is replaced in-place.
@@ -129,23 +156,28 @@ export function createGlobalConfig(
     }
 
     fs.writeFileSync(dotenvPath, lines.join("\n"));
-    process.env[key] = value;
+    patchRuntimeVariable(key, value, options);
+  }
 
-    // Patch cached config so runtime credential refreshes are visible
-    // immediately without waiting for a process restart.
-    if (cachedConfig) {
-      cachedConfig.variableMap[key] = value;
-      const exportToShell =
-        options.exportToShell ??
-        (!hubClient || key in cachedConfig.shellVariableMap);
-      if (exportToShell) {
-        cachedConfig.shellVariableMap[key] = value;
-      } else {
-        delete cachedConfig.shellVariableMap[key];
+  /** Hub mode: optimistic local patch + fire-and-forget hub send for fan-out
+   *  to other clients. Standalone: persist to .env. */
+  async function patchVariableValues(
+    updates: VariablePatchEntry[],
+  ): Promise<void> {
+    if (updates.length === 0) {
+      return;
+    }
+
+    if (hubClient) {
+      for (const update of updates) {
+        patchRuntimeVariable(update.key, update.value, { exportToShell: false });
       }
-      if (key === "NAISYS_HOSTNAME") {
-        cachedConfig.hostname = value;
-      }
+      hubClient.sendMessage(HubEvents.VARIABLE_PATCH, { updates });
+      return;
+    }
+
+    for (const update of updates) {
+      setVariableValue(update.key, update.value, { exportToShell: false });
     }
   }
 
@@ -160,6 +192,7 @@ export function createGlobalConfig(
       configChangedHandler = handler;
     },
     setVariableValue,
+    patchVariableValues,
     updateEnvValue,
   };
 }

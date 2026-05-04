@@ -30,6 +30,7 @@ import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubRuntimeKeyService } from "./handlers/hubRuntimeKeyService.js";
 import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
+import { createHubVariablePatchService } from "./handlers/hubVariablePatchService.js";
 import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
@@ -120,6 +121,14 @@ export const startHub: StartHub = async (
     const redactionService = await createHubRedactionService(
       naisysServer,
       hubDatabaseService,
+      logService,
+    );
+
+    createHubVariablePatchService(
+      naisysServer,
+      hubDatabaseService,
+      configService,
+      redactionService,
       logService,
     );
 

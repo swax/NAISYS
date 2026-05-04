@@ -101,7 +101,12 @@ export async function createHubRedactionService(
 
   await rebuildDbSecrets();
 
-  return { redact, registerRuntimeApiKey, revokeRuntimeApiKey };
+  return {
+    redact,
+    registerRuntimeApiKey,
+    revokeRuntimeApiKey,
+    rebuildDbSecrets,
+  };
 }
 
 export type HubRedactionService = Awaited<

@@ -130,7 +130,6 @@ export function createLLMService(
         systemMessage,
         context,
         source,
-        apiKey,
         abortSignal,
       );
     } else {

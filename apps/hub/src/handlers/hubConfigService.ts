@@ -2,7 +2,8 @@ import {
   buildClientConfig,
   builtInImageModels,
   builtInLlmModels,
-  openAiCodexOAuthEnvVars,
+  OPENAI_CODEX_ACCESS_TOKEN_VAR,
+  OPENAI_CODEX_REFRESH_TOKEN_VAR,
 } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
@@ -23,12 +24,14 @@ export async function createHubConfigService(
     error: "Not yet loaded",
   };
 
-  // API key variable names referenced by built-in models — always sensitive
+  // API key variable names referenced by built-in models — always sensitive.
+  // EXPIRES_AT is a timestamp, not a credential — keep it out so nearby
+  // millisecond values in logs don't get rewritten as redactions.
   const sensitiveKeys = new Set(
     [...builtInLlmModels, ...builtInImageModels]
       .map((m) => m.apiKeyVar)
       .filter(Boolean)
-      .concat([...openAiCodexOAuthEnvVars]),
+      .concat([OPENAI_CODEX_ACCESS_TOKEN_VAR, OPENAI_CODEX_REFRESH_TOKEN_VAR]),
   );
 
   // Seed DB from .env on first run
@@ -130,6 +133,7 @@ export async function createHubConfigService(
 
   return {
     getConfig: () => cachedConfig,
+    broadcastConfig,
   };
 }
 
