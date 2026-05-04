@@ -1,5 +1,6 @@
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
+import "./animations.css";
 
 import { AppShell, Box, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";

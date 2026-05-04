@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Box,
-  Button,
   Code,
   Drawer,
   Group,
@@ -18,8 +17,9 @@ import { notifications } from "@mantine/notifications";
 import {
   IconHelp,
   IconList,
-  IconPlayerPause,
-  IconPlayerPlay,
+  IconPlayerPauseFilled,
+  IconPlayerPlayFilled,
+  IconRotateClockwise,
   IconSend,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -479,29 +479,6 @@ export const AgentRuns: React.FC = () => {
                     Online
                   </Badge>
                 )}
-                {selectedRun.isOnline && selectedRun.paused && (
-                  <Badge size="sm" variant="light" color="orange">
-                    Paused
-                  </Badge>
-                )}
-                {selectedRun.isOnline && (
-                  <Button
-                    size="compact-xs"
-                    variant={selectedRun.paused ? "filled" : "light"}
-                    color="orange"
-                    loading={pauseLoading}
-                    leftSection={
-                      selectedRun.paused ? (
-                        <IconPlayerPlay size={12} />
-                      ) : (
-                        <IconPlayerPause size={12} />
-                      )
-                    }
-                    onClick={() => handlePauseToggle(selectedRun)}
-                  >
-                    {selectedRun.paused ? "Resume" : "Pause"}
-                  </Button>
-                )}
               </Group>
               <Group gap="xs">
                 <Text size="xs" c="dimmed">
@@ -585,6 +562,46 @@ export const AgentRuns: React.FC = () => {
                   </Stack>
                 </HoverCard.Dropdown>
               </HoverCard>
+              {selectedRun.isOnline && (
+                <Tooltip
+                  label={selectedRun.paused ? "Resume agent" : "Pause agent"}
+                >
+                  <ActionIcon
+                    variant="subtle"
+                    color={selectedRun.paused ? "orange" : "gray"}
+                    size="lg"
+                    loading={pauseLoading}
+                    onClick={() => void handlePauseToggle(selectedRun)}
+                  >
+                    <Box
+                      style={{
+                        position: "relative",
+                        width: 22,
+                        height: 22,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <IconRotateClockwise
+                        size={22}
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          animation: !selectedRun.paused
+                            ? "agentRunSpin 2s linear infinite"
+                            : undefined,
+                        }}
+                      />
+                      {selectedRun.paused ? (
+                        <IconPlayerPlayFilled size={9} />
+                      ) : (
+                        <IconPlayerPauseFilled size={9} />
+                      )}
+                    </Box>
+                  </ActionIcon>
+                </Tooltip>
+              )}
               <Textarea
                 ref={commandInputRef}
                 placeholder={
