@@ -133,6 +133,8 @@ export default function agentLifecycleRoutes(
           success: true,
           message: "Agent started",
           hostname: response.hostname,
+          runId: response.runId,
+          sessionId: response.sessionId,
         };
       } else {
         return reply.status(500).send({

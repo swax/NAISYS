@@ -11,6 +11,9 @@ export async function createRunService(
   sessionHubClient: HubClient | undefined,
   localUserId: number,
   subagentContext?: SubagentContext,
+  /** Set on the main-agent path: the hub already allocated the runId via
+   * AGENT_START, so we adopt it instead of round-tripping SESSION_CREATE. */
+  preallocated?: { runId: number; sessionId: number },
 ) {
   /** The run ID of an agent process (there could be multiple runs for the same user). Globally unique */
   let runId = -1;
@@ -21,7 +24,10 @@ export async function createRunService(
   await init();
 
   async function init() {
-    if (sessionHubClient) {
+    if (preallocated) {
+      runId = preallocated.runId;
+      sessionId = preallocated.sessionId;
+    } else if (sessionHubClient) {
       const response = await sessionHubClient.sendRequest(
         HubEvents.SESSION_CREATE,
         {

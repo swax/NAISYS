@@ -9,10 +9,12 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { IconFileText } from "@tabler/icons-react";
-import React from "react";
-import { Link } from "react-router-dom";
+import { notifications } from "@mantine/notifications";
+import { IconFileText, IconPlus } from "@tabler/icons-react";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
+import { startAgent } from "../../lib/apiAgents";
 import type { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
 
@@ -121,6 +123,40 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   loadingMore,
   onLoadMore,
 }) => {
+  const navigate = useNavigate();
+  const [startingRun, setStartingRun] = useState(false);
+  const hasOnlineRun = runs.some((run) => run.isOnline);
+
+  const handleStartNewRun = async () => {
+    setStartingRun(true);
+    try {
+      const result = await startAgent(agentName);
+      if (result.success && result.runId !== undefined) {
+        onNavLinkClick?.();
+        void navigate(
+          runUrl(agentName, {
+            runId: result.runId,
+            sessionId: result.sessionId ?? 1,
+          }),
+        );
+      } else {
+        notifications.show({
+          title: "Failed to start run",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Failed to start run",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setStartingRun(false);
+    }
+  };
+
   return (
     <Stack gap={0} style={{ height: "100%" }}>
       <RunsCostChart runs={runs} agentName={agentName} />
@@ -133,6 +169,31 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
       )}
 
       <ScrollArea style={{ flex: 1 }}>
+        {/* Hidden once a run is online — the new run row visually becomes
+            that run's row at the top of the list. */}
+        {!hasOnlineRun && (
+          <NavLink
+            label={
+              <Group gap="xs" wrap="nowrap">
+                {startingRun ? (
+                  <Loader size="xs" />
+                ) : (
+                  <IconPlus size={14} />
+                )}
+                <Text size="sm" fw={500} c={startingRun ? "dimmed" : undefined}>
+                  {startingRun ? "Starting new run…" : "Start new run"}
+                </Text>
+              </Group>
+            }
+            disabled={startingRun}
+            onClick={() => void handleStartNewRun()}
+            styles={{
+              root: {
+                borderBottom: "1px solid var(--mantine-color-dark-6)",
+              },
+            }}
+          />
+        )}
         {(() => {
           let groupIndex = 0;
           return runs.map((run, index) => {

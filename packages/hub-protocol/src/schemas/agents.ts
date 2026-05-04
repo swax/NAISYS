@@ -10,20 +10,27 @@ export type AgentStartInbound = z.infer<typeof AgentStartInboundSchema>;
 
 /** Hub → target host. Runtime key is minted up front so the agent's
  *  authenticated from its first command; RUNTIME_KEY_REISSUE handles
- *  later hash mismatches. */
+ *  later hash mismatches. runId/sessionId are pre-allocated by the hub so
+ *  the agent skips an initial SESSION_CREATE round-trip. */
 export const AgentStartDispatchSchema = z.object({
   startUserId: z.number(),
   taskDescription: z.string().optional(),
   runtimeApiKey: z.string(),
+  runId: z.number(),
+  sessionId: z.number(),
   sourceHostId: z.number().optional(),
 });
 export type AgentStartDispatch = z.infer<typeof AgentStartDispatchSchema>;
 
-/** Response to agent start request */
+/** modelName is set by the host so the hub can fill in the run_session
+ *  row it pre-allocated. runId/sessionId are echoed back to the supervisor. */
 export const AgentStartResponseSchema = z.object({
   success: z.boolean(),
   error: z.string().optional(),
   hostname: z.string().optional(),
+  runId: z.number().optional(),
+  sessionId: z.number().optional(),
+  modelName: z.string().optional(),
 });
 export type AgentStartResponse = z.infer<typeof AgentStartResponseSchema>;
 

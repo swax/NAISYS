@@ -3,6 +3,7 @@ import {
   Alert,
   Badge,
   Box,
+  Button,
   Code,
   Drawer,
   Group,
@@ -19,6 +20,7 @@ import {
   IconList,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
+  IconPlayerStop,
   IconRotateClockwise,
   IconSend,
 } from "@tabler/icons-react";
@@ -37,6 +39,7 @@ import { getPlatformBadge } from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
+import { stopAgent } from "../../lib/apiAgents";
 import { pauseRun, resumeRun, sendRunCommand } from "../../lib/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
@@ -236,6 +239,40 @@ export const AgentRuns: React.FC = () => {
       });
     } finally {
       setPauseLoading(false);
+    }
+  };
+
+  const [stopLoading, setStopLoading] = useState(false);
+
+  const handleStop = async (run: RunSession) => {
+    if (!username || stopLoading) return;
+    if (!window.confirm("Stop this run?")) return;
+    setStopLoading(true);
+    try {
+      const result = await stopAgent(username);
+      if (result.success) {
+        // Force isOnline false locally so the Stop/pause/command surfaces
+        // disappear and "Start new run" returns without waiting for the
+        // 8s heartbeat-staleness window.
+        patchRun(run.userId, run.runId, run.sessionId, run.subagentId, {
+          lastActive: new Date(0).toISOString(),
+          paused: false,
+        });
+      } else {
+        notifications.show({
+          title: "Stop Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Stop Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setStopLoading(false);
     }
   };
 
@@ -478,6 +515,18 @@ export const AgentRuns: React.FC = () => {
                   <Badge size="sm" variant="dot" color="green">
                     Online
                   </Badge>
+                )}
+                {selectedRun.isOnline && selectedRun.subagentId == null && (
+                  <Button
+                    size="compact-xs"
+                    variant="light"
+                    color="red"
+                    loading={stopLoading}
+                    leftSection={<IconPlayerStop size={12} />}
+                    onClick={() => void handleStop(selectedRun)}
+                  >
+                    Stop
+                  </Button>
                 )}
               </Group>
               <Group gap="xs">

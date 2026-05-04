@@ -6,6 +6,7 @@ import {
   AgentRunPauseRequestSchema,
   type AgentStartDispatch,
   AgentStartInboundSchema,
+  type AgentStartResponse,
   AgentStopRequestSchema,
   HubEvents,
 } from "@naisys/hub-protocol";
@@ -115,27 +116,120 @@ export function createHubAgentService(
    * Mint and ship a key with AGENT_START so the agent's authenticated from
    * spawn time, avoiding the one-RTT window heartbeat-only would create.
    * Heartbeat-driven reissue covers later hash mismatches.
+   *
+   * The run_session row is written up front with model_name="" so the
+   * agent's command loop (which starts before the host acks) can FK-safely
+   * write logs/costs. model_name is patched in from the ack; the session
+   * is pushed to supervisors and runId/sessionId returned to the caller
+   * only on success. Any failure rolls back the placeholder.
    */
   async function dispatchAgentStart(args: {
     bestHostId: number;
-    payload: Omit<AgentStartDispatch, "runtimeApiKey">;
-    onResponse: (response: AgentResponse) => void;
+    payload: Omit<AgentStartDispatch, "runtimeApiKey" | "runId" | "sessionId">;
+    onResponse: (response: AgentStartResponse) => void;
   }): Promise<{ sent: boolean }> {
     const { bestHostId, payload, onResponse } = args;
     const startUserId = payload.startUserId;
     const runtimeApiKey = await issueRuntimeApiKey(startUserId);
 
+    const lastRun = await hubDb.run_session.findFirst({
+      select: { run_id: true },
+      orderBy: { run_id: "desc" },
+    });
+    const runId = lastRun ? lastRun.run_id + 1 : 1;
+    const sessionId = 1;
+    const subagentId = 0;
+    const now = new Date().toISOString();
+    const rowWhere = {
+      user_id: startUserId,
+      run_id: runId,
+      subagent_id: subagentId,
+      session_id: sessionId,
+    };
+
+    await hubDb.run_session.create({
+      data: {
+        ...rowWhere,
+        host_id: bestHostId,
+        model_name: "",
+        created_at: now,
+        last_active: now,
+      },
+    });
+
+    async function rollbackPlaceholder(reason: string) {
+      try {
+        await hubDb.run_session.deleteMany({ where: rowWhere });
+      } catch (err) {
+        logService.error(
+          `[Hub:Agents] Failed to roll back run_session row for run ${runId} (${reason}): ${err}`,
+        );
+      }
+    }
+
     const sent = naisysServer.sendMessage(
       bestHostId,
       HubEvents.AGENT_START,
-      { ...payload, runtimeApiKey },
-      (response: AgentResponse) => {
-        if (response.success) {
-          heartbeatService.addStartedAgent(bestHostId, startUserId);
+      { ...payload, runtimeApiKey, runId, sessionId },
+      async (response: AgentStartResponse) => {
+        if (response.success && response.modelName) {
+          const modelName = response.modelName;
+          try {
+            await hubDb.run_session.updateMany({
+              where: rowWhere,
+              data: { model_name: modelName },
+            });
+            heartbeatService.addStartedAgent(bestHostId, startUserId);
+            naisysServer.broadcastToSupervisors(HubEvents.SESSION_PUSH, {
+              session: {
+                userId: startUserId,
+                runId,
+                sessionId,
+                modelName,
+                createdAt: now,
+                lastActive: now,
+                latestLogId: 0,
+                totalLines: 0,
+                totalCost: 0,
+              },
+            });
+            onResponse({ ...response, runId, sessionId });
+          } catch (err) {
+            logService.error(
+              `[Hub:Agents] Failed to finalize run_session row for run ${runId}: ${err}`,
+            );
+            await rollbackPlaceholder("update failed");
+            onResponse({
+              success: false,
+              error: `Failed to finalize run_session row: ${err}`,
+              hostname: response.hostname,
+            });
+          }
+        } else {
+          if (response.success && !response.modelName) {
+            logService.error(
+              `[Hub:Agents] Host ${bestHostId} acked agent_start without modelName for user ${startUserId}; treating as failure`,
+            );
+          }
+          await rollbackPlaceholder(
+            response.success ? "missing modelName" : "host failure",
+          );
+          onResponse(
+            response.success
+              ? {
+                  success: false,
+                  error: "Host did not return modelName",
+                  hostname: response.hostname,
+                }
+              : response,
+          );
         }
-        onResponse(response);
       },
     );
+
+    if (!sent) {
+      await rollbackPlaceholder("send failed");
+    }
 
     return { sent };
   }

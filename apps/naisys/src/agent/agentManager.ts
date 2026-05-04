@@ -56,14 +56,18 @@ export class AgentManager {
             this.notifyHubRequest("start", parsed.startUserId);
           }
 
-          await this.startAgent(
+          const { shellModel } = await this.startAgent(
             parsed.startUserId,
             parsed.runtimeApiKey,
+            undefined,
+            undefined,
+            { runId: parsed.runId, sessionId: parsed.sessionId },
           );
 
           ack({
             success: true,
             hostname,
+            modelName: shellModel,
           });
         } catch (error) {
           ack({
@@ -231,6 +235,7 @@ export class AgentManager {
     runtimeApiKey?: string,
     onStop?: (reason: string) => void,
     subagentContext?: SubagentContext,
+    preallocated?: { runId: number; sessionId: number },
   ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
@@ -250,6 +255,7 @@ export class AgentManager {
       this.modelService,
       this.promptNotification,
       subagentContext,
+      preallocated,
     );
 
     // Apply before push so the immediate onHeartbeatNeeded fires with the
@@ -276,7 +282,7 @@ export class AgentManager {
 
     this.runPromises.set(userId, runPromise);
 
-    return agent.agentUserId;
+    return { agentUserId: agent.agentUserId, shellModel: agent.shellModel };
   }
 
   async stopAgent(agentUserId: number, reason: string) {

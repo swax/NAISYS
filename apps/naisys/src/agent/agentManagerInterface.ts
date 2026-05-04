@@ -10,6 +10,13 @@ export interface SubagentContext {
   parentCostTracker: CostTracker;
 }
 
+/** shellModel is returned so the AGENT_START ack can hand it back to the
+ * hub to fill in the run_session row's model_name. */
+export interface AgentStartedInfo {
+  agentUserId: number;
+  shellModel: string;
+}
+
 /** Don't create a cyclic dependency on agent manager, or give this class access to all of the the agent manager's properties */
 export interface IAgentManager {
   startAgent: (
@@ -17,13 +24,15 @@ export interface IAgentManager {
     runtimeApiKey?: string,
     onStop?: (reason: string) => void,
     subagentContext?: SubagentContext,
-  ) => Promise<number>;
+    preallocated?: { runId: number; sessionId: number },
+  ) => Promise<AgentStartedInfo>;
   stopAgent: (agentUserId: number, reason: string) => Promise<void>;
   stopAll: (reason: string, excludeUserId?: number) => Promise<void>;
   runningAgents: Array<{
     agentUserId: number;
     agentUsername: string;
     agentTitle: string;
+    shellModel: string;
     getRunId: () => number;
     getSessionId: () => number;
     isPaused: () => boolean;

@@ -62,6 +62,7 @@ export async function createAgentRuntime(
   modelService: ModelService,
   promptNotification: PromptNotificationService,
   subagentContext?: SubagentContext,
+  preallocated?: { runId: number; sessionId: number },
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
   // local-mode branch. RunService keeps the parent's hubClient (as
@@ -88,6 +89,7 @@ export async function createAgentRuntime(
     sessionHubClient,
     localUserId,
     subagentContext,
+    preallocated,
   );
   // Shared ref so attachmentService (built before shellWrapper) and
   // shellWrapper read the same current key.
@@ -375,6 +377,7 @@ export async function createAgentRuntime(
     agentUserId: localUserId,
     agentUsername: config.username,
     agentTitle: config.title,
+    shellModel: config.shellModel,
     getRunId: runService.getRunId,
     getSessionId: runService.getSessionId,
     isPaused: commandLoop.isPaused,

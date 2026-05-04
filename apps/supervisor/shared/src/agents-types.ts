@@ -131,10 +131,14 @@ export const AgentStartRequestSchema = z
   .strict();
 export type AgentStartRequest = z.infer<typeof AgentStartRequestSchema>;
 
+/** runId/sessionId are allocated by the hub so the UI can navigate
+ *  to the new run without waiting for the agent to register a session. */
 export const AgentStartResultSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   hostname: z.string().optional(),
+  runId: z.number().optional(),
+  sessionId: z.number().optional(),
 });
 export type AgentStartResult = z.infer<typeof AgentStartResultSchema>;
 
