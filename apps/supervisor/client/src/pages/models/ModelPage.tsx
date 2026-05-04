@@ -9,7 +9,7 @@ import {
   Title,
 } from "@mantine/core";
 import { hasAction } from "@naisys/common";
-import { IconEdit, IconTrash } from "@tabler/icons-react";
+import { IconEdit, IconInfoCircle, IconTrash } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useBlocker, useNavigate, useParams } from "react-router-dom";
 
@@ -285,6 +285,23 @@ export const ModelPage: React.FC = () => {
           withCloseButton
         >
           {saveError}
+        </Alert>
+      )}
+
+      {key === "none" && (
+        <Alert color="blue" icon={<IconInfoCircle size={16} />}>
+          The <strong>none</strong> model allows agents to exist in the system
+          without being backed by an LLM &mdash; they may be driven by a human,
+          an external API, or anything else. To other agents they look the
+          same: they can send and receive messages and participate in the
+          system normally.
+        </Alert>
+      )}
+
+      {key === "mock" && (
+        <Alert color="blue" icon={<IconInfoCircle size={16} />}>
+          The <strong>mock</strong> LLM is used for basic testing and will
+          always respond with the same dummy command.
         </Alert>
       )}
 

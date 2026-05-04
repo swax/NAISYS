@@ -30,6 +30,16 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const sortedLlmModels = React.useMemo(
+    () => [...llmModels].sort((a, b) => a.label.localeCompare(b.label)),
+    [llmModels],
+  );
+
+  const sortedImageModels = React.useMemo(
+    () => [...imageModels].sort((a, b) => a.label.localeCompare(b.label)),
+    [imageModels],
+  );
+
   const isModelSelected = (key: string) => {
     const pathParts = location.pathname.split("/");
     // Path: /models/:key
@@ -128,7 +138,7 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
           LLM Models
         </Text>
         <Stack gap="xs">
-          {llmModels.map((model) => (
+          {sortedLlmModels.map((model) => (
             <Card
               key={model.key}
               padding="sm"
@@ -198,7 +208,7 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
           Image Models
         </Text>
         <Stack gap="xs">
-          {imageModels.map((model) => (
+          {sortedImageModels.map((model) => (
             <Card
               key={model.key}
               padding="sm"
