@@ -545,144 +545,155 @@ export const AgentRuns: React.FC = () => {
               </Group>
             </Group>
 
-            {/* Log content */}
-            <RunSessionLog run={selectedRun} />
-
-            {/* Command input — only usable while run is online. */}
-            <Group
-              gap="xs"
-              p="xs"
-              style={{ borderTop: "1px solid var(--mantine-color-dark-4)" }}
-            >
-              <HoverCard width={340} shadow="md" withArrow position="top-start">
-                <HoverCard.Target>
-                  <ActionIcon variant="subtle" color="gray" size="lg">
-                    <IconHelp size={18} />
-                  </ActionIcon>
-                </HoverCard.Target>
-                <HoverCard.Dropdown>
-                  <Stack gap={6}>
-                    <Text size="sm" fw={600}>
-                      Remote command input
-                    </Text>
-                    <Text size="xs">
-                      Send <Code>ns-help</Code> to see available commands.
-                    </Text>
-                    <Text size="xs">
-                      Prefix with <Code>@</Code> to send a message and trigger
-                      the next LLM run.
-                    </Text>
-                    <Text size="xs">
-                      Prefix with <Code>!</Code> to run a shell command the LLM
-                      can see — added to its context (coming soon).
-                    </Text>
-                    <Text size="xs">
-                      Otherwise, commands run on the shell without being added
-                      to the LLM&apos;s context.
-                    </Text>
-                    <Text size="xs">
-                      Send blank to bounce the agent into LLM mode for one cycle
-                      — bypasses a paused or indefinite debug wait.
-                    </Text>
-                    <Text size="sm" fw={600} mt={4}>
-                      Log colors
-                    </Text>
-                    <Text size="xs">
-                      <Text span c="green">
-                        Green
-                      </Text>{" "}
-                      — info &amp; debug (off-context)
-                    </Text>
-                    <Text size="xs">
-                      <Text span>White</Text> — shell output (in context)
-                    </Text>
-                    <Text size="xs">
-                      <Text span c="magenta">
-                        Magenta
-                      </Text>{" "}
-                      — LLM output (in context)
-                    </Text>
-                    <Text size="xs">
-                      <Text span c="red">
-                        Red
-                      </Text>{" "}
-                      — errors (off-context)
-                    </Text>
-                  </Stack>
-                </HoverCard.Dropdown>
-              </HoverCard>
-              {selectedRun.isOnline && (
-                <Tooltip
-                  label={selectedRun.paused ? "Resume agent" : "Pause agent"}
+            {/* Log content — footer travels with the log into fullscreen mode. */}
+            <RunSessionLog
+              run={selectedRun}
+              footer={
+                <Group
+                  gap="xs"
+                  p="xs"
+                  style={{
+                    borderTop: "1px solid var(--mantine-color-dark-4)",
+                  }}
                 >
-                  <ActionIcon
-                    variant="subtle"
-                    color={selectedRun.paused ? "orange" : "gray"}
-                    size="lg"
-                    loading={pauseLoading}
-                    onClick={() => void handlePauseToggle(selectedRun)}
+                  <HoverCard
+                    width={340}
+                    shadow="md"
+                    withArrow
+                    position="top-start"
                   >
-                    <Box
-                      style={{
-                        position: "relative",
-                        width: 22,
-                        height: 22,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                    <HoverCard.Target>
+                      <ActionIcon variant="subtle" color="gray" size="lg">
+                        <IconHelp size={18} />
+                      </ActionIcon>
+                    </HoverCard.Target>
+                    <HoverCard.Dropdown>
+                      <Stack gap={6}>
+                        <Text size="sm" fw={600}>
+                          Remote command input
+                        </Text>
+                        <Text size="xs">
+                          Send <Code>ns-help</Code> to see available commands.
+                        </Text>
+                        <Text size="xs">
+                          Prefix with <Code>@</Code> to send a message and
+                          trigger the next LLM run.
+                        </Text>
+                        <Text size="xs">
+                          Prefix with <Code>!</Code> to run a shell command the
+                          LLM can see — added to its context (coming soon).
+                        </Text>
+                        <Text size="xs">
+                          Otherwise, commands run on the shell without being
+                          added to the LLM&apos;s context.
+                        </Text>
+                        <Text size="xs">
+                          Send blank to bounce the agent into LLM mode for one
+                          cycle — bypasses a paused or indefinite debug wait.
+                        </Text>
+                        <Text size="sm" fw={600} mt={4}>
+                          Log colors
+                        </Text>
+                        <Text size="xs">
+                          <Text span c="green">
+                            Green
+                          </Text>{" "}
+                          — info &amp; debug (off-context)
+                        </Text>
+                        <Text size="xs">
+                          <Text span>White</Text> — shell output (in context)
+                        </Text>
+                        <Text size="xs">
+                          <Text span c="magenta">
+                            Magenta
+                          </Text>{" "}
+                          — LLM output (in context)
+                        </Text>
+                        <Text size="xs">
+                          <Text span c="red">
+                            Red
+                          </Text>{" "}
+                          — errors (off-context)
+                        </Text>
+                      </Stack>
+                    </HoverCard.Dropdown>
+                  </HoverCard>
+                  {selectedRun.isOnline && (
+                    <Tooltip
+                      label={
+                        selectedRun.paused ? "Resume agent" : "Pause agent"
+                      }
                     >
-                      <IconRotateClockwise
-                        size={22}
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          animation: !selectedRun.paused
-                            ? "agentRunSpin 2s linear infinite"
-                            : undefined,
-                        }}
-                      />
-                      {selectedRun.paused ? (
-                        <IconPlayerPlayFilled size={9} />
-                      ) : (
-                        <IconPlayerPauseFilled size={9} />
-                      )}
-                    </Box>
+                      <ActionIcon
+                        variant="subtle"
+                        color={selectedRun.paused ? "orange" : "gray"}
+                        size="lg"
+                        loading={pauseLoading}
+                        onClick={() => void handlePauseToggle(selectedRun)}
+                      >
+                        <Box
+                          style={{
+                            position: "relative",
+                            width: 22,
+                            height: 22,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <IconRotateClockwise
+                            size={22}
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              animation: !selectedRun.paused
+                                ? "agentRunSpin 2s linear infinite"
+                                : undefined,
+                            }}
+                          />
+                          {selectedRun.paused ? (
+                            <IconPlayerPlayFilled size={9} />
+                          ) : (
+                            <IconPlayerPauseFilled size={9} />
+                          )}
+                        </Box>
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
+                  <Textarea
+                    ref={commandInputRef}
+                    placeholder={
+                      selectedRun.isOnline
+                        ? "Send a command to the agent..."
+                        : "Run is offline"
+                    }
+                    disabled={!selectedRun.isOnline || commandSending}
+                    value={commandInput}
+                    onChange={(e) => setCommandInput(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleSendCommand(selectedRun);
+                      }
+                    }}
+                    autosize
+                    minRows={1}
+                    maxRows={4}
+                    style={{ flex: 1 }}
+                  />
+                  <ActionIcon
+                    variant="filled"
+                    color="blue"
+                    size="lg"
+                    disabled={!selectedRun.isOnline || commandSending}
+                    loading={commandSending}
+                    onClick={() => void handleSendCommand(selectedRun)}
+                  >
+                    <IconSend size={18} />
                   </ActionIcon>
-                </Tooltip>
-              )}
-              <Textarea
-                ref={commandInputRef}
-                placeholder={
-                  selectedRun.isOnline
-                    ? "Send a command to the agent..."
-                    : "Run is offline"
-                }
-                disabled={!selectedRun.isOnline || commandSending}
-                value={commandInput}
-                onChange={(e) => setCommandInput(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSendCommand(selectedRun);
-                  }
-                }}
-                autosize
-                minRows={1}
-                maxRows={4}
-                style={{ flex: 1 }}
-              />
-              <ActionIcon
-                variant="filled"
-                color="blue"
-                size="lg"
-                disabled={!selectedRun.isOnline || commandSending}
-                loading={commandSending}
-                onClick={() => void handleSendCommand(selectedRun)}
-              >
-                <IconSend size={18} />
-              </ActionIcon>
-            </Group>
+                </Group>
+              }
+            />
           </>
         )}
       </Box>

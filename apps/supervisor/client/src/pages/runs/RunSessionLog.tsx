@@ -26,7 +26,8 @@ import { GroupedLogComponent, groupPromptEntries } from "./LogEntries";
 
 export const RunSessionLog: React.FC<{
   run: RunSession;
-}> = ({ run }) => {
+  footer?: React.ReactNode;
+}> = ({ run, footer }) => {
   const { username } = useParams<{ username: string }>();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const agent = agents.find((a) => a.name === username);
@@ -160,8 +161,8 @@ export const RunSessionLog: React.FC<{
           position: "relative",
           display: "flex",
           flexDirection: "column",
-          flex: isFullscreen ? undefined : 1,
-          minHeight: isFullscreen ? undefined : 0,
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {isFullscreen && (
@@ -238,10 +239,8 @@ export const RunSessionLog: React.FC<{
             backgroundColor: "#1a1a1a",
             padding: "8px",
             borderRadius: "4px",
-            maxHeight: isFullscreen ? "100vh" : undefined,
-            height: isFullscreen ? "100vh" : undefined,
-            flex: isFullscreen ? undefined : 1,
-            minHeight: isFullscreen ? undefined : 0,
+            flex: 1,
+            minHeight: 0,
             overflowY: "auto",
           }}
         >
@@ -295,6 +294,9 @@ export const RunSessionLog: React.FC<{
             </Text>
           )}
         </Stack>
+        {/* Render footer in whichever view is currently active (inline vs portal)
+            so we never have two copies of the input in the DOM. */}
+        {fullscreen === isFullscreen && footer}
       </Box>
     );
   };
@@ -336,6 +338,8 @@ export const RunSessionLog: React.FC<{
               left: 0,
               right: 0,
               bottom: 0,
+              display: "flex",
+              flexDirection: "column",
               backgroundColor: "#1a1a1a",
               zIndex: 1000,
             }}
