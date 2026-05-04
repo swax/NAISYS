@@ -24,6 +24,8 @@ Additional commands introduced or normalized under the `ns-` prefix:
 
 - `ns-look`, `ns-listen` — media inspection
 - `ns-desktop` — desktop interaction (screenshot, focus, key, hold, click, type, dump)
+- `ns-browser` — headless browser with both text-based and visual modes (Playwright Chromium)
+- `ns-websearch` — Google web search (requires `GOOGLE_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID`)
 - `ns-chat` — lightweight team chat (separate from `ns-mail`)
 - `ns-users` — relevant-user directory
 - `ns-workspace` — pinned-file workspace
@@ -64,6 +66,8 @@ Registry is assembled in `agentRuntime.ts`. Registered commands include:
 
 - `ns-comment` — inline thought marker (small shim declared in `agentRuntime.ts`)
 - `ns-lynx` — context-friendly browser (`lynxService`)
+- `ns-websearch` — Google web search (`webSearchService`)
+- `ns-browser` — headless Chromium browser, text + visual modes (`browserService`)
 - `ns-genimg` — image generation (`genimg`)
 - `ns-desktop` — desktop/computer-use (`desktopService`)
 - `ns-look`, `ns-listen` — media into context (`lookService`, `listenService`)

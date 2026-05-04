@@ -56,7 +56,8 @@ All built-in commands use an `ns-*` prefix for discoverability ([doc 003](../../
 - `ns-agent` — start/stop/peek/local subagents; `peek` works across the cluster
 - `ns-mail` — flat (non-thread) mail model ([doc 002](../../docs/002-revised-llmail-plan.md)), `@host` addressing, short-id threads, archive-all, from-title, gap detection/recovery, markdown, cross-machine delivery through the hub
 - `ns-chat` — shorter-form conversation service layered on mail
-- `ns-lynx` — text web browser, cost-tracked Google Custom Search
+- `ns-lynx` — text web browser
+- `ns-websearch` — Google Custom Search (requires `GOOGLE_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID`); available when either `ns-lynx` or `ns-browser` is enabled
 - `ns-browser` — headless Chromium via Playwright; selector-based click/fill, on-demand screenshots
 - `ns-genimg` — image generation (vendor-agnostic model registry)
 - `ns-look` — load images into LLM context
@@ -84,7 +85,8 @@ Available only at the local debug prompt; not exposed to the LLM.
 
 ### Models
 
-- Anthropic Claude (with extended thinking and tool-use completion), OpenAI (Responses API), Google Gemini, Grok, OpenRouter, and local LLMs
+- Anthropic Claude (with extended thinking and tool-use completion), OpenAI (Responses API, with Codex OAuth as an alternative to API-key auth), Google Gemini, Grok, OpenRouter, and local LLMs
+- Per-vendor reasoning-level selector (low/medium/high) for models that support it, configurable per-agent
 - Computer-use integrations for Claude, Gemini, and OpenAI
 - Desktop control on Linux (X11/Wayland), Windows (PowerShell, no WSL), and macOS (`cliclick`, preliminary)
 - DB-backed, user-editable LLM and image model catalogs

@@ -13,7 +13,7 @@ Two running modes share a common policy but implement it differently:
 - **Hub mode** (multi-host): The hub owns auto-start. `hubMailService` polls every 10 seconds (plus reacts to `MAIL_SEND` and `CLIENT_CONNECTED`) for users with unread mail who are not currently active, picks the least-loaded eligible host, and sends an `AGENT_START` event to that host.
 - **Standalone mode** (single process, no hub): Auto-start is triggered inline from `MailService.sendMessage()` — after writing the mail to the in-process event bus, any inactive recipient has `AgentManager.startAgent()` called.
 
-In both modes, the same global flag gates the behavior (`globalConfig.autoStartAgentsOnMessage`, currently hardcoded to `true` in `packages/common/src/globalConfigLoader.ts`).
+In both modes, the same global flag gates the behavior (`globalConfig.autoStartAgentsOnMessage`, currently hardcoded to `true` in `packages/common/src/globalConfigLoader.ts`). Separately, the mail service itself is globally gated by the `MAIL_ENABLED` env var (default off — chat is the default comm channel), surfaced as `globalConfig.mailServiceEnabled`. The auto-start code paths don't check this flag directly; they just don't fire because no mail gets generated when the service is disabled.
 
 Agents shut themselves down via `ns-session complete "<result>"`, which mails the result to the agent's lead (or admin as fallback) and exits the process.
 

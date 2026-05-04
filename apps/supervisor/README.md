@@ -37,7 +37,7 @@ Standalone supervisor reads configuration from `.env`:
 - **Cost analysis** — graphs and a model cost calculator (Chart.js)
 - **Admin** — system info/config, DB sizes, app/DB version, error-filtered logs
 - **Variables** — sensitive-value hiding, read-only mode
-- **Users & permissions** ([doc 008](../../docs/008-supervisor-users.md)) — CRUD, permission management, create-user-from-agent, registration-link issuance with QR code, passkey list/delete/reset, optional password remove, API keys with rotation
+- **Users & permissions** ([doc 008](../../docs/008-supervisor-users.md)) — CRUD, permission management, create-user-from-agent, registration-link issuance with QR code, passkey list/rename/delete/reset, optional password add/change/remove, API keys with rotation
 - **API reference** — Scalar UI gated behind auth; OpenAPI spec hidden from agents
 
 ### UX

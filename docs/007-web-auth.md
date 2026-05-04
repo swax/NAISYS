@@ -144,10 +144,10 @@ Agent users created via `createUserForAgent()` have no `passwordHash` and no pas
 model User {
   id                  Int                 @id @default(autoincrement())
   username            String              @unique
-  uuid                String              @default("")
+  uuid                String              @unique
   isAgent             Boolean             @default(false)
   passwordHash        String?             // null = no password set
-  apiKey              String?             @unique
+  apiKeyHash          String?             @unique @map("api_key_hash")
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
   permissions         UserPermission[]
