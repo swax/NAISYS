@@ -32,6 +32,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { getPlatformBadgeColor } from "../../components/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
@@ -652,7 +653,9 @@ export const AgentDetail: React.FC = () => {
                 to={`/hosts/${agentData.host}`}
                 size="sm"
                 variant="light"
-                color="blue"
+                color={getPlatformBadgeColor(
+                  hosts.find((h) => h.name === agentData.host)?.platform,
+                )}
                 style={{ cursor: "pointer" }}
               >
                 {agentData.host}

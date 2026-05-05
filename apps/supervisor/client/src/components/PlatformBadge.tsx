@@ -12,6 +12,9 @@ const PLATFORM_META: Record<string, { label: string; color: string }> = {
 export const getPlatformBadge = (platform: string | undefined | null) =>
   PLATFORM_META[platform ?? ""] ?? { label: platform || "?", color: "gray" };
 
+export const getPlatformBadgeColor = (platform: string | undefined | null) =>
+  getPlatformBadge(platform).color;
+
 interface PlatformBadgeProps {
   platform: string | undefined | null;
   size?: BadgeProps["size"];

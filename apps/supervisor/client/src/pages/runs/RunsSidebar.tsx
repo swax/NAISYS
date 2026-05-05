@@ -14,6 +14,7 @@ import { IconFileText, IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { getPlatformBadgeColor } from "../../components/PlatformBadge";
 import { startAgent } from "../../lib/apiAgents";
 import type { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
@@ -281,7 +282,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                         <Badge
                           size="xs"
                           variant="light"
-                          color="cyan"
+                          color={getPlatformBadgeColor(
+                            run.hostEnvironment?.platform,
+                          )}
                           style={{ whiteSpace: "nowrap" }}
                         >
                           {run.hostName}

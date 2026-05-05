@@ -35,7 +35,10 @@ import {
 } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
-import { getPlatformBadge } from "../../components/PlatformBadge";
+import {
+  getPlatformBadge,
+  getPlatformBadgeColor,
+} from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/useRunsData";
@@ -484,7 +487,9 @@ export const AgentRuns: React.FC = () => {
                   <Badge
                     size="sm"
                     variant="light"
-                    color="cyan"
+                    color={getPlatformBadgeColor(
+                      selectedRun.hostEnvironment?.platform,
+                    )}
                     component={Link}
                     to={`/hosts/${selectedRun.hostName}`}
                     style={{ cursor: "pointer" }}
