@@ -197,6 +197,7 @@ export function createUserService(
     const user = userMap.get(userId);
     const status = determineAgentStatus({
       isActive: isUserActive(userId),
+      isPaused: false,
       isEnabled: user?.enabled ?? true,
       isSuspended: false,
       assignedHostIds: user?.assignedHostIds,

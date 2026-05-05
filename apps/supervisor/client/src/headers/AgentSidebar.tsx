@@ -306,18 +306,23 @@ export const AgentSidebar: React.FC = () => {
               color={
                 agent.status === "active"
                   ? "green"
-                  : agent.status === "available"
+                  : agent.status === "paused"
                     ? "yellow"
-                    : agent.status === "suspended"
-                      ? "red"
-                      : "gray"
+                    : agent.status === "available"
+                      ? "blue"
+                      : agent.status === "suspended"
+                        ? "red"
+                        : "gray"
               }
               style={{
                 flexShrink: 0,
-                cursor: agent.status === "active" ? "pointer" : "default",
+                cursor:
+                  agent.status === "active" || agent.status === "paused"
+                    ? "pointer"
+                    : "default",
               }}
               onClick={(e) => {
-                if (agent.status === "active") {
+                if (agent.status === "active" || agent.status === "paused") {
                   e.preventDefault();
                   e.stopPropagation();
                   void navigate(`/agents/${agent.name}/runs?expand=online`);

@@ -35,6 +35,7 @@ import {
   markAgentStopped,
   updateAgentsStatus,
   updateHostsStatus,
+  updatePausedAgents,
 } from "./agentHostStatusService.js";
 import { refreshUserLookup, resolveUsername } from "./agentService.js";
 import { getIO } from "./browserSocketService.js";
@@ -249,12 +250,19 @@ export function initHubConnection(hubUrl: string) {
     }
 
     const browserIO = getIO();
+    const pausedUserIds: number[] = [];
     for (const update of parsed.data.updates) {
+      // Only parent sessions affect the agent-level paused indicator —
+      // a paused subagent doesn't pause its parent's command loop.
+      if (update.paused && !update.subagentId) {
+        pausedUserIds.push(update.userId);
+      }
       const username = resolveUsername(update.userId);
       if (!username) continue;
       const room = `runs:${username}`;
       browserIO.to(room).emit(room, { type: "heartbeat-update", ...update });
     }
+    updatePausedAgents(pausedUserIds);
   });
 
   // Track last pushed message ID per room for gap detection

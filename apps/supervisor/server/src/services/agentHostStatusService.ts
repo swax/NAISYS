@@ -8,6 +8,7 @@ import type {
 import { getIO } from "./browserSocketService.js";
 
 const activeAgentIds = new Set<number>();
+const pausedAgentIds = new Set<number>();
 const disabledAgentIds = new Set<number>();
 const costSuspendedAgentIds = new Set<number>();
 const connectedHostIds = new Set<number>();
@@ -111,6 +112,22 @@ export function markAgentStarted(userId: number): void {
 
 export function markAgentStopped(userId: number): void {
   activeAgentIds.delete(userId);
+  pausedAgentIds.delete(userId);
+  broadcastAgentStatus(getAgentSnapshot());
+}
+
+/** Replace the paused-agent set from the latest session heartbeat. Only
+ * parent sessions count — a paused subagent doesn't make the agent paused. */
+export function updatePausedAgents(userIds: number[]): void {
+  const next = new Set(userIds);
+  if (
+    next.size === pausedAgentIds.size &&
+    [...next].every((id) => pausedAgentIds.has(id))
+  ) {
+    return;
+  }
+  pausedAgentIds.clear();
+  for (const id of next) pausedAgentIds.add(id);
   broadcastAgentStatus(getAgentSnapshot());
 }
 
@@ -188,6 +205,7 @@ function hasNonRestrictedOnlineHost(): boolean {
 export function getAgentStatus(agentId: number): AgentStatus {
   return determineAgentStatus({
     isActive: activeAgentIds.has(agentId),
+    isPaused: pausedAgentIds.has(agentId),
     isEnabled: !disabledAgentIds.has(agentId),
     isSuspended: costSuspendedAgentIds.has(agentId),
     assignedHostIds: agentHostAssignments.get(agentId),

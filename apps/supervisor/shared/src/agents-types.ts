@@ -30,7 +30,7 @@ export const AgentSchema = z.object({
   budgetLeft: z.number().nullable().optional(),
   shellModel: z.string().optional(),
   status: z
-    .enum(["active", "available", "disabled", "offline", "suspended"])
+    .enum(["active", "available", "disabled", "offline", "paused", "suspended"])
     .optional(),
 });
 
@@ -79,7 +79,7 @@ export const AgentDetailResponseSchema = z.object({
   enabled: z.boolean().optional(),
   archived: z.boolean().optional(),
   status: z
-    .enum(["active", "available", "disabled", "offline", "suspended"])
+    .enum(["active", "available", "disabled", "offline", "paused", "suspended"])
     .optional(),
   costSuspendedReason: z.string().optional(),
   currentSpend: z.number().optional(),

@@ -15,6 +15,7 @@ export const AgentStatusEventSchema = z.object({
         "available",
         "disabled",
         "offline",
+        "paused",
         "suspended",
       ]),
       latestLogId: z.number(),
