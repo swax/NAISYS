@@ -34,6 +34,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import {
   getPlatformBadge,
@@ -41,6 +42,7 @@ import {
 } from "../../components/PlatformBadge";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useLlmModels } from "../../hooks/useLlmModels";
 import { useRunsData } from "../../hooks/useRunsData";
 import { stopAgent } from "../../lib/apiAgents";
 import { pauseRun, resumeRun, sendRunCommand } from "../../lib/apiRuns";
@@ -72,6 +74,7 @@ export const AgentRuns: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { agents, readStatus } = useAgentDataContext();
+  const llmModels = useLlmModels();
   const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
   const [searchParams] = useSearchParams();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
@@ -513,7 +516,10 @@ export const AgentRuns: React.FC = () => {
                 <Badge
                   size="sm"
                   variant="light"
-                  color="blue"
+                  color={getApiTypeBadgeColor(
+                    llmModels.find((m) => m.key === selectedRun.modelName)
+                      ?.apiType,
+                  )}
                   component={Link}
                   to={`/models/${encodeURIComponent(selectedRun.modelName)}`}
                   style={{ cursor: "pointer" }}

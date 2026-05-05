@@ -1,9 +1,13 @@
-import { Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
+import { Badge, Button, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
 import { hasAction, type HateoasAction } from "@naisys/common";
 import {
+  IconBrain,
   IconCalculator,
   IconChartDots,
   IconCpu,
+  IconDeviceDesktop,
+  IconEye,
+  IconHeadphones,
   IconPhoto,
   IconPlus,
   IconUser,
@@ -11,6 +15,7 @@ import {
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { ApiTypeBadge } from "../components/ApiTypeBadge";
 import { ROUTER_BASENAME } from "../constants";
 import type { ImageModelDetail, LlmModelDetail } from "../lib/apiClient";
 
@@ -179,10 +184,46 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
                       </Badge>
                     )}
                   </Group>
-                  <Text size="xs" c="dimmed" truncate="end">
-                    {model.apiType} &middot; {model.maxTokens.toLocaleString()}{" "}
-                    tokens
-                  </Text>
+                  <Group gap={6} align="center" wrap="nowrap" mt={6}>
+                    <ApiTypeBadge apiType={model.apiType} />
+                    {model.supportsVision && (
+                      <Tooltip label="Vision">
+                        <IconEye
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
+                    {model.supportsHearing && (
+                      <Tooltip label="Hearing">
+                        <IconHeadphones
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
+                    {model.supportsComputerUse && (
+                      <Tooltip label="Computer Use">
+                        <IconDeviceDesktop
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
+                    {model.reasoningLevel &&
+                      model.reasoningLevel !== "none" && (
+                        <Tooltip label={`Reasoning: ${model.reasoningLevel}`}>
+                          <IconBrain
+                            size={14}
+                            color="var(--mantine-color-dimmed)"
+                            style={{ flexShrink: 0 }}
+                          />
+                        </Tooltip>
+                      )}
+                  </Group>
                 </div>
               </Group>
             </Card>

@@ -24,11 +24,13 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AgentModelIcon } from "../../components/AgentModelIcon";
+import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
 import { PlatformBadge } from "../../components/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
 import { useHostRuns } from "../../hooks/useHostRuns";
+import { useLlmModels } from "../../hooks/useLlmModels";
 import {
   assignAgentToHost,
   deleteHost,
@@ -51,6 +53,7 @@ export const HostPage: React.FC = () => {
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
   const { status: connectionStatus } = useConnectionStatus();
+  const llmModels = useLlmModels();
 
   const [hostDetail, setHostDetail] = useState<HostDetailResponse | null>(null);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
@@ -630,7 +633,14 @@ export const HostPage: React.FC = () => {
                         )}
                       </Table.Td>
                       <Table.Td>
-                        <Badge size="xs" variant="light" color="blue">
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color={getApiTypeBadgeColor(
+                            llmModels.find((m) => m.key === run.modelName)
+                              ?.apiType,
+                          )}
+                        >
                           {run.modelName}
                         </Badge>
                       </Table.Td>

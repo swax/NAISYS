@@ -6,6 +6,7 @@ import { builtInImageModels, builtInLlmModels } from "./builtInModels.js";
 
 export enum LlmApiType {
   OpenAI = "openai",
+  OpenAICompatible = "openai-compatible",
   OpenAIOAuth = "openai-oauth",
   Google = "google",
   Anthropic = "anthropic",
@@ -53,6 +54,7 @@ export const LlmModelSchema = z
       data.baseUrl &&
       ![
         LlmApiType.OpenAI,
+        LlmApiType.OpenAICompatible,
         LlmApiType.OpenAIOAuth,
         LlmApiType.Anthropic,
         LlmApiType.Google,
@@ -60,7 +62,7 @@ export const LlmModelSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `baseUrl is only supported for OpenAI, OpenAI OAuth, Anthropic, and Google API types (got "${data.apiType}")`,
+        message: `baseUrl is only supported for OpenAI, OpenAI Compatible, OpenAI OAuth, Anthropic, and Google API types (got "${data.apiType}")`,
         path: ["baseUrl"],
       });
     }

@@ -14,7 +14,9 @@ import { IconFileText, IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
+import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
 import { getPlatformBadgeColor } from "../../components/PlatformBadge";
+import { useLlmModels } from "../../hooks/useLlmModels";
 import { startAgent } from "../../lib/apiAgents";
 import type { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
@@ -125,6 +127,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   onLoadMore,
 }) => {
   const navigate = useNavigate();
+  const llmModels = useLlmModels();
   const [startingRun, setStartingRun] = useState(false);
   const hasOnlineRun = runs.some((run) => run.isOnline);
 
@@ -303,7 +306,10 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                       <Badge
                         size="xs"
                         variant="light"
-                        color="blue"
+                        color={getApiTypeBadgeColor(
+                          llmModels.find((m) => m.key === run.modelName)
+                            ?.apiType,
+                        )}
                         style={{ whiteSpace: "nowrap" }}
                       >
                         {run.modelName}

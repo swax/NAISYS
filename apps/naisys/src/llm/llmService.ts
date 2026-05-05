@@ -110,11 +110,17 @@ export function createLLMService(
         abortSignal,
       );
     } else if (model.apiType == LlmApiType.OpenAI) {
-      const sendFn = modelKey.startsWith("gpt")
-        ? sendWithOpenAiStandard
-        : sendWithOpenAiCompatible;
-
-      return sendFn(
+      return sendWithOpenAiStandard(
+        deps,
+        modelKey,
+        systemMessage,
+        context,
+        source,
+        apiKey,
+        abortSignal,
+      );
+    } else if (model.apiType == LlmApiType.OpenAICompatible) {
+      return sendWithOpenAiCompatible(
         deps,
         modelKey,
         systemMessage,
