@@ -297,11 +297,13 @@ export const AgentRuns: React.FC = () => {
     return () => cancelAnimationFrame(frame);
   }, [commandSending]);
 
-  const handleSendCommand = async (run: RunSession) => {
+  const handleSendCommand = async (run: RunSession, override?: string) => {
     if (!username || commandSending) return;
     // Blank input is meaningful — it bounces the agent into LLM mode,
     // bypassing an indefinite debug wait or remote pause for one cycle.
-    const command = commandInput.trim();
+    // `override` lets the step-over button send "" without consuming whatever
+    // the user has been typing.
+    const command = override ?? commandInput.trim();
     shouldRefocusCommandInputRef.current = true;
     setCommandSending(true);
     try {
@@ -313,7 +315,9 @@ export const AgentRuns: React.FC = () => {
         run.subagentId,
       );
       if (result.success) {
-        setCommandInput("");
+        if (override === undefined) {
+          setCommandInput("");
+        }
       } else {
         notifications.show({
           title: "Send Failed",
@@ -581,7 +585,7 @@ export const AgentRuns: React.FC = () => {
                         </Text>
                         <Text size="xs">
                           Prefix with <Code>@</Code> to send a message and
-                          trigger the next LLM run.
+                          trigger the next LLM iteration.
                         </Text>
                         <Text size="xs">
                           Prefix with <Code>!</Code> to run a shell command the
@@ -695,6 +699,38 @@ export const AgentRuns: React.FC = () => {
                   >
                     <IconSend size={18} />
                   </ActionIcon>
+                  {selectedRun.isOnline && selectedRun.paused && (
+                    <Tooltip label="Step over — same as pressing Enter on a blank line, sends a blank command">
+                      <ActionIcon
+                        variant="light"
+                        color="grape"
+                        size="lg"
+                        disabled={commandSending}
+                        onClick={() => void handleSendCommand(selectedRun, "")}
+                      >
+                        <svg
+                          width={18}
+                          height={18}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M5 14 A7 7 0 0 1 19 14" />
+                          <path d="M16 11 L19 14 L22 11" />
+                          <circle
+                            cx="12"
+                            cy="17"
+                            r="1.5"
+                            fill="currentColor"
+                            stroke="none"
+                          />
+                        </svg>
+                      </ActionIcon>
+                    </Tooltip>
+                  )}
                 </Group>
               }
             />
