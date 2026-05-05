@@ -15,8 +15,14 @@ import { hasAction } from "@naisys/common";
 import { IconCornerUpLeft, IconMail } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 
+import type { AppOutletContext } from "../../App";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { ParticipantInfo } from "../../components/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
@@ -43,6 +49,7 @@ export const AgentMail: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
+  const { mailServiceEnabled } = useOutletContext<AppOutletContext>();
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
     useDisclosure();
 
@@ -345,14 +352,20 @@ export const AgentMail: React.FC = () => {
   );
 
   return (
-    <Box
-      style={{
-        display: "flex",
-        flex: 1,
-        minHeight: 0,
-        overflow: "hidden",
-      }}
-    >
+    <>
+      {!mailServiceEnabled && (
+        <Alert color="yellow" variant="light" py="xs" px="md" radius={0}>
+          The mail service is disabled (set MAIL_ENABLED=true to enable).
+        </Alert>
+      )}
+      <Box
+        style={{
+          display: "flex",
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+        }}
+      >
       {/* Desktop conversation sidebar */}
       <CollapsibleSidebar>{conversationList}</CollapsibleSidebar>
 
@@ -478,6 +491,7 @@ export const AgentMail: React.FC = () => {
         initialSubject={replyData?.subject}
         initialBody={replyData?.body}
       />
-    </Box>
+      </Box>
+    </>
   );
 };

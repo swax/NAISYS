@@ -4,10 +4,12 @@ import React from "react";
 import {
   Outlet,
   useLocation,
+  useOutletContext,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 
+import type { AppOutletContext } from "../../App";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
 import { AgentNavHeader } from "../../headers/AgentNavHeader";
@@ -19,6 +21,7 @@ export const AgentsLayout: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { username } = useParams<{ username: string }>();
+  const outletContext = useOutletContext<AppOutletContext>();
 
   // Close drawer on navigation
   React.useEffect(() => {
@@ -74,7 +77,7 @@ export const AgentsLayout: React.FC = () => {
             flexDirection: "column",
           }}
         >
-          <Outlet />
+          <Outlet context={outletContext} />
         </div>
       </div>
 

@@ -16,9 +16,8 @@ import {
   IconTerminal2,
 } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import type { AppOutletContext } from "../App";
 import { AgentModelIcon } from "../components/AgentModelIcon";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
@@ -36,7 +35,6 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { agents, readStatus } = useAgentDataContext();
-  const { mailServiceEnabled } = useOutletContext<AppOutletContext>();
   const [links, setLinks] = useState<{ rel: string; href: string }[]>([]);
   const [linksLoaded, setLinksLoaded] = useState(false);
 
@@ -71,15 +69,11 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
   const hasMailLink = links.some((link) => link.rel === "mail");
   const hasChatLink = links.some((link) => link.rel === "chat");
 
-  // Show info message when viewing a disabled mail/chat tab (only after links loaded)
+  // Show info message when viewing a disabled chat tab (only after links loaded)
   const disabledTabMessage =
-    linksLoaded && currentSection === "mail" && !hasMailLink
-      ? !mailServiceEnabled
-        ? "The mail service is disabled (set MAIL_ENABLED=true to enable)."
-        : "Mail can be sent to this agent, but the agent isn't configured to use mail."
-      : linksLoaded && currentSection === "chat" && !hasChatLink
-        ? "Chat messages can be sent to this agent, but the agent isn't configured to use chat."
-        : null;
+    linksLoaded && currentSection === "chat" && !hasChatLink
+      ? "Chat messages can be sent to this agent, but the agent isn't configured to use chat."
+      : null;
 
   // Check for unread data
   const hasUnreadLogs =
@@ -168,7 +162,7 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
                 Detail
               </Text>
             </Tabs.Tab>
-            {mailServiceEnabled && (
+            {hasMailLink && (
               <Indicator
                 disabled={!hasUnreadMail}
                 color="blue"
@@ -183,9 +177,6 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
                   // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
                   href={getAbsoluteUrl("mail")}
                   onClick={(e: React.MouseEvent) => handleTabClick(e, "mail")}
-                  style={
-                    !hasMailLink && linksLoaded ? { opacity: 0.4 } : undefined
-                  }
                 >
                   <Text visibleFrom="sm" span>
                     Mail
