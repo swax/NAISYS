@@ -53,7 +53,38 @@ import { getLogFilePath, tailLogFile } from "../services/logFileService.js";
 import { saveVariable } from "../services/variableService.js";
 import { getPackageVersion } from "../version.js";
 
-function adminActions(hasAdminPermission: boolean): HateoasAction[] {
+function targetVersionActions(targetVersion: string | undefined): HateoasAction[] {
+  const actions: HateoasAction[] = [
+    {
+      rel: "check-updates",
+      href: `${API_PREFIX}/admin/npm-versions`,
+      method: "GET",
+      title: "Check for Updates",
+    },
+    {
+      rel: "set-target-version",
+      href: `${API_PREFIX}/admin/target-version`,
+      method: "PUT",
+      title: "Set Target Version",
+    },
+  ];
+
+  if (targetVersion) {
+    actions.push({
+      rel: "clear-target-version",
+      href: `${API_PREFIX}/admin/target-version`,
+      method: "DELETE",
+      title: "Clear Target Version",
+    });
+  }
+
+  return actions;
+}
+
+function adminActions(
+  hasAdminPermission: boolean,
+  targetVersion: string | undefined,
+): HateoasAction[] {
   const actions: HateoasAction[] = [];
 
   if (hasAdminPermission) {
@@ -78,20 +109,7 @@ function adminActions(hasAdminPermission: boolean): HateoasAction[] {
       },
     );
 
-    actions.push(
-      {
-        rel: "check-updates",
-        href: `${API_PREFIX}/admin/npm-versions`,
-        method: "GET",
-        title: "Check for Updates",
-      },
-      {
-        rel: "set-target-version",
-        href: `${API_PREFIX}/admin/target-version`,
-        method: "PUT",
-        title: "Set Target Version",
-      },
-    );
+    actions.push(...targetVersionActions(targetVersion));
 
     if (getHubAccessKey()) {
       actions.push({
@@ -133,8 +151,6 @@ export default function adminRoutes(
         "supervisor_admin",
       );
 
-      const actions = adminActions(hasAdminPermission);
-
       const [supervisorDbSize, hubDbSize, targetVar] = await Promise.all([
         fs
           .stat(supervisorDbPath())
@@ -146,6 +162,8 @@ export default function adminRoutes(
           .catch(() => undefined),
         hubDb.variables.findUnique({ where: { key: "TARGET_VERSION" } }),
       ]);
+
+      const actions = adminActions(hasAdminPermission, targetVar?.value);
 
       return {
         supervisorVersion: getPackageVersion(),
@@ -330,6 +348,7 @@ export default function adminRoutes(
           latest: distTags.latest ?? "",
           beta: distTags.beta ?? null,
           targetVersion: targetVar?.value ?? "",
+          _actions: targetVersionActions(targetVar?.value),
         };
 
         // Optionally validate a specific version
@@ -395,6 +414,46 @@ export default function adminRoutes(
             error instanceof Error
               ? error.message
               : "Failed to set target version",
+        });
+      }
+    },
+  );
+
+  // DELETE /target-version — Clear the TARGET_VERSION variable
+  fastify.delete<{
+    Reply: SaveVariableResponse | ErrorResponse;
+  }>(
+    "/target-version",
+    {
+      preHandler: [requirePermission("supervisor_admin")],
+      schema: {
+        description: "Clear the TARGET_VERSION variable",
+        tags: ["Admin"],
+        response: {
+          200: SaveVariableResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      try {
+        const result = await saveVariable(
+          "TARGET_VERSION",
+          "",
+          false,
+          false,
+          request.supervisorUser!.uuid,
+        );
+        sendVariablesChanged();
+        return result;
+      } catch (error) {
+        return reply.status(500).send({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to clear target version",
         });
       }
     },

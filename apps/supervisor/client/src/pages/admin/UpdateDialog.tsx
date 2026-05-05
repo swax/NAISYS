@@ -14,7 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { formatVersion, parseVersion } from "@naisys/common";
+import { formatVersion, hasAction, parseVersion } from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
@@ -209,10 +209,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const handleClear = async () => {
     setSaving(true);
     try {
-      const result = await api.put<
-        { version: string },
-        { success: boolean; message: string }
-      >(apiEndpoints.adminTargetVersion, { version: "" });
+      const result = await api.delete<{ success: boolean; message: string }>(
+        apiEndpoints.adminTargetVersion,
+      );
       if (result.success) {
         setNpmData((prev) => (prev ? { ...prev, targetVersion: "" } : prev));
         onUpdate();
@@ -234,6 +233,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
       setSaving(false);
     }
   };
+
+  const canSetTarget = !!hasAction(npmData?._actions, "set-target-version");
+  const canClearTarget = !!hasAction(npmData?._actions, "clear-target-version");
 
   return (
     <Modal opened={opened} onClose={onClose} title="Software Update" size="lg">
@@ -431,7 +433,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             <Button variant="default" onClick={onClose}>
               Cancel
             </Button>
-            {npmData.targetVersion && (
+            {canClearTarget && (
               <Button
                 variant="subtle"
                 color="red"
@@ -441,13 +443,15 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 Clear Target
               </Button>
             )}
-            <Button
-              onClick={handleApply}
-              loading={saving}
-              disabled={!canApply()}
-            >
-              Set Target Version
-            </Button>
+            {canSetTarget && (
+              <Button
+                onClick={handleApply}
+                loading={saving}
+                disabled={!canApply()}
+              >
+                Set Target Version
+              </Button>
+            )}
           </Group>
         </Stack>
       ) : null}

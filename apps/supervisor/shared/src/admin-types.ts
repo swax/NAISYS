@@ -101,6 +101,7 @@ export const NpmVersionsResponseSchema = z.object({
       exists: z.boolean(),
     })
     .optional(),
+  _actions: z.array(HateoasActionSchema).optional(),
 });
 export type NpmVersionsResponse = z.infer<typeof NpmVersionsResponseSchema>;
 
