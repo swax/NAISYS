@@ -29,7 +29,7 @@
     "test": "vitest run",
     "npm:publish:dryrun": "npm publish --dry-run",
     "npm:publish": "npm publish",
-    "postinstall": "node -e \"process.platform !== 'win32' && require('child_process').execSync('chmod +x ./bin/*')\""
+    "postinstall": "node ./bin/postinstall.cjs"
   },
   "repository": {
     "type": "git",
