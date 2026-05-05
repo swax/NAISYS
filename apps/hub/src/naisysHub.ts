@@ -188,6 +188,7 @@ export const startHub: StartHub = async (
       sendMailService,
       hostRegistrar,
       runtimeKeyService,
+      configService,
     );
 
     // Register hub mail service for mail events from NAISYS instances

@@ -13,6 +13,7 @@ import {
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
 import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubConfigService } from "./hubConfigService.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
@@ -32,6 +33,7 @@ export function createHubAgentService(
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
   runtimeKeyService: HubRuntimeKeyService,
+  configService: HubConfigService,
 ) {
   const { issueRuntimeApiKey, revokeRuntimeApiKey } = runtimeKeyService;
   /** Find the least-loaded eligible host for a given user */
@@ -322,12 +324,17 @@ export function createHubAgentService(
     taskDescription: string,
   ) {
     try {
+      const mailEnabled =
+        !!configService.getConfig().config?.mailServiceEnabled;
       await sendMailService.sendMail({
         fromUserId: requesterUserId,
         recipientUserIds: [startUserId],
-        subject: "Agent Start", // Agent will send a 'Session Completed' mail when session is completed
-        body: taskDescription,
-        kind: "mail",
+        // Agent will send a 'Session Completed' message when session is completed
+        subject: mailEnabled ? "Agent Start" : "",
+        body: mailEnabled
+          ? taskDescription
+          : `Agent Start: ${taskDescription}`,
+        kind: mailEnabled ? "mail" : "chat",
       });
     } catch (err) {
       logService.error(`[Hub:Agents] Failed to send task mail: ${err}`);

@@ -226,6 +226,7 @@ export async function createAgentRuntime(
   );
   const subagentService = createSubagentService(
     mailService,
+    chatService,
     output,
     agentManager,
     inputMode,
@@ -233,6 +234,7 @@ export async function createAgentRuntime(
     localUserId,
     promptNotification,
     hubClient,
+    globalConfig,
     agentConfig,
     runService,
     costTracker,
@@ -281,6 +283,7 @@ export async function createAgentRuntime(
     systemMessage,
     llmService,
     mailService,
+    chatService,
     userService,
     localUserId,
   );

@@ -17,6 +17,7 @@ import type { ShellCommand } from "../command/shellCommand.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { LLMService } from "../llm/llmService.js";
+import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
 import type { OutputService } from "../utils/output.js";
 import { getTokenCount, trimChars } from "../utils/utilities.js";
@@ -30,6 +31,7 @@ export function createSessionService(
   systemMessage: string,
   llmService: LLMService,
   mailService: MailService,
+  chatService: ChatService,
   userService: UserService,
   localUserId: number,
 ) {
@@ -219,7 +221,16 @@ export function createSessionService(
       : undefined;
 
     if (recipient) {
-      await mailService.sendMessage([recipient], "Session Completed", result);
+      const useMail =
+        globalConfig().mailServiceEnabled && agentConfig().mailEnabled;
+      if (useMail) {
+        await mailService.sendMessage([recipient], "Session Completed", result);
+      } else {
+        await chatService.sendToUser(
+          recipient.userId,
+          `Session Completed: ${result}`,
+        );
+      }
       output.commentAndLog(
         `Session completed. Result sent to ${recipient.username}. Exiting process.`,
       );

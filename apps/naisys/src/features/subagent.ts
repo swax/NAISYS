@@ -9,8 +9,10 @@ import type { IAgentManager } from "../agent/agentManagerInterface.js";
 import type { UserService } from "../agent/userService.js";
 import { subagentCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
+import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { CostTracker } from "../llm/costTracker.js";
+import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
 import type { RunService } from "../services/runService.js";
 import { agentNames } from "../utils/agentNames.js";
@@ -28,6 +30,7 @@ interface Subagent {
 
 export function createSubagentService(
   mailService: MailService,
+  chatService: ChatService,
   output: OutputService,
   agentManager: IAgentManager,
   inputMode: InputModeService,
@@ -35,6 +38,7 @@ export function createSubagentService(
   localUserId: number,
   promptNotification: PromptNotificationService,
   hubClient: HubClient | undefined,
+  globalConfig: GlobalConfig,
   agentConfig: AgentConfig,
   runService: RunService,
   costTracker: CostTracker,
@@ -418,12 +422,26 @@ export function createSubagentService(
     subagent: Subagent,
     taskDescription: string,
   ) {
-    const recipients = userService.resolveUsernames(subagent.agentName);
-    return await mailService
-      .sendMessage(recipients, "Your Task", taskDescription)
+    const useMail =
+      globalConfig.globalConfig().mailServiceEnabled &&
+      agentConfig.agentConfig().mailEnabled;
+
+    if (useMail) {
+      const recipients = userService.resolveUsernames(subagent.agentName);
+      return await mailService
+        .sendMessage(recipients, "Your Task", taskDescription)
+        .catch(() => {
+          output.commentAndLog(
+            `Failed to send initial task email to subagent ${subagent.agentName}`,
+          );
+        });
+    }
+
+    return await chatService
+      .sendToUser(subagent.userId, `Your Task: ${taskDescription}`)
       .catch(() => {
         output.commentAndLog(
-          `Failed to send initial task email to subagent ${subagent.agentName}`,
+          `Failed to send initial task chat to subagent ${subagent.agentName}`,
         );
       });
   }
