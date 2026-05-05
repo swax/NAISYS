@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   CloseButton,
+  Collapse,
   Group,
   Menu,
   NumberInput,
@@ -18,7 +19,14 @@ import { useForm } from "@mantine/form";
 import type { AgentConfigFile } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
-import { IconCheck, IconPlus, IconServer, IconX } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconPlus,
+  IconServer,
+  IconX,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useBlocker } from "react-router-dom";
 
@@ -45,6 +53,8 @@ interface AgentConfigFormProps {
   onUnassignHost?: (hostname: string) => void;
   /** Optional element rendered inside Identity, after the Title field. */
   afterTitle?: React.ReactNode;
+  /** Optional element rendered at the end of the Advanced section. */
+  advancedExtras?: React.ReactNode;
 }
 
 /** Convert form values to AgentConfigFile, omitting empty optionals. */
@@ -172,6 +182,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   onAssignHost,
   onUnassignHost,
   afterTitle,
+  advancedExtras,
 }) => {
   const showHostsSection = assignedHosts !== undefined;
   const unassignedHosts = useMemo(() => {
@@ -179,6 +190,8 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
     const assignedIds = new Set(assignedHosts.map((h) => h.id));
     return availableHosts.filter((h) => !assignedIds.has(h.id));
   }, [availableHosts, assignedHosts]);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const form = useForm<FormValues>({
     initialValues: {
@@ -435,49 +448,66 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
         />
 
         {/* Advanced */}
-        <Text fw={600} size="sm" c="dimmed">
-          Advanced
-        </Text>
-        <ModelSelect
-          label="Image Model"
-          description={desc("imageModel")}
-          clearable
-          data={imageModelOptions}
-          {...form.getInputProps("imageModel")}
-        />
-        <Switch
-          label="Mail Enabled"
-          description={`${desc("mailEnabled") ?? ""} The MAIL_ENABLED variable must be set to true as well.`.trim()}
-          {...form.getInputProps("mailEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Workspaces Enabled"
-          description={desc("workspacesEnabled")}
-          {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Multiple Commands Enabled"
-          description={desc("multipleCommandsEnabled")}
-          {...form.getInputProps("multipleCommandsEnabled", {
-            type: "checkbox",
-          })}
-        />
-        <Select
-          label="Command Protection"
-          description={desc("commandProtection")}
-          data={[
-            { value: "none", label: "None" },
-            { value: "manual", label: "Manual" },
-            { value: "auto", label: "Auto" },
-          ]}
-          {...form.getInputProps("commandProtection")}
-        />
-        <NumberInput
-          label="Debug Pause Seconds"
-          description={desc("debugPauseSeconds")}
-          min={0}
-          {...form.getInputProps("debugPauseSeconds")}
-        />
+        <Group
+          gap="xs"
+          align="center"
+          style={{ cursor: "pointer", userSelect: "none" }}
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced ? (
+            <IconChevronDown size={14} />
+          ) : (
+            <IconChevronRight size={14} />
+          )}
+          <Text fw={600} size="sm" c="dimmed">
+            Advanced
+          </Text>
+        </Group>
+        <Collapse in={showAdvanced}>
+          <Stack gap="lg">
+            <ModelSelect
+              label="Image Model"
+              description={desc("imageModel")}
+              clearable
+              data={imageModelOptions}
+              {...form.getInputProps("imageModel")}
+            />
+            <Switch
+              label="Mail Enabled"
+              description={`${desc("mailEnabled") ?? ""} The MAIL_ENABLED variable must be set to true as well.`.trim()}
+              {...form.getInputProps("mailEnabled", { type: "checkbox" })}
+            />
+            <Switch
+              label="Workspaces Enabled"
+              description={desc("workspacesEnabled")}
+              {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
+            />
+            <Switch
+              label="Multiple Commands Enabled"
+              description={desc("multipleCommandsEnabled")}
+              {...form.getInputProps("multipleCommandsEnabled", {
+                type: "checkbox",
+              })}
+            />
+            <Select
+              label="Command Protection"
+              description={desc("commandProtection")}
+              data={[
+                { value: "none", label: "None" },
+                { value: "manual", label: "Manual" },
+                { value: "auto", label: "Auto" },
+              ]}
+              {...form.getInputProps("commandProtection")}
+            />
+            <NumberInput
+              label="Debug Pause Seconds"
+              description={desc("debugPauseSeconds")}
+              min={0}
+              {...form.getInputProps("debugPauseSeconds")}
+            />
+            {advancedExtras}
+          </Stack>
+        </Collapse>
       </Stack>
 
       {/* Sticky Save / Discard */}

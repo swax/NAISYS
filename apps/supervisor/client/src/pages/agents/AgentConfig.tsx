@@ -289,36 +289,37 @@ export const AgentConfig: React.FC = () => {
               />
             ) : undefined
           }
+          advancedExtras={
+            hasAction(actions, "export-config") ||
+            hasAction(actions, "import-config") ? (
+              <>
+                <Text fw={600} size="sm" c="dimmed">
+                  Configuration File
+                </Text>
+                <Group>
+                  {hasAction(actions, "export-config") && (
+                    <Button
+                      variant="outline"
+                      leftSection={<IconFileExport size={16} />}
+                      onClick={() => setConfigDialogMode("export")}
+                    >
+                      Export
+                    </Button>
+                  )}
+                  {hasAction(actions, "import-config") && (
+                    <Button
+                      variant="outline"
+                      leftSection={<IconFileImport size={16} />}
+                      onClick={() => setConfigDialogMode("import")}
+                    >
+                      Import
+                    </Button>
+                  )}
+                </Group>
+              </>
+            ) : undefined
+          }
         />
-      )}
-
-      {(hasAction(actions, "export-config") ||
-        hasAction(actions, "import-config")) && (
-        <>
-          <Text fw={600} size="sm" c="dimmed">
-            Configuration File
-          </Text>
-          <Group>
-            {hasAction(actions, "export-config") && (
-              <Button
-                variant="outline"
-                leftSection={<IconFileExport size={16} />}
-                onClick={() => setConfigDialogMode("export")}
-              >
-                Export
-              </Button>
-            )}
-            {hasAction(actions, "import-config") && (
-              <Button
-                variant="outline"
-                leftSection={<IconFileImport size={16} />}
-                onClick={() => setConfigDialogMode("import")}
-              >
-                Import
-              </Button>
-            )}
-          </Group>
-        </>
       )}
 
       {username && configDialogMode && (
