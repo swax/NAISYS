@@ -573,6 +573,10 @@ export const AgentRuns: React.FC = () => {
                           Remote command input
                         </Text>
                         <Text size="xs">
+                          <Code>Enter</Code> to send, <Code>Shift+Enter</Code>{" "}
+                          for a new line.
+                        </Text>
+                        <Text size="xs">
                           Send <Code>ns-help</Code> to see available commands.
                         </Text>
                         <Text size="xs">
