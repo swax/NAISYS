@@ -37,6 +37,7 @@ export function registerSecurityHeaders(
   fastify.addHook("onSend", (request, reply, _payload, done) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
+    reply.header("X-Robots-Tag", "noindex, nofollow");
 
     const isApiReference = request.url.includes("/api-reference");
     reply.header(
