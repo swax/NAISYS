@@ -30,7 +30,7 @@ export const InlineWordDiff: React.FC<InlineWordDiffProps> = ({
   );
   const highlightBg = side === "old" ? HIGHLIGHT_BG_OLD : HIGHLIGHT_BG_NEW;
   return (
-    <>
+    <span style={{ whiteSpace: "pre-wrap" }}>
       {parts.map((p, i) => {
         if (side === "old" && p.added) return null;
         if (side === "new" && p.removed) return null;
@@ -43,6 +43,6 @@ export const InlineWordDiff: React.FC<InlineWordDiffProps> = ({
           <span key={i}>{p.value}</span>
         );
       })}
-    </>
+    </span>
   );
 };

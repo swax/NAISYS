@@ -136,7 +136,7 @@ export const OperationDetail: React.FC = () => {
   const canEdit = hasAction(operation._actions, "update");
 
   return (
-    <Container size="md" py="xl" w="100%">
+    <Container size="lg" py="xl" w="100%">
       <Stack gap="md">
         <Group justify="space-between">
           <Group gap="xs">

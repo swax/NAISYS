@@ -233,7 +233,7 @@ export const RevisionDiff: React.FC = () => {
   const unchangedCount = diff ? diff.operations.length - changedOps.length : 0;
 
   return (
-    <Container size="md" py="xl">
+    <Container size="lg" py="xl">
       <Group justify="space-between" mb="lg">
         <Title order={2}>
           Compare Revisions: Rev {fromRevNo} → Rev {toRevNo}
