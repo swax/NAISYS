@@ -215,14 +215,29 @@ export function typeText(text: string) {
   // Dvorak/AZERTY where cmd+kc=9 (the QWERTY V position) would resolve to a
   // different character. This needs Automation permission, validated by
   // checkDependencies.
-  execFileSync(
-    "osascript",
-    [
-      "-e",
-      'tell application "System Events" to keystroke "v" using command down',
-    ],
-    { stdio: "pipe", timeout: 5000 },
-  );
+  try {
+    execFileSync(
+      "osascript",
+      [
+        "-e",
+        'tell application "System Events" to keystroke "v" using command down',
+      ],
+      { stdio: "pipe", timeout: 5000 },
+    );
+  } catch (e) {
+    const err = e as ExecError;
+    // First-run Automation prompt blocks osascript until the user clicks
+    // Allow. Surface that explicitly so the caller (or agent) knows to look
+    // for the dialog instead of treating it as a generic crash.
+    if (err.killed || err.code === "ETIMEDOUT" || err.signal === "SIGTERM") {
+      throw new Error(
+        "osascript timed out sending paste keystroke — a first-run Automation " +
+          "permission dialog ('… wants access to control System Events') is " +
+          "likely open. Click Allow and retry.",
+      );
+    }
+    throw e;
+  }
 }
 
 // --- Key delivery ---

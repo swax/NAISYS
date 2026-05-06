@@ -17,6 +17,7 @@ This doc covers:
 - Focus — zooming the model into a subsection of the display
 - Per-vendor coord contracts (Anthropic / OpenAI / Google)
 - The manual `ns-desktop` shell commands, which mirror the LLM path
+- How multiple agents on one host cooperatively share the desktop
 
 ## Why this is non-trivial
 
@@ -189,6 +190,7 @@ coords into `executeAction`, ComputerService translates.
 | `type <text>`        | Type text                                                                     |
 | `wait [seconds]`     | Pause to let the UI settle (defaults to 5s)                                   |
 | `dump`               | Save full / viewport-native / scaled screenshots for debugging                |
+| `release`            | Release this agent's claim on the shared desktop (see _Multi-agent sharing_)  |
 
 For vendors with native computer-use tool support, the subcommands
 that duplicate the native tool (`screenshot`, `click`, `move`, `scroll`,
@@ -234,6 +236,56 @@ not adding a post-hoc resize.
 Bounds violations and backend failures become tool_result errors with
 the fresh screenshot attached, so the model has a current view to
 retry against.
+
+## Multi-agent desktop sharing
+
+A NAISYS host can run several agents but typically has one display,
+mouse, and keyboard. The desktop is shared via a cooperative claim: the
+first modifying action by an agent implicitly claims the desktop, every
+subsequent action refreshes it, and shutdown releases it. Read-only ops
+(`screenshot`, `dump`, `wait`, `focus`, `release`, status, help) never
+claim. `focus` is per-agent — each agent has its own `computerService`
+instance with its own viewport state — so two agents can hold different
+focus rects on the same desktop and screenshot/explore in parallel
+without contention. Only the actions that move the global mouse,
+keyboard, or scroll wheel need to serialize.
+
+```
+agent alice: ns-desktop click 100 100   ← implicit claim
+agent alice: ns-desktop type "hello"    ← refreshes lastUsedAt
+agent bob:   ns-desktop click 50 50     ← blocked, alice still holds it
+agent alice: ns-desktop release         ← explicit release
+agent bob:   ns-desktop click 50 50     ← claim taken, executes
+```
+
+**Conflict.** When another agent holds the claim, the would-be actor's
+command (or LLM tool batch) is rejected with a context-bound message:
+`Unable to modify desktop, alice currently holds it. Ask them to release
+it if you need it.` For LLM tool batches the request is still appended
+to context (so the model sees what it tried) and every action in the
+batch gets the conflict as its tool_result error — there is no queue or
+silent steal.
+
+**Staleness.** Each claim records `claimedAt` and `lastUsedAt`. A claim
+idle for more than 10 minutes is treated as free — the next agent to
+act takes it without warning. The check is read-time only (no timer),
+so a forgotten claim never wedges the desktop even if cleanup didn't
+run.
+
+**Cleanup.** On agent stop (graceful or crashed), `completeShutdown`
+calls `desktopService.cleanup()` which releases that agent's claim.
+Staleness is the safety net for cases cleanup can't cover.
+
+**Status.** The `ns-desktop` status block shows the current holder:
+`Claim: free` / `Claim: held by you (last used 12s ago)` / `Claim: held
+by alice (last used 2m ago)` / `Claim: held by alice but stale (last
+used 11m ago) — your next action will take it`.
+
+The `DesktopClaimService` is a host-level singleton constructed in
+`naisysMain.ts` and threaded through `AgentManager` →
+`createAgentRuntime` → `createDesktopService` along with the agent's
+username. State is a single `{ agentUsername, claimedAt, lastUsedAt }`
+record.
 
 ## Platform backends
 

@@ -2,6 +2,7 @@ import { LlmApiType } from "@naisys/common";
 import { vi } from "vitest";
 
 import { createDesktopService } from "../../computer-use/desktop.js";
+import { createDesktopClaimService } from "../../computer-use/desktopClaimService.js";
 import type { DesktopConfig } from "../../llm/vendors/vendorTypes.js";
 import {
   createMockCommandLoopState,
@@ -63,6 +64,8 @@ export type BuildDesktopServiceOverrides = {
   config?: Partial<DesktopConfig>;
   computerService?: Record<string, unknown>;
   model?: ComputerUseModelOverrides;
+  agentUsername?: string;
+  desktopClaimService?: ReturnType<typeof createDesktopClaimService>;
 };
 
 export function buildDesktopService(
@@ -76,6 +79,9 @@ export function buildDesktopService(
   const contextManager = createMockContextManager();
   const output = createMockOutputService();
   const model = makeComputerUseModel(overrides.model);
+  const desktopClaimService =
+    overrides.desktopClaimService ?? createDesktopClaimService();
+  const agentUsername = overrides.agentUsername ?? "test-agent";
 
   const desktopService = createDesktopService(
     computerService,
@@ -83,6 +89,7 @@ export function buildDesktopService(
     output,
     {
       agentConfig: () => ({
+        username: agentUsername,
         shellModel: "shell-model",
         controlDesktop: true,
         debugPauseSeconds: 0,
@@ -96,6 +103,7 @@ export function buildDesktopService(
     } as any,
     createMockCommandLoopState() as any,
     createMockInputMode() as any,
+    desktopClaimService,
   );
 
   return {
@@ -105,5 +113,7 @@ export function buildDesktopService(
     contextManager,
     output,
     model,
+    desktopClaimService,
+    agentUsername,
   };
 }

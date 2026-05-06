@@ -10,6 +10,7 @@ import path from "path";
 
 import { AgentManager } from "./agent/agentManager.js";
 import { createUserService } from "./agent/userService.js";
+import { createDesktopClaimService } from "./computer-use/desktopClaimService.js";
 import { createGlobalConfig } from "./globalConfig.js";
 import type { HubClient } from "./hub/hubClient.js";
 import { createHubClient } from "./hub/hubClient.js";
@@ -169,6 +170,7 @@ if (hubClient) {
 await globalConfig.waitForConfig();
 
 console.log(`[NAISYS] Started`);
+const desktopClaimService = createDesktopClaimService();
 const agentManager = new AgentManager(
   globalConfig,
   hubClient,
@@ -178,6 +180,7 @@ const agentManager = new AgentManager(
   userService,
   modelService,
   promptNotification,
+  desktopClaimService,
 );
 
 heartbeatService = createHeartbeatService(hubClient, agentManager, userService);

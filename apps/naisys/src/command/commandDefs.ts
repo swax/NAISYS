@@ -109,6 +109,11 @@ export const desktopCmd: CommandDef = {
       description:
         "Pause to let the UI settle (animations, page loads). Defaults to 5 seconds",
     },
+    release: {
+      usage: "release",
+      description:
+        "Release your claim on the shared desktop so other agents on this host can use it",
+    },
   },
 };
 

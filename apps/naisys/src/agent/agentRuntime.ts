@@ -9,6 +9,7 @@ import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
 import { createComputerService } from "../computer-use/computerService.js";
 import { createDesktopService } from "../computer-use/desktop.js";
+import type { DesktopClaimService } from "../computer-use/desktopClaimService.js";
 import { createBrowserService } from "../features/browser.js";
 import { createGenImg } from "../features/genImg.js";
 import { createListenService } from "../features/listen.js";
@@ -61,6 +62,7 @@ export async function createAgentRuntime(
   userService: UserService,
   modelService: ModelService,
   promptNotification: PromptNotificationService,
+  desktopClaimService: DesktopClaimService,
   subagentContext?: SubagentContext,
   preallocated?: { runId: number; sessionId: number },
 ) {
@@ -189,6 +191,7 @@ export async function createAgentRuntime(
     shellWrapper,
     commandLoopState,
     inputMode,
+    desktopClaimService,
   );
   const genimg = createGenImg(
     globalConfig,
@@ -407,6 +410,7 @@ export async function createAgentRuntime(
       mailService.cleanup();
       chatService.cleanup();
       void browserService.cleanup();
+      desktopService.cleanup();
     },
   };
 }

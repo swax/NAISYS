@@ -10,6 +10,7 @@ import {
 } from "@naisys/hub-protocol";
 import stripAnsi from "strip-ansi";
 
+import type { DesktopClaimService } from "../computer-use/desktopClaimService.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
@@ -44,6 +45,7 @@ export class AgentManager {
     private userService: UserService,
     private modelService: ModelService,
     private promptNotification: PromptNotificationService,
+    private desktopClaimService: DesktopClaimService,
   ) {
     if (hubClient) {
       hubClient.registerEvent(HubEvents.AGENT_START, async (data, ack) => {
@@ -254,6 +256,7 @@ export class AgentManager {
       this.userService,
       this.modelService,
       this.promptNotification,
+      this.desktopClaimService,
       subagentContext,
       preallocated,
     );

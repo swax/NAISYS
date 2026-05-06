@@ -17,6 +17,7 @@ import type {
   DesktopAction,
   DesktopActionInput,
   DesktopConfig,
+  DesktopSubAction,
 } from "../llm/vendors/vendorTypes.js";
 import type { ModelService } from "../services/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
@@ -32,6 +33,7 @@ import {
   mapCoordinateBetweenSpaces,
   WAIT_DEFAULT_SECONDS,
 } from "./computerService.js";
+import type { DesktopClaimService } from "./desktopClaimService.js";
 
 export function createDesktopService(
   computerService: ComputerService,
@@ -42,7 +44,9 @@ export function createDesktopService(
   shellWrapper: ShellWrapper,
   commandLoopState: CommandLoopStateService,
   inputMode: InputModeService,
+  desktopClaimService: DesktopClaimService,
 ) {
+  const agentUsername = agentConfig.agentConfig().username;
   type DesktopRuntimeState = {
     desktopConfig: ReturnType<ComputerService["getConfig"]>;
   };
@@ -74,6 +78,46 @@ export function createDesktopService(
   // `ns-desktop focus` so the LLM sees the same "where am I" story it got
   // at focus time. Cleared by `ns-desktop focus clear`.
   let lastFocusResponse: string | null = null;
+
+  // Sub-actions that don't touch the global mouse/keyboard/scroll. (`focus`
+  // is per-agent state, not a DesktopSubAction, so it's absent here.)
+  const READ_ONLY_SUB_ACTIONS: ReadonlySet<DesktopSubAction["action"]> = new Set(
+    ["screenshot", "wait"],
+  );
+
+  function inputIsModifying(input: DesktopActionInput): boolean {
+    return input.actions.some((a) => !READ_ONLY_SUB_ACTIONS.has(a.action));
+  }
+
+  // Throws on conflict; the thrown string is what the model sees as the
+  // command result.
+  function requireClaim(): void {
+    const result = desktopClaimService.tryClaim(agentUsername);
+    if (!result.ok) {
+      throw `Unable to modify desktop, ${result.holderUsername} currently holds it. Ask them to release it if you need it.`;
+    }
+  }
+
+  function formatRelativeTime(date: Date): string {
+    const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.round(minutes / 60);
+    return `${hours}h ago`;
+  }
+
+  function formatClaimStatus(): string {
+    const status = desktopClaimService.getStatus();
+    if (!status) return "  Claim: free";
+    if (status.agentUsername === agentUsername) {
+      return `  Claim: held by you (last used ${formatRelativeTime(status.lastUsedAt)})`;
+    }
+    if (status.isStale) {
+      return `  Claim: held by ${status.agentUsername} but stale (last used ${formatRelativeTime(status.lastUsedAt)}) — your next action will take it`;
+    }
+    return `  Claim: held by ${status.agentUsername} (last used ${formatRelativeTime(status.lastUsedAt)})`;
+  }
 
   function getFocusChangeCostNote(): string {
     if (shellModel.apiType === LlmApiType.Anthropic) {
@@ -250,6 +294,7 @@ export function createDesktopService(
       `  Scale Factor: ${scaleFactor.toFixed(4)}`,
       `  Manual Focus Args: current screenshot pixels (${scaledWidth}x${scaledHeight})`,
       `  Manual Click Args: current screenshot pixels (${scaledWidth}x${scaledHeight})`,
+      formatClaimStatus(),
     ].join("\n");
   }
 
@@ -389,6 +434,7 @@ export function createDesktopService(
     if (!key) {
       throw usageError("key");
     }
+    requireClaim();
     await computerService.executeAction({
       actions: [{ action: "key", text: key }],
     });
@@ -410,6 +456,7 @@ export function createDesktopService(
     if (ms > HOLD_MAX_MS) {
       throw `hold duration ${ms}ms exceeds max ${HOLD_MAX_MS}ms`;
     }
+    requireClaim();
     await computerService.executeAction({
       actions: [{ action: "hold_key", text: key, duration: ms / 1000 }],
     });
@@ -437,6 +484,7 @@ export function createDesktopService(
       actions: [{ action, coordinate: [x, y] }],
     };
     throwIfOutOfBounds(input, state);
+    requireClaim();
 
     await computerService.executeAction(input);
     return `Clicked (${button}) at screenshot (${x}, ${y})`;
@@ -450,6 +498,7 @@ export function createDesktopService(
     if (!text) {
       throw usageError("type");
     }
+    requireClaim();
     await computerService.executeAction({
       actions: [{ action: "type", text }],
     });
@@ -472,6 +521,7 @@ export function createDesktopService(
       actions: [{ action: "mouse_move", coordinate: [x, y] }],
     };
     throwIfOutOfBounds(input, state);
+    requireClaim();
 
     await computerService.executeAction(input);
     return `Moved mouse to screenshot (${x}, ${y})`;
@@ -515,6 +565,7 @@ export function createDesktopService(
       ],
     };
     throwIfOutOfBounds(input, state);
+    requireClaim();
 
     await computerService.executeAction(input);
     return `Scrolled ${direction} by ${amount} at screenshot (${x}, ${y})`;
@@ -549,9 +600,22 @@ export function createDesktopService(
       ],
     };
     throwIfOutOfBounds(input, state);
+    requireClaim();
 
     await computerService.executeAction(input);
     return `Dragged from (${x1}, ${y1}) to (${x2}, ${y2})`;
+  }
+
+  function handleReleaseCommand(): string {
+    const status = desktopClaimService.getStatus();
+    if (!status) {
+      return "Desktop is not currently claimed.";
+    }
+    if (status.agentUsername !== agentUsername) {
+      return `Desktop is held by ${status.agentUsername}, not you. Nothing to release.`;
+    }
+    desktopClaimService.release(agentUsername);
+    return "Released desktop claim. Other agents on this host can now use it.";
   }
 
   function handleWaitCommand(
@@ -646,6 +710,10 @@ export function createDesktopService(
         return handleWaitCommand(argv, usageError);
       }
 
+      case "release": {
+        return handleReleaseCommand();
+      }
+
       default: {
         const helpResponse = formatCommandHelp();
         return `Unknown ${desktopCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${helpResponse}`;
@@ -669,6 +737,33 @@ export function createDesktopService(
         ? `Unsupported action — ${action.validationError}`
         : formatDesktopAction(action.input, desktopConfig) || action.name;
       output.commentAndLog(`Desktop Action: ${desc}`);
+    }
+
+    // On conflict, skip confirmation/execution and let the model see the
+    // collision via per-action errors so it can wait, ask, or pivot.
+    const needsClaim = actionsWithViewport.some((a) =>
+      !a.validationError && inputIsModifying(a.input),
+    );
+    // Tracked so an operator rejection can release a claim acquired here
+    // without disturbing one we merely refreshed.
+    let claimAcquiredHere = false;
+    if (needsClaim) {
+      const claimResult = desktopClaimService.tryClaim(agentUsername);
+      if (!claimResult.ok) {
+        const conflictMsg = `Unable to modify desktop, ${claimResult.holderUsername} currently holds it. Ask them to release it if you need it.`;
+        output.commentAndLog(`Desktop Action Blocked: ${conflictMsg}`);
+        contextManager.appendDesktopRequest(
+          textContent,
+          actionsWithViewport,
+          formatDesktopActions(actionsWithViewport, desktopConfig),
+        );
+        for (const action of actionsWithViewport) {
+          contextManager.appendDesktopError(action.id, conflictMsg);
+        }
+        return;
+      }
+      claimAcquiredHere =
+        claimResult.took === "fresh" || claimResult.took === "stolen-stale";
     }
 
     // getConfirmation auto-approves when unfocused, so only surface the
@@ -742,6 +837,10 @@ export function createDesktopService(
         }
       }
     } else {
+      // Don't strand the desktop on a rejection we caused.
+      if (claimAcquiredHere) {
+        desktopClaimService.release(agentUsername);
+      }
       for (const action of actionsWithViewport) {
         contextManager.appendDesktopError(
           action.id,
@@ -813,6 +912,10 @@ export function createDesktopService(
     }
   }
 
+  function cleanup(): void {
+    desktopClaimService.release(agentUsername);
+  }
+
   const registrableCommand: RegistrableCommand = {
     command: desktopCmd,
     handleCommand,
@@ -822,6 +925,7 @@ export function createDesktopService(
     ...registrableCommand,
     logStartup,
     confirmAndExecuteActions,
+    cleanup,
   };
 }
 

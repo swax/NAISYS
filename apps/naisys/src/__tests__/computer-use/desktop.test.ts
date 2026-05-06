@@ -1,7 +1,13 @@
 import { LlmApiType } from "@naisys/common";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { createDesktopClaimService } from "../../computer-use/desktopClaimService.js";
+import { getConfirmation } from "../../utils/confirmation.js";
 import { buildDesktopService } from "../builders/desktop.js";
+
+vi.mock("../../utils/confirmation.js", () => ({
+  getConfirmation: vi.fn().mockResolvedValue(true),
+}));
 
 describe("desktop focus commands", () => {
   test("maps screenshot focus coordinates into native desktop focus", async () => {
@@ -154,6 +160,239 @@ describe("desktop focus commands", () => {
     expect(helpText).toContain("key <combo>");
     expect(helpText).toContain(
       "Send a manual key combo or sequence (e.g. enter, escape, ctrl+c, alt+tab, up up right)",
+    );
+  });
+});
+
+describe("desktop claim sharing", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("first modifying action claims the desktop and surfaces in status", async () => {
+    const claim = createDesktopClaimService();
+    const { desktopService } = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+
+    await desktopService.handleCommand("click 100 100");
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+
+    const status = await desktopService.handleCommand("");
+    expect(status).toContain("Claim: held by you");
+  });
+
+  test("second agent is blocked while first agent's claim is fresh", async () => {
+    const claim = createDesktopClaimService();
+    const aliceExec = vi.fn(async () => {});
+    const bobExec = vi.fn(async () => {});
+
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: aliceExec },
+    });
+    const bob = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "bob",
+      computerService: { executeAction: bobExec },
+    });
+
+    await alice.desktopService.handleCommand("click 50 50");
+    expect(aliceExec).toHaveBeenCalledTimes(1);
+
+    await expect(bob.desktopService.handleCommand("click 60 60")).rejects.toBe(
+      "Unable to modify desktop, alice currently holds it. Ask them to release it if you need it.",
+    );
+    expect(bobExec).not.toHaveBeenCalled();
+
+    const bobStatus = await bob.desktopService.handleCommand("");
+    expect(bobStatus).toContain("Claim: held by alice");
+  });
+
+  test("stale claim (>10 min idle) is silently taken by the next agent", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00Z"));
+
+    const claim = createDesktopClaimService();
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+    const bobExec = vi.fn(async () => {});
+    const bob = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "bob",
+      computerService: { executeAction: bobExec },
+    });
+
+    await alice.desktopService.handleCommand("click 50 50");
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+
+    vi.setSystemTime(new Date("2026-01-01T12:11:00Z"));
+
+    await bob.desktopService.handleCommand("click 60 60");
+    expect(bobExec).toHaveBeenCalledTimes(1);
+    expect(claim.getStatus()?.agentUsername).toBe("bob");
+  });
+
+  test("release subcommand frees the claim for other agents", async () => {
+    const claim = createDesktopClaimService();
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+    const bobExec = vi.fn(async () => {});
+    const bob = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "bob",
+      computerService: { executeAction: bobExec },
+    });
+
+    await alice.desktopService.handleCommand("click 10 10");
+    await alice.desktopService.handleCommand("release");
+    expect(claim.getStatus()).toBeNull();
+
+    await bob.desktopService.handleCommand("click 20 20");
+    expect(bobExec).toHaveBeenCalledTimes(1);
+  });
+
+  test("release no-ops when called by an agent that doesn't hold the claim", async () => {
+    const claim = createDesktopClaimService();
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+    const bob = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "bob",
+    });
+
+    await alice.desktopService.handleCommand("click 10 10");
+
+    await expect(bob.desktopService.handleCommand("release")).resolves.toBe(
+      "Desktop is held by alice, not you. Nothing to release.",
+    );
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+  });
+
+  test("agent shutdown cleanup releases its claim", async () => {
+    const claim = createDesktopClaimService();
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+
+    await alice.desktopService.handleCommand("click 5 5");
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+
+    alice.desktopService.cleanup();
+    expect(claim.getStatus()).toBeNull();
+  });
+
+  test("screenshot does not claim the desktop", async () => {
+    const claim = createDesktopClaimService();
+    const { desktopService } = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: {
+        captureScaledScreenshot: vi.fn(() =>
+          Promise.resolve({ base64: "x", filepath: "/tmp/s.png" }),
+        ),
+      },
+    });
+
+    await desktopService.handleCommand("screenshot");
+    expect(claim.getStatus()).toBeNull();
+  });
+
+  test("operator rejection releases a claim acquired by this batch", async () => {
+    const claim = createDesktopClaimService();
+    const { desktopService } = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+
+    (getConfirmation as any).mockResolvedValueOnce(false);
+
+    await desktopService.confirmAndExecuteActions("", [
+      {
+        id: "call-1",
+        name: "computer",
+        input: { actions: [{ action: "left_click", coordinate: [10, 20] }] },
+      },
+    ]);
+
+    expect(claim.getStatus()).toBeNull();
+  });
+
+  test("operator rejection preserves a claim that was already held before this batch", async () => {
+    const claim = createDesktopClaimService();
+    const { desktopService } = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: vi.fn(async () => {}) },
+    });
+
+    // Pre-existing claim from an earlier shell action — must survive a
+    // later rejected LLM batch since alice already had the desktop.
+    await desktopService.handleCommand("click 5 5");
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+
+    (getConfirmation as any).mockResolvedValueOnce(false);
+
+    await desktopService.confirmAndExecuteActions("", [
+      {
+        id: "call-2",
+        name: "computer",
+        input: { actions: [{ action: "left_click", coordinate: [10, 20] }] },
+      },
+    ]);
+
+    expect(claim.getStatus()?.agentUsername).toBe("alice");
+  });
+
+  test("LLM tool path blocks all actions in batch with conflict error when held by another agent", async () => {
+    const claim = createDesktopClaimService();
+    const aliceExec = vi.fn(async () => {});
+    const alice = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: { executeAction: aliceExec },
+    });
+    const bobExec = vi.fn(async () => {});
+    const bob = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "bob",
+      computerService: {
+        executeAction: bobExec,
+        captureScaledScreenshot: vi.fn(() =>
+          Promise.resolve({ base64: "x", filepath: "/tmp/s.png" }),
+        ),
+      },
+    });
+
+    await alice.desktopService.handleCommand("click 5 5");
+
+    await bob.desktopService.confirmAndExecuteActions("", [
+      {
+        id: "call-1",
+        name: "computer",
+        input: { actions: [{ action: "left_click", coordinate: [10, 20] }] },
+      },
+    ]);
+
+    expect(bobExec).not.toHaveBeenCalled();
+    expect(bob.contextManager.appendDesktopError).toHaveBeenCalledWith(
+      "call-1",
+      "Unable to modify desktop, alice currently holds it. Ask them to release it if you need it.",
     );
   });
 });
