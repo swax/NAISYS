@@ -14,6 +14,7 @@ import {
   findUserIdsForLead,
   getCostHistogram,
   getCostsByAgent,
+  getCostsByModel,
   getSpendLimitSettings,
 } from "../services/costsService.js";
 
@@ -65,9 +66,10 @@ export default function costsRoutes(
           ? await findUserIdsForLead(request.query.leadUsername)
           : undefined;
 
-        const [buckets, byAgent] = await Promise.all([
+        const [buckets, byAgent, byModel] = await Promise.all([
           getCostHistogram(start, end, bucketHours, userIds),
           getCostsByAgent(start, end, userIds),
+          getCostsByModel(start, end, userIds),
         ]);
 
         return {
@@ -75,6 +77,7 @@ export default function costsRoutes(
           spendLimitHours,
           buckets,
           byAgent,
+          byModel,
         };
       } catch (error) {
         const message =

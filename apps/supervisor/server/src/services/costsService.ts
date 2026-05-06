@@ -1,4 +1,8 @@
-import type { CostBucket, CostByAgent } from "@naisys/supervisor-shared";
+import type {
+  CostBucket,
+  CostByAgent,
+  CostByModel,
+} from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 
@@ -65,6 +69,9 @@ export async function getCostHistogram(
       cost: true,
       created_at: true,
       user_id: true,
+      model: true,
+      input_tokens: true,
+      output_tokens: true,
     },
     orderBy: { created_at: "asc" },
   });
@@ -96,7 +103,11 @@ export async function getCostHistogram(
       start: new Date(bucketStart).toISOString(),
       end: new Date(bucketEnd).toISOString(),
       cost: 0,
+      tokens: 0,
       byAgent: {},
+      byModel: {},
+      byAgentTokens: {},
+      byModelTokens: {},
     });
   }
 
@@ -106,10 +117,18 @@ export async function getCostHistogram(
     const bucketIndex = Math.floor((costMs - startMs) / bucketMs);
     if (bucketIndex >= 0 && bucketIndex < buckets.length) {
       const amount = cost.cost ?? 0;
-      buckets[bucketIndex].cost += amount;
+      const tokens = (cost.input_tokens ?? 0) + (cost.output_tokens ?? 0);
+      const bucket = buckets[bucketIndex];
+      bucket.cost += amount;
+      bucket.tokens += tokens;
       const username = userMap.get(cost.user_id) ?? `user-${cost.user_id}`;
-      buckets[bucketIndex].byAgent[username] =
-        (buckets[bucketIndex].byAgent[username] ?? 0) + amount;
+      bucket.byAgent[username] = (bucket.byAgent[username] ?? 0) + amount;
+      bucket.byAgentTokens[username] =
+        (bucket.byAgentTokens[username] ?? 0) + tokens;
+      const modelName = cost.model || "unknown";
+      bucket.byModel[modelName] = (bucket.byModel[modelName] ?? 0) + amount;
+      bucket.byModelTokens[modelName] =
+        (bucket.byModelTokens[modelName] ?? 0) + tokens;
     }
   }
 
@@ -133,13 +152,18 @@ export async function getCostsByAgent(
     select: {
       cost: true,
       user_id: true,
+      input_tokens: true,
+      output_tokens: true,
     },
   });
 
   // Aggregate by user_id
-  const byUserId = new Map<number, number>();
+  const byUserId = new Map<number, { cost: number; tokens: number }>();
   for (const c of costs) {
-    byUserId.set(c.user_id, (byUserId.get(c.user_id) ?? 0) + (c.cost ?? 0));
+    const entry = byUserId.get(c.user_id) ?? { cost: 0, tokens: 0 };
+    entry.cost += c.cost ?? 0;
+    entry.tokens += (c.input_tokens ?? 0) + (c.output_tokens ?? 0);
+    byUserId.set(c.user_id, entry);
   }
 
   if (byUserId.size === 0) return [];
@@ -155,13 +179,54 @@ export async function getCostsByAgent(
   );
 
   return Array.from(byUserId.entries())
-    .map(([userId, cost]) => {
+    .map(([userId, totals]) => {
       const user = userMap.get(userId);
       return {
         username: user?.username ?? `user-${userId}`,
         title: user?.title ?? "",
-        cost: Math.round(cost * 100) / 100,
+        cost: Math.round(totals.cost * 100) / 100,
+        tokens: totals.tokens,
       };
     })
+    .sort((a, b) => b.cost - a.cost);
+}
+
+export async function getCostsByModel(
+  start: Date,
+  end: Date,
+  userIds?: number[],
+): Promise<CostByModel[]> {
+  const where: Record<string, unknown> = {
+    created_at: { gte: start, lte: end },
+  };
+  if (userIds) {
+    where.user_id = { in: userIds };
+  }
+
+  const costs = await hubDb.costs.findMany({
+    where,
+    select: {
+      cost: true,
+      model: true,
+      input_tokens: true,
+      output_tokens: true,
+    },
+  });
+
+  const byModel = new Map<string, { cost: number; tokens: number }>();
+  for (const c of costs) {
+    const modelName = c.model || "unknown";
+    const entry = byModel.get(modelName) ?? { cost: 0, tokens: 0 };
+    entry.cost += c.cost ?? 0;
+    entry.tokens += (c.input_tokens ?? 0) + (c.output_tokens ?? 0);
+    byModel.set(modelName, entry);
+  }
+
+  return Array.from(byModel.entries())
+    .map(([model, totals]) => ({
+      model,
+      cost: Math.round(totals.cost * 100) / 100,
+      tokens: totals.tokens,
+    }))
     .sort((a, b) => b.cost - a.cost);
 }

@@ -13,7 +13,11 @@ export const CostBucketSchema = z.object({
   start: z.string(),
   end: z.string(),
   cost: z.number(),
+  tokens: z.number(),
   byAgent: z.record(z.string(), z.number()),
+  byModel: z.record(z.string(), z.number()),
+  byAgentTokens: z.record(z.string(), z.number()),
+  byModelTokens: z.record(z.string(), z.number()),
 });
 
 export type CostBucket = z.infer<typeof CostBucketSchema>;
@@ -22,15 +26,25 @@ export const CostByAgentSchema = z.object({
   username: z.string(),
   title: z.string(),
   cost: z.number(),
+  tokens: z.number(),
 });
 
 export type CostByAgent = z.infer<typeof CostByAgentSchema>;
+
+export const CostByModelSchema = z.object({
+  model: z.string(),
+  cost: z.number(),
+  tokens: z.number(),
+});
+
+export type CostByModel = z.infer<typeof CostByModelSchema>;
 
 export const CostsHistogramResponseSchema = z.object({
   spendLimitDollars: z.number().nullable(),
   spendLimitHours: z.number().nullable(),
   buckets: z.array(CostBucketSchema),
   byAgent: z.array(CostByAgentSchema),
+  byModel: z.array(CostByModelSchema),
 });
 
 export type CostsHistogramResponse = z.infer<

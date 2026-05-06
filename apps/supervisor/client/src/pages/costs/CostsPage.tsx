@@ -91,6 +91,38 @@ export const CostsPage: React.FC = () => {
   const [rangeHours, setRangeHours] = useState("168");
   const [bucketHours, setBucketHours] = useState<string | null>(null);
   const [leadUsername, setLeadUsername] = useState<string>("");
+  const [groupBy, setGroupBy] = useState<"agent" | "model">("agent");
+  const [metric, setMetric] = useState<"cost" | "tokens">("cost");
+
+  const formatCost = useCallback((n: number) => `$${n.toFixed(2)}`, []);
+  const formatTokens = useCallback(
+    (n: number) => `${Math.round(n).toLocaleString()} tokens`,
+    [],
+  );
+  const formatTokensShort = useCallback((n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+    return `${Math.round(n)}`;
+  }, []);
+
+  const formatValue = useCallback(
+    (n: number) => (metric === "cost" ? formatCost(n) : formatTokens(n)),
+    [metric, formatCost, formatTokens],
+  );
+  const formatOther = useCallback(
+    (n: number) => (metric === "cost" ? formatTokens(n) : formatCost(n)),
+    [metric, formatCost, formatTokens],
+  );
+  const formatTick = useCallback(
+    (n: number) =>
+      metric === "cost" ? formatCost(n) : formatTokensShort(n),
+    [metric, formatCost, formatTokensShort],
+  );
+  const formatRate = useCallback(
+    (cost: number, tokens: number) =>
+      tokens > 0 ? `$${((cost * 1_000_000) / tokens).toFixed(2)}/Mtok` : null,
+    [],
+  );
 
   // Default to spend limit window on first load, then fall back to 24h
   const effectiveBucketHours = bucketHours
@@ -144,26 +176,32 @@ export const CostsPage: React.FC = () => {
     void fetchData();
   }, [fetchData]);
 
-  // Collect all unique agent names across buckets for series definition
-  const agentNames = useMemo(() => {
+  const breakdownFor = useCallback(
+    (bucket: CostsHistogramResponse["buckets"][number]) => {
+      if (metric === "cost") {
+        return groupBy === "agent" ? bucket.byAgent : bucket.byModel;
+      }
+      return groupBy === "agent" ? bucket.byAgentTokens : bucket.byModelTokens;
+    },
+    [groupBy, metric],
+  );
+
+  // Collect all unique series names across buckets, sorted by total desc
+  const seriesNames = useMemo(() => {
     if (!data) return [];
     const names = new Set<string>();
-    for (const bucket of data.buckets) {
-      for (const name of Object.keys(bucket.byAgent)) {
-        names.add(name);
-      }
-    }
-    // Sort by total cost descending (matching byAgent order)
     const totals = new Map<string, number>();
     for (const bucket of data.buckets) {
-      for (const [name, cost] of Object.entries(bucket.byAgent)) {
-        totals.set(name, (totals.get(name) ?? 0) + cost);
+      const breakdown = breakdownFor(bucket);
+      for (const [name, value] of Object.entries(breakdown)) {
+        names.add(name);
+        totals.set(name, (totals.get(name) ?? 0) + value);
       }
     }
     return Array.from(names).sort(
       (a, b) => (totals.get(b) ?? 0) - (totals.get(a) ?? 0),
     );
-  }, [data]);
+  }, [data, breakdownFor]);
 
   const chartData = useMemo(() => {
     if (!data) return [];
@@ -185,23 +223,47 @@ export const CostsPage: React.FC = () => {
         });
       }
       const row: Record<string, string | number> = { label };
-      for (const name of agentNames) {
-        row[name] = Math.round((bucket.byAgent[name] ?? 0) * 100) / 100;
+      const breakdown = breakdownFor(bucket);
+      for (const name of seriesNames) {
+        const v = breakdown[name] ?? 0;
+        row[name] = metric === "cost" ? Math.round(v * 100) / 100 : Math.round(v);
       }
       return row;
     });
-  }, [data, bucketHours, agentNames]);
+  }, [data, bucketHours, seriesNames, breakdownFor, metric]);
 
   const titleMap = useMemo(() => {
     if (!data) return new Map<string, string>();
     return new Map(data.byAgent.map((a) => [a.username, a.title]));
   }, [data]);
 
+  // Per-bucket values for the *other* metric, keyed by series name, used in
+  // tooltips to show the secondary metric next to the primary.
+  const secondaryByName = useMemo(() => {
+    const map = new Map<string, number[]>();
+    if (!data) return map;
+    for (const name of seriesNames) map.set(name, []);
+    for (const bucket of data.buckets) {
+      const otherBreakdown =
+        metric === "cost"
+          ? groupBy === "agent"
+            ? bucket.byAgentTokens
+            : bucket.byModelTokens
+          : groupBy === "agent"
+            ? bucket.byAgent
+            : bucket.byModel;
+      for (const name of seriesNames) {
+        map.get(name)!.push(otherBreakdown[name] ?? 0);
+      }
+    }
+    return map;
+  }, [data, seriesNames, metric, groupBy]);
+
   const barChartData = useMemo<ChartData<"bar">>(() => {
     return {
       labels: chartData.map((d) => d.label as string),
-      datasets: agentNames.map((name, i) => {
-        const title = titleMap.get(name);
+      datasets: seriesNames.map((name, i) => {
+        const title = groupBy === "agent" ? titleMap.get(name) : undefined;
         const color = resolveColor(
           AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length],
         );
@@ -210,37 +272,61 @@ export const CostsPage: React.FC = () => {
           data: chartData.map((d) => Number(d[name] ?? 0)),
           backgroundColor: color,
           maxBarThickness: 50,
-          stack: "agents",
+          stack: "series",
         };
       }),
     };
-  }, [chartData, agentNames, titleMap, resolveColor]);
+  }, [chartData, seriesNames, titleMap, resolveColor, groupBy]);
 
-  const totalCost = useMemo(() => {
-    if (!data) return 0;
-    return data.buckets.reduce((sum, b) => sum + b.cost, 0);
+  const totals = useMemo(() => {
+    if (!data) return { cost: 0, tokens: 0 };
+    return data.buckets.reduce(
+      (acc, b) => ({ cost: acc.cost + b.cost, tokens: acc.tokens + b.tokens }),
+      { cost: 0, tokens: 0 },
+    );
   }, [data]);
 
+  const pieEntries = useMemo<
+    { label: string; cost: number; tokens: number }[]
+  >(() => {
+    if (!data) return [];
+    if (groupBy === "agent") {
+      return data.byAgent.map((e) => ({
+        label: `${e.username} (${e.title})`,
+        cost: e.cost,
+        tokens: e.tokens,
+      }));
+    }
+    return data.byModel.map((e) => ({
+      label: e.model,
+      cost: e.cost,
+      tokens: e.tokens,
+    }));
+  }, [data, groupBy]);
+
   const pieChartData = useMemo<ChartData<"pie">>(() => {
-    if (!data?.byAgent.length) {
+    if (!pieEntries.length) {
       return { labels: [], datasets: [{ data: [], backgroundColor: [] }] };
     }
     return {
-      labels: data.byAgent.map((e) => `${e.username} (${e.title})`),
+      labels: pieEntries.map((e) => e.label),
       datasets: [
         {
-          data: data.byAgent.map((e) => e.cost),
-          backgroundColor: data.byAgent.map((_, i) =>
+          data: pieEntries.map((e) =>
+            metric === "cost" ? e.cost : e.tokens,
+          ),
+          backgroundColor: pieEntries.map((_, i) =>
             resolveColor(AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length]),
           ),
           borderWidth: 1,
         },
       ],
     };
-  }, [data, resolveColor]);
+  }, [pieEntries, resolveColor, metric]);
 
   // Show the spend limit reference line when bucket size matches the spend limit hours
   const showSpendLimitLine =
+    metric === "cost" &&
     data?.spendLimitDollars != null &&
     data?.spendLimitHours != null &&
     effectiveBucketHours === data.spendLimitHours;
@@ -258,14 +344,37 @@ export const CostsPage: React.FC = () => {
           itemSort: (a, b) => Number(b.parsed.y) - Number(a.parsed.y),
           filter: (item) => Number(item.parsed.y) > 0,
           callbacks: {
-            label: (ctx) =>
-              `${ctx.dataset.label}: $${Number(ctx.parsed.y).toFixed(2)}`,
+            label: (ctx) => {
+              const name = seriesNames[ctx.datasetIndex];
+              const other =
+                secondaryByName.get(name)?.[ctx.dataIndex] ?? 0;
+              const primary = Number(ctx.parsed.y);
+              const cost = metric === "cost" ? primary : other;
+              const tokens = metric === "cost" ? other : primary;
+              const rate = formatRate(cost, tokens);
+              const base = `${ctx.dataset.label}: ${formatValue(
+                primary,
+              )} (${formatOther(other)})`;
+              return rate ? `${base} · ${rate}` : base;
+            },
             footer: (items) => {
-              const total = items.reduce(
+              const totalPrimary = items.reduce(
                 (s, it) => s + Number(it.parsed.y || 0),
                 0,
               );
-              return `Total: $${total.toFixed(2)}`;
+              const totalSecondary = items.reduce((s, it) => {
+                const name = seriesNames[it.datasetIndex];
+                return s + (secondaryByName.get(name)?.[it.dataIndex] ?? 0);
+              }, 0);
+              const totalCost =
+                metric === "cost" ? totalPrimary : totalSecondary;
+              const totalTokens =
+                metric === "cost" ? totalSecondary : totalPrimary;
+              const rate = formatRate(totalCost, totalTokens);
+              const base = `Total: ${formatValue(
+                totalPrimary,
+              )} (${formatOther(totalSecondary)})`;
+              return rate ? `${base} · ${rate}` : base;
             },
           },
         },
@@ -274,7 +383,7 @@ export const CostsPage: React.FC = () => {
         x: { stacked: true, grid: { display: false } },
         y: {
           stacked: true,
-          ticks: { callback: (v) => `$${Number(v).toFixed(2)}` },
+          ticks: { callback: (v) => formatTick(Number(v)) },
         },
       },
     };
@@ -286,7 +395,18 @@ export const CostsPage: React.FC = () => {
       };
     }
     return opts;
-  }, [showSpendLimitLine, data?.spendLimitDollars, limitLineColor]);
+  }, [
+    showSpendLimitLine,
+    data?.spendLimitDollars,
+    limitLineColor,
+    formatValue,
+    formatOther,
+    formatTick,
+    formatRate,
+    metric,
+    seriesNames,
+    secondaryByName,
+  ]);
 
   const pieOptions = useMemo<ChartOptions<"pie">>(
     () => ({
@@ -297,12 +417,24 @@ export const CostsPage: React.FC = () => {
         legend: { position: "right", labels: { boxWidth: 12 } },
         tooltip: {
           callbacks: {
-            label: (ctx) => `${ctx.label}: $${Number(ctx.parsed).toFixed(2)}`,
+            label: (ctx) => {
+              const entry = pieEntries[ctx.dataIndex];
+              if (!entry) return `${ctx.label}: ${ctx.parsed}`;
+              const primary = formatValue(
+                metric === "cost" ? entry.cost : entry.tokens,
+              );
+              const other = formatOther(
+                metric === "cost" ? entry.tokens : entry.cost,
+              );
+              const rate = formatRate(entry.cost, entry.tokens);
+              const base = `${ctx.label}: ${primary} (${other})`;
+              return rate ? `${base} · ${rate}` : base;
+            },
           },
         },
       },
     }),
-    [],
+    [formatValue, formatOther, formatRate, pieEntries, metric],
   );
 
   return (
@@ -336,10 +468,20 @@ export const CostsPage: React.FC = () => {
           </div>
           <div>
             <Text size="xs" c="dimmed">
-              Total ({TIME_RANGES.find((r) => r.value === rangeHours)?.label})
+              Total Cost (
+              {TIME_RANGES.find((r) => r.value === rangeHours)?.label})
             </Text>
             <Text size="sm" fw={500}>
-              ${totalCost.toFixed(2)}
+              {formatCost(totals.cost)}
+            </Text>
+          </div>
+          <div>
+            <Text size="xs" c="dimmed">
+              Total Tokens (
+              {TIME_RANGES.find((r) => r.value === rangeHours)?.label})
+            </Text>
+            <Text size="sm" fw={500}>
+              {formatTokensShort(totals.tokens)}
             </Text>
           </div>
         </Group>
@@ -373,6 +515,30 @@ export const CostsPage: React.FC = () => {
             searchable
             size="xs"
           />
+          <NativeSelect
+            label="Group By"
+            data={[
+              { value: "agent", label: "Agent" },
+              { value: "model", label: "Model" },
+            ]}
+            value={groupBy}
+            onChange={(e) =>
+              setGroupBy(e.currentTarget.value as "agent" | "model")
+            }
+            size="xs"
+          />
+          <NativeSelect
+            label="Metric"
+            data={[
+              { value: "cost", label: "Cost ($)" },
+              { value: "tokens", label: "Tokens" },
+            ]}
+            value={metric}
+            onChange={(e) =>
+              setMetric(e.currentTarget.value as "cost" | "tokens")
+            }
+            size="xs"
+          />
         </Group>
 
         {/* Charts */}
@@ -397,10 +563,11 @@ export const CostsPage: React.FC = () => {
                 </Text>
               )}
             </Paper>
-            {data?.byAgent.length ? (
+            {pieEntries.length ? (
               <Paper p="md" withBorder>
                 <Text size="sm" fw={500} mb="sm">
-                  Cost by Agent
+                  {metric === "cost" ? "Cost" : "Tokens"} by{" "}
+                  {groupBy === "agent" ? "Agent" : "Model"}
                 </Text>
                 <div style={{ height: 350 }}>
                   <Pie data={pieChartData} options={pieOptions} />
