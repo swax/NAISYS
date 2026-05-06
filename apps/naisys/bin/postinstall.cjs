@@ -4,7 +4,7 @@ const path = require("path");
 
 if (process.platform !== "win32") {
   try {
-    execSync("chmod +x ./bin/*");
+    execSync("chmod +x ./bin/naisys.js");
   } catch {
     // best-effort
   }
