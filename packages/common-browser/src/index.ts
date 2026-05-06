@@ -7,6 +7,8 @@ export type {
 } from "./AttachmentList.js";
 export { AttachmentList } from "./AttachmentList.js";
 export { CompactMarkdown } from "./CompactMarkdown.js";
+export type { InlineWordDiffProps } from "./InlineWordDiff.js";
+export { InlineWordDiff } from "./InlineWordDiff.js";
 export type { SecretFieldProps } from "./SecretField.js";
 export { SecretField } from "./SecretField.js";
 export type {
@@ -15,5 +17,7 @@ export type {
   ServerLogViewerProps,
 } from "./ServerLogViewer.js";
 export { ServerLogViewer } from "./ServerLogViewer.js";
+export type { DiffViewMode, TextDiffViewerProps } from "./TextDiffViewer.js";
+export { TextDiffViewer } from "./TextDiffViewer.js";
 export { VersionBadge } from "./VersionBadge.js";
 export { zodResolver } from "./zodResolver.js";

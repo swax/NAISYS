@@ -11,6 +11,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { InlineWordDiff } from "@naisys/common-browser";
 import type {
   DependencyDiff,
   FieldDiff,
@@ -43,13 +44,42 @@ const PropertyChanges: React.FC<{ changes: PropertyChange[] }> = ({
       </Table.Tr>
     </Table.Thead>
     <Table.Tbody>
-      {changes.map((c) => (
-        <Table.Tr key={c.field}>
-          <Table.Td fw={600}>{c.field}</Table.Td>
-          <Table.Td c="red">{String(c.from ?? "—")}</Table.Td>
-          <Table.Td c="green">{String(c.to ?? "—")}</Table.Td>
-        </Table.Tr>
-      ))}
+      {changes.map((c) => {
+        const fromStr = c.from == null ? "" : String(c.from);
+        const toStr = c.to == null ? "" : String(c.to);
+        const bothPresent = c.from != null && c.to != null;
+        return (
+          <Table.Tr key={c.field}>
+            <Table.Td fw={600}>{c.field}</Table.Td>
+            <Table.Td c="red">
+              {c.from == null ? (
+                "—"
+              ) : bothPresent ? (
+                <InlineWordDiff
+                  oldText={fromStr}
+                  newText={toStr}
+                  side="old"
+                />
+              ) : (
+                fromStr
+              )}
+            </Table.Td>
+            <Table.Td c="green">
+              {c.to == null ? (
+                "—"
+              ) : bothPresent ? (
+                <InlineWordDiff
+                  oldText={fromStr}
+                  newText={toStr}
+                  side="new"
+                />
+              ) : (
+                toStr
+              )}
+            </Table.Td>
+          </Table.Tr>
+        );
+      })}
     </Table.Tbody>
   </Table>
 );

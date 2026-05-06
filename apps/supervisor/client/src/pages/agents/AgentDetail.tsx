@@ -17,6 +17,7 @@ import {
   hasAction,
   type HateoasAction,
 } from "@naisys/common";
+import { TextDiffViewer } from "@naisys/common-browser";
 import type { AgentDetailResponse } from "@naisys/supervisor-shared";
 import { type ConfigRevision } from "@naisys/supervisor-shared";
 import {
@@ -41,6 +42,7 @@ import {
   deleteAgentPermanently,
   disableAgent,
   enableAgent,
+  exportAgentConfig,
   getAgentDetail,
   getConfigRevisions,
   resetAgentSpend,
@@ -83,8 +85,10 @@ export const AgentDetail: React.FC = () => {
     string | undefined
   >();
   const [revisions, setRevisions] = useState<ConfigRevision[]>([]);
-  const [selectedRevision, setSelectedRevision] =
-    useState<ConfigRevision | null>(null);
+  const [currentYaml, setCurrentYaml] = useState<string | null>(null);
+  const [selectedRevisionId, setSelectedRevisionId] = useState<
+    number | "current" | null
+  >(null);
   const [showHistory, setShowHistory] = useState(false);
   const [resolvedEnvVars, setResolvedEnvVars] = useState<
     Record<string, string> | undefined
@@ -117,11 +121,15 @@ export const AgentDetail: React.FC = () => {
     void fetchDetail();
   }, [username]);
 
-  const fetchRevisions = async () => {
+  const fetchHistory = async () => {
     if (!username) return;
     try {
-      const data = await getConfigRevisions(username);
-      setRevisions(data.items);
+      const [revs, current] = await Promise.all([
+        getConfigRevisions(username),
+        exportAgentConfig(username),
+      ]);
+      setRevisions(revs.items);
+      setCurrentYaml(current.yaml);
     } catch (err) {
       console.error("Error fetching config revisions:", err);
     }
@@ -131,10 +139,10 @@ export const AgentDetail: React.FC = () => {
     const next = !showHistory;
     setShowHistory(next);
     if (next && revisions.length === 0) {
-      void fetchRevisions();
+      void fetchHistory();
     }
     if (!next) {
-      setSelectedRevision(null);
+      setSelectedRevisionId(null);
     }
   };
 
@@ -697,42 +705,97 @@ export const AgentDetail: React.FC = () => {
 
       {showHistory && (
         <Stack gap="xs">
-          {revisions.length === 0 ? (
+          {revisions.length === 0 && currentYaml === null ? (
             <Text size="sm" c="dimmed">
-              No previous revisions
+              Loading history...
             </Text>
           ) : (
-            <>
-              <Group gap="xs" wrap="wrap">
-                {revisions.map((rev) => (
-                  <Button
-                    key={rev.id}
-                    size="compact-xs"
-                    variant={
-                      selectedRevision?.id === rev.id ? "filled" : "light"
-                    }
-                    onClick={() =>
-                      setSelectedRevision(
-                        selectedRevision?.id === rev.id ? null : rev,
-                      )
-                    }
-                  >
-                    {new Date(rev.createdAt).toLocaleString()}
-                  </Button>
-                ))}
-              </Group>
-              {selectedRevision && (
-                <Stack gap={4}>
-                  <Text size="xs" c="dimmed">
-                    Changed by {selectedRevision.changedByUsername} on{" "}
-                    {new Date(selectedRevision.createdAt).toLocaleString()}
-                  </Text>
-                  <Code block style={{ whiteSpace: "pre-wrap" }}>
-                    {selectedRevision.config}
-                  </Code>
-                </Stack>
-              )}
-            </>
+            (() => {
+              type Entry = {
+                id: number | "current";
+                label: string;
+                yaml: string;
+                changedBy?: string;
+                changedAt?: string;
+              };
+              const entries: Entry[] = [];
+              if (currentYaml !== null) {
+                entries.push({
+                  id: "current",
+                  label: "Current",
+                  yaml: currentYaml,
+                });
+              }
+              for (const rev of revisions) {
+                entries.push({
+                  id: rev.id,
+                  label: new Date(rev.createdAt).toLocaleString(),
+                  yaml: rev.config,
+                  changedBy: rev.changedByUsername,
+                  changedAt: rev.createdAt,
+                });
+              }
+
+              const selectedIdx = entries.findIndex(
+                (e) => e.id === selectedRevisionId,
+              );
+              const selected =
+                selectedIdx >= 0 ? entries[selectedIdx] : undefined;
+              const predecessor =
+                selected && selectedIdx + 1 < entries.length
+                  ? entries[selectedIdx + 1]
+                  : undefined;
+
+              return (
+                <>
+                  <Group gap="xs" wrap="wrap">
+                    {entries.map((entry) => (
+                      <Button
+                        key={entry.id}
+                        size="compact-xs"
+                        variant={
+                          selectedRevisionId === entry.id ? "filled" : "light"
+                        }
+                        color={entry.id === "current" ? "teal" : undefined}
+                        onClick={() =>
+                          setSelectedRevisionId(
+                            selectedRevisionId === entry.id ? null : entry.id,
+                          )
+                        }
+                      >
+                        {entry.label}
+                      </Button>
+                    ))}
+                  </Group>
+                  {selected && (
+                    <Stack gap={4}>
+                      {selected.changedBy && selected.changedAt ? (
+                        <Text size="xs" c="dimmed">
+                          Changed by {selected.changedBy} on{" "}
+                          {new Date(selected.changedAt).toLocaleString()}
+                        </Text>
+                      ) : (
+                        <Text size="xs" c="dimmed">
+                          Live configuration
+                        </Text>
+                      )}
+                      {predecessor ? (
+                        <TextDiffViewer
+                          oldText={predecessor.yaml}
+                          newText={selected.yaml}
+                          oldLabel={predecessor.label}
+                          newLabel={selected.label}
+                        />
+                      ) : (
+                        <Code block style={{ whiteSpace: "pre-wrap" }}>
+                          {selected.yaml}
+                        </Code>
+                      )}
+                    </Stack>
+                  )}
+                </>
+              );
+            })()
           )}
         </Stack>
       )}
