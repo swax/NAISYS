@@ -166,13 +166,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
       }
 
       if (multipleCommandsEnabled) {
-        if (Array.isArray(commandList)) {
-          for (const command of commandList) {
-            if (typeof command === "string" && command.trim()) {
-              commands.push(command.trim());
-            }
-          }
-        }
+        pushCommandListEntries(commandList, commands);
       } else if (typeof command === "string" && command.trim()) {
         commands.push(command.trim());
       }
@@ -229,13 +223,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
       }
 
       if (multipleCommandsEnabled) {
-        if (Array.isArray(commandList)) {
-          for (const command of commandList) {
-            if (typeof command === "string" && command.trim()) {
-              commands.push(command.trim());
-            }
-          }
-        }
+        pushCommandListEntries(commandList, commands);
       } else if (typeof command === "string" && command.trim()) {
         commands.push(command.trim());
       }
@@ -282,13 +270,7 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
       }
 
       if (multipleCommandsEnabled) {
-        if (Array.isArray(commandList)) {
-          for (const command of commandList) {
-            if (typeof command === "string" && command.trim()) {
-              commands.push(command.trim());
-            }
-          }
-        }
+        pushCommandListEntries(commandList, commands);
       } else if (typeof command === "string" && command.trim()) {
         commands.push(command.trim());
       }
@@ -299,6 +281,24 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
     }
 
     return undefined;
+  }
+
+  // Split an entry on newlines so a multi-line string in one commandList slot
+  // becomes one command per line. Without this, downstream stringArgv flattens
+  // newlines to spaces and a command like `ns-desktop click 1 2\nns-desktop
+  // wait 1` is parsed as a single call with garbage args.
+  function pushCommandListEntries(
+    commandList: unknown,
+    commands: string[],
+  ): void {
+    if (!Array.isArray(commandList)) return;
+    for (const entry of commandList) {
+      if (typeof entry !== "string") continue;
+      for (const line of entry.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (trimmed) commands.push(trimmed);
+      }
+    }
   }
 
   function buildCommentCommand(comment: string): string {
