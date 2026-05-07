@@ -37,6 +37,19 @@ export const getRunsData = async (
   return await api.get<RunsDataResponse>(url);
 };
 
+export interface ChatThreadRunsParams {
+  agentUsername: string;
+  participants: string;
+}
+
+export const getChatThreadRuns = async (
+  params: ChatThreadRunsParams,
+): Promise<RunsDataResponse> => {
+  return await api.get<RunsDataResponse>(
+    apiEndpoints.agentChatThreadRuns(params.agentUsername, params.participants),
+  );
+};
+
 export interface HostRunsParams {
   hostname: string;
   page?: number;

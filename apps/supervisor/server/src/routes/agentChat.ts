@@ -7,6 +7,7 @@ import type {
   ChatMessagesRequest,
   ChatMessagesResponse,
   ErrorResponse,
+  RunsDataResponse,
   SendChatRequest,
   SendChatResponse,
 } from "@naisys/supervisor-shared";
@@ -18,6 +19,7 @@ import {
   ChatMessagesRequestSchema,
   ChatMessagesResponseSchema,
   ErrorResponseSchema,
+  RunsDataResponseSchema,
   SendChatRequestSchema,
   SendChatResponseSchema,
 } from "@naisys/supervisor-shared";
@@ -34,6 +36,7 @@ import {
   getMessages,
   sendChatMessage,
 } from "../services/chatService.js";
+import { getChatThreadRuns } from "../services/runsService.js";
 
 function sendChatAction(username: string) {
   return {
@@ -160,6 +163,36 @@ export default function agentChatRoutes(
           oldest,
         ),
         _actions: canSend ? [sendChatAction(username)] : undefined,
+      };
+    },
+  );
+
+  // GET /:username/chat/:participants/runs — Runs that participated in a chat
+  // thread, derived from mail_recipients.read_run_id. Used by chat UI to scope
+  // the run-divider/auto-load logic to chat-relevant runs only.
+  fastify.get<{
+    Params: AgentUsernameParams & { participants: string };
+    Reply: RunsDataResponse | ErrorResponse;
+  }>(
+    "/:username/chat/:participants/runs",
+    {
+      schema: {
+        description:
+          "Get runs that participated in a specific chat conversation",
+        tags: ["Chat"],
+        response: {
+          200: RunsDataResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, _reply) => {
+      const { participants } = request.params;
+      const data = await getChatThreadRuns(participants);
+      return {
+        success: true,
+        message: "Chat-thread runs retrieved successfully",
+        data,
       };
     },
   );

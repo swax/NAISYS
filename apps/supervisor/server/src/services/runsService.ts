@@ -194,6 +194,76 @@ export async function getRunsData(
   };
 }
 
+/**
+ * Fetch RunSession rows for runs that participated in a chat thread, derived
+ * from `mail_recipients.read_run_id` (set on send for the sender's `from` row,
+ * and on read for each recipient's `to` row). Runs that never touched this
+ * thread — admin, mail, config, fire-and-forget tasks — are filtered out.
+ */
+export async function getChatThreadRuns(
+  participants: string,
+): Promise<RunsData> {
+  const pairs = await hubDb.mail_recipients.findMany({
+    where: {
+      read_run_id: { not: null },
+      message: {
+        kind: "chat",
+        participants,
+      },
+    },
+    distinct: ["user_id", "read_run_id"],
+    select: {
+      user_id: true,
+      read_run_id: true,
+    },
+  });
+
+  if (pairs.length === 0) {
+    return { runs: [], timestamp: new Date().toISOString() };
+  }
+
+  // Pull every (session, subagent) row under each (userId, runId) — a single
+  // chat-relevant run can span multiple sessions or have subagents.
+  const runSessions = await hubDb.run_session.findMany({
+    where: {
+      OR: pairs.map((p) => ({
+        user_id: p.user_id,
+        run_id: p.read_run_id as number,
+      })),
+    },
+    orderBy: [
+      { run_id: "desc" },
+      { subagent_id: "desc" },
+      { created_at: "desc" },
+    ],
+    include: {
+      host: { select: { name: true, environment: true } },
+      users: { select: { username: true } },
+    },
+  });
+
+  const runs: RunSession[] = runSessions.map((session) => ({
+    userId: session.user_id,
+    username: session.users.username,
+    runId: session.run_id,
+    subagentId: session.subagent_id === 0 ? undefined : session.subagent_id,
+    sessionId: session.session_id,
+    createdAt: session.created_at.toISOString(),
+    lastActive: session.last_active.toISOString(),
+    modelName: session.model_name,
+    latestLogId: session.latest_log_id,
+    totalLines: session.total_lines,
+    totalCost: session.total_cost,
+    hostName: session.host?.name ?? null,
+    hostEnvironment: parseHostEnvironment(session.host?.environment ?? null),
+  }));
+
+  return {
+    runs,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 export async function getContextLog(
   userId: number,
   runId: number,
