@@ -1,11 +1,16 @@
 import { ATTACHMENT_NO_ACCESS } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import type {
+  AgentRunLogEntry,
   HostEnvironment,
   LogEntry,
+  LogSource,
   RunSession,
 } from "@naisys/supervisor-shared";
-import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
+import {
+  AGENT_RUN_LOG_ENTRIES_DEFAULT_LIMIT,
+  HostEnvironmentSchema,
+} from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
@@ -29,6 +34,11 @@ export interface RunsData {
 
 export interface ContextLogData {
   logs: LogEntry[];
+  timestamp: string;
+}
+
+export interface AgentRunLogEntriesData {
+  entries: AgentRunLogEntry[];
   timestamp: string;
 }
 
@@ -81,6 +91,19 @@ export function obfuscateLogs(data: ContextLogData): ContextLogData {
             downloadUrl: "",
           }
         : undefined,
+    })),
+  };
+}
+
+/** Obfuscate the message field on each entry for users without view_run_logs. */
+export function obfuscateAgentRunLogEntries(
+  data: AgentRunLogEntriesData,
+): AgentRunLogEntriesData {
+  return {
+    ...data,
+    entries: data.entries.map((e) => ({
+      ...e,
+      message: obfuscateText(e.message),
     })),
   };
 }
@@ -179,6 +202,7 @@ export async function getContextLog(
   logsBefore?: number,
   limit?: number,
   subagentId?: number,
+  sources?: LogSource[],
 ): Promise<ContextLogData> {
   const where: any = {
     user_id: userId,
@@ -192,6 +216,10 @@ export async function getContextLog(
     where.id = {};
     if (logsAfter !== undefined) where.id.gt = logsAfter;
     if (logsBefore !== undefined) where.id.lt = logsBefore;
+  }
+
+  if (sources && sources.length > 0) {
+    where.source = { in: sources };
   }
 
   const dbLogs = await hubDb.context_log.findMany({
@@ -243,6 +271,60 @@ export async function getContextLog(
 
   return {
     logs,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Fetch log entries across all sessions/subagents of the named runs, filtered
+ * by source. Used by the chat thread to pull a user's LLM commands per run
+ * without fanning out a REST call per session.
+ */
+export async function getAgentRunLogEntries(
+  userId: number,
+  runIds: number[],
+  sources: LogSource[],
+  limit: number = AGENT_RUN_LOG_ENTRIES_DEFAULT_LIMIT,
+): Promise<AgentRunLogEntriesData> {
+  if (runIds.length === 0 || sources.length === 0) {
+    return { entries: [], timestamp: new Date().toISOString() };
+  }
+
+  const rows = await hubDb.context_log.findMany({
+    where: {
+      user_id: userId,
+      run_id: { in: runIds },
+      source: { in: sources },
+    },
+    orderBy: { id: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      run_id: true,
+      session_id: true,
+      subagent_id: true,
+      source: true,
+      message: true,
+      created_at: true,
+    },
+  });
+
+  const entries: AgentRunLogEntry[] = rows.map((r) => ({
+    logId: r.id,
+    runId: r.run_id,
+    sessionId: r.session_id,
+    subagentId: r.subagent_id === 0 ? undefined : r.subagent_id,
+    source: r.source as LogSource,
+    message: r.message,
+    createdAt: r.created_at.toISOString(),
+  }));
+
+  // Reverse so callers get chronological (oldest first); matches how chat
+  // ordering works without forcing every consumer to re-sort.
+  entries.reverse();
+
+  return {
+    entries,
     timestamp: new Date().toISOString(),
   };
 }

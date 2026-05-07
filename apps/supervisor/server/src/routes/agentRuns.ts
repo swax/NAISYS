@@ -1,6 +1,8 @@
 import type {
   AgentRunCommandRequestBody,
   AgentRunCommandResult,
+  AgentRunLogEntriesRequest,
+  AgentRunLogEntriesResponse,
   AgentRunPauseResult,
   AgentUsernameParams,
   ContextLogParams,
@@ -14,6 +16,8 @@ import type {
 import {
   AgentRunCommandRequestSchema,
   AgentRunCommandResultSchema,
+  AgentRunLogEntriesRequestSchema,
+  AgentRunLogEntriesResponseSchema,
   AgentRunPauseResultSchema,
   AgentUsernameParamsSchema,
   ContextLogParamsSchema,
@@ -40,8 +44,10 @@ import {
   sendAgentRunPauseState,
 } from "../services/hubConnectionService.js";
 import {
+  getAgentRunLogEntries,
   getContextLog,
   getRunsData,
+  obfuscateAgentRunLogEntries,
   obfuscateLogs,
 } from "../services/runsService.js";
 
@@ -140,6 +146,51 @@ export default function agentRunsRoutes(
   registerContextLogRoute(fastify, false);
   registerContextLogRoute(fastify, true);
 
+  // GET /:username/runLogEntries — flat list of log entries across the named
+  // runs (any session/subagent) filtered by source. Used by chat to attach
+  // LLM commands to messages without fanning out a request per session.
+  fastify.get<{
+    Params: AgentUsernameParams;
+    Querystring: AgentRunLogEntriesRequest;
+    Reply: AgentRunLogEntriesResponse;
+  }>(
+    "/:username/runLogEntries",
+    {
+      schema: {
+        description:
+          "Get log entries across all sessions of the named runs for an agent, filtered by source (e.g. endPrompt,llm)",
+        tags: ["Runs"],
+        params: AgentUsernameParamsSchema,
+        querystring: AgentRunLogEntriesRequestSchema,
+        response: {
+          200: AgentRunLogEntriesResponseSchema,
+          500: AgentRunLogEntriesResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { username } = request.params;
+      const { runIds, sources, limit } = request.query;
+      const id = resolveAgentId(username);
+
+      if (!id) {
+        return notFound(reply, `Agent '${username}' not found`);
+      }
+
+      let data = await getAgentRunLogEntries(id, runIds, sources, limit);
+
+      if (!hasPermission(request.supervisorUser, "view_run_logs")) {
+        data = obfuscateAgentRunLogEntries(data);
+      }
+
+      return {
+        success: true,
+        message: "Run log entries retrieved successfully",
+        data,
+      };
+    },
+  );
+
   // Paired pause/resume routes — the verb is carried in the URL rather than
   // the body so the HATEOAS action list can express them as two distinct
   // affordances that toggle on/off based on current run state.
@@ -188,7 +239,7 @@ function registerContextLogRoute(
       const subagentId = withSubagent
         ? (request.params as SubagentSessionParams).subagentId
         : undefined;
-      const { logsAfter, logsBefore, limit } = request.query;
+      const { logsAfter, logsBefore, limit, sources } = request.query;
       const id = resolveAgentId(username);
 
       if (!id) {
@@ -203,6 +254,7 @@ function registerContextLogRoute(
         logsBefore,
         limit,
         subagentId,
+        sources,
       );
 
       // Obfuscate log text for users without view_run_logs permission

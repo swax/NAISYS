@@ -96,9 +96,24 @@ const LogAttachmentDisplay: React.FC<{ log: LogEntry }> = ({ log }) => {
   );
 };
 
-export const LogEntryComponent: React.FC<{ log: LogEntry }> = ({ log }) => {
+export const LogEntryComponent: React.FC<{
+  log: LogEntry;
+  highlighted?: boolean;
+}> = ({ log, highlighted }) => {
   return (
-    <Stack gap={0}>
+    <Stack
+      gap={0}
+      id={`log-${log.id}`}
+      style={
+        highlighted
+          ? {
+              backgroundColor: "rgba(66, 153, 225, 0.25)",
+              transition: "background-color 0.6s ease-out",
+              borderRadius: 4,
+            }
+          : undefined
+      }
+    >
       <Text
         size="sm"
         c={getLogColor(log)}
@@ -148,16 +163,35 @@ export const groupPromptEntries = (
   return grouped;
 };
 
-export const GroupedLogComponent: React.FC<{ item: LogEntry | LogEntry[] }> = ({
-  item,
-}) => {
+export const GroupedLogComponent: React.FC<{
+  item: LogEntry | LogEntry[];
+  highlightedId?: number | null;
+}> = ({ item, highlightedId }) => {
   if (Array.isArray(item)) {
+    const groupHighlighted = item.some((log) => log.id === highlightedId);
+    // The group's outer id matches the last entry (the endPrompt) since chat
+    // bubble links target endPromptId. Each entry also gets its own anchor
+    // so other consumers can scrollIntoView either id.
+    const anchorId = item[item.length - 1].id;
     return (
-      <Stack gap={0}>
+      <Stack
+        gap={0}
+        id={`log-${anchorId}`}
+        style={
+          groupHighlighted
+            ? {
+                backgroundColor: "rgba(66, 153, 225, 0.25)",
+                transition: "background-color 0.6s ease-out",
+                borderRadius: 4,
+              }
+            : undefined
+        }
+      >
         <div style={{ display: "inline", margin: 0, padding: 0 }}>
           {item.map((log) => (
             <Text
               key={log.id}
+              id={log.id === anchorId ? undefined : `log-${log.id}`}
               size="sm"
               c={getLogColor(log)}
               component="span"
@@ -184,5 +218,7 @@ export const GroupedLogComponent: React.FC<{ item: LogEntry | LogEntry[] }> = ({
     );
   }
 
-  return <LogEntryComponent log={item} />;
+  return (
+    <LogEntryComponent log={item} highlighted={item.id === highlightedId} />
+  );
 };

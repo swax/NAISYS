@@ -247,6 +247,8 @@ export const apiEndpoints = {
   agentConfigRevisions: (username: string) =>
     `/agents/${username}/config/revisions`,
   agentRuns: (username: string) => `/agents/${username}/runs`,
+  agentRunLogEntries: (username: string) =>
+    `/agents/${username}/runLogEntries`,
   agentMail: (username: string) => `/agents/${username}/mail`,
   agentChat: (username: string) => `/agents/${username}/chat`,
   agentChatMessages: (username: string, participants: string) =>

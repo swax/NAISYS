@@ -105,7 +105,12 @@ export const MailThread: React.FC<MailThreadProps> = ({
     <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
       <Container size="md" w="100%" p="md">
         <Stack gap="sm">
-          {trailingDivider && <RunDividerLine divider={trailingDivider} />}
+          {trailingDivider && (
+            <RunDividerLine
+              divider={trailingDivider}
+              currentAgentUsername={currentAgentName}
+            />
+          )}
           {sortedMessages.map((msg, index) => {
             const isOwn = msg.fromUsername === currentAgentName;
             const msgDate = formatDate(msg.createdAt);
@@ -263,7 +268,10 @@ export const MailThread: React.FC<MailThreadProps> = ({
                   )}
                 </Paper>
                 {runDividers.get(msg.id) && (
-                  <RunDividerLine divider={runDividers.get(msg.id)!} />
+                  <RunDividerLine
+                    divider={runDividers.get(msg.id)!}
+                    currentAgentUsername={currentAgentName}
+                  />
                 )}
                 {showNewMailDivider && (
                   <Divider

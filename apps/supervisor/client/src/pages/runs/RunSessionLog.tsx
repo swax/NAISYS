@@ -16,7 +16,7 @@ import {
   IconMinimize,
 } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useContextLog } from "../../hooks/useContextLog";
@@ -29,6 +29,9 @@ export const RunSessionLog: React.FC<{
   footer?: React.ReactNode;
 }> = ({ run, footer }) => {
   const { username } = useParams<{ username: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusLogIdParam = searchParams.get("focusLogId");
+  const focusLogId = focusLogIdParam ? Number(focusLogIdParam) : null;
   const { agents, updateReadStatus, readStatus } = useAgentDataContext();
   const agent = agents.find((a) => a.name === username);
   const agentName = agent?.name;
@@ -39,6 +42,8 @@ export const RunSessionLog: React.FC<{
   const [needsSyncScrolling, setNeedsSyncScrolling] = useState(false);
   const previousLogsLength = useRef<number>(0);
   const wasAtBottomRef = useRef<boolean>(true); // Track if we were at bottom before render
+  const [highlightedLogId, setHighlightedLogId] = useState<number | null>(null);
+  const focusedRef = useRef<number | null>(null);
 
   // Save the initial lastReadLogId to determine where to show the divider
   const [dividerLogId] = useState<number | undefined>(
@@ -82,19 +87,58 @@ export const RunSessionLog: React.FC<{
     );
     updateReadStatus(agentName || "", maxLogId, undefined);
 
-    // Auto-scroll to bottom when new logs arrive (if already at bottom or first load)
+    // Auto-scroll to bottom when new logs arrive (if already at bottom or first load).
+    // Skip auto-scroll on first load when navigating to a specific log id —
+    // the focus effect below will scroll to that entry instead.
     if (!logContainerRef.current || logs.length === 0) return;
 
     const isFirstLoad = previousLogsLength.current === 0 && logs.length > 0;
+    const skipForFocus =
+      isFirstLoad && focusLogId !== null && focusedRef.current !== focusLogId;
 
-    // Use the wasAtBottomRef that was set BEFORE this render
-    if (isFirstLoad || wasAtBottomRef.current) {
+    if (!skipForFocus && (isFirstLoad || wasAtBottomRef.current)) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
       wasAtBottomRef.current = true;
     }
 
     previousLogsLength.current = logs.length;
-  }, [agentName, logs, updateReadStatus]);
+  }, [agentName, logs, updateReadStatus, focusLogId]);
+
+  // Scroll the requested log into view once it's rendered, then briefly flash
+  // its background. Clear the URL param afterwards so a refresh doesn't keep
+  // re-scrolling on subsequent renders.
+  useEffect(() => {
+    if (focusLogId === null) {
+      focusedRef.current = null;
+      return;
+    }
+    if (focusedRef.current === focusLogId) return;
+    if (logs.length === 0) return;
+
+    const el = document.getElementById(`log-${focusLogId}`);
+    if (!el) return;
+
+    focusedRef.current = focusLogId;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightedLogId(focusLogId);
+
+    const flashTimer = setTimeout(() => setHighlightedLogId(null), 1800);
+    const cleanupTimer = setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("focusLogId");
+          return next;
+        },
+        { replace: true },
+      );
+    }, 2000);
+
+    return () => {
+      clearTimeout(flashTimer);
+      clearTimeout(cleanupTimer);
+    };
+  }, [focusLogId, logs, setSearchParams]);
 
   const toggleFullscreen = useCallback((value: boolean) => {
     // Save current scroll percentage before toggling
@@ -259,7 +303,10 @@ export const RunSessionLog: React.FC<{
 
             return (
               <React.Fragment key={key}>
-                <GroupedLogComponent item={item} />
+                <GroupedLogComponent
+                  item={item}
+                  highlightedId={highlightedLogId}
+                />
                 {showDivider && (
                   <Divider
                     my="md"

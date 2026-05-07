@@ -1,4 +1,9 @@
 import type {
+  AgentRunLogEntriesResponse,
+  LogSource,
+} from "@naisys/supervisor-shared";
+
+import type {
   AgentRunCommandResult,
   AgentRunPauseResult,
   ContextLogResponse,
@@ -61,6 +66,7 @@ export interface ContextLogParams {
   subagentId?: number | null;
   logsAfter?: number;
   logsBefore?: number;
+  sources?: LogSource[];
 }
 
 export const getContextLog = async (
@@ -73,10 +79,33 @@ export const getContextLog = async (
   if (params.logsBefore !== undefined) {
     queryParams.append("logsBefore", String(params.logsBefore));
   }
+  if (params.sources && params.sources.length > 0) {
+    queryParams.append("sources", params.sources.join(","));
+  }
 
   const query = queryParams.toString();
   const url = `${apiEndpoints.agentContextLog(params.agentUsername, params.runId, params.sessionId, params.subagentId)}${query ? `?${query}` : ""}`;
   return await api.get<ContextLogResponse>(url);
+};
+
+export interface AgentRunLogEntriesParams {
+  agentUsername: string;
+  runIds: number[];
+  sources: LogSource[];
+  limit?: number;
+}
+
+export const getAgentRunLogEntries = async (
+  params: AgentRunLogEntriesParams,
+): Promise<AgentRunLogEntriesResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("runIds", params.runIds.join(","));
+  queryParams.append("sources", params.sources.join(","));
+  if (params.limit !== undefined) {
+    queryParams.append("limit", String(params.limit));
+  }
+  const url = `${apiEndpoints.agentRunLogEntries(params.agentUsername)}?${queryParams.toString()}`;
+  return await api.get<AgentRunLogEntriesResponse>(url);
 };
 
 export const pauseRun = async (

@@ -378,6 +378,7 @@ export const AgentChat: React.FC = () => {
               <ChatThread
                 messages={messages}
                 currentAgentId={agentId}
+                currentAgentUsername={username}
                 total={totalMessages}
                 hasMore={hasMoreMessages}
                 loadingMore={loadingMoreMessages}

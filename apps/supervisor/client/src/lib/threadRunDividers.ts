@@ -5,6 +5,7 @@ export type RunEventType = "start" | "stop";
 type RunEvent = {
   type: RunEventType;
   username: string;
+  runId: number;
   time: string;
 };
 
@@ -12,6 +13,8 @@ export type RunDividerEntry = {
   username: string;
   type: RunEventType;
   time: string;
+  /** Distinct runIds for this user whose start/stop fell into the cluster. */
+  runIds: number[];
 };
 
 export type RunDivider = {
@@ -55,6 +58,7 @@ export function buildThreadDividers(
       events.push({
         type: "start",
         username: run.username,
+        runId: run.runId,
         time: run.createdAt,
       });
     }
@@ -65,6 +69,7 @@ export function buildThreadDividers(
         events.push({
           type: "stop",
           username: run.username,
+          runId: run.runId,
           time: run.lastActive,
         });
       }
@@ -106,8 +111,12 @@ function collapseCluster(cluster: RunEvent[]): RunDivider | null {
   if (cluster.length === 0) return null;
 
   // Cluster is already in chronological order; later events overwrite earlier
-  // ones for the same user.
-  const perUser = new Map<string, RunDividerEntry>();
+  // ones for the same user. RunIds, however, accumulate per user.
+  const perUser = new Map<
+    string,
+    { username: string; type: RunEventType; time: string }
+  >();
+  const runIdsByUser = new Map<string, Set<number>>();
   let latestTime = cluster[0].time;
   for (const event of cluster) {
     perUser.set(event.username, {
@@ -115,13 +124,19 @@ function collapseCluster(cluster: RunEvent[]): RunDivider | null {
       type: event.type,
       time: event.time,
     });
+    const ids = runIdsByUser.get(event.username) ?? new Set();
+    ids.add(event.runId);
+    runIdsByUser.set(event.username, ids);
     if (new Date(event.time).getTime() > new Date(latestTime).getTime()) {
       latestTime = event.time;
     }
   }
 
-  const entries = Array.from(perUser.values()).sort((a, b) =>
-    a.username.localeCompare(b.username),
-  );
+  const entries: RunDividerEntry[] = Array.from(perUser.values())
+    .sort((a, b) => a.username.localeCompare(b.username))
+    .map((e) => ({
+      ...e,
+      runIds: Array.from(runIdsByUser.get(e.username) ?? []),
+    }));
   return { perUser: entries, latestTime };
 }
