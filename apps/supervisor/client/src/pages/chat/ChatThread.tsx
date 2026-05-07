@@ -5,7 +5,6 @@ import {
   Container,
   Group,
   Image,
-  Loader,
   Paper,
   ScrollArea,
   Stack,
@@ -37,6 +36,7 @@ import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
 import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
 import { useThreadRunCommands } from "../../hooks/useThreadRunCommands";
 import type { ChatMessage } from "../../lib/apiClient";
+import { parseCommandIcon } from "../../lib/commandIcons";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 import { bucketRunCommandsByMessage } from "../../lib/threadRunCommandBuckets";
 
@@ -349,9 +349,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             onClick={() => toggleExpanded(expansionKey)}
             style={{ alignSelf: "flex-start" }}
           >
-            <Group gap={2} wrap="nowrap">
+            <Group gap={4} wrap="nowrap">
               <IconChevronDown
-                size={12}
+                size={14}
                 style={{
                   transform: expanded ? "rotate(0deg)" : "rotate(-90deg)",
                   transition: "transform 0.15s",
@@ -368,6 +368,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
         )}
         {visible.map((cmd) => {
           const showSpinner = isActive && cmd.logId === latestId;
+          const line = firstLine(cmd.message);
+          const parsed = parseCommandIcon(line);
           return (
             <Tooltip
               key={cmd.logId}
@@ -389,12 +391,13 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 onClick={() => handleCommandClick(cmd)}
                 style={{ minWidth: 0, width: "100%" }}
               >
-                <Group gap={2} wrap="nowrap" align="center">
-                  {/* Gutter matches the toggle's chevron so cmd text aligns
-                      with the "Ran N" label; holds the active spinner. */}
+                <Group gap={4} wrap="nowrap" align="center">
+                  {/* Gutter aligns cmd text with the "Ran N" label. Active
+                      commands pulse the icon; unrecognized prefixes fall back
+                      to a terminal icon. */}
                   <Box
-                    w={12}
-                    h={12}
+                    w={14}
+                    h={14}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -402,13 +405,18 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                       flexShrink: 0,
                     }}
                   >
-                    {showSpinner && (
-                      <Loader
-                        size={10}
-                        type="dots"
-                        color={isOwn ? "white" : "blue"}
-                      />
-                    )}
+                    <parsed.Icon
+                      size={14}
+                      color={parsed.color}
+                      style={
+                        showSpinner
+                          ? {
+                              animation:
+                                "commandIconPulse 1.2s ease-in-out infinite",
+                            }
+                          : undefined
+                      }
+                    />
                   </Box>
                   <Text
                     size="xs"
@@ -422,7 +430,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                       flex: 1,
                     }}
                   >
-                    {firstLine(cmd.message)}
+                    {parsed.remainder}
                   </Text>
                 </Group>
               </UnstyledButton>
