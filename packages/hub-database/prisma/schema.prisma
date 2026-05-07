@@ -167,6 +167,7 @@ model mail_recipients {
   user_id     Int
   type        RecipientType
   read_at     DateTime?
+  read_run_id Int?
   archived_at DateTime?
   created_at  DateTime      @default(now())
   message     mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

@@ -17,6 +17,7 @@ export type AttachmentPurpose = z.infer<typeof AttachmentPurposeEnum>;
 /** Request to send a mail message */
 export const MailSendRequestSchema = z.object({
   fromUserId: z.number(),
+  fromRunId: z.number().optional(),
   toUserIds: z.array(z.number()),
   subject: z.string(),
   body: z.string(),
@@ -165,6 +166,7 @@ export type MailSearchResponse = z.infer<typeof MailSearchResponseSchema>;
 /** Request to mark messages as read */
 export const MailMarkReadRequestSchema = z.object({
   userId: z.number(),
+  runId: z.number().optional(),
   messageIds: z.array(z.number()),
   kind: MessageKindSchema,
 });

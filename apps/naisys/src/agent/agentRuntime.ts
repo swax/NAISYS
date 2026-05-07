@@ -218,6 +218,7 @@ export async function createAgentRuntime(
     shellWrapper,
     globalConfig,
     agentManager,
+    runService,
   );
   const chatService = createChatService(
     hubClient,
@@ -226,6 +227,7 @@ export async function createAgentRuntime(
     promptNotification,
     attachmentService,
     shellWrapper,
+    runService,
   );
   const subagentService = createSubagentService(
     mailService,

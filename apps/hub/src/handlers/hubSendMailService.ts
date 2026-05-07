@@ -20,6 +20,7 @@ export function createHubSendMailService(
   /** Send a mail message directly by user IDs */
   async function sendMail(params: {
     fromUserId: number;
+    fromRunId?: number;
     recipientUserIds: number[];
     subject: string;
     body: string;
@@ -100,6 +101,7 @@ export function createHubSendMailService(
             user_id: params.fromUserId,
             type: "from",
             read_at: now,
+            read_run_id: params.fromRunId ?? null,
             created_at: now,
           },
         });

@@ -15,6 +15,7 @@ import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { AttachmentService } from "../services/attachmentService.js";
+import type { RunService } from "../services/runService.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
@@ -50,6 +51,7 @@ export function createChatService(
   promptNotification: PromptNotificationService,
   attachmentService: AttachmentService,
   shellWrapper: ShellWrapper,
+  runService: RunService,
 ) {
   async function handleCommand(args: string): Promise<string> {
     const argv = stringArgv(args);
@@ -150,6 +152,7 @@ export function createChatService(
     if (hubRecipients.length > 0) {
       const response = await hubClient!.sendRequest(HubEvents.MAIL_SEND, {
         fromUserId: localUserId,
+        fromRunId: runService.getRunId(),
         toUserIds: hubRecipients.map((r) => r.userId),
         subject: "",
         body: message,
@@ -310,6 +313,7 @@ export function createChatService(
 
     await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
       userId: localUserId,
+      runId: runService.getRunId(),
       messageIds,
       kind: "chat",
     });

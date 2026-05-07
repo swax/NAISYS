@@ -14,6 +14,7 @@ import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { AttachmentService } from "../services/attachmentService.js";
+import type { RunService } from "../services/runService.js";
 import type { PromptNotificationService } from "../utils/promptNotificationService.js";
 import type { MailContent } from "./mailFormat.js";
 import { formatMessageDisplay } from "./mailFormat.js";
@@ -29,6 +30,7 @@ export function createMailService(
   shellWrapper: ShellWrapper,
   globalConfig: GlobalConfig,
   agentManager: IAgentManager,
+  runService: RunService,
 ) {
   const localUser = userService.getUserById(localUserId);
   const localUsername = localUser?.username || "unknown";
@@ -197,6 +199,7 @@ export function createMailService(
     if (hubRecipients.length > 0) {
       const response = await hubClient!.sendRequest(HubEvents.MAIL_SEND, {
         fromUserId: localUserId,
+        fromRunId: runService.getRunId(),
         toUserIds: hubRecipients.map((r) => r.userId),
         subject,
         body: message,
@@ -318,6 +321,7 @@ export function createMailService(
 
     await hubClient.sendRequest(HubEvents.MAIL_MARK_READ, {
       userId: localUserId,
+      runId: runService.getRunId(),
       messageIds,
       kind: "mail",
     });

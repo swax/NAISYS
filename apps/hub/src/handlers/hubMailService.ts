@@ -92,6 +92,7 @@ export function createHubMailService(
 
       await sendMailService.sendMail({
         fromUserId: parsed.fromUserId,
+        fromRunId: parsed.fromRunId,
         recipientUserIds: parsed.toUserIds,
         subject: parsed.subject,
         body: parsed.body,
@@ -285,7 +286,7 @@ export function createHubMailService(
             user_id: parsed.userId,
             read_at: null,
           },
-          data: { read_at: new Date() },
+          data: { read_at: new Date(), read_run_id: parsed.runId ?? null },
         });
 
         ack({ success: true });
