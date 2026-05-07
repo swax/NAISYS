@@ -227,7 +227,11 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     explicitlyLoadedRunIds,
   );
 
-  const { beforeMessage: commandBuckets, trailing: trailingCommands } = useMemo(
+  const {
+    beforeMessage: commandBuckets,
+    phantomsBeforeMessage: intercalatedPhantoms,
+    trailing: trailingCommands,
+  } = useMemo(
     () => bucketRunCommandsByMessage(messages, runCommands),
     [messages, runCommands],
   );
@@ -444,6 +448,68 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     backgroundColor: "var(--mantine-color-dark-5)" as const,
   };
 
+  // Phantom bubble: a "no chat message yet" rendering for command activity
+  // attached to a time bucket.
+  // - "active": trailing + agent currently online → blue border + spinner
+  // - "inactive": trailing + agent stopped → dashed border + "(no reply)"
+  // - "historical": intercalated between someone else's messages → normal
+  //   border, no spinner, no "(no reply)" — past activity, not in-progress
+  const renderPhantomBubble = (
+    username: string,
+    cmds: ThreadRunCommand[],
+    expansionKey: string,
+    kind: "active" | "inactive" | "historical",
+  ) => {
+    const isOwn = username === currentAgentUsername;
+    const title = displayTitle(username);
+    const showSpinner = kind === "active";
+    const showNoReply = kind === "inactive";
+    const borderOverride =
+      kind === "active"
+        ? "1px solid var(--mantine-color-blue-4)"
+        : kind === "inactive"
+          ? "1px dashed var(--mantine-color-dark-3)"
+          : undefined;
+
+    return (
+      <Box
+        key={expansionKey}
+        style={{
+          display: "flex",
+          justifyContent: isOwn ? "flex-end" : "flex-start",
+        }}
+      >
+        <Paper
+          p="xs"
+          px="sm"
+          radius="lg"
+          style={{
+            maxWidth: "75%",
+            ...(isOwn ? ownStyle : otherStyle),
+            ...(borderOverride ? { border: borderOverride } : {}),
+          }}
+        >
+          {!isOwn && (
+            <Text size="xs" fw={600} c="dimmed" mb={2}>
+              {username}
+              {title ? ` (${title})` : ""}
+            </Text>
+          )}
+          {renderCommandList(cmds, expansionKey, isOwn, showSpinner, true)}
+          {showNoReply && (
+            <Text
+              size="xs"
+              fs="italic"
+              c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
+            >
+              (no reply)
+            </Text>
+          )}
+        </Paper>
+      </Box>
+    );
+  };
+
   return (
     <ScrollArea
       style={{ flex: 1 }}
@@ -489,6 +555,28 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     onLoadCommands={handleLoadCommands}
                   />
                 )}
+                {/* Intercalated phantoms: other users that ran commands
+                    between the previous boundary and this message without
+                    sending a chat message of their own. */}
+                {Array.from(intercalatedPhantoms.get(msg.id)?.entries() ?? [])
+                  .map(([username, cmds]) => ({
+                    username,
+                    cmds,
+                    latestTime: cmds[cmds.length - 1].createdAt,
+                  }))
+                  .sort(
+                    (a, b) =>
+                      new Date(a.latestTime).getTime() -
+                      new Date(b.latestTime).getTime(),
+                  )
+                  .map(({ username, cmds }) =>
+                    renderPhantomBubble(
+                      username,
+                      cmds,
+                      `phantom-before-${msg.id}-${username}`,
+                      "historical",
+                    ),
+                  )}
                 <Box
                   style={{
                     display: "flex",
@@ -606,8 +694,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
               </React.Fragment>
             );
           })}
-          {/* Phantom bubbles for in-progress / unanswered turns. Sorted by
-              latest command time so they appear in the natural place. */}
+          {/* Trailing phantom bubbles — for activity after the last message.
+              Sorted by latest command time so they appear in natural order. */}
           {Array.from(trailingCommands.entries())
             .map(([username, cmds]) => ({
               username,
@@ -619,57 +707,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 new Date(a.latestTime).getTime() -
                 new Date(b.latestTime).getTime(),
             )
-            .map(({ username, cmds }) => {
-              const isOwn = username === currentAgentUsername;
-              const isActive = onlineUsernames.has(username);
-              const expansionKey = `phantom-${username}`;
-              const title = displayTitle(username);
-              return (
-                <Box
-                  key={expansionKey}
-                  style={{
-                    display: "flex",
-                    justifyContent: isOwn ? "flex-end" : "flex-start",
-                  }}
-                >
-                  <Paper
-                    p="xs"
-                    px="sm"
-                    radius="lg"
-                    style={{
-                      maxWidth: "75%",
-                      ...(isOwn ? ownStyle : otherStyle),
-                      border: isActive
-                        ? "1px solid var(--mantine-color-blue-4)"
-                        : "1px dashed var(--mantine-color-dark-3)",
-                    }}
-                  >
-                    {!isOwn && (
-                      <Text size="xs" fw={600} c="dimmed" mb={2}>
-                        {username}
-                        {title ? ` (${title})` : ""}
-                      </Text>
-                    )}
-                    {renderCommandList(
-                      cmds,
-                      expansionKey,
-                      isOwn,
-                      isActive,
-                      true,
-                    )}
-                    {!isActive && (
-                      <Text
-                        size="xs"
-                        fs="italic"
-                        c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
-                      >
-                        (no reply)
-                      </Text>
-                    )}
-                  </Paper>
-                </Box>
-              );
-            })}
+            .map(({ username, cmds }) =>
+              renderPhantomBubble(
+                username,
+                cmds,
+                `phantom-${username}`,
+                onlineUsernames.has(username) ? "active" : "inactive",
+              ),
+            )}
           {trailingDivider && (
             <RunDividerLine
               divider={trailingDivider}

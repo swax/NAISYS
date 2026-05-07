@@ -1,25 +1,40 @@
 import type { ThreadRunCommand } from "../hooks/useThreadRunCommands";
 
 export interface BucketedRunCommands {
-  /** Commands attached to the next chronological message from the same user. */
+  /**
+   * Commands attached to the next chronological message (by any sender) when
+   * that message is from the command's own user. Render inline inside the
+   * message bubble.
+   */
   beforeMessage: Map<number, ThreadRunCommand[]>;
   /**
-   * Commands that have no following message from the same user — i.e. the
-   * user is mid-turn (still working) or finished a run without replying.
-   * Keyed by username.
+   * Commands attached to the next chronological message when that message is
+   * from a *different* user. Render as a per-user phantom bubble immediately
+   * before the message — captures activity the user did between two of the
+   * other user's messages, before they replied.
+   * Outer key = message id; inner key = command's username.
+   */
+  phantomsBeforeMessage: Map<number, Map<string, ThreadRunCommand[]>>;
+  /**
+   * Commands with no chronological next message at all. Render as trailing
+   * phantom bubbles after the entire thread.
    */
   trailing: Map<string, ThreadRunCommand[]>;
 }
 
 const EMPTY: BucketedRunCommands = {
   beforeMessage: new Map(),
+  phantomsBeforeMessage: new Map(),
   trailing: new Map(),
 };
 
 /**
- * Group commands under the next chat message from the same agent. Anything
- * after that agent's last message goes into the per-user trailing bucket so
- * the UI can render an in-progress / phantom bubble.
+ * Group commands by the next chat message (any sender) that occurs at or
+ * after the command. The model is "every message is a time boundary":
+ *  - Next msg is by the same user → inline with that bubble (their reply).
+ *  - Next msg is by another user → phantom bubble before that msg, showing
+ *    what the agent did before the conversation moved on without their reply.
+ *  - No next msg → trailing phantom bubble at the end of the thread.
  */
 export function bucketRunCommandsByMessage(
   messages: Array<{ id: number; fromUsername: string; createdAt: string }>,
@@ -27,45 +42,59 @@ export function bucketRunCommandsByMessage(
 ): BucketedRunCommands {
   if (commands.length === 0) return EMPTY;
 
-  const messagesByUser = new Map<
-    string,
-    Array<{ id: number; time: number }>
-  >();
-  for (const m of messages) {
-    const list = messagesByUser.get(m.fromUsername) ?? [];
-    list.push({ id: m.id, time: new Date(m.createdAt).getTime() });
-    messagesByUser.set(m.fromUsername, list);
-  }
-  for (const list of messagesByUser.values()) {
-    list.sort((a, b) => a.time - b.time);
-  }
+  const sortedMsgs = [...messages].sort(
+    (a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
 
   const beforeMessage = new Map<number, ThreadRunCommand[]>();
+  const phantomsBeforeMessage = new Map<
+    number,
+    Map<string, ThreadRunCommand[]>
+  >();
   const trailing = new Map<string, ThreadRunCommand[]>();
 
   for (const cmd of commands) {
-    const userMsgs = messagesByUser.get(cmd.username) ?? [];
     const cmdTime = new Date(cmd.createdAt).getTime();
-    const nextMsg = userMsgs.find((m) => m.time >= cmdTime);
+    const nextMsg = sortedMsgs.find(
+      (m) => new Date(m.createdAt).getTime() >= cmdTime,
+    );
 
-    if (nextMsg) {
+    if (!nextMsg) {
+      const list = trailing.get(cmd.username) ?? [];
+      list.push(cmd);
+      trailing.set(cmd.username, list);
+      continue;
+    }
+
+    if (nextMsg.fromUsername === cmd.username) {
       const list = beforeMessage.get(nextMsg.id) ?? [];
       list.push(cmd);
       beforeMessage.set(nextMsg.id, list);
     } else {
-      const list = trailing.get(cmd.username) ?? [];
+      let perUser = phantomsBeforeMessage.get(nextMsg.id);
+      if (!perUser) {
+        perUser = new Map();
+        phantomsBeforeMessage.set(nextMsg.id, perUser);
+      }
+      const list = perUser.get(cmd.username) ?? [];
       list.push(cmd);
-      trailing.set(cmd.username, list);
+      perUser.set(cmd.username, list);
     }
   }
 
-  // Defensive sort so the latest entry is always last.
+  // Defensive sort so the latest entry in each bucket is always last.
   for (const list of beforeMessage.values()) {
     list.sort((a, b) => a.logId - b.logId);
+  }
+  for (const perUser of phantomsBeforeMessage.values()) {
+    for (const list of perUser.values()) {
+      list.sort((a, b) => a.logId - b.logId);
+    }
   }
   for (const list of trailing.values()) {
     list.sort((a, b) => a.logId - b.logId);
   }
 
-  return { beforeMessage, trailing };
+  return { beforeMessage, phantomsBeforeMessage, trailing };
 }
