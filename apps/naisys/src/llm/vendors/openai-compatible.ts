@@ -141,7 +141,7 @@ function formatContentForOpenAI(
       if (block.type === "tool_use") {
         return {
           type: "text",
-          text: `[Desktop action: ${JSON.stringify(block.input)}]`,
+          text: `ns-tool desktop-action ${JSON.stringify(block.input)}`,
         };
       }
       if (block.type === "tool_result") {

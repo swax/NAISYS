@@ -180,7 +180,10 @@ export function createContextManager(
       } satisfies ToolUseBlock);
     }
 
-    const logMessage = [text, `[Desktop Request: ${actionDesc}]`]
+    const logMessage = [
+      text && `ns-tool comment ${text}`,
+      `ns-tool desktop-request ${actionDesc}`,
+    ]
       .filter(Boolean)
       .join("\n");
 

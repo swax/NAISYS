@@ -412,6 +412,13 @@ export const cmdCmd: CommandDef = {
   isDebug: true,
 };
 
+export const toolCmd: CommandDef = {
+  name: "ns-tool",
+  description:
+    "Virtual command — appears in logs when the LLM has used a tool (e.g. computer use). Has no runtime behavior",
+  isDebug: true,
+};
+
 export const pauseCmd: CommandDef = {
   name: "ns-pause",
   description:

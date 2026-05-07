@@ -11,6 +11,7 @@ import {
   exitCmd,
   pauseCmd,
   talkCmd,
+  toolCmd,
 } from "./commandDefs.js";
 import type { CommandResponse, RegistrableCommand } from "./commandRegistry.js";
 import { NextCommandAction } from "./commandRegistry.js";
@@ -120,6 +121,12 @@ export function createDebugCommands(
     },
   };
 
+  const nsTool: RegistrableCommand = {
+    command: toolCmd,
+    handleCommand: () =>
+      "ns-tool is a virtual command — it appears in logs when the LLM uses a tool (e.g. computer use). It has no runtime behavior and is not invoked directly.",
+  };
+
   const nsExit: RegistrableCommand = {
     command: exitCmd,
     handleCommand: async (cmdArgs): Promise<CommandResponse> => {
@@ -145,5 +152,5 @@ export function createDebugCommands(
     },
   };
 
-  return [nsContext, nsTalk, nsPause, nsCmd, nsExit];
+  return [nsContext, nsTalk, nsPause, nsCmd, nsTool, nsExit];
 }

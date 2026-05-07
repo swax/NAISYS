@@ -290,7 +290,7 @@ function formatSingleBlock(
     case "tool_use":
       // Fallback when desktop is not enabled — include as text description
       return makeTextPart(
-        `[Desktop action: ${JSON.stringify(block.input)}]`,
+        `ns-tool desktop-action ${JSON.stringify(block.input)}`,
         role,
       );
     case "tool_result":

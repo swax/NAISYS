@@ -21,6 +21,7 @@ import {
   IconSettings,
   IconTerminal2,
   IconTextCaption,
+  IconTool,
   IconUsers,
   IconWand,
   IconWorld,
@@ -55,6 +56,10 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-desktop": {
     Icon: IconDeviceDesktop,
     color: "var(--mantine-color-cyan-4)",
+  },
+  "ns-tool": {
+    Icon: IconTool,
+    color: "var(--mantine-color-grape-5)",
   },
   "ns-browser": {
     Icon: IconWorld,
