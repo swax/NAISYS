@@ -167,9 +167,8 @@ export default function agentChatRoutes(
     },
   );
 
-  // GET /:username/chat/:participants/runs — Runs that participated in a chat
-  // thread, derived from mail_recipients.read_run_id. Used by chat UI to scope
-  // the run-divider/auto-load logic to chat-relevant runs only.
+  // GET /:username/chat/:participants/runs — Runs that participated in a chat,
+  // derived from mail_recipients.read_run_id (excludes admin/mail/etc).
   fastify.get<{
     Params: AgentUsernameParams & { participants: string };
     Reply: RunsDataResponse | ErrorResponse;

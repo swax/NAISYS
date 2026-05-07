@@ -33,9 +33,8 @@ const EMPTY_DIVIDERS: ThreadDividers = {
 };
 
 /**
- * Group run events into clusters bracketed by messages. Each cluster collapses
- * to one divider showing the latest event per user — matches the "show only
- * the latest start, combine adjacent users" rule.
+ * Group start/stop events into clusters bracketed by messages. Each cluster
+ * collapses to one divider entry per user (their latest event in the gap).
  */
 export function buildThreadDividers(
   messages: Array<{ id: number; createdAt: string }>,
@@ -110,8 +109,8 @@ export function buildThreadDividers(
 function collapseCluster(cluster: RunEvent[]): RunDivider | null {
   if (cluster.length === 0) return null;
 
-  // Cluster is already in chronological order; later events overwrite earlier
-  // ones for the same user. RunIds, however, accumulate per user.
+  // Cluster is chronological; later events overwrite earlier ones per user
+  // for the displayed entry. RunIds, however, accumulate.
   const perUser = new Map<
     string,
     { username: string; type: RunEventType; time: string }

@@ -11,7 +11,6 @@ export interface ThreadRunCommand {
   runId: number;
   subagentId: number | null;
   sessionId: number;
-  source: "endPrompt" | "llm";
   message: string;
   createdAt: string;
 }
@@ -27,13 +26,11 @@ const subscriptionRoom = (
 ) => `logs:${username}:${runId}:${subagentId ?? 0}:${sessionId}`;
 
 /**
- * Fetches `endPrompt` and `llm` log entries for the chat thread, scoped to a
- * bounded set of runs rather than a time window. The set is the auto-loaded
- * top-N latest runs per participant, plus any online runs (so phantom bubbles
- * always render), plus runs the user has explicitly opened from a divider.
- *
- * Online runs in the loaded set additionally get a socket subscription so
- * fresh commands stream in live.
+ * `endPrompt` and `llm` log entries for the chat thread, scoped to a bounded
+ * set of runs: the top-N latest per participant, every online run (so phantom
+ * bubbles always render), and any runs the user has explicitly opened from a
+ * divider. Online runs in the loaded set get a socket subscription so fresh
+ * commands stream in live.
  */
 export function useThreadRunCommands(
   participants: string[],
@@ -43,14 +40,11 @@ export function useThreadRunCommands(
   entries: ThreadRunCommand[];
   loadedRunIds: Set<number>;
 } {
-  // Outer key = username; inner key = logId. Two-level map keeps merging
-  // (REST refetch + live socket pushes) idempotent per id without rescanning.
+  // username → logId → command. Two-level map keeps merging idempotent per id
+  // across REST refetches and live socket pushes.
   const [byUser, setByUser] = useState<
     Map<string, Map<number, ThreadRunCommand>>
   >(new Map());
-
-  // RunIds we've successfully fetched (or are fetching). Used to skip
-  // refetching the same run twice and to drive the divider button state.
   const [loadedRunIds, setLoadedRunIds] = useState<Set<number>>(new Set());
   const inFlight = useRef<Set<number>>(new Set());
   const generation = useRef(0);
@@ -60,8 +54,8 @@ export function useThreadRunCommands(
     [participants],
   );
 
-  // Reset state on participants change. Bumps generation so any in-flight
-  // promises from the prior thread are ignored on resolve.
+  // Bumping generation lets in-flight fetches from the prior thread bail out
+  // on resolve instead of writing into the new thread's state.
   useEffect(() => {
     generation.current += 1;
     inFlight.current = new Set();
@@ -69,8 +63,6 @@ export function useThreadRunCommands(
     setLoadedRunIds(new Set());
   }, [participantsKey]);
 
-  // For each participant, the runIds we want loaded right now: top-N most
-  // recent runs (by createdAt), plus every online run, plus explicitly loaded.
   const targetByUser = useMemo(() => {
     const target = new Map<string, Set<number>>();
     if (participants.length === 0) return target;
@@ -85,24 +77,24 @@ export function useThreadRunCommands(
 
     for (const username of participants) {
       const list = runsByUser.get(username) ?? [];
-      // Most-recently-started first. Distinct runIds across sessions.
       list.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
       const set = new Set<number>();
+      // Distinct runIds, skipping subagent rows that share the parent's runId.
       for (const r of list) {
         if (set.size >= TOP_RUNS_PER_PARTICIPANT) break;
         set.add(r.runId);
       }
-      // Online runs always count, even if older than the top N.
+      // Online runs always count, even if older than the top N — otherwise
+      // long-running runs older than recent activity would lose their phantom.
       for (const r of list) {
         if (r.isOnline) set.add(r.runId);
       }
       target.set(username, set);
     }
 
-    // Explicitly loaded — find which participant owns each runId.
     if (explicitlyLoadedRunIds.size > 0) {
       const ownerByRunId = new Map<number, string>();
       for (const r of runs) {
@@ -122,8 +114,6 @@ export function useThreadRunCommands(
     return target;
   }, [participants, runs, explicitlyLoadedRunIds]);
 
-  // Fetch any newly-targeted runs. Existing entries are kept on the merge so
-  // live-pushed commands aren't clobbered.
   useEffect(() => {
     if (targetByUser.size === 0) return;
 
@@ -152,7 +142,6 @@ export function useThreadRunCommands(
           .catch(() => ({ username, runIds, result: null })),
       ),
     ).then((results) => {
-      // Bail if the participants changed mid-flight.
       if (myGen !== generation.current) return;
 
       for (const { runIds } of results) {
@@ -179,7 +168,6 @@ export function useThreadRunCommands(
               runId: e.runId,
               subagentId: e.subagentId ?? null,
               sessionId: e.sessionId,
-              source: e.source as "endPrompt" | "llm",
               message: e.message,
               createdAt: e.createdAt,
             });
@@ -191,15 +179,13 @@ export function useThreadRunCommands(
     });
   }, [targetByUser, loadedRunIds]);
 
-  // Live subscriptions: subscribe to every online run that's in the target
-  // set. The room key includes session + subagent, so a long-running run with
-  // multiple sessions or subagents needs one sub per session row.
+  // Live commands. The `logs:...` room key is per-session/subagent, so a run
+  // with multiple sessions or subagents needs one subscription per row.
   const onlineSubKey = useMemo(() => {
     const keys: string[] = [];
     for (const r of runs) {
       if (!r.isOnline || !r.username) continue;
-      const userTarget = targetByUser.get(r.username);
-      if (!userTarget?.has(r.runId)) continue;
+      if (!targetByUser.get(r.username)?.has(r.runId)) continue;
       keys.push(
         `${r.username}|${r.runId}|${r.subagentId ?? 0}|${r.sessionId}`,
       );
@@ -231,17 +217,13 @@ export function useThreadRunCommands(
 
       const handler = (entries: LogPushEntry[]) => {
         const newEntries = entries
-          .filter(
-            (e): e is LogPushEntry & { source: "endPrompt" | "llm" } =>
-              e.source === "endPrompt" || e.source === "llm",
-          )
+          .filter((e) => e.source === "endPrompt" || e.source === "llm")
           .map<ThreadRunCommand>((e) => ({
             logId: e.id,
             username,
             runId: run.runId,
             subagentId: run.subagentId ?? null,
             sessionId: run.sessionId,
-            source: e.source,
             message: e.message,
             createdAt: e.createdAt,
           }));
@@ -273,7 +255,7 @@ export function useThreadRunCommands(
   const entries = useMemo(() => {
     const flat: ThreadRunCommand[] = [];
     for (const userMap of byUser.values()) {
-      for (const ep of userMap.values()) flat.push(ep);
+      for (const cmd of userMap.values()) flat.push(cmd);
     }
     flat.sort(
       (a, b) =>

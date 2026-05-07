@@ -11,11 +11,7 @@ interface RunDividerLineProps {
   onLoadCommands?: (runIds: number[]) => void;
 }
 
-/**
- * Renders one row per user with run start/stop in this gap. Rows align to the
- * user's side of the conversation (own = right, other = left), so the chat
- * structure stays visible without a hard divider line cutting across.
- */
+/** One row per user with start/stop in this gap, aligned to that user's side. */
 export const RunDividerLine: React.FC<RunDividerLineProps> = ({
   divider,
   currentAgentUsername,

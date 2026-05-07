@@ -29,12 +29,10 @@ const EMPTY: BucketedRunCommands = {
 };
 
 /**
- * Group commands by the next chat message (any sender) that occurs at or
- * after the command. The model is "every message is a time boundary":
- *  - Next msg is by the same user → inline with that bubble (their reply).
- *  - Next msg is by another user → phantom bubble before that msg, showing
- *    what the agent did before the conversation moved on without their reply.
- *  - No next msg → trailing phantom bubble at the end of the thread.
+ * Bucket each command by the next message (any sender) at or after its time.
+ * Same-user next msg → inline with that bubble. Different-user next msg →
+ * phantom-before-msg, surfacing activity the user did before the conversation
+ * moved on without them replying. No next msg → trailing phantom.
  */
 export function bucketRunCommandsByMessage(
   messages: Array<{ id: number; fromUsername: string; createdAt: string }>,
@@ -83,7 +81,6 @@ export function bucketRunCommandsByMessage(
     }
   }
 
-  // Defensive sort so the latest entry in each bucket is always last.
   for (const list of beforeMessage.values()) {
     list.sort((a, b) => a.logId - b.logId);
   }

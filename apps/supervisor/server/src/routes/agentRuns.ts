@@ -146,9 +146,8 @@ export default function agentRunsRoutes(
   registerContextLogRoute(fastify, false);
   registerContextLogRoute(fastify, true);
 
-  // GET /:username/runLogEntries — flat list of log entries across the named
-  // runs (any session/subagent) filtered by source. Used by chat to attach
-  // LLM commands to messages without fanning out a request per session.
+  // GET /:username/runLogEntries — log entries across the named runs (any
+  // session/subagent) filtered by source.
   fastify.get<{
     Params: AgentUsernameParams;
     Querystring: AgentRunLogEntriesRequest;

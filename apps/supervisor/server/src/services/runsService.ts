@@ -195,10 +195,9 @@ export async function getRunsData(
 }
 
 /**
- * Fetch RunSession rows for runs that participated in a chat thread, derived
- * from `mail_recipients.read_run_id` (set on send for the sender's `from` row,
- * and on read for each recipient's `to` row). Runs that never touched this
- * thread — admin, mail, config, fire-and-forget tasks — are filtered out.
+ * RunSession rows for runs that touched this chat thread (sender or reader).
+ * Driven by `mail_recipients.read_run_id`, so admin / mail / fire-and-forget
+ * runs the agent ran outside the thread are excluded.
  */
 export async function getChatThreadRuns(
   participants: string,
@@ -206,24 +205,17 @@ export async function getChatThreadRuns(
   const pairs = await hubDb.mail_recipients.findMany({
     where: {
       read_run_id: { not: null },
-      message: {
-        kind: "chat",
-        participants,
-      },
+      message: { kind: "chat", participants },
     },
     distinct: ["user_id", "read_run_id"],
-    select: {
-      user_id: true,
-      read_run_id: true,
-    },
+    select: { user_id: true, read_run_id: true },
   });
 
   if (pairs.length === 0) {
     return { runs: [], timestamp: new Date().toISOString() };
   }
 
-  // Pull every (session, subagent) row under each (userId, runId) — a single
-  // chat-relevant run can span multiple sessions or have subagents.
+  // One (userId, runId) can span multiple sessions and subagents — pull all.
   const runSessions = await hubDb.run_session.findMany({
     where: {
       OR: pairs.map((p) => ({
@@ -346,9 +338,8 @@ export async function getContextLog(
 }
 
 /**
- * Fetch log entries across all sessions/subagents of the named runs, filtered
- * by source. Used by the chat thread to pull a user's LLM commands per run
- * without fanning out a REST call per session.
+ * Log entries for the named runs across all their sessions and subagents,
+ * filtered by source.
  */
 export async function getAgentRunLogEntries(
   userId: number,
@@ -389,8 +380,7 @@ export async function getAgentRunLogEntries(
     createdAt: r.created_at.toISOString(),
   }));
 
-  // Reverse so callers get chronological (oldest first); matches how chat
-  // ordering works without forcing every consumer to re-sort.
+  // Oldest-first matches chat-thread ordering on the consumer side.
   entries.reverse();
 
   return {

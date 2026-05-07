@@ -1,10 +1,9 @@
 import type {
-  CostPushEntry,
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
 } from "@naisys/hub-protocol";
 import type { RunSession } from "@naisys/supervisor-shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { getChatThreadRuns } from "../lib/apiRuns";
 import { isRunActive } from "./runStatus";
@@ -12,12 +11,9 @@ import { getSocket } from "./useSocket";
 import type { ThreadRun } from "./useThreadRuns";
 import { useTick } from "./useTick";
 
-type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
-type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
-type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
-  type: "heartbeat-update";
-};
-type RunsEvent = RunsLogUpdate | RunsCostUpdate | RunsHeartbeatUpdate;
+type RunsEvent =
+  | (LogPushSessionUpdate & { type: "log-update" })
+  | (SessionHeartbeatUpdate & { type: "heartbeat-update" });
 
 const runKey = (run: {
   userId: number;
@@ -27,15 +23,9 @@ const runKey = (run: {
 }) => `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
 
 /**
- * Fetch the runs that have actually participated in a chat thread, derived
- * server-side from `mail_recipients.read_run_id`. This filters out admin /
- * config / mail / fire-and-forget runs that the agent ran outside the chat,
- * so dividers and auto-load only see chat-relevant runs.
- *
- * Refetches whenever a chat-messages socket event fires (new message or read
- * receipt) — both can extend the participating-run set. Live heartbeat and
- * log-update events still flow per `runs:{username}` room, but only update
- * runs we already have in the chat-scoped map.
+ * Runs that have actually participated in this chat thread, derived from
+ * `mail_recipients.read_run_id`. Filters out admin / mail / fire-and-forget
+ * runs the agent ran outside the chat.
  */
 export const useChatThreadRuns = (
   currentAgentUsername: string,
@@ -43,24 +33,17 @@ export const useChatThreadRuns = (
 ) => {
   const [runMap, setRunMap] = useState<Map<string, RunSession>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
-
-  // Bumped whenever a chat-messages socket event arrives, to trigger a
-  // refetch and pick up newly-participating runs.
   const [refetchTick, setRefetchTick] = useState(0);
 
-  // Tick once a second so freshly-stopped runs flip isOnline → false without
-  // waiting for an explicit refetch.
+  // Drives the 1s isOnline transition without waiting on a refetch.
   useTick(1000);
 
-  // Sorted CSV — matches mail_messages.participants and the chat-messages
-  // socket room key. Empty string when there's no thread to fetch.
+  // Matches mail_messages.participants and the chat-messages room key.
   const participantsKey = useMemo(
     () => participants.slice().sort().join(","),
     [participants],
   );
 
-  // REST fetch. Reruns when participants change or when a chat-messages event
-  // hints that the participating set may have grown.
   useEffect(() => {
     if (!participantsKey || !currentAgentUsername) {
       setRunMap(new Map());
@@ -85,8 +68,7 @@ export const useChatThreadRuns = (
         setRunMap(next);
       })
       .catch(() => {
-        if (cancelled) return;
-        setRunMap(new Map());
+        if (!cancelled) setRunMap(new Map());
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -97,19 +79,20 @@ export const useChatThreadRuns = (
     };
   }, [participantsKey, currentAgentUsername, refetchTick]);
 
-  // Live heartbeat / log-update updates for runs we already have. We
-  // intentionally skip new-session here — a fresh run isn't necessarily
-  // chat-relevant. The chat-messages room handler below picks up new
-  // chat-relevant runs via refetch.
+  // Live heartbeat/log-update for runs already in the map. New-session is
+  // ignored — a fresh run isn't chat-relevant until it reads or sends a
+  // message, which the chat-messages refetch below catches.
   useEffect(() => {
-    if (participants.length === 0) return;
+    const usernames = participantsKey
+      ? participantsKey.split(",").filter(Boolean)
+      : [];
+    if (usernames.length === 0) return;
 
     const socket = getSocket();
     const cleanups: Array<() => void> = [];
 
-    for (const username of participants) {
+    for (const username of usernames) {
       const room = `runs:${username}`;
-
       const subscribe = () => socket.emit("subscribe", { room });
       subscribe();
 
@@ -132,7 +115,6 @@ export const useChatThreadRuns = (
 
       socket.on(room, handler);
       socket.on("connect", subscribe);
-
       cleanups.push(() => {
         socket.off(room, handler);
         socket.off("connect", subscribe);
@@ -145,25 +127,17 @@ export const useChatThreadRuns = (
     };
   }, [participantsKey]);
 
-  // Subscribe to the chat-messages room — any event there (new-message or
-  // read-receipt) is a hint that read_run_id may have changed for some user,
-  // which in turn may change the participating run set. Refetch on signal.
-  const bumpRefetch = useCallback(() => {
-    setRefetchTick((t) => t + 1);
-  }, []);
-
-  const bumpRefetchRef = useRef(bumpRefetch);
-  bumpRefetchRef.current = bumpRefetch;
-
+  // new-message and read-receipt both can extend the participating-run set
+  // (a fresh sender or reader's run_id), so refetch on any chat event.
   useEffect(() => {
     if (!participantsKey) return;
     const room = `chat-messages:${participantsKey}`;
-
     const socket = getSocket();
+
     const subscribe = () => socket.emit("subscribe", { room });
     subscribe();
 
-    const handler = () => bumpRefetchRef.current();
+    const handler = () => setRefetchTick((t) => t + 1);
     socket.on(room, handler);
     socket.on("connect", subscribe);
 

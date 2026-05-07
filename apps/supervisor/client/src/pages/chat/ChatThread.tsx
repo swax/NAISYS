@@ -97,16 +97,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     lastMessageId: null,
   });
 
-  // Per-bubble expansion state. Keyed by message id (settled bubbles) or
-  // `phantom-${username}` (in-progress bubbles). Default is collapsed, so
-  // an absent key means collapsed.
+  // Keyed by message id, `phantom-${username}`, or `phantom-before-${msgId}-${username}`.
+  // Absence == collapsed.
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(
     new Set(),
   );
 
-  // RunIds the user has explicitly opened from a divider. The hook always
-  // auto-loads the top-N latest runs per participant; this set adds older
-  // runs on demand.
+  // Older runs the user opened from a divider. Top-N is auto-loaded by the
+  // commands hook; this set adds extras on demand.
   const [explicitlyLoadedRunIds, setExplicitlyLoadedRunIds] = useState<
     Set<number>
   >(new Set());
@@ -173,8 +171,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
     if (threadChanged) {
       shouldStickToBottom.current = true;
-      // Reset per-bubble expansions and any explicitly-loaded runs when
-      // switching conversations.
       setExpandedBubbles(new Set());
       setExplicitlyLoadedRunIds(new Set());
     }
@@ -236,7 +232,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     [messages, runCommands],
   );
 
-  // Active state is per-username: any of that user's runs is online.
   const onlineUsernames = useMemo(() => {
     const set = new Set<string>();
     for (const r of runs) {
@@ -250,8 +245,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     [agents],
   );
 
-  // Latest fromTitle per username from messages — fallback for users not in
-  // the agents list (e.g. legacy or external participants).
+  // Fallback for users not in the agents list (legacy / external participants).
   const titleFromMessages = useMemo(() => {
     const map = new Map<string, string>();
     for (const m of messages) {
@@ -334,13 +328,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     if (cmds.length === 0) return null;
 
     const expanded = expandedBubbles.has(expansionKey);
-    // Settled bubble: collapsed shows just the toggle.
-    // Phantom bubble: collapsed shows the latest command (so you can see what
-    // the agent is working on right now without clicking).
+    // Phantom collapsed surfaces the latest cmd so you can see what the agent
+    // is working on without expanding.
     const visible = expanded ? cmds : isPhantom ? [cmds[cmds.length - 1]] : [];
     const latestId = cmds[cmds.length - 1].logId;
-    // Phantom with a single cmd doesn't need a toggle — there's nothing to
-    // expand to. Settled always shows the toggle since it carries the count.
     const showToggle = !isPhantom || cmds.length > 1;
 
     const dimColor = isOwn ? "rgba(255,255,255,0.7)" : "dimmed";
@@ -395,8 +386,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 style={{ minWidth: 0, width: "100%" }}
               >
                 <Group gap={2} wrap="nowrap" align="center">
-                  {/* 12px gutter aligns command text with the "Ran N" toggle
-                      label. Holds the spinner for the latest active command. */}
+                  {/* Gutter matches the toggle's chevron so cmd text aligns
+                      with the "Ran N" label; holds the active spinner. */}
                   <Box
                     w={12}
                     h={12}
@@ -448,12 +439,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     backgroundColor: "var(--mantine-color-dark-5)" as const,
   };
 
-  // Phantom bubble: a "no chat message yet" rendering for command activity
-  // attached to a time bucket.
-  // - "active": trailing + agent currently online → blue border + spinner
-  // - "inactive": trailing + agent stopped → dashed border + "(no reply)"
-  // - "historical": intercalated between someone else's messages → normal
-  //   border, no spinner, no "(no reply)" — past activity, not in-progress
+  // Bubble shown for command activity that has no chat message of its own.
+  // active: trailing + agent online (blue border + spinner)
+  // inactive: trailing + agent stopped (dashed + "(no reply)")
+  // historical: between two other-user messages (default border, no spinner)
   const renderPhantomBubble = (
     username: string,
     cmds: ThreadRunCommand[],
@@ -555,9 +544,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     onLoadCommands={handleLoadCommands}
                   />
                 )}
-                {/* Intercalated phantoms: other users that ran commands
-                    between the previous boundary and this message without
-                    sending a chat message of their own. */}
+                {/* Other users' command activity in this gap with no reply. */}
                 {Array.from(intercalatedPhantoms.get(msg.id)?.entries() ?? [])
                   .map(([username, cmds]) => ({
                     username,
@@ -694,8 +681,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
               </React.Fragment>
             );
           })}
-          {/* Trailing phantom bubbles — for activity after the last message.
-              Sorted by latest command time so they appear in natural order. */}
+          {/* Activity after the last message — in-progress or "no reply". */}
           {Array.from(trailingCommands.entries())
             .map(([username, cmds]) => ({
               username,
