@@ -36,7 +36,7 @@ import {
   getMessages,
   sendChatMessage,
 } from "../services/chatService.js";
-import { getChatThreadRuns } from "../services/runsService.js";
+import { getMessageThreadRuns } from "../services/runsService.js";
 
 function sendChatAction(username: string) {
   return {
@@ -187,7 +187,7 @@ export default function agentChatRoutes(
     },
     async (request, _reply) => {
       const { participants } = request.params;
-      const data = await getChatThreadRuns(participants);
+      const data = await getMessageThreadRuns(participants, "chat");
       return {
         success: true,
         message: "Chat-thread runs retrieved successfully",

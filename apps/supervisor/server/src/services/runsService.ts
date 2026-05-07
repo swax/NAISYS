@@ -195,17 +195,18 @@ export async function getRunsData(
 }
 
 /**
- * RunSession rows for runs that touched this chat thread (sender or reader).
- * Driven by `mail_recipients.read_run_id`, so admin / mail / fire-and-forget
- * runs the agent ran outside the thread are excluded.
+ * RunSession rows for runs that touched this message thread (sender or
+ * reader). Driven by `mail_recipients.read_run_id`, so runs the agent ran
+ * outside the thread (admin / other mail / fire-and-forget) are excluded.
  */
-export async function getChatThreadRuns(
+export async function getMessageThreadRuns(
   participants: string,
+  kind: "chat" | "mail",
 ): Promise<RunsData> {
   const pairs = await hubDb.mail_recipients.findMany({
     where: {
       read_run_id: { not: null },
-      message: { kind: "chat", participants },
+      message: { kind, participants },
     },
     distinct: ["user_id", "read_run_id"],
     select: { user_id: true, read_run_id: true },

@@ -37,17 +37,26 @@ export const getRunsData = async (
   return await api.get<RunsDataResponse>(url);
 };
 
-export interface ChatThreadRunsParams {
+export interface MessageThreadRunsParams {
+  kind: "chat" | "mail";
   agentUsername: string;
   participants: string;
 }
 
-export const getChatThreadRuns = async (
-  params: ChatThreadRunsParams,
+export const getMessageThreadRuns = async (
+  params: MessageThreadRunsParams,
 ): Promise<RunsDataResponse> => {
-  return await api.get<RunsDataResponse>(
-    apiEndpoints.agentChatThreadRuns(params.agentUsername, params.participants),
-  );
+  const url =
+    params.kind === "chat"
+      ? apiEndpoints.agentChatThreadRuns(
+          params.agentUsername,
+          params.participants,
+        )
+      : apiEndpoints.agentMailThreadRuns(
+          params.agentUsername,
+          params.participants,
+        );
+  return await api.get<RunsDataResponse>(url);
 };
 
 export interface HostRunsParams {

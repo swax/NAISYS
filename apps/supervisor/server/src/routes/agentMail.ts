@@ -5,6 +5,7 @@ import type {
   ErrorResponse,
   MailDataRequest,
   MailDataResponse,
+  RunsDataResponse,
   SendMailRequest,
   SendMailResponse,
 } from "@naisys/supervisor-shared";
@@ -14,6 +15,7 @@ import {
   ErrorResponseSchema,
   MailDataRequestSchema,
   MailDataResponseSchema,
+  RunsDataResponseSchema,
   SendMailRequestSchema,
   SendMailResponseSchema,
 } from "@naisys/supervisor-shared";
@@ -28,6 +30,7 @@ import {
   getMailDataByUserId,
   sendMessage,
 } from "../services/mailService.js";
+import { getMessageThreadRuns } from "../services/runsService.js";
 
 export default function agentMailRoutes(
   fastify: FastifyInstance,
@@ -111,6 +114,35 @@ export default function agentMailRoutes(
               },
             ]
           : undefined,
+      };
+    },
+  );
+
+  // GET /:username/mail/:participants/runs — Runs that participated in a mail
+  // thread, derived from mail_recipients.read_run_id (excludes admin/chat/etc).
+  fastify.get<{
+    Params: AgentUsernameParams & { participants: string };
+    Reply: RunsDataResponse | ErrorResponse;
+  }>(
+    "/:username/mail/:participants/runs",
+    {
+      schema: {
+        description:
+          "Get runs that participated in a specific mail conversation",
+        tags: ["Mail"],
+        response: {
+          200: RunsDataResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (request, _reply) => {
+      const { participants } = request.params;
+      const data = await getMessageThreadRuns(participants, "mail");
+      return {
+        success: true,
+        message: "Mail-thread runs retrieved successfully",
+        data,
       };
     },
   );

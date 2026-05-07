@@ -20,10 +20,10 @@ import {
 } from "@tabler/icons-react";
 import React, { useMemo, useRef } from "react";
 
-import { RunDividerLine } from "../../components/RunDividerLine";
-import { useThreadRuns } from "../../hooks/useThreadRuns";
+import { RunActivityRow } from "../../components/RunActivityRow";
+import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
 import type { MailMessage } from "../../lib/apiClient";
-import { buildThreadDividers } from "../../lib/threadRunDividers";
+import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 
 interface MailThreadProps {
   messages: MailMessage[];
@@ -42,21 +42,10 @@ export const MailThread: React.FC<MailThreadProps> = ({
 }) => {
   const viewport = useRef<HTMLDivElement>(null);
 
-  const oldestMessageTime = useMemo(() => {
-    if (messages.length === 0) return null;
-    let oldest = messages[0].createdAt;
-    for (const m of messages) {
-      if (new Date(m.createdAt).getTime() < new Date(oldest).getTime()) {
-        oldest = m.createdAt;
-      }
-    }
-    return oldest;
-  }, [messages]);
+  const { runs } = useMessageThreadRuns("mail", currentAgentName, participants);
 
-  const { runs } = useThreadRuns(participants, oldestMessageTime);
-
-  const { beforeMessage: runDividers, trailing: trailingDivider } = useMemo(
-    () => buildThreadDividers(messages, runs),
+  const { beforeMessage: runActivity, trailing: trailingActivity } = useMemo(
+    () => buildThreadRunActivity(messages, runs),
     [messages, runs],
   );
 
@@ -105,9 +94,9 @@ export const MailThread: React.FC<MailThreadProps> = ({
     <ScrollArea style={{ flex: 1 }} viewportRef={viewport}>
       <Container size="md" w="100%" p="md">
         <Stack gap="sm">
-          {trailingDivider && (
-            <RunDividerLine
-              divider={trailingDivider}
+          {trailingActivity && (
+            <RunActivityRow
+              activity={trailingActivity}
               currentAgentUsername={currentAgentName}
             />
           )}
@@ -267,9 +256,9 @@ export const MailThread: React.FC<MailThreadProps> = ({
                     </Stack>
                   )}
                 </Paper>
-                {runDividers.get(msg.id) && (
-                  <RunDividerLine
-                    divider={runDividers.get(msg.id)!}
+                {runActivity.get(msg.id) && (
+                  <RunActivityRow
+                    activity={runActivity.get(msg.id)!}
                     currentAgentUsername={currentAgentName}
                   />
                 )}

@@ -1,4 +1,4 @@
-import type { ThreadRun } from "../hooks/useThreadRuns";
+import type { ThreadRun } from "../hooks/useMessageThreadRuns";
 
 export type RunEventType = "start" | "stop";
 
@@ -9,7 +9,7 @@ type RunEvent = {
   time: string;
 };
 
-export type RunDividerEntry = {
+export type RunActivityEntry = {
   username: string;
   type: RunEventType;
   time: string;
@@ -17,30 +17,30 @@ export type RunDividerEntry = {
   runIds: number[];
 };
 
-export type RunDivider = {
-  perUser: RunDividerEntry[];
+export type RunActivity = {
+  perUser: RunActivityEntry[];
   latestTime: string;
 };
 
-export type ThreadDividers = {
-  beforeMessage: Map<number, RunDivider>;
-  trailing: RunDivider | null;
+export type ThreadRunActivity = {
+  beforeMessage: Map<number, RunActivity>;
+  trailing: RunActivity | null;
 };
 
-const EMPTY_DIVIDERS: ThreadDividers = {
+const EMPTY: ThreadRunActivity = {
   beforeMessage: new Map(),
   trailing: null,
 };
 
 /**
  * Group start/stop events into clusters bracketed by messages. Each cluster
- * collapses to one divider entry per user (their latest event in the gap).
+ * collapses to one entry per user (their latest event in the gap).
  */
-export function buildThreadDividers(
+export function buildThreadRunActivity(
   messages: Array<{ id: number; createdAt: string }>,
   runs: ThreadRun[],
-): ThreadDividers {
-  if (messages.length === 0 || runs.length === 0) return EMPTY_DIVIDERS;
+): ThreadRunActivity {
+  if (messages.length === 0 || runs.length === 0) return EMPTY;
 
   const sortedMsgs = [...messages].sort(
     (a, b) =>
@@ -75,14 +75,14 @@ export function buildThreadDividers(
     }
   }
 
-  if (events.length === 0) return EMPTY_DIVIDERS;
+  if (events.length === 0) return EMPTY;
 
   events.sort(
     (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
   );
 
-  const beforeMessage = new Map<number, RunDivider>();
-  let trailing: RunDivider | null = null;
+  const beforeMessage = new Map<number, RunActivity>();
+  let trailing: RunActivity | null = null;
   let eventIdx = 0;
 
   for (const msg of sortedMsgs) {
@@ -95,8 +95,8 @@ export function buildThreadDividers(
       cluster.push(events[eventIdx]);
       eventIdx++;
     }
-    const divider = collapseCluster(cluster);
-    if (divider) beforeMessage.set(msg.id, divider);
+    const activity = collapseCluster(cluster);
+    if (activity) beforeMessage.set(msg.id, activity);
   }
 
   if (eventIdx < events.length) {
@@ -106,7 +106,7 @@ export function buildThreadDividers(
   return { beforeMessage, trailing };
 }
 
-function collapseCluster(cluster: RunEvent[]): RunDivider | null {
+function collapseCluster(cluster: RunEvent[]): RunActivity | null {
   if (cluster.length === 0) return null;
 
   // Cluster is chronological; later events overwrite earlier ones per user
@@ -131,7 +131,7 @@ function collapseCluster(cluster: RunEvent[]): RunDivider | null {
     }
   }
 
-  const entries: RunDividerEntry[] = Array.from(perUser.values())
+  const entries: RunActivityEntry[] = Array.from(perUser.values())
     .sort((a, b) => a.username.localeCompare(b.username))
     .map((e) => ({
       ...e,

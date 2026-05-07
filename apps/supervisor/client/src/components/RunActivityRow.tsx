@@ -2,25 +2,25 @@ import { ActionIcon, Box, Group, Text, Tooltip } from "@mantine/core";
 import { IconTerminal2 } from "@tabler/icons-react";
 import React from "react";
 
-import type { RunDivider } from "../lib/threadRunDividers";
+import type { RunActivity } from "../lib/threadRunActivity";
 
-interface RunDividerLineProps {
-  divider: RunDivider;
+interface RunActivityRowProps {
+  activity: RunActivity;
   currentAgentUsername: string;
   loadedRunIds?: Set<number>;
   onLoadCommands?: (runIds: number[]) => void;
 }
 
 /** One row per user with start/stop in this gap, aligned to that user's side. */
-export const RunDividerLine: React.FC<RunDividerLineProps> = ({
-  divider,
+export const RunActivityRow: React.FC<RunActivityRowProps> = ({
+  activity,
   currentAgentUsername,
   loadedRunIds,
   onLoadCommands,
 }) => {
   return (
     <Box my={4}>
-      {divider.perUser.map((entry) => {
+      {activity.perUser.map((entry) => {
         const isOwn = entry.username === currentAgentUsername;
         const verb = entry.type === "start" ? "started" : "stopped";
         const unloadedRunIds = loadedRunIds

@@ -250,6 +250,8 @@ export const apiEndpoints = {
   agentRunLogEntries: (username: string) =>
     `/agents/${username}/runLogEntries`,
   agentMail: (username: string) => `/agents/${username}/mail`,
+  agentMailThreadRuns: (username: string, participants: string) =>
+    `/agents/${username}/mail/${participants}/runs`,
   agentChat: (username: string) => `/agents/${username}/chat`,
   agentChatMessages: (username: string, participants: string) =>
     `/agents/${username}/chat/${participants}`,

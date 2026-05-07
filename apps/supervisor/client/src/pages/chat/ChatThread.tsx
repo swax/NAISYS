@@ -31,14 +31,14 @@ import React, {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { RunDividerLine } from "../../components/RunDividerLine";
+import { RunActivityRow } from "../../components/RunActivityRow";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useChatThreadRuns } from "../../hooks/useChatThreadRuns";
+import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
 import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
 import { useThreadRunCommands } from "../../hooks/useThreadRunCommands";
 import type { ChatMessage } from "../../lib/apiClient";
+import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 import { bucketRunCommandsByMessage } from "../../lib/threadRunCommandBuckets";
-import { buildThreadDividers } from "../../lib/threadRunDividers";
 
 interface ChatThreadProps {
   messages: ChatMessage[];
@@ -210,10 +210,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     return () => observer.disconnect();
   }, [messages.length, scrollToBottom, threadKey]);
 
-  const { runs } = useChatThreadRuns(currentAgentUsername, participants);
+  const { runs } = useMessageThreadRuns(
+    "chat",
+    currentAgentUsername,
+    participants,
+  );
 
-  const { beforeMessage: runDividers, trailing: trailingDivider } = useMemo(
-    () => buildThreadDividers(messages, runs),
+  const { beforeMessage: runActivity, trailing: trailingActivity } = useMemo(
+    () => buildThreadRunActivity(messages, runs),
     [messages, runs],
   );
 
@@ -536,9 +540,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     {msgDate}
                   </Text>
                 )}
-                {runDividers.get(msg.id) && (
-                  <RunDividerLine
-                    divider={runDividers.get(msg.id)!}
+                {runActivity.get(msg.id) && (
+                  <RunActivityRow
+                    activity={runActivity.get(msg.id)!}
                     currentAgentUsername={currentAgentUsername}
                     loadedRunIds={loadedRunIds}
                     onLoadCommands={handleLoadCommands}
@@ -701,9 +705,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 onlineUsernames.has(username) ? "active" : "inactive",
               ),
             )}
-          {trailingDivider && (
-            <RunDividerLine
-              divider={trailingDivider}
+          {trailingActivity && (
+            <RunActivityRow
+              activity={trailingActivity}
               currentAgentUsername={currentAgentUsername}
               loadedRunIds={loadedRunIds}
               onLoadCommands={handleLoadCommands}

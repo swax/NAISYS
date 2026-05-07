@@ -2,8 +2,8 @@ import type { LogPushEntry } from "@naisys/hub-protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getAgentRunLogEntries } from "../lib/apiRuns";
+import type { ThreadRun } from "./useMessageThreadRuns";
 import { getSocket } from "./useSocket";
-import type { ThreadRun } from "./useThreadRuns";
 
 export interface ThreadRunCommand {
   logId: number;

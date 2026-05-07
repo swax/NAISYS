@@ -5,11 +5,12 @@ import type {
 import type { RunSession } from "@naisys/supervisor-shared";
 import { useEffect, useMemo, useState } from "react";
 
-import { getChatThreadRuns } from "../lib/apiRuns";
+import { getMessageThreadRuns } from "../lib/apiRuns";
 import { isRunActive } from "./runStatus";
 import { getSocket } from "./useSocket";
-import type { ThreadRun } from "./useThreadRuns";
 import { useTick } from "./useTick";
+
+export type ThreadRun = RunSession & { isOnline: boolean };
 
 type RunsEvent =
   | (LogPushSessionUpdate & { type: "log-update" })
@@ -23,11 +24,12 @@ const runKey = (run: {
 }) => `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
 
 /**
- * Runs that have actually participated in this chat thread, derived from
- * `mail_recipients.read_run_id`. Filters out admin / mail / fire-and-forget
- * runs the agent ran outside the chat.
+ * Runs that have actually participated in this chat or mail thread, derived
+ * from `mail_recipients.read_run_id`. Filters out runs the agent ran outside
+ * the thread (admin, other-kind messages, fire-and-forget tasks).
  */
-export const useChatThreadRuns = (
+export const useMessageThreadRuns = (
+  kind: "chat" | "mail",
   currentAgentUsername: string,
   participants: string[],
 ) => {
@@ -38,7 +40,7 @@ export const useChatThreadRuns = (
   // Drives the 1s isOnline transition without waiting on a refetch.
   useTick(1000);
 
-  // Matches mail_messages.participants and the chat-messages room key.
+  // Matches mail_messages.participants and the relevant socket room key.
   const participantsKey = useMemo(
     () => participants.slice().sort().join(","),
     [participants],
@@ -53,7 +55,8 @@ export const useChatThreadRuns = (
     let cancelled = false;
     setIsLoading(true);
 
-    void getChatThreadRuns({
+    void getMessageThreadRuns({
+      kind,
       agentUsername: currentAgentUsername,
       participants: participantsKey,
     })
@@ -77,11 +80,11 @@ export const useChatThreadRuns = (
     return () => {
       cancelled = true;
     };
-  }, [participantsKey, currentAgentUsername, refetchTick]);
+  }, [kind, participantsKey, currentAgentUsername, refetchTick]);
 
   // Live heartbeat/log-update for runs already in the map. New-session is
-  // ignored — a fresh run isn't chat-relevant until it reads or sends a
-  // message, which the chat-messages refetch below catches.
+  // ignored — a fresh run isn't thread-relevant until it reads or sends a
+  // message, which the message-room refetch below catches.
   useEffect(() => {
     const usernames = participantsKey
       ? participantsKey.split(",").filter(Boolean)
@@ -128,10 +131,15 @@ export const useChatThreadRuns = (
   }, [participantsKey]);
 
   // new-message and read-receipt both can extend the participating-run set
-  // (a fresh sender or reader's run_id), so refetch on any chat event.
+  // (a fresh sender or reader's run_id), so refetch on any message event.
+  // Chat broadcasts per-thread (`chat-messages:{participants}`); mail
+  // broadcasts per-user inbox (`mail:{username}`) — same trigger semantics.
   useEffect(() => {
-    if (!participantsKey) return;
-    const room = `chat-messages:${participantsKey}`;
+    if (!participantsKey || !currentAgentUsername) return;
+    const room =
+      kind === "chat"
+        ? `chat-messages:${participantsKey}`
+        : `mail:${currentAgentUsername}`;
     const socket = getSocket();
 
     const subscribe = () => socket.emit("subscribe", { room });
@@ -146,7 +154,7 @@ export const useChatThreadRuns = (
       socket.off("connect", subscribe);
       socket.emit("unsubscribe", { room });
     };
-  }, [participantsKey]);
+  }, [kind, participantsKey, currentAgentUsername]);
 
   const runs: ThreadRun[] = useMemo(
     () =>
