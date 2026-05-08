@@ -430,6 +430,20 @@ export const pauseCmd: CommandDef = {
   },
 };
 
+export const waitCmd: CommandDef = {
+  name: "ns-wait",
+  usage: "<seconds>",
+  description:
+    "Extend the wait on a long-running shell command by the given number of seconds",
+  isDebug: true,
+};
+
+export const killCmd: CommandDef = {
+  name: "ns-kill",
+  description: "Terminate the currently running shell command",
+  isDebug: true,
+};
+
 // --- Built-in commands ---
 
 export const helpCmd: CommandDef = {

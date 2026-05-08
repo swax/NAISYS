@@ -51,7 +51,7 @@ export function createShellCommand(
     }
     // Else shell is suspended, continue
     else {
-      response = await shellWrapper.continueCommand(input);
+      response = await shellWrapper.continueCommand({ kind: "input", text: input });
     }
 
     let outputLimitExceeded = false;

@@ -318,6 +318,7 @@ export async function createAgentRuntime(
 
   const commandRegistry = createCommandRegistry(inputMode, [
     commentCommand,
+    ...shellWrapper.commands,
     lynxService,
     browserService,
     webSearchService,

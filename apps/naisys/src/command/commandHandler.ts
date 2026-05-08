@@ -286,11 +286,11 @@ export function createCommandHandler(
       input = nextInput.slice(0, newLinePos);
       nextInput = nextInput.slice(newLinePos).trim();
     }
-    // If shell is suspended, the process can kill/wait the shell, and may run some commands after
+    // If shell is suspended, the process can ns-kill/ns-wait the shell, and may run some commands after
     else if (
       newLinePos > 0 &&
       shellCommand.isShellSuspended() &&
-      (nextInput.startsWith("kill") || nextInput.startsWith("wait"))
+      (nextInput.startsWith("ns-kill") || nextInput.startsWith("ns-wait"))
     ) {
       input = nextInput.slice(0, newLinePos);
       nextInput = nextInput.slice(newLinePos).trim();
@@ -370,8 +370,8 @@ export function createCommandHandler(
 
   /** Mask input lines while a secure-flagged command (e.g. ns-pty) is mid-flight,
    *  so passwords typed into the suspended shell don't leak into the LLM context,
-   *  the persisted log, or the supervisor UI mirror. wait/kill stay visible since
-   *  they're control verbs, not credentials. */
+   *  the persisted log, or the supervisor UI mirror. ns-wait/ns-kill stay visible
+   *  since they're control verbs, not credentials. */
   function redactIfSecure(input: string): string {
     if (
       !shellWrapper.isShellSuspended() ||
@@ -380,7 +380,7 @@ export function createCommandHandler(
       return input;
     }
     const baseCmd = input.trim().split(/\s+/)[0];
-    if (baseCmd === "wait" || baseCmd === "kill") {
+    if (baseCmd === "ns-wait" || baseCmd === "ns-kill") {
       return input;
     }
     return "******";

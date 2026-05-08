@@ -13,9 +13,18 @@ import type { GlobalConfig } from "../globalConfig.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import type { OutputService } from "../utils/output.js";
+import { killCmd, waitCmd } from "./commandDefs.js";
+import type { RegistrableCommand } from "./commandRegistry.js";
 import { createOutputBuffer } from "./outputBuffer.js";
 
 type ShellEvent = "stdout" | "stderr" | "exit";
+
+/** How a suspended shell should resume: extend the wait, kill the running
+ *  process, or pass text through to the running process's stdin. */
+export type ContinueAction =
+  | { kind: "wait"; seconds?: string }
+  | { kind: "kill" }
+  | { kind: "input"; text: string };
 
 // Bound shell output memory at ~4MB (head + tail). Sized well above the
 // downstream token-truncation limit in shellCommand.ts so it only kicks in
@@ -363,27 +372,12 @@ export function createShellWrapper(
   }
 
   /** The LLM made its decision on how it wants to continue with the shell that previously timed out */
-  function continueCommand(command: string) {
+  function continueCommand(action: ContinueAction) {
     if (!_wrapperSuspended) {
       throw "Shell is not suspended, use execute command";
     }
 
-    command = command.trim();
-
     _wrapperSuspended = false;
-
-    let choice: "wait" | "kill" | "input";
-
-    const cmdParts = command.split(" ");
-    const baseCommand = cmdParts[0];
-
-    if (baseCommand === "wait") {
-      choice = "wait";
-    } else if (baseCommand === "kill") {
-      choice = "kill";
-    } else {
-      choice = "input";
-    }
 
     return new Promise<string>((resolve, reject) => {
       _resolveCurrentCommand = resolve;
@@ -406,34 +400,30 @@ export function createShellWrapper(
         // with commands like `mtr` changing the display type
       }
 
-      // LLM wants to wait for more output
-      if (choice == "wait") {
-        const waitParam = cmdParts[1];
-        setCommandTimeout("extend", waitParam);
-        return;
-      }
-      // Else LLM wants to kill the process
-      else if (choice == "kill") {
-        if (!_currentProcessId) {
-          reject("No process to kill");
-        } else if (resetShell(_currentProcessId)) {
-          return; // Wait for exit event
-        } else {
-          reject("Unable to kill. Process not found");
-        }
-
-        return;
-      }
-      // Else LLM wants to send input to the process
-      else {
-        if (!_process) {
-          reject("Shell process is not open");
+      switch (action.kind) {
+        case "wait":
+          setCommandTimeout("extend", action.seconds);
+          return;
+        case "kill":
+          if (!_currentProcessId) {
+            reject("No process to kill");
+          } else if (resetShell(_currentProcessId)) {
+            return; // Wait for exit event
+          } else {
+            reject("Unable to kill. Process not found");
+          }
+          return;
+        case "input": {
+          if (!_process) {
+            reject("Shell process is not open");
+            return;
+          }
+          const text = action.text.trim();
+          _shellInputLines = text.split("\n").map((l) => l.trim());
+          _process.stdin.write(text + "\n");
+          setCommandTimeout("start");
           return;
         }
-
-        _shellInputLines = command.split("\n").map((l) => l.trim());
-        _process.stdin.write(command + "\n");
-        setCommandTimeout("start");
       }
     });
   }
@@ -747,6 +737,31 @@ ${command.trim()}`;
     _pendingRuntimeApiKey = undefined;
   }
 
+  // ns-wait/ns-kill only do real work while a shell command is suspended; out-of-context
+  // invocations get a friendly explanation instead of falling through to bash.
+  const nsWaitCommand: RegistrableCommand = {
+    command: waitCmd,
+    handleCommand: async (cmdArgs) => {
+      if (!_wrapperSuspended) {
+        return "ns-wait only works while a shell command is running long. There is no active command to wait on.";
+      }
+      return await continueCommand({
+        kind: "wait",
+        seconds: cmdArgs.trim() || undefined,
+      });
+    },
+  };
+
+  const nsKillCommand: RegistrableCommand = {
+    command: killCmd,
+    handleCommand: async () => {
+      if (!_wrapperSuspended) {
+        return "ns-kill only works while a shell command is running long. There is no active command to terminate.";
+      }
+      return await continueCommand({ kind: "kill" });
+    },
+  };
+
   return {
     executeCommand,
     continueCommand,
@@ -758,6 +773,7 @@ ${command.trim()}`;
     getCommandElapsedTimeString,
     getCurrentCommandName,
     applyRuntimeApiKey,
+    commands: [nsWaitCommand, nsKillCommand] as RegistrableCommand[],
   };
 }
 

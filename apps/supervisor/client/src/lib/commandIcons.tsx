@@ -6,7 +6,9 @@ import {
   IconDeviceDesktop,
   IconEar,
   IconEye,
+  IconHandStop,
   IconHelp,
+  IconHourglass,
   IconLink,
   IconList,
   IconLogout,
@@ -132,6 +134,14 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-pause": {
     Icon: IconPlayerPause,
     color: "var(--mantine-color-orange-5)",
+  },
+  "ns-wait": {
+    Icon: IconHourglass,
+    color: "var(--mantine-color-orange-4)",
+  },
+  "ns-kill": {
+    Icon: IconHandStop,
+    color: "var(--mantine-color-red-5)",
   },
   "ns-help": {
     Icon: IconHelp,

@@ -97,6 +97,7 @@ export function createMockShellWrapper() {
     getCommandElapsedTimeString: vi.fn(() => ""),
     getCurrentCommandName: vi.fn(() => ""),
     applyRuntimeApiKey: vi.fn(),
+    commands: [],
   };
 
   return shellWrapper;

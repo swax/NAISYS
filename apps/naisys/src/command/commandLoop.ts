@@ -316,7 +316,7 @@ export function createCommandLoop(
       const elapsedTime = shellCommand.getCommandElapsedTimeString();
       const commandName = shellCommand.getCurrentCommandName();
       contextManager.append(
-        `'${commandName}' has been running for ${elapsedTime}. Enter 'wait <seconds>' to continue waiting. 'kill' to terminate. Any other input will be sent directly to the running process.`,
+        `'${commandName}' has been running for ${elapsedTime}. Enter 'ns-wait <seconds>' to continue waiting. 'ns-kill' to terminate. Any other input will be sent directly to the running process.`,
         ContentSource.Console,
       );
     }
@@ -371,8 +371,8 @@ export function createCommandLoop(
         const isSecure =
           shellCommand.isShellSuspended() &&
           shellCommand.isSecureContinuation() &&
-          baseCmd !== "wait" &&
-          baseCmd !== "kill";
+          baseCmd !== "ns-wait" &&
+          baseCmd !== "ns-kill";
         output.logOnly(prompt + (isSecure ? "******" : commandList[0]));
       }
     }

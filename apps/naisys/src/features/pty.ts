@@ -30,7 +30,7 @@ export function createPtyService(shellWrapper: ShellWrapper) {
     }
 
     if (shellWrapper.isShellSuspended()) {
-      return `Cannot run ${ptyCmd.name} while another shell command is active. Use 'wait', 'kill', or send input to the running command first.`;
+      return `Cannot run ${ptyCmd.name} while another shell command is active. Use 'ns-wait', 'ns-kill', or send input to the running command first.`;
     }
 
     const wrapped = `script -qfc ${shellEscape(command)} /dev/null`;
