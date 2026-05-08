@@ -62,7 +62,8 @@ export function createSystemMessage(
 
   let chatStr = "";
   if (agentConfig().chatEnabled) {
-    chatStr = `\n  ${chatCmd.name}: ${chatCmd.description}`;
+    const chatSubs = chatCmd.subcommands!;
+    chatStr = `\n  ${chatCmd.name}: ${chatCmd.description}, e.g. \`${chatCmd.name} ${chatSubs.send.usage}\``;
   }
 
   let lynxStr = "";
