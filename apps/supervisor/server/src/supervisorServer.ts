@@ -27,6 +27,7 @@ import {
   registerLenientJsonParser,
   registerSecurityHeaders,
   type StartServer,
+  type SupervisorPlugin,
 } from "@naisys/common";
 import { createHubDatabaseClient } from "@naisys/hub-database";
 import {
@@ -75,7 +76,7 @@ const __dirname = path.dirname(__filename);
 
 /** Plugin options for registering supervisor inside another Fastify app */
 interface SupervisorPluginOptions {
-  plugins?: "erp"[];
+  plugins?: SupervisorPlugin[];
   serverPort?: number;
   hosted?: boolean;
 }
@@ -234,7 +235,10 @@ export const supervisorPlugin: FastifyPluginAsync<
     return reply.redirect("/supervisor/");
   });
 
-  fastify.register(apiRoutes, { prefix: "/supervisor/api" });
+  fastify.register(apiRoutes, {
+    prefix: "/supervisor/api",
+    plugins: opts.plugins,
+  });
 
   // Public endpoint to expose client configuration (plugins, publicRead, etc.)
   fastify.get(

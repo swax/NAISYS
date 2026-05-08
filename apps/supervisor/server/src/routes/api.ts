@@ -1,3 +1,4 @@
+import type { SupervisorPlugin } from "@naisys/common";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { registerAuthMiddleware } from "../auth-middleware.js";
@@ -19,15 +20,19 @@ import statusRoutes from "./status.js";
 import userRoutes from "./users.js";
 import variablesRoutes from "./variables.js";
 
+interface ApiRoutesOptions extends FastifyPluginOptions {
+  plugins?: SupervisorPlugin[];
+}
+
 export default async function apiRoutes(
   fastify: FastifyInstance,
-  _options: FastifyPluginOptions,
+  options: ApiRoutesOptions,
 ) {
   // Register auth middleware for all routes in this scope
   registerAuthMiddleware(fastify);
 
   // Register root discovery routes
-  await fastify.register(rootRoutes);
+  await fastify.register(rootRoutes, { plugins: options.plugins });
 
   // Register auth routes
   await fastify.register(authRoutes);

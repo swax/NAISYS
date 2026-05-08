@@ -6,11 +6,14 @@
  * share the same type without a compile-time dependency between them.
  */
 
+/** Optional plugins that can be loaded into the Supervisor. */
+export type SupervisorPlugin = "erp";
+
 /** Starts the Hub server. Exported by @naisys/hub */
 export type StartHub = (
   startupType: "standalone" | "hosted",
   startSupervisor?: boolean,
-  plugins?: "erp"[],
+  plugins?: SupervisorPlugin[],
   startupAgentPath?: string,
   wizardRan?: boolean,
 ) => Promise<{
@@ -26,7 +29,7 @@ export type StartHub = (
 /** Starts the Supervisor web server. Exported by @naisys/supervisor */
 export type StartServer = (
   startupType: "standalone" | "hosted",
-  plugins?: "erp"[],
+  plugins?: SupervisorPlugin[],
   hubPort?: number,
   wizardRan?: boolean,
 ) => Promise<number>;

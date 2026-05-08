@@ -1,4 +1,8 @@
-import type { HostedSupervisorModule, StartHub } from "@naisys/common";
+import type {
+  HostedSupervisorModule,
+  StartHub,
+  SupervisorPlugin,
+} from "@naisys/common";
 import {
   createDualLogger,
   cwdWithTilde,
@@ -337,7 +341,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     .option("--setup", "Run interactive setup wizard")
     .parse();
 
-  const plugins: "erp"[] = [];
+  const plugins: SupervisorPlugin[] = [];
   if (program.opts().erp) plugins.push("erp");
 
   void startHub(

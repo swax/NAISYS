@@ -1,4 +1,8 @@
-import { sleep, type StartHub } from "@naisys/common";
+import {
+  sleep,
+  type StartHub,
+  type SupervisorPlugin,
+} from "@naisys/common";
 import {
   createDualLogger,
   ensureDotEnv,
@@ -105,7 +109,7 @@ if (integratedHub) {
   // Use variable to avoid compile-time type dependency on @naisys/hub (allows parallel builds)
   const hubModule = "@naisys/hub";
   const { startHub } = (await import(hubModule)) as { startHub: StartHub };
-  const plugins: "erp"[] = [];
+  const plugins: SupervisorPlugin[] = [];
   if (program.opts().erp) plugins.push("erp");
   const hubResult = await startHub(
     "hosted",

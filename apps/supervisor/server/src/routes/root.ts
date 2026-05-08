@@ -1,12 +1,16 @@
-import type { HateoasLink } from "@naisys/common";
+import type { HateoasLink, SupervisorPlugin } from "@naisys/common";
 import { PermissionEnum } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 const API_PREFIX = "/supervisor/api";
 
+interface RootRoutesOptions extends FastifyPluginOptions {
+  plugins?: SupervisorPlugin[];
+}
+
 export default function rootRoutes(
   fastify: FastifyInstance,
-  _options: FastifyPluginOptions,
+  options: RootRoutesOptions,
 ) {
   fastify.get(
     "/",
@@ -39,6 +43,10 @@ export default function rootRoutes(
           title: "Available Permissions",
         },
       ];
+
+      if (options.plugins?.includes("erp")) {
+        links.push({ rel: "erp", href: "/erp/api/", title: "ERP" });
+      }
 
       // Only show user management links if user has supervisor_admin permission
       if (request.supervisorUser?.permissions.includes("supervisor_admin")) {
