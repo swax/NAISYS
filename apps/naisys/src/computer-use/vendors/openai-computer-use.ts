@@ -232,6 +232,36 @@ export function formatInputWithComputerUse<Part>(
   ) => Part[],
   formatSingleBlock: (block: ContentBlock, role: string) => Part | null,
 ): unknown[] {
+  // OpenAI's computer_call_output strictly requires a `computer_screenshot`
+  // output — there is no text-error variant. For tool_results without a
+  // screenshot (early failures, operator rejections, validation errors before
+  // capture) the call/output pair is dropped and the message is surfaced as
+  // plain user text so the LLM still sees what happened. Orphaned tool_use
+  // blocks (e.g. after scrubRecentMedia strips a tool_result) are likewise
+  // dropped so OpenAI doesn't see an unmatched computer_call.
+  const droppedCallIds = new Set<string>();
+  const seenToolUseIds = new Set<string>();
+  const seenToolResultIds = new Set<string>();
+  for (const msg of context) {
+    if (typeof msg.content === "string") continue;
+    for (const block of msg.content) {
+      if (block.type === "tool_use" && block.name === "computer") {
+        seenToolUseIds.add(block.id);
+      } else if (block.type === "tool_result") {
+        seenToolResultIds.add(block.toolUseId);
+        const hasImage = block.resultContent.some((c) => c.type === "image");
+        if (!hasImage) {
+          droppedCallIds.add(block.toolUseId);
+        }
+      }
+    }
+  }
+  for (const id of seenToolUseIds) {
+    if (!seenToolResultIds.has(id)) {
+      droppedCallIds.add(id);
+    }
+  }
+
   const items: unknown[] = [];
 
   for (const msg of context) {
@@ -261,9 +291,11 @@ export function formatInputWithComputerUse<Part>(
         });
       }
 
-      // Emit tool_use blocks as computer_call items
+      // Emit tool_use blocks as computer_call items, skipping any whose paired
+      // tool_result is missing or has no screenshot.
       for (const block of content) {
         if (block.type === "tool_use" && block.name === "computer") {
+          if (droppedCallIds.has(block.id)) continue;
           const input = block.input as unknown as DesktopActionInput;
           items.push({
             type: "computer_call",
@@ -278,36 +310,38 @@ export function formatInputWithComputerUse<Part>(
 
     if (msg.role === "user" && hasToolResult) {
       for (const block of content) {
-        if (block.type === "tool_result") {
-          if (block.isError) {
-            const errorText = block.resultContent?.find(
-              (c) => c.type === "text",
-            );
-            items.push({
-              type: "computer_call_output",
-              call_id: block.toolUseId,
-              output: {
-                type: "output_text",
-                text: `[Desktop action error: ${errorText?.type === "text" ? errorText.text : "unknown error"}]`,
-              },
-            });
-          } else {
-            const imageContent = block.resultContent?.find(
-              (c) => c.type === "image",
-            );
-            if (imageContent && imageContent.type === "image") {
-              items.push({
-                type: "computer_call_output",
-                call_id: block.toolUseId,
-                output: {
-                  type: "computer_screenshot",
-                  image_url: `data:${imageContent.mimeType};base64,${imageContent.base64}`,
-                  detail: "original",
-                },
-              });
-            }
-          }
+        if (block.type !== "tool_result") continue;
+
+        const imageContent = block.resultContent.find(
+          (c) => c.type === "image",
+        );
+        if (imageContent && imageContent.type === "image") {
+          items.push({
+            type: "computer_call_output",
+            call_id: block.toolUseId,
+            output: {
+              type: "computer_screenshot",
+              image_url: `data:${imageContent.mimeType};base64,${imageContent.base64}`,
+              detail: "original",
+            },
+          });
+          continue;
         }
+
+        // No screenshot — the matching computer_call was dropped above.
+        // Surface the error as plain user text so the LLM still sees it.
+        const textContent = block.resultContent.find((c) => c.type === "text");
+        const text =
+          textContent?.type === "text" ? textContent.text : "unknown error";
+        items.push({
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: block.isError ? `[Desktop action error: ${text}]` : text,
+            },
+          ],
+        });
       }
       continue;
     }
