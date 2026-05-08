@@ -147,6 +147,8 @@ function canonicalConfigOrder(
     ordered.multipleCommandsEnabled = config.multipleCommandsEnabled;
   if (config.controlDesktop !== undefined)
     ordered.controlDesktop = config.controlDesktop;
+  if (config.supervisorApiHints !== undefined)
+    ordered.supervisorApiHints = config.supervisorApiHints;
 
   // Advanced
   if (config.commandProtection !== undefined)

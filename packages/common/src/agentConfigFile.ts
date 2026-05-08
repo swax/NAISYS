@@ -149,6 +149,13 @@ export const AgentConfigFileSchema = z.object({
     .describe(
       `Allow the agent to operate the desktop GUI. Requires a vision-capable model; computer-use models are ideal. Screens over ${TARGET_MEGAPIXELS}MP will be downscaled.`,
     ),
+
+  supervisorApiHints: z
+    .boolean()
+    .optional()
+    .describe(
+      "Tell the agent in its system message how to call the supervisor API to manage NAISYS agents, hosts, variables, models, users, etc. Useful for admin / assistant agents",
+    ),
 });
 
 export type AgentConfigFile = z.infer<typeof AgentConfigFileSchema>;

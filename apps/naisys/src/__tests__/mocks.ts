@@ -353,6 +353,7 @@ export function createMockAgentConfig(): AgentConfig {
       initialCommands: [],
       multipleCommandsEnabled: true,
       workspacesEnabled: false,
+      supervisorApiHints: false,
       resolveConfigVars: (str: string) => str,
     }),
   };

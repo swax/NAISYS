@@ -53,6 +53,7 @@ export const ConfigSummary: React.FC<{
   if (config.workspacesEnabled) features.push("Workspaces");
   if (config.multipleCommandsEnabled) features.push("Multiple Commands");
   if (config.controlDesktop) features.push("Control Desktop");
+  if (config.supervisorApiHints) features.push("Supervisor API Hints");
 
   return (
     <Stack gap="sm">

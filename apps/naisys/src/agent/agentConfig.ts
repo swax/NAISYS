@@ -72,6 +72,7 @@ export function createAgentConfig(
       debugPauseSeconds: config.debugPauseSeconds,
       multipleCommandsEnabled: !!config.multipleCommandsEnabled,
       workspacesEnabled: !!config.workspacesEnabled,
+      supervisorApiHints: !!config.supervisorApiHints,
     };
   }
 

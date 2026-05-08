@@ -82,6 +82,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.workspacesEnabled) result.workspacesEnabled = true;
   if (values.multipleCommandsEnabled) result.multipleCommandsEnabled = true;
   if (values.controlDesktop) result.controlDesktop = true;
+  if (values.supervisorApiHints) result.supervisorApiHints = true;
 
   if (values.commandProtection && values.commandProtection !== "none")
     result.commandProtection = values.commandProtection;
@@ -114,6 +115,7 @@ interface FormValues {
   workspacesEnabled: boolean;
   multipleCommandsEnabled: boolean;
   controlDesktop: boolean;
+  supervisorApiHints: boolean;
   commandProtection: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
@@ -217,6 +219,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       workspacesEnabled: config.workspacesEnabled ?? false,
       multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
       controlDesktop: config.controlDesktop ?? false,
+      supervisorApiHints: config.supervisorApiHints ?? false,
       commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n\n") ?? "",
@@ -438,6 +441,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Control Desktop"
           description={desc("controlDesktop")}
           {...form.getInputProps("controlDesktop", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supervisor API Hints"
+          description={desc("supervisorApiHints")}
+          {...form.getInputProps("supervisorApiHints", { type: "checkbox" })}
         />
 
         {/* Initial Commands */}

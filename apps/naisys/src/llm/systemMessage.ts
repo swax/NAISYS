@@ -95,6 +95,16 @@ export function createSystemMessage(
     ptyStr = `\n  ${ptyCmd.name} ${ptyCmd.usage}: ${ptyCmd.description}`;
   }
 
+  let supervisorApiStr = "";
+  if (agentConfig().supervisorApiHints) {
+    supervisorApiStr = `
+Supervisor API:
+  Manage NAISYS agents, hosts, variables, models, users, etc., via the root API:
+    curl -sS -H "Authorization: Bearer $NAISYS_API_KEY" "$NAISYS_API_URL_BASE/supervisor/api/"
+  The response includes links to other subsystems (e.g. ERP) when those plugins are loaded.
+  Need a permission you don't have? Ask the admin to grant it via the Users menu.`;
+  }
+
   // ns-session guidance lives in the token-notes section below — listing
   // these in the command list as well led to the LLM treating them as just
   // another option rather than the right move when idle / near token limit.
@@ -162,7 +172,7 @@ ${platformConfig.displayName} Commands:
   }
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: ${naisysChainNote}${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
-  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}
+  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${supervisorApiStr}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
 

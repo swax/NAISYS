@@ -214,6 +214,7 @@ export async function ensureAgentConfig(
 
   const config = buildDefaultAgentConfig("andy");
   config.shellModel = model.key;
+  config.supervisorApiHints = true;
 
   const filePath = path.resolve("assistant.yaml");
   fs.writeFileSync(filePath, yaml.dump(config));
