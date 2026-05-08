@@ -604,6 +604,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                       false,
                     )}
                     <Text
+                      component="div"
                       size="sm"
                       style={{
                         wordBreak: "break-word",
