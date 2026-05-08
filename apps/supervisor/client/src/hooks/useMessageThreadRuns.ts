@@ -38,7 +38,7 @@ export const useMessageThreadRuns = (
   const [refetchTick, setRefetchTick] = useState(0);
 
   // Drives the 1s isOnline transition without waiting on a refetch.
-  useTick(1000);
+  const tick = useTick(1000);
 
   // Matches mail_messages.participants and the relevant socket room key.
   const participantsKey = useMemo(
@@ -156,13 +156,25 @@ export const useMessageThreadRuns = (
     };
   }, [kind, participantsKey, currentAgentUsername]);
 
+  // Recomputes each tick. Returning a string makes the dep value-stable, so
+  // the runs memo (and downstream consumers) only invalidate when an actual
+  // online/offline transition happens — not every second.
+  const onlineFingerprint = useMemo(() => {
+    void tick;
+    const keys: string[] = [];
+    for (const [key, run] of runMap) {
+      if (isRunActive(run.lastActive)) keys.push(key);
+    }
+    return keys.sort().join("|");
+  }, [runMap, tick]);
+
   const runs: ThreadRun[] = useMemo(
     () =>
       Array.from(runMap.values()).map((run) => ({
         ...run,
         isOnline: isRunActive(run.lastActive),
       })),
-    [runMap],
+    [runMap, onlineFingerprint],
   );
 
   return { runs, isLoading };

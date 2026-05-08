@@ -148,13 +148,23 @@ export function useThreadRunCommands(
         runIds.forEach((id) => inFlight.current.delete(id));
       }
 
-      setLoadedRunIds((prev) => {
-        const next = new Set(prev);
-        for (const { runIds } of results) {
-          runIds.forEach((id) => next.add(id));
-        }
-        return next;
-      });
+      // Only mark successful fetches as loaded. A failed result leaves the run
+      // out so a subsequent target-set change (online flip, divider open) will
+      // retry it instead of silently hiding its commands. Skip the setter when
+      // nothing succeeded so the effect's loadedRunIds dep doesn't change and
+      // immediately re-fire a tight retry loop.
+      const succeededIds: number[] = [];
+      for (const { runIds, result } of results) {
+        if (!result?.success) continue;
+        succeededIds.push(...runIds);
+      }
+      if (succeededIds.length > 0) {
+        setLoadedRunIds((prev) => {
+          const next = new Set(prev);
+          for (const id of succeededIds) next.add(id);
+          return next;
+        });
+      }
 
       setByUser((prev) => {
         const next = new Map(prev);

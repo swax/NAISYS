@@ -10,4 +10,3 @@ SET "read_run_id" = (
     AND rs."created_at" <= "mail_recipients"."read_at"
 )
 WHERE "read_at" IS NOT NULL;
-

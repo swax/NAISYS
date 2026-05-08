@@ -232,8 +232,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     phantomsBeforeMessage: intercalatedPhantoms,
     trailing: trailingCommands,
   } = useMemo(
-    () => bucketRunCommandsByMessage(messages, runCommands),
-    [messages, runCommands],
+    () => bucketRunCommandsByMessage(messages, runCommands, hasMore),
+    [messages, runCommands, hasMore],
   );
 
   const onlineUsernames = useMemo(() => {

@@ -33,10 +33,16 @@ const EMPTY: BucketedRunCommands = {
  * Same-user next msg → inline with that bubble. Different-user next msg →
  * phantom-before-msg, surfacing activity the user did before the conversation
  * moved on without them replying. No next msg → trailing phantom.
+ *
+ * `hasOlderMessages` indicates that older messages exist outside the loaded
+ * window. When true, commands timestamped before the oldest visible message
+ * are dropped — they belong to messages that aren't yet rendered, and
+ * attaching them to the oldest visible message would misplace them.
  */
 export function bucketRunCommandsByMessage(
   messages: Array<{ id: number; fromUsername: string; createdAt: string }>,
   commands: ThreadRunCommand[],
+  hasOlderMessages: boolean = false,
 ): BucketedRunCommands {
   if (commands.length === 0) return EMPTY;
 
@@ -44,6 +50,11 @@ export function bucketRunCommandsByMessage(
     (a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
+
+  const oldestVisibleMs =
+    hasOlderMessages && sortedMsgs.length > 0
+      ? new Date(sortedMsgs[0].createdAt).getTime()
+      : null;
 
   const beforeMessage = new Map<number, ThreadRunCommand[]>();
   const phantomsBeforeMessage = new Map<
@@ -54,6 +65,7 @@ export function bucketRunCommandsByMessage(
 
   for (const cmd of commands) {
     const cmdTime = new Date(cmd.createdAt).getTime();
+    if (oldestVisibleMs !== null && cmdTime < oldestVisibleMs) continue;
     const nextMsg = sortedMsgs.find(
       (m) => new Date(m.createdAt).getTime() >= cmdTime,
     );
