@@ -283,10 +283,14 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
     return undefined;
   }
 
-  // Split an entry on newlines so a multi-line string in one commandList slot
-  // becomes one command per line. Without this, downstream stringArgv flattens
-  // newlines to spaces and a command like `ns-desktop click 1 2\nns-desktop
-  // wait 1` is parsed as a single call with garbage args.
+  // For ns-* entries, split on newlines so a bundle like
+  // `ns-desktop click 1 2\nns-desktop wait 1` becomes one command per line —
+  // otherwise downstream stringArgv flattens \n to space and the bundle parses
+  // as a single call with garbage args. Shell entries must NOT be split: the
+  // shell wrapper sources multi-line commands as a script, so heredocs and
+  // quoted multi-line strings (e.g. `msg=$(cat <<'EOF' ... EOF)`) need to
+  // arrive intact or each line gets fed to the shell separately and the
+  // heredoc hangs waiting for EOF.
   function pushCommandListEntries(
     commandList: unknown,
     commands: string[],
@@ -294,9 +298,15 @@ export function createCommandTools({ agentConfig }: AgentConfig) {
     if (!Array.isArray(commandList)) return;
     for (const entry of commandList) {
       if (typeof entry !== "string") continue;
-      for (const line of entry.split(/\r?\n/)) {
-        const trimmed = line.trim();
-        if (trimmed) commands.push(trimmed);
+      const trimmed = entry.trim();
+      if (!trimmed) continue;
+      if (!/^ns-/i.test(trimmed)) {
+        commands.push(trimmed);
+        continue;
+      }
+      for (const line of trimmed.split(/\r?\n/)) {
+        const t = line.trim();
+        if (t) commands.push(t);
       }
     }
   }
