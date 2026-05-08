@@ -8,7 +8,9 @@ const MIN_SECRET_LENGTH = 6;
 
 const PATTERN_REPLACEMENTS: { pattern: RegExp; replacement: string }[] = [
   {
-    pattern: /Authorization:\s*(Bearer|Basic)\s+\S+/gi,
+    // Stop at whitespace or quote chars so the closing quote survives, and
+    // skip unexpanded shell-var refs ($FOO, ${FOO}) which aren't real secrets.
+    pattern: /Authorization:\s*(Bearer|Basic)\s+(?!\$)[^\s"']+/gi,
     replacement: "Authorization: $1 [REDACTED]",
   },
   {

@@ -162,6 +162,15 @@ describe("hubRedactionService", () => {
     expect(svc.redact("Authorization: Bearer xyz.token.here")).toBe(
       "Authorization: Bearer [REDACTED]",
     );
+    expect(
+      svc.redact('curl -H "Authorization: Bearer xyz.token.here" url'),
+    ).toBe('curl -H "Authorization: Bearer [REDACTED]" url');
+    expect(
+      svc.redact('curl -H "Authorization: Bearer $NAISYS_API_KEY" url'),
+    ).toBe('curl -H "Authorization: Bearer $NAISYS_API_KEY" url');
+    expect(
+      svc.redact('curl -H "Authorization: Bearer ${NAISYS_API_KEY}" url'),
+    ).toBe('curl -H "Authorization: Bearer ${NAISYS_API_KEY}" url');
     expect(svc.redact("AKIAIOSFODNN7EXAMPLE")).toBe("[REDACTED:AWS_KEY]");
     expect(
       svc.redact(
