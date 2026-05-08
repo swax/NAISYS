@@ -331,8 +331,13 @@ export function createShellWrapper(
     command: string,
     options?: { inlineDelimiter?: boolean; secure?: boolean },
   ) {
+    // Defensive: every external caller (shellCommand.handleCommand, ns-pty,
+    // expandShellArgs, etc.) is supposed to check isShellSuspended() and
+    // route via continueCommand instead. If this fires, the caller has a bug
+    // — surface a message that points at the caller rather than dressing it
+    // up as user-facing guidance the agent can act on.
     if (_wrapperSuspended) {
-      throw "Use continueCommand to send input to a shell command in process";
+      throw `executeCommand invoked while shell is suspended (running '${getCurrentCommandName()}') — caller must check isShellSuspended() first and route via continueCommand`;
     }
 
     command = command.trim();

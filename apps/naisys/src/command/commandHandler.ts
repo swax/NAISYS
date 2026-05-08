@@ -329,6 +329,15 @@ export function createCommandHandler(
       return cmdArgs;
     }
 
+    // Expansion shells out to `printf` in the live shell. If a previous
+    // command left the shell suspended, that call would throw the generic
+    // executeCommand-busy error from a step the agent didn't initiate —
+    // surface a message that names the blocked operation explicitly.
+    if (shellWrapper.isShellSuspended()) {
+      const running = shellWrapper.getCurrentCommandName() || "shell command";
+      throw `Cannot expand $vars in args while '${running}' is still running. Use 'ns-wait <seconds>' to keep waiting, 'ns-kill' to terminate it, then re-issue the command.`;
+    }
+
     const parsedArgs = stringArgv(cmdArgs);
     const expandedParts: string[] = [];
     let anyExpanded = false;
