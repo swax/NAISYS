@@ -191,6 +191,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
     return availableHosts.filter((h) => !assignedIds.has(h.id));
   }, [availableHosts, assignedHosts]);
 
+  const sortedLlmModelOptions = useMemo(
+    () => [...llmModelOptions].sort((a, b) => a.label.localeCompare(b.label)),
+    [llmModelOptions],
+  );
+
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const form = useForm<FormValues>({
@@ -351,7 +356,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
           label="Shell Model"
           description={desc("shellModel")}
           withAsterisk
-          data={llmModelOptions}
+          data={sortedLlmModelOptions}
           {...form.getInputProps("shellModel")}
         />
 
