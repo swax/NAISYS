@@ -36,6 +36,10 @@ import type { ComponentType, CSSProperties } from "react";
 interface IconSpec {
   Icon: ComponentType<{ size?: number; color?: string; style?: CSSProperties }>;
   color: string;
+  // Portion of the line to hide from display. Defaults to the match key.
+  // Set to "" to show the whole line (e.g. "exit", "ns-kill"); set to a
+  // parent prefix (e.g. "ns-session") to keep the subcommand visible.
+  hide?: string;
 }
 
 // Icon + color per command prefix. Colors are Mantine CSS vars at shade .4–.5
@@ -93,14 +97,17 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-session wait": {
     Icon: IconZzz,
     color: "var(--mantine-color-violet-4)",
+    hide: "ns-session",
   },
   "ns-session compact": {
     Icon: IconArchive,
     color: "var(--mantine-color-yellow-6)",
+    hide: "ns-session",
   },
   "ns-session complete": {
     Icon: IconFlagCheck,
     color: "var(--mantine-color-green-5)",
+    hide: "ns-session",
   },
   "ns-agent": {
     Icon: IconRobot,
@@ -125,6 +132,7 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-cost": {
     Icon: IconCoin,
     color: "var(--mantine-color-yellow-5)",
+    hide: "",
   },
   "ns-context": {
     Icon: IconList,
@@ -133,10 +141,12 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-host": {
     Icon: IconServer,
     color: "var(--mantine-color-gray-4)",
+    hide: "",
   },
   "ns-hub": {
     Icon: IconLink,
     color: "var(--mantine-color-lime-5)",
+    hide: "",
   },
   "ns-talk": {
     Icon: IconMicrophone,
@@ -149,22 +159,27 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-pause": {
     Icon: IconPlayerPause,
     color: "var(--mantine-color-orange-5)",
+    hide: "",
   },
   "ns-wait": {
     Icon: IconHourglass,
     color: "var(--mantine-color-orange-4)",
+    hide: "",
   },
   "ns-kill": {
     Icon: IconHandStop,
     color: "var(--mantine-color-red-5)",
+    hide: "",
   },
   "ns-help": {
     Icon: IconHelp,
     color: "var(--mantine-color-cyan-5)",
+    hide: "",
   },
   exit: {
     Icon: IconLogout,
     color: "var(--mantine-color-red-4)",
+    hide: "",
   },
 };
 
@@ -190,9 +205,10 @@ export function parseCommandIcon(line: string): ParsedCommand {
   }
   if (bestKey === null) return { ...FALLBACK, remainder: line };
   const spec = COMMAND_ICONS[bestKey];
+  const hide = spec.hide ?? bestKey;
   return {
     Icon: spec.Icon,
     color: spec.color,
-    remainder: line.slice(bestKey.length).trimStart(),
+    remainder: line.slice(hide.length).trimStart(),
   };
 }
