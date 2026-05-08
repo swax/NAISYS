@@ -95,40 +95,19 @@ export function createSystemMessage(
     ptyStr = `\n  ${ptyCmd.name} ${ptyCmd.usage}: ${ptyCmd.description}`;
   }
 
-  // Build ns-session command help based on enabled features
+  // ns-session guidance lives in the token-notes section below — listing
+  // these in the command list as well led to the LLM treating them as just
+  // another option rather than the right move when idle / near token limit.
   const sessionSubs = sessionCmd.subcommands!;
-  let sessionCmdStr = "";
-  const sessionSubcommands: string[] = [];
 
-  sessionSubcommands.push(
-    `${sessionSubs.wait.usage} - ${sessionSubs.wait.description}`,
-  );
-  if (globalConfig().compactSessionEnabled) {
-    sessionSubcommands.push(
-      `${sessionSubs.compact.usage} - ${sessionSubs.compact.description}`,
-    );
-  }
-  if (agentConfig().completeSessionEnabled) {
-    sessionSubcommands.push(
-      `${sessionSubs.complete.usage} - ${sessionSubs.complete.description}`,
-    );
-  }
-
-  if (sessionSubcommands.length > 0) {
-    sessionCmdStr = `\n  ns-session: Session management. Subcommands:
-    ${sessionSubcommands.join("\n    ")}`;
-  }
-
-  let tokenNote = "";
+  let tokenNote = `\n  When there is nothing more to do, call \`${sessionCmd.name} ${sessionSubs.wait.usage}\` — the session auto-wakes on new mail or events.`;
 
   if (globalConfig().compactSessionEnabled) {
-    tokenNote =
-      "\n  Make sure to call `ns-session compact` before the token limit is hit so you can continue your work without interruption.";
+    tokenNote += `\n  Call \`${sessionCmd.name} ${sessionSubs.compact.usage}\` before the token limit is hit so you can continue your work without interruption.`;
   }
 
   if (agentConfig().completeSessionEnabled) {
-    tokenNote =
-      "\n  Complete the session if there's nothing specific you're waiting for. New messages or events will startup the session again.";
+    tokenNote += `\n  Or call \`${sessionCmd.name} ${sessionSubs.complete.usage}\` if the task is fully done; new messages or events will start a new session.`;
   }
 
   if (agentConfig().multipleCommandsEnabled) {
@@ -183,7 +162,7 @@ ${platformConfig.displayName} Commands:
   }
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: ${naisysChainNote}${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
-  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}${sessionCmdStr}
+  ${commentCmd.name} ${commentCmd.usage}: ${commentCmd.description}
 Tokens:
   The console log can only hold a certain number of tokens that is specified in the prompt.${tokenNote}`;
 
