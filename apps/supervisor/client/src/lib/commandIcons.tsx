@@ -1,4 +1,5 @@
 import {
+  IconArchive,
   IconBriefcase,
   IconChevronRight,
   IconClock,
@@ -6,6 +7,7 @@ import {
   IconDeviceDesktop,
   IconEar,
   IconEye,
+  IconFlagCheck,
   IconHandStop,
   IconHelp,
   IconHourglass,
@@ -27,6 +29,7 @@ import {
   IconUsers,
   IconWand,
   IconWorld,
+  IconZzz,
 } from "@tabler/icons-react";
 import type { ComponentType, CSSProperties } from "react";
 
@@ -86,6 +89,18 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   "ns-session": {
     Icon: IconClock,
     color: "var(--mantine-color-gray-5)",
+  },
+  "ns-session wait": {
+    Icon: IconZzz,
+    color: "var(--mantine-color-violet-4)",
+  },
+  "ns-session compact": {
+    Icon: IconArchive,
+    color: "var(--mantine-color-yellow-6)",
+  },
+  "ns-session complete": {
+    Icon: IconFlagCheck,
+    color: "var(--mantine-color-green-5)",
   },
   "ns-agent": {
     Icon: IconRobot,
@@ -153,8 +168,6 @@ const COMMAND_ICONS: Record<string, IconSpec> = {
   },
 };
 
-const COMMAND_REGEX = /^(ns-[a-z]+|exit)\b/;
-
 const FALLBACK: IconSpec = {
   Icon: IconTerminal2,
   color: "var(--mantine-color-gray-5)",
@@ -166,18 +179,20 @@ export interface ParsedCommand {
   remainder: string;
 }
 
-/** Return the icon + remainder for a command line. Lines starting with a
- * registered prefix get their specific icon and have the prefix stripped;
- * everything else falls back to the terminal icon with the full line. */
+/** Return the icon + remainder for a command line. Picks the longest registered
+ * prefix that the line starts with (so subcommand keys like "ns-session wait"
+ * win over "ns-session"); falls back to the terminal icon for unknown lines. */
 export function parseCommandIcon(line: string): ParsedCommand {
-  const match = COMMAND_REGEX.exec(line);
-  const spec = match && COMMAND_ICONS[match[1]];
-  if (!match || !spec) {
-    return { ...FALLBACK, remainder: line };
+  let bestKey: string | null = null;
+  for (const key in COMMAND_ICONS) {
+    if (line !== key && !line.startsWith(`${key} `)) continue;
+    if (bestKey === null || key.length > bestKey.length) bestKey = key;
   }
+  if (bestKey === null) return { ...FALLBACK, remainder: line };
+  const spec = COMMAND_ICONS[bestKey];
   return {
     Icon: spec.Icon,
     color: spec.color,
-    remainder: line.slice(match[0].length).trimStart(),
+    remainder: line.slice(bestKey.length).trimStart(),
   };
 }
