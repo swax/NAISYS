@@ -14,6 +14,11 @@ export function createHubClientConfig(hubUrl: string) {
     );
   }
 
+  // Origin (and any prefix) without the `/hub` suffix — exposed to agent
+  // shells as $NAISYS_API_URL_BASE so commands can target sibling endpoints
+  // like /erp/api/* without hardcoding the host/port.
+  const apiUrlBase = hubUrl.replace(/\/hub\/?$/, "");
+
   const hostname = process.env.NAISYS_HOSTNAME || os.hostname();
   const machineId = process.env.NAISYS_MACHINE_ID || "";
   const instanceId = randomUUID();
@@ -38,6 +43,7 @@ export function createHubClientConfig(hubUrl: string) {
 
   return {
     hubUrl,
+    apiUrlBase,
     hostname,
     machineId,
     instanceId,

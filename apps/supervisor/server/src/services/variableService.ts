@@ -1,7 +1,10 @@
 import { hubDb } from "../database/hubDb.js";
 
 // Reserved at the agent shell — set by the runtime, not editable as a variable.
-const RESERVED_VARIABLE_KEYS = new Set(["NAISYS_API_KEY"]);
+const RESERVED_VARIABLE_KEYS = new Set([
+  "NAISYS_API_KEY",
+  "NAISYS_API_URL_BASE",
+]);
 
 const VARIABLE_CACHE_TTL_MS = 10_000;
 const variableCache = new Map<

@@ -3,6 +3,11 @@ import type { AgentConfigFile } from "@naisys/common";
 import { parseTemplateSegments } from "@naisys/common";
 import React, { useMemo } from "react";
 
+const SPECIAL_BUILTIN_VARS = new Set([
+  "${env.NAISYS_API_KEY}",
+  "${env.NAISYS_API_URL_BASE}",
+]);
+
 export const TemplatedText: React.FC<{
   template: string;
   config: AgentConfigFile;
@@ -22,6 +27,21 @@ export const TemplatedText: React.FC<{
       {segments.map((seg, i) => {
         if (seg.type === "text") {
           return <span key={i}>{seg.text}</span>;
+        }
+
+        if (SPECIAL_BUILTIN_VARS.has(seg.variable)) {
+          return (
+            <Tooltip key={i} label="Special built-in variable" withArrow>
+              <span
+                style={{
+                  color: "var(--mantine-color-blue-4)",
+                  cursor: "help",
+                }}
+              >
+                {seg.variable}
+              </span>
+            </Tooltip>
+          );
         }
 
         if (seg.value !== undefined) {

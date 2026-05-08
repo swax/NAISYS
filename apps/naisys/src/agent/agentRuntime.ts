@@ -108,12 +108,15 @@ export async function createAgentRuntime(
   );
   const output = createOutputService(logService);
 
-  // Shell surface and workspace context.
+  // Shell surface and workspace context. apiUrlBase comes from sessionHubClient
+  // so subagents (which null out `hubClient`) still get $NAISYS_API_URL_BASE
+  // alongside the runtime API key the parent dispatched them with.
   const shellWrapper = createShellWrapper(
     globalConfig,
     agentConfig,
     output,
     runtimeKeyRef,
+    sessionHubClient?.getApiUrlBase(),
   );
   const workspaces = createWorkspacesFeature(shellWrapper);
 

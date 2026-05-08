@@ -33,6 +33,7 @@ export function createHubClient(
   promptNotification: PromptNotificationService,
 ) {
   const hubUrl = hubClientConfig.hubUrl;
+  const apiUrlBase = hubClientConfig.apiUrlBase;
   let activeConnection: HubConnection | null = null;
   let hasConnectedOnce = false;
   let disconnectNotified = false;
@@ -274,6 +275,7 @@ export function createHubClient(
     // HubClient API
     getConnectionInfo,
     getHubUrl: () => hubUrl,
+    getApiUrlBase: () => apiUrlBase,
     isConnected,
     waitForConnection,
     registerEvent,

@@ -37,6 +37,7 @@ export function createShellWrapper(
   { agentConfig }: AgentConfig,
   output: OutputService,
   runtimeKeyRef: { current: string | undefined } = { current: undefined },
+  apiUrlBase: string | undefined = undefined,
 ) {
   let _process: ChildProcessWithoutNullStreams | undefined;
   let _currentProcessId: number | undefined;
@@ -91,6 +92,9 @@ export function createShellWrapper(
     const cleanEnv = { ...process.env, ...globalConfig().shellVariableMap };
     if (runtimeKeyRef.current) {
       cleanEnv.NAISYS_API_KEY = runtimeKeyRef.current;
+    }
+    if (apiUrlBase) {
+      cleanEnv.NAISYS_API_URL_BASE = apiUrlBase;
     }
     return cleanEnv;
   }
