@@ -73,10 +73,10 @@ enum CostSource {
 // --- Models ---
 
 model context_log {
-  id            Int              @id @default(autoincrement())
+  id            Int               @id @default(autoincrement())
   user_id       Int
   run_id        Int
-  subagent_id   Int              @default(0)
+  subagent_id   Int               @default(0)
   session_id    Int
   host_id       Int
   role          ContextLogRole
@@ -84,11 +84,11 @@ model context_log {
   type          ContextLogType?
   message       String
   attachment_id Int?
-  created_at    DateTime         @default(now())
-  users         users            @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  run_session   run_session      @relation(fields: [user_id, run_id, subagent_id, session_id], references: [user_id, run_id, subagent_id, session_id], onDelete: NoAction, onUpdate: NoAction)
-  host          hosts            @relation(fields: [host_id], references: [id])
-  attachment    attachments?     @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  created_at    DateTime          @default(now())
+  users         users             @relation("context_log_user", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  run_session   run_session       @relation(fields: [user_id, run_id, subagent_id, session_id], references: [user_id, run_id, subagent_id, session_id], onDelete: NoAction, onUpdate: NoAction)
+  host          hosts             @relation(fields: [host_id], references: [id])
+  attachment    attachments?      @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([user_id, run_id, subagent_id, session_id], map: "idx_context_log_user_run_subagent_session") // WHERE user_id, run_id, subagent_id, session_id in runsService.getContextLog
 }
@@ -118,17 +118,17 @@ model costs {
 }
 
 model mail_messages {
-  id              Int                @id @default(autoincrement())
-  from_user_id    Int
-  host_id         Int? // Sender's host
-  kind            MessageKind        @default(mail)
-  participants    String // Sorted CSV of participant usernames, used as conversation lookup key
-  subject         String
-  body            String
-  created_at      DateTime           @default(now())
-  from_user       users              @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  host            hosts?             @relation(fields: [host_id], references: [id])
-  recipients      mail_recipients[]
+  id               Int                @id @default(autoincrement())
+  from_user_id     Int
+  host_id          Int? // Sender's host
+  kind             MessageKind        @default(mail)
+  participants     String // Sorted CSV of participant usernames, used as conversation lookup key
+  subject          String
+  body             String
+  created_at       DateTime           @default(now())
+  from_user        users              @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  host             hosts?             @relation(fields: [host_id], references: [id])
+  recipients       mail_recipients[]
   mail_attachments mail_attachments[]
 
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
@@ -137,18 +137,31 @@ model mail_messages {
 }
 
 model attachments {
-  id               Int                @id @default(autoincrement())
-  public_id        String             @unique
-  filepath         String
-  filename         String
-  file_size        Int
-  file_hash        String
-  purpose          AttachmentPurpose
-  uploaded_by      Int
-  created_at       DateTime           @default(now())
-  uploader         users              @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  mail_attachments mail_attachments[]
-  context_logs     context_log[]
+  id                        Int                         @id @default(autoincrement())
+  public_id                 String                      @unique
+  filepath                  String
+  filename                  String
+  file_size                 Int
+  file_hash                 String
+  purpose                   AttachmentPurpose
+  uploaded_by               Int
+  created_at                DateTime                    @default(now())
+  uploader                  users                       @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mail_attachments          mail_attachments[]
+  context_logs              context_log[]
+  user_startup_attachments user_startup_attachments[]
+}
+
+model user_startup_attachments {
+  user_id       Int
+  attachment_id Int
+  path          String
+  created_at    DateTime    @default(now())
+  user          users       @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment    attachments @relation(fields: [attachment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([user_id, path])
+  @@index([attachment_id], map: "idx_user_startup_attachments_attachment_id")
 }
 
 model mail_attachments {
@@ -179,29 +192,30 @@ model mail_recipients {
 }
 
 model users {
-  id                 Int                 @id @default(autoincrement())
-  uuid               String              @unique
-  username           String              @unique
-  title              String
-  api_key_hash       String?             @unique
-  lead_user_id       Int?
-  config             String              @default("{}")
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @updatedAt
-  enabled            Boolean             @default(true)
-  archived           Boolean             @default(false)
-  lead_user          users?              @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subagents          users[]             @relation("lead_to_subagents")
-  mail_messages_sent mail_messages[]     @relation("mail_messages_from_user")
-  mail_recipients    mail_recipients[]
-  run_sessions       run_session[]
-  context_logs       context_log[]       @relation("context_log_user")
-  costs              costs[]             @relation("costs_user")
-  uploaded_attachments attachments[]      @relation("uploaded_attachments")
-  user_notifications     user_notifications?
-  user_hosts             user_hosts[]
-  config_revisions       config_revisions[]  @relation("config_revision_user")
-  config_changes_made    config_revisions[]  @relation("config_revision_changed_by")
+  id                        Int                         @id @default(autoincrement())
+  uuid                      String                      @unique
+  username                  String                      @unique
+  title                     String
+  api_key_hash              String?                     @unique
+  lead_user_id              Int?
+  config                    String                      @default("{}")
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime                    @updatedAt
+  enabled                   Boolean                     @default(true)
+  archived                  Boolean                     @default(false)
+  lead_user                 users?                      @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subagents                 users[]                     @relation("lead_to_subagents")
+  mail_messages_sent        mail_messages[]             @relation("mail_messages_from_user")
+  mail_recipients           mail_recipients[]
+  run_sessions              run_session[]
+  context_logs              context_log[]               @relation("context_log_user")
+  costs                     costs[]                     @relation("costs_user")
+  uploaded_attachments      attachments[]               @relation("uploaded_attachments")
+  user_notifications        user_notifications?
+  user_hosts                user_hosts[]
+  config_revisions          config_revisions[]          @relation("config_revision_user")
+  config_changes_made       config_revisions[]          @relation("config_revision_changed_by")
+  user_startup_attachments user_startup_attachments[]
   // username has @unique which creates an implicit index
 }
 
@@ -212,10 +226,10 @@ model user_notifications {
   latest_mail_id        Int       @default(0)
   latest_chat_id        Int       @default(0)
   last_active           DateTime?
-  cost_suspended_reason  String?
-  spend_limit_reset_at   DateTime?
-  budget_left            Decimal?
-  updated_at             DateTime  @updatedAt
+  cost_suspended_reason String?
+  spend_limit_reset_at  DateTime?
+  budget_left           Decimal?
+  updated_at            DateTime  @updatedAt
   users                 users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   host                  hosts?    @relation(fields: [latest_host_id], references: [id])
 }
@@ -292,14 +306,14 @@ model config_revisions {
 }
 
 model variables {
-  key              String   @id
-  value            String
-  export_to_shell  Boolean  @default(false)
-  sensitive        Boolean  @default(false)
-  created_by       String
-  updated_by       String
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  key             String   @id
+  value           String
+  export_to_shell Boolean  @default(false)
+  sensitive       Boolean  @default(false)
+  created_by      String
+  updated_by      String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
 model models {
@@ -310,7 +324,7 @@ model models {
   version_name String
   is_builtin   Boolean   @default(false)
   is_custom    Boolean   @default(false)
-  meta         String    // JSON blob — type-specific properties validated by Zod
+  meta         String // JSON blob — type-specific properties validated by Zod
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
 }
