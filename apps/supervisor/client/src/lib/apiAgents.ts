@@ -13,9 +13,11 @@ import type {
   HostDetailResponse,
   HostListResponse,
   ImportAgentConfigResponse,
+  StartupAttachmentListResponse,
+  StartupAttachmentResponse,
   UpdateAgentConfigResponse,
 } from "./apiClient";
-import { api, apiEndpoints } from "./apiClient";
+import { api, API_BASE, apiEndpoints } from "./apiClient";
 
 export interface AgentDataParams {
   updatedSince?: string;
@@ -213,6 +215,56 @@ export const deleteAgentPermanently = async (
 ): Promise<AgentActionResult> => {
   return await api.delete<AgentActionResult>(
     apiEndpoints.agentDelete(username),
+  );
+};
+
+// --- Startup attachments ---
+
+export const getStartupAttachments = async (
+  username: string,
+): Promise<StartupAttachmentListResponse> => {
+  return await api.get<StartupAttachmentListResponse>(
+    apiEndpoints.agentStartupAttachments(username),
+  );
+};
+
+export const uploadStartupAttachment = async (
+  username: string,
+  file: File,
+  path: string,
+): Promise<StartupAttachmentResponse> => {
+  const formData = new FormData();
+  formData.append("path", path);
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${API_BASE}${apiEndpoints.agentStartupAttachments(username)}`,
+    { method: "POST", body: formData },
+  );
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || `API Error: ${response.status}`);
+  }
+  return result;
+};
+
+export const deleteStartupAttachment = async (
+  username: string,
+  path: string,
+): Promise<AgentActionResult> => {
+  return await api.delete<AgentActionResult>(
+    `${apiEndpoints.agentStartupAttachments(username)}?path=${encodeURIComponent(path)}`,
+  );
+};
+
+export const renameStartupAttachment = async (
+  username: string,
+  oldPath: string,
+  newPath: string,
+): Promise<StartupAttachmentResponse> => {
+  return await api.put<{ newPath: string }, StartupAttachmentResponse>(
+    `${apiEndpoints.agentStartupAttachments(username)}?path=${encodeURIComponent(oldPath)}`,
+    { newPath },
   );
 };
 

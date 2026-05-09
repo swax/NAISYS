@@ -26,6 +26,7 @@ import {
 } from "../../lib/apiAgents";
 import { api, apiEndpoints, type ModelsResponse } from "../../lib/apiClient";
 import { AgentConfigForm } from "./AgentConfigForm";
+import { AgentStartupAttachments } from "./AgentStartupAttachments";
 import { ConfigYamlDialog } from "./ConfigYamlDialog";
 
 export const AgentConfig: React.FC = () => {
@@ -331,6 +332,8 @@ export const AgentConfig: React.FC = () => {
           onSuccess={fetchConfig}
         />
       )}
+      
+      {config && <AgentStartupAttachments username={username} />}
     </Stack>
   );
 };

@@ -169,6 +169,10 @@ function agentLinks(
     selfLink(`/agents/${username}`),
     { rel: "config", href: `${API_PREFIX}/agents/${username}/config` },
     { rel: "runs", href: `${API_PREFIX}/agents/${username}/runs` },
+    {
+      rel: "startup-attachments",
+      href: `${API_PREFIX}/agents/${username}/startup-attachments`,
+    },
     collectionLink("agents"),
   ];
   if (config?.mailEnabled) {

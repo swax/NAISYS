@@ -51,6 +51,7 @@ import {
   unarchiveAgent,
 } from "../../lib/apiAgents";
 import { useBoomGuard } from "../../lib/useBoomGuard";
+import { AgentStartupAttachmentsSummary } from "./AgentStartupAttachmentsSummary";
 import { ConfigSummary } from "./ConfigSummary";
 
 export const AgentDetail: React.FC = () => {
@@ -693,6 +694,8 @@ export const AgentDetail: React.FC = () => {
           onResetSpend={handleResetSpend}
         />
       )}
+
+      {config && <AgentStartupAttachmentsSummary username={username} />}
 
       <Button
         variant="subtle"

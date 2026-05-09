@@ -393,6 +393,9 @@ export async function deleteAgent(id: number): Promise<void> {
     await hubTx.mail_recipients.deleteMany({ where: { user_id: id } });
     await hubTx.user_notifications.deleteMany({ where: { user_id: id } });
     await hubTx.user_hosts.deleteMany({ where: { user_id: id } });
+    await hubTx.user_startup_attachments.deleteMany({
+      where: { user_id: id },
+    });
     await hubTx.users.updateMany({
       where: { lead_user_id: id },
       data: { lead_user_id: null },

@@ -59,6 +59,9 @@ import type {
   SendMailRequest,
   SendMailResponse,
   ServerLogResponse,
+  StartupAttachment,
+  StartupAttachmentListResponse,
+  StartupAttachmentResponse,
   StatusResponse,
   StepUpOptionsResponse,
   UpdateAgentConfigResponse,
@@ -129,6 +132,9 @@ export type {
   SendMailRequest,
   SendMailResponse,
   ServerLogResponse,
+  StartupAttachment,
+  StartupAttachmentListResponse,
+  StartupAttachmentResponse,
   StatusResponse,
   StepUpOptionsResponse,
   UpdateAgentConfigResponse,
@@ -259,6 +265,8 @@ export const apiEndpoints = {
     `/agents/${username}/chat/${participants}/runs`,
   agentChatArchive: (username: string) => `/agents/${username}/chat/archive`,
   agentMailArchive: (username: string) => `/agents/${username}/mail/archive`,
+  agentStartupAttachments: (username: string) =>
+    `/agents/${username}/startup-attachments`,
   agentContextLog: (
     username: string,
     runId: number,

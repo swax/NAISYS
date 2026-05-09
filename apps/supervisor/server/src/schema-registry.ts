@@ -11,6 +11,7 @@ import {
   SendMailRequestSchema,
   SetLeadAgentRequestSchema,
   UpdateAgentConfigRequestSchema,
+  UpdateStartupAttachmentRequestSchema,
   UpdateUserSchema,
 } from "@naisys/supervisor-shared";
 import { z } from "zod/v4";
@@ -30,6 +31,7 @@ export const schemaRegistry: Record<string, $ZodType> = {
   SaveImageModel: SaveImageModelRequestSchema,
   SaveVariable: SaveVariableRequestSchema,
   PasskeyRename: PasskeyRenameRequestSchema,
+  UpdateStartupAttachment: UpdateStartupAttachmentRequestSchema,
 };
 
 // Register schemas with Zod global registry for OpenAPI components/schemas population
