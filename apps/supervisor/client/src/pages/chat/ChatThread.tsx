@@ -3,43 +3,37 @@ import {
   Box,
   Button,
   Container,
-  Group,
   Image,
   Paper,
   ScrollArea,
   Stack,
   Text,
-  Tooltip,
-  UnstyledButton,
 } from "@mantine/core";
 import { formatFileSize, isImageFilename } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
-import {
-  IconCheck,
-  IconChecks,
-  IconChevronDown,
-  IconFile,
-  IconHierarchy2,
-} from "@tabler/icons-react";
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { IconCheck, IconChecks, IconFile } from "@tabler/icons-react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { RunActivityRow } from "../../components/RunActivityRow";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useChatScroll } from "../../hooks/useChatScroll";
 import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
 import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
 import { useThreadRunCommands } from "../../hooks/useThreadRunCommands";
 import type { ChatMessage } from "../../lib/apiClient";
-import { parseCommandIcon } from "../../lib/commandIcons";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 import { bucketRunCommandsByMessage } from "../../lib/threadRunCommandBuckets";
+import { ActiveSubagentBadge } from "./ActiveSubagentBadge";
+import {
+  formatDate,
+  formatTime,
+  otherStyle,
+  ownStyle,
+  runLogPath,
+} from "./chatThreadHelpers";
+import { CommandList } from "./CommandList";
+import { PhantomBubble } from "./PhantomBubble";
 
 interface ChatThreadProps {
   messages: ChatMessage[];
@@ -51,27 +45,6 @@ interface ChatThreadProps {
   onLoadMore: () => void;
   participants: string[];
 }
-
-const BOTTOM_STICKINESS_PX = 24;
-
-const firstLine = (s: string) => {
-  const idx = s.indexOf("\n");
-  return idx === -1 ? s : s.slice(0, idx);
-};
-
-const TOOLTIP_MAX_CHARS = 2000;
-const tooltipText = (s: string) =>
-  s.length > TOOLTIP_MAX_CHARS
-    ? `${s.slice(0, TOOLTIP_MAX_CHARS)}\n…(truncated, ${s.length - TOOLTIP_MAX_CHARS} more chars — click to view)`
-    : s;
-
-const runLogPath = (cmd: ThreadRunCommand) => {
-  const base = `/agents/${cmd.username}/runs/${cmd.runId}`;
-  const tail = `/sessions/${cmd.sessionId}?focusLogId=${cmd.logId}`;
-  return cmd.subagentId !== null && cmd.subagentId !== 0
-    ? `${base}/subagents/${cmd.subagentId}${tail}`
-    : `${base}${tail}`;
-};
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
   messages,
@@ -85,18 +58,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 }) => {
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
-  const viewport = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  const shouldStickToBottom = useRef(true);
-  const lastScrollTop = useRef(0);
-  const scrollFrame = useRef<number | null>(null);
-  const previousThread = useRef<{
-    threadKey: string;
-    lastMessageId: number | null;
-  }>({
-    threadKey: "",
-    lastMessageId: null,
-  });
 
   // Keyed by `${msgId}` (header), `${msgId}-footer`, `phantom-${username}`,
   // or `phantom-before-${msgId}-${username}`. Absence == collapsed.
@@ -113,103 +74,17 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   const threadKey = participants.join(",");
   const lastMessageId = messages[messages.length - 1]?.id ?? null;
 
-  const scrollToBottom = useCallback(() => {
-    const applyScroll = () => {
-      const node = viewport.current;
-      if (!node) return;
-
-      node.scrollTop = node.scrollHeight;
-      lastScrollTop.current = node.scrollTop;
-    };
-
-    applyScroll();
-
-    if (scrollFrame.current !== null) {
-      window.cancelAnimationFrame(scrollFrame.current);
-    }
-
-    scrollFrame.current = window.requestAnimationFrame(() => {
-      scrollFrame.current = null;
-      applyScroll();
-    });
+  const handleThreadChange = useCallback(() => {
+    setExpandedBubbles(new Set());
+    setExplicitlyLoadedRunIds(new Set());
   }, []);
 
-  const handleScrollPositionChange = useCallback(() => {
-    const node = viewport.current;
-    if (!node) return;
-
-    const distanceFromBottom =
-      node.scrollHeight - node.clientHeight - node.scrollTop;
-    const isAtBottom = distanceFromBottom <= BOTTOM_STICKINESS_PX;
-    const movedUp = node.scrollTop < lastScrollTop.current - 1;
-
-    // Late content growth can move the bottom without a user action. Only an
-    // actual upward scroll should disable bottom stickiness.
-    if (isAtBottom) {
-      shouldStickToBottom.current = true;
-    } else if (movedUp) {
-      shouldStickToBottom.current = false;
-    }
-
-    lastScrollTop.current = node.scrollTop;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (scrollFrame.current !== null) {
-        window.cancelAnimationFrame(scrollFrame.current);
-      }
-    };
-  }, []);
-
-  // Auto-scroll on conversation load and when newer messages append. Loading
-  // older messages keeps the same last message id, so it does not pull the
-  // viewport back down.
-  useLayoutEffect(() => {
-    const previous = previousThread.current;
-    const threadChanged = previous.threadKey !== threadKey;
-    const lastMessageChanged = lastMessageId !== previous.lastMessageId;
-
-    if (threadChanged) {
-      shouldStickToBottom.current = true;
-      setExpandedBubbles(new Set());
-      setExplicitlyLoadedRunIds(new Set());
-    }
-
-    if (
-      messages.length > 0 &&
-      (threadChanged || (lastMessageChanged && shouldStickToBottom.current))
-    ) {
-      scrollToBottom();
-    }
-
-    previousThread.current = {
-      threadKey,
-      lastMessageId,
-    };
-  }, [lastMessageId, messages.length, scrollToBottom, threadKey]);
-
-  // Keep the latest message visible when content height changes after the
-  // initial scroll, for example when image attachments or run dividers load.
-  useEffect(() => {
-    if (
-      messages.length === 0 ||
-      !content.current ||
-      typeof ResizeObserver === "undefined"
-    ) {
-      return;
-    }
-
-    const node = content.current;
-    const observer = new ResizeObserver(() => {
-      if (shouldStickToBottom.current) {
-        scrollToBottom();
-      }
-    });
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [messages.length, scrollToBottom, threadKey]);
+  const { viewport, content, handleScrollPositionChange } = useChatScroll({
+    threadKey,
+    lastMessageId,
+    messageCount: messages.length,
+    onThreadChange: handleThreadChange,
+  });
 
   const { runs } = useMessageThreadRuns(
     "chat",
@@ -355,242 +230,27 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     );
   }
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-    return date.toLocaleDateString();
-  };
-
-  const renderCommandList = (
-    cmds: ThreadRunCommand[],
-    expansionKey: string,
-    isOwn: boolean,
-    isActive: boolean,
-    isPhantom: boolean,
-  ) => {
-    if (cmds.length === 0) return null;
-
-    const expanded = expandedBubbles.has(expansionKey);
-    // Surface the latest cmd while collapsed for any list with live activity
-    // — phantom bubbles always do this, and active footers do it too so the
-    // pulsing icon is visible without forcing the user to expand.
-    const surfaceLatestWhenCollapsed = isPhantom || isActive;
-    const visible = expanded
-      ? cmds
-      : surfaceLatestWhenCollapsed
-        ? [cmds[cmds.length - 1]]
-        : [];
-    const latestId = cmds[cmds.length - 1].logId;
-    const showToggle = !surfaceLatestWhenCollapsed || cmds.length > 1;
-
-    const dimColor = isOwn ? "rgba(255,255,255,0.7)" : "dimmed";
-    const cmdColor = isOwn ? "rgba(255,255,255,0.92)" : "magenta.4";
-    const countLabel = `Ran ${cmds.length} ${cmds.length === 1 ? "command" : "commands"}`;
-
-    return (
-      <Stack gap={0} mb={4}>
-        {showToggle && (
-          <UnstyledButton
-            onClick={() => toggleExpanded(expansionKey)}
-            style={{ alignSelf: "flex-start" }}
-          >
-            <Group gap={4} wrap="nowrap">
-              <IconChevronDown
-                size={14}
-                style={{
-                  transform: expanded ? "rotate(0deg)" : "rotate(-90deg)",
-                  transition: "transform 0.15s",
-                  color: isOwn
-                    ? "rgba(255,255,255,0.7)"
-                    : "var(--mantine-color-dimmed)",
-                }}
-              />
-              <Text size="xs" c={dimColor}>
-                {countLabel}
-              </Text>
-            </Group>
-          </UnstyledButton>
-        )}
-        {visible.map((cmd) => {
-          const showSpinner = isActive && cmd.logId === latestId;
-          const line = firstLine(cmd.message);
-          const parsed = parseCommandIcon(line);
-          return (
-            <Tooltip
-              key={cmd.logId}
-              label={tooltipText(cmd.message)}
-              multiline
-              w={480}
-              openDelay={300}
-              withinPortal
-              position="top-start"
-              styles={{
-                tooltip: {
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  whiteSpace: "pre-wrap",
-                },
-              }}
-            >
-              <UnstyledButton
-                onClick={() => handleCommandClick(cmd)}
-                style={{ minWidth: 0, width: "100%" }}
-              >
-                <Group gap={4} wrap="nowrap" align="center">
-                  {/* Fixed-width gutter so cmd lines align under the chevron
-                      in the "Ran N" toggle above. */}
-                  <Box
-                    w={14}
-                    h={14}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <parsed.Icon
-                      size={14}
-                      color={parsed.color}
-                      style={
-                        showSpinner
-                          ? {
-                              animation:
-                                "commandIconPulse 1.2s ease-in-out infinite",
-                            }
-                          : undefined
-                      }
-                    />
-                  </Box>
-                  <Text
-                    size="xs"
-                    c={cmdColor}
-                    style={{
-                      fontFamily: "monospace",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      minWidth: 0,
-                      flex: 1,
-                    }}
-                  >
-                    {parsed.remainder}
-                  </Text>
-                </Group>
-              </UnstyledButton>
-            </Tooltip>
-          );
-        })}
-      </Stack>
-    );
-  };
-
   let lastDate = "";
 
-  const ownStyle = {
-    backgroundColor: "var(--mantine-color-blue-filled)" as const,
-  };
-  const otherStyle = {
-    backgroundColor: "var(--mantine-color-dark-5)" as const,
-  };
-
-  const renderActiveSubagentBadge = (username: string, isOwn: boolean) => {
-    const count = activeSubagentCountByUsername.get(username) ?? 0;
-    if (count === 0) return null;
-    // Icon stroke takes a literal color, not a Mantine palette token —
-    // "magenta.4" works on Text but the icon would render invisible.
-    const color = isOwn ? "rgba(255,255,255,0.85)" : "magenta";
-    return (
-      <Group gap={4} wrap="nowrap" mb={4} style={{ alignSelf: "flex-start" }}>
-        <IconHierarchy2
-          size={14}
-          color={color}
-          style={{
-            animation: "commandIconPulse 1.2s ease-in-out infinite",
-            flexShrink: 0,
-          }}
-        />
-        <Text
-          size="xs"
-          c={isOwn ? "rgba(255,255,255,0.85)" : "magenta.4"}
-          fw={500}
-        >
-          {count} subagent{count === 1 ? "" : "s"} running
-        </Text>
-      </Group>
-    );
-  };
-
-  // Bubble shown for command activity that has no chat message of its own.
-  // active: trailing + agent online (blue border + spinner)
-  // inactive: trailing + agent stopped (dashed + "(no reply)")
-  // historical: between two other-user messages (default border, no spinner)
   const renderPhantomBubble = (
     username: string,
     cmds: ThreadRunCommand[],
     expansionKey: string,
     kind: "active" | "inactive" | "historical",
-  ) => {
-    const isOwn = username === currentAgentUsername;
-    const title = displayTitle(username);
-    const showSpinner = kind === "active";
-    const showNoReply = kind === "inactive";
-    const borderOverride =
-      kind === "active"
-        ? "1px solid var(--mantine-color-blue-4)"
-        : kind === "inactive"
-          ? "1px dashed var(--mantine-color-dark-3)"
-          : undefined;
-
-    return (
-      <Box
-        key={expansionKey}
-        style={{
-          display: "flex",
-          justifyContent: isOwn ? "flex-end" : "flex-start",
-        }}
-      >
-        <Paper
-          p="xs"
-          px="sm"
-          radius="lg"
-          style={{
-            maxWidth: "75%",
-            ...(isOwn ? ownStyle : otherStyle),
-            ...(borderOverride ? { border: borderOverride } : {}),
-          }}
-        >
-          {!isOwn && (
-            <Text size="xs" fw={600} c="dimmed" mb={2}>
-              {username}
-              {title ? ` (${title})` : ""}
-            </Text>
-          )}
-          {kind === "active" && renderActiveSubagentBadge(username, isOwn)}
-          {renderCommandList(cmds, expansionKey, isOwn, showSpinner, true)}
-          {showNoReply && (
-            <Text
-              size="xs"
-              fs="italic"
-              c={isOwn ? "rgba(255,255,255,0.7)" : "dimmed"}
-            >
-              (no reply)
-            </Text>
-          )}
-        </Paper>
-      </Box>
-    );
-  };
+  ) => (
+    <PhantomBubble
+      key={expansionKey}
+      username={username}
+      title={displayTitle(username)}
+      cmds={cmds}
+      kind={kind}
+      isOwn={username === currentAgentUsername}
+      activeSubagentCount={activeSubagentCountByUsername.get(username) ?? 0}
+      expanded={expandedBubbles.has(expansionKey)}
+      onToggle={() => toggleExpanded(expansionKey)}
+      onCommandClick={handleCommandClick}
+    />
+  );
 
   const lastMessage = messages[messages.length - 1] ?? null;
   const lastMessageUsername = lastMessage?.fromUsername ?? null;
@@ -662,7 +322,9 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             // rule as the trailing phantom that footer commands replace.
             const footerLastTime =
               footerCmds.length > 0
-                ? new Date(footerCmds[footerCmds.length - 1].createdAt).getTime()
+                ? new Date(
+                    footerCmds[footerCmds.length - 1].createdAt,
+                  ).getTime()
                 : 0;
             const footerActive =
               footerCmds.length > 0 &&
@@ -729,13 +391,15 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                         {msg.fromUsername} ({msg.fromTitle})
                       </Text>
                     )}
-                    {renderCommandList(
-                      cmds,
-                      String(msg.id),
-                      isOwn,
-                      false,
-                      false,
-                    )}
+                    <CommandList
+                      cmds={cmds}
+                      isOwn={isOwn}
+                      isActive={false}
+                      isPhantom={false}
+                      expanded={expandedBubbles.has(String(msg.id))}
+                      onToggle={() => toggleExpanded(String(msg.id))}
+                      onCommandClick={handleCommandClick}
+                    />
                     <Text
                       component="div"
                       size="sm"
@@ -796,15 +460,25 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     )}
                     {showFooterActivity && (
                       <Box mt={4}>
-                        {showFooterSubagentBadge &&
-                          renderActiveSubagentBadge(msg.fromUsername, isOwn)}
-                        {renderCommandList(
-                          footerCmds,
-                          `${msg.id}-footer`,
-                          isOwn,
-                          footerActive,
-                          false,
+                        {showFooterSubagentBadge && (
+                          <ActiveSubagentBadge
+                            count={
+                              activeSubagentCountByUsername.get(
+                                msg.fromUsername,
+                              ) ?? 0
+                            }
+                            isOwn={isOwn}
+                          />
                         )}
+                        <CommandList
+                          cmds={footerCmds}
+                          isOwn={isOwn}
+                          isActive={footerActive}
+                          isPhantom={false}
+                          expanded={expandedBubbles.has(`${msg.id}-footer`)}
+                          onToggle={() => toggleExpanded(`${msg.id}-footer`)}
+                          onCommandClick={handleCommandClick}
+                        />
                       </Box>
                     )}
                     <Text
