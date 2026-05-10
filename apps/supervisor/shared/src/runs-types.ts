@@ -18,6 +18,7 @@ export const RunSessionSchema = z.object({
   latestLogId: z.number(),
   totalLines: z.number(),
   totalCost: z.number(),
+  activeSubagentCount: z.number().int().nonnegative(),
   hostName: z.string().nullable().optional(),
   hostEnvironment: HostEnvironmentSchema.nullable().optional(),
 });

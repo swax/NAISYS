@@ -91,9 +91,9 @@ export const useAgentData = () => {
 
       let changed = false;
 
-      for (const agent of agentCache) {
+      const nextAgents = agentCache.map((agent) => {
         const update = event.agents[String(agent.id)];
-        if (!update) continue;
+        if (!update) return agent;
 
         const newStatus = update.status;
         const newLogId = update.latestLogId;
@@ -104,14 +104,19 @@ export const useAgentData = () => {
           agent.latestLogId !== newLogId ||
           agent.latestMailId !== newMailId
         ) {
-          agent.status = newStatus;
-          agent.latestLogId = newLogId;
-          agent.latestMailId = newMailId;
           changed = true;
+          return {
+            ...agent,
+            status: newStatus,
+            latestLogId: newLogId,
+            latestMailId: newMailId,
+          };
         }
-      }
+        return agent;
+      });
 
       if (changed) {
+        agentCache = nextAgents;
         setCacheVersion((v) => v + 1);
       }
     },

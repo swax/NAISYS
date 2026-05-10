@@ -1,9 +1,10 @@
 import type {
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
+  SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession } from "@naisys/supervisor-shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getMessageThreadRuns } from "../lib/apiRuns";
 import { isRunActive } from "./runStatus";
@@ -12,9 +13,15 @@ import { useTick } from "./useTick";
 
 export type ThreadRun = RunSession & { isOnline: boolean };
 
+type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
+  type: "heartbeat-update";
+  activeSubagentCount: number;
+};
+
 type RunsEvent =
   | (LogPushSessionUpdate & { type: "log-update" })
-  | (SessionHeartbeatUpdate & { type: "heartbeat-update" });
+  | RunsHeartbeatUpdate
+  | (SessionPush["session"] & { type: "new-session" });
 
 const runKey = (run: {
   userId: number;
@@ -36,6 +43,13 @@ export const useMessageThreadRuns = (
   const [runMap, setRunMap] = useState<Map<string, RunSession>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [refetchTick, setRefetchTick] = useState(0);
+
+  // Socket handler needs a synchronous read of the current map to decide
+  // refetch vs patch — setRunMap's updater runs during commit, too late.
+  const runMapRef = useRef(runMap);
+  useEffect(() => {
+    runMapRef.current = runMap;
+  }, [runMap]);
 
   // Drives the 1s isOnline transition without waiting on a refetch.
   const tick = useTick(1000);
@@ -82,9 +96,10 @@ export const useMessageThreadRuns = (
     };
   }, [kind, participantsKey, currentAgentUsername, refetchTick]);
 
-  // Live heartbeat/log-update for runs already in the map. New-session is
-  // ignored — a fresh run isn't thread-relevant until it reads or sends a
-  // message, which the message-room refetch below catches.
+  // Subagent rows still need to land in the map even though the badge reads
+  // its count from the parent: useThreadRunCommands subscribes to a log room
+  // per (runId, subagentId, sessionId), so without them the subagent's
+  // command stream stays dark.
   useEffect(() => {
     const usernames = participantsKey
       ? participantsKey.split(",").filter(Boolean)
@@ -102,18 +117,35 @@ export const useMessageThreadRuns = (
       const handler = (event: RunsEvent) => {
         if (
           event.type !== "log-update" &&
-          event.type !== "heartbeat-update"
+          event.type !== "heartbeat-update" &&
+          event.type !== "new-session"
         ) {
           return;
         }
         const key = runKey(event);
-        setRunMap((prev) => {
-          const existing = prev.get(key);
-          if (!existing) return prev;
-          const next = new Map(prev);
-          next.set(key, { ...existing, lastActive: event.lastActive });
-          return next;
-        });
+        const map = runMapRef.current;
+        if (map.has(key)) {
+          setRunMap((prev) => {
+            const existing = prev.get(key);
+            if (!existing) return prev;
+            const next = new Map(prev);
+            next.set(key, {
+              ...existing,
+              lastActive: event.lastActive,
+              ...(event.type === "heartbeat-update"
+                ? { activeSubagentCount: event.activeSubagentCount }
+                : {}),
+            });
+            return next;
+          });
+          return;
+        }
+        for (const run of map.values()) {
+          if (run.userId === event.userId && run.runId === event.runId) {
+            setRefetchTick((t) => t + 1);
+            return;
+          }
+        }
       };
 
       socket.on(room, handler);

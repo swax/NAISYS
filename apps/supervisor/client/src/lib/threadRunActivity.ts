@@ -51,6 +51,9 @@ export function buildThreadRunActivity(
   const events: RunEvent[] = [];
   for (const run of runs) {
     if (!run.username) continue;
+    // collapseCluster keeps the latest event per user — letting a subagent
+    // stop in would surface as the parent stopping.
+    if (run.subagentId != null) continue;
 
     const startMs = new Date(run.createdAt).getTime();
     if (startMs >= oldestMsgTime) {

@@ -70,12 +70,26 @@ export function createHubHeartbeatService(
       ...new Set(parsed.activeSessions.map((s) => s.userId)),
     ];
 
-    // Update in-memory per-host active agent IDs
+    // Memory before DB: supervisor online badges read this map live, so a
+    // slow SQLite write shouldn't make heartbeats look stale.
     hostActiveAgents.set(hostId, activeUserIds);
+    const now = new Date().toISOString();
+    const sessionMap = new Map<string, ActiveSessionInfo>();
+    for (const session of parsed.activeSessions) {
+      const subagentId = session.subagentId ?? 0;
+      sessionMap.set(sessionKey(session.userId, subagentId), {
+        userId: session.userId,
+        subagentId: subagentId === 0 ? null : subagentId,
+        runId: session.runId,
+        sessionId: session.sessionId,
+        lastActive: now,
+        paused: session.paused,
+        state: session.state,
+      });
+    }
+    hostActiveSessions.set(hostId, sessionMap);
 
     try {
-      const now = new Date().toISOString();
-
       // Update host last_active
       await hubDb.hosts.updateMany({
         where: { id: hostId },
@@ -93,19 +107,6 @@ export function createHubHeartbeatService(
       // Bump run_session.last_active for each active session so the run-online
       // badge stays lit even during quiet periods with no log writes. The
       // aggregate SESSION_HEARTBEAT broadcast runs on its own interval below.
-      const sessionMap = new Map<string, ActiveSessionInfo>();
-      for (const session of parsed.activeSessions) {
-        const subagentId = session.subagentId ?? 0;
-        sessionMap.set(sessionKey(session.userId, subagentId), {
-          userId: session.userId,
-          subagentId: subagentId === 0 ? null : subagentId,
-          runId: session.runId,
-          sessionId: session.sessionId,
-          lastActive: now,
-          paused: session.paused,
-          state: session.state,
-        });
-      }
       if (parsed.activeSessions.length > 0) {
         await hubDb.run_session.updateMany({
           where: {
@@ -119,7 +120,6 @@ export function createHubHeartbeatService(
           data: { last_active: now },
         });
       }
-      hostActiveSessions.set(hostId, sessionMap);
 
       // Self-heal: register each plaintext with the redactor (idempotent),
       // then mint + push a fresh key if the hash is missing or mismatched.

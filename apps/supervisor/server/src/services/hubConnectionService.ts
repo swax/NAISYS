@@ -33,6 +33,7 @@ import {
   emitHubConnectionStatus,
   markAgentStarted,
   markAgentStopped,
+  updateActiveSubagentCount,
   updateAgentsStatus,
   updateHostsStatus,
   updatePausedAgents,
@@ -251,6 +252,25 @@ export function initHubConnection(hubUrl: string) {
 
     const browserIO = getIO();
     const pausedUserIds: number[] = [];
+    const countByRunKey = new Map<
+      string,
+      { userId: number; runId: number; count: number }
+    >();
+    for (const update of parsed.data.updates) {
+      const key = `${update.userId}-${update.runId}`;
+      const entry =
+        countByRunKey.get(key) ??
+        { userId: update.userId, runId: update.runId, count: 0 };
+      if (update.subagentId != null && update.subagentId !== 0) {
+        entry.count += 1;
+      }
+      countByRunKey.set(key, entry);
+    }
+
+    for (const entry of countByRunKey.values()) {
+      updateActiveSubagentCount(entry.userId, entry.runId, entry.count);
+    }
+
     for (const update of parsed.data.updates) {
       // Only parent sessions affect the agent-level paused indicator —
       // a paused subagent doesn't pause its parent's command loop.
@@ -260,7 +280,12 @@ export function initHubConnection(hubUrl: string) {
       const username = resolveUsername(update.userId);
       if (!username) continue;
       const room = `runs:${username}`;
-      browserIO.to(room).emit(room, { type: "heartbeat-update", ...update });
+      browserIO.to(room).emit(room, {
+        type: "heartbeat-update",
+        ...update,
+        activeSubagentCount:
+          countByRunKey.get(`${update.userId}-${update.runId}`)?.count ?? 0,
+      });
     }
     updatePausedAgents(pausedUserIds);
   });

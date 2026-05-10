@@ -16,6 +16,10 @@ const agentNotifications = new Map<
   number,
   { latestLogId: number; latestMailId: number }
 >();
+const activeSubagentCounts = new Map<
+  string,
+  { userId: number; runId: number; count: number }
+>();
 
 interface HostState {
   online: boolean;
@@ -26,6 +30,8 @@ interface HostState {
 const hostStates = new Map<number, HostState>();
 
 const agentHostAssignments = new Map<number, number[]>();
+
+const parentRunKey = (userId: number, runId: number) => `${userId}-${runId}`;
 
 function broadcast<T>(room: string, event: T) {
   try {
@@ -49,11 +55,21 @@ export function updateAgentsStatus(
   hostActiveAgents: Record<string, number[]>,
   notifications?: Record<string, { latestLogId: number; latestMailId: number }>,
 ): void {
-  activeAgentIds.clear();
+  const nextActiveAgentIds = new Set<number>();
   for (const userIds of Object.values(hostActiveAgents)) {
     for (const id of userIds) {
-      activeAgentIds.add(id);
+      nextActiveAgentIds.add(id);
     }
+  }
+
+  for (const [key, entry] of activeSubagentCounts) {
+    if (nextActiveAgentIds.has(entry.userId)) continue;
+    activeSubagentCounts.delete(key);
+  }
+
+  activeAgentIds.clear();
+  for (const id of nextActiveAgentIds) {
+    activeAgentIds.add(id);
   }
 
   if (notifications) {
@@ -113,6 +129,9 @@ export function markAgentStarted(userId: number): void {
 export function markAgentStopped(userId: number): void {
   activeAgentIds.delete(userId);
   pausedAgentIds.delete(userId);
+  for (const [key, entry] of activeSubagentCounts) {
+    if (entry.userId === userId) activeSubagentCounts.delete(key);
+  }
   broadcastAgentStatus(getAgentSnapshot());
 }
 
@@ -129,6 +148,19 @@ export function updatePausedAgents(userIds: number[]): void {
   pausedAgentIds.clear();
   for (const id of next) pausedAgentIds.add(id);
   broadcastAgentStatus(getAgentSnapshot());
+}
+
+export function updateActiveSubagentCount(
+  userId: number,
+  runId: number,
+  count: number,
+): void {
+  const key = parentRunKey(userId, runId);
+  if (count > 0) {
+    activeSubagentCounts.set(key, { userId, runId, count });
+  } else {
+    activeSubagentCounts.delete(key);
+  }
 }
 
 export function emitAgentsListChanged(): void {
@@ -212,6 +244,10 @@ export function getAgentStatus(agentId: number): AgentStatus {
     isHostOnline: (hid) => connectedHostIds.has(hid),
     hasNonRestrictedOnlineHost: hasNonRestrictedOnlineHost(),
   });
+}
+
+export function getActiveSubagentCount(userId: number, runId: number): number {
+  return activeSubagentCounts.get(parentRunKey(userId, runId))?.count ?? 0;
 }
 
 export function isHostConnected(hostId: number): boolean {

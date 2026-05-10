@@ -8,6 +8,7 @@ import type {
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 
 type CachedRunSession = BaseRunSession & {
+  activeSubagentCount?: number;
   paused?: boolean;
   state?: CommandLoopState;
 };
@@ -41,6 +42,7 @@ type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
 type RunsNewSession = SessionPush["session"] & { type: "new-session" };
 type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
   type: "heartbeat-update";
+  activeSubagentCount: number;
 };
 type RunsEvent =
   | RunsLogUpdate
@@ -131,7 +133,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       const key = runKey(event);
 
       if (event.type === "new-session") {
-        // Add new session as a full RunSession
+        // Heartbeats carry activeSubagentCount; brand-new sessions start at 0.
         const newRun: CachedRunSession = {
           userId: event.userId,
           runId: event.runId,
@@ -143,6 +145,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
           latestLogId: event.latestLogId,
           totalLines: event.totalLines,
           totalCost: event.totalCost,
+          activeSubagentCount: 0,
         };
         mergeRuns([newRun]);
         return;
@@ -170,6 +173,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
         const updated: CachedRunSession = {
           ...existing,
           lastActive: event.lastActive,
+          activeSubagentCount: event.activeSubagentCount,
           paused: event.paused,
           state: event.state,
         };

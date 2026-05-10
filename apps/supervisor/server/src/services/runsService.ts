@@ -15,6 +15,7 @@ import {
 import { hubDb } from "../database/hubDb.js";
 import { attachmentUrl } from "../hateoas.js";
 import { timestampCursorWhere } from "../paging.js";
+import { getActiveSubagentCount } from "./agentHostStatusService.js";
 
 function parseHostEnvironment(raw: string | null): HostEnvironment | null {
   if (!raw) return null;
@@ -126,6 +127,13 @@ export interface RunsFilter {
   hostName?: string;
 }
 
+function activeSubagentCountFor(session: {
+  user_id: number;
+  run_id: number;
+}) {
+  return getActiveSubagentCount(session.user_id, session.run_id);
+}
+
 export async function getRunsData(
   filter: RunsFilter,
   updatedSince?: string,
@@ -182,6 +190,7 @@ export async function getRunsData(
       latestLogId: session.latest_log_id,
       totalLines: session.total_lines,
       totalCost: session.total_cost,
+      activeSubagentCount: activeSubagentCountFor(session),
       hostName: session.host?.name ?? null,
       hostEnvironment: parseHostEnvironment(session.host?.environment ?? null),
     };
@@ -247,6 +256,7 @@ export async function getMessageThreadRuns(
     latestLogId: session.latest_log_id,
     totalLines: session.total_lines,
     totalCost: session.total_cost,
+    activeSubagentCount: activeSubagentCountFor(session),
     hostName: session.host?.name ?? null,
     hostEnvironment: parseHostEnvironment(session.host?.environment ?? null),
   }));

@@ -19,6 +19,7 @@ import {
   IconChecks,
   IconChevronDown,
   IconFile,
+  IconHierarchy2,
 } from "@tabler/icons-react";
 import React, {
   useCallback,
@@ -237,13 +238,46 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     [messages, runCommands, hasMore],
   );
 
+  // Flips immediately on stop/pause/disconnect; lastActive takes ~15s to age
+  // out, which would leave the spinner pulsing after the agent stopped.
+  const activeAgentUsernames = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of agents) {
+      if (a.status === "active") set.add(a.name);
+    }
+    return set;
+  }, [agents]);
+
   const onlineUsernames = useMemo(() => {
     const set = new Set<string>();
     for (const r of runs) {
-      if (r.isOnline && r.username) set.add(r.username);
+      if (!r.isOnline || !r.username) continue;
+      if (!activeAgentUsernames.has(r.username)) continue;
+      set.add(r.username);
     }
     return set;
-  }, [runs]);
+  }, [runs, activeAgentUsernames]);
+
+  // Server stamps the live count on parent rows; iterating subagent rows here
+  // would double-count. isOnline gate matches the command-spinner rule: a
+  // missed zero-count heartbeat can leave activeSubagentCount stale, so once
+  // lastActive ages out we stop trusting the count.
+  const activeSubagentCountByUsername = useMemo(() => {
+    const map = new Map<string, number>();
+    const seenParentRuns = new Set<string>();
+    for (const r of runs) {
+      const count = r.activeSubagentCount ?? 0;
+      if (count === 0 || !r.username) continue;
+      if (!r.isOnline) continue;
+      if (!activeAgentUsernames.has(r.username)) continue;
+      if (r.subagentId != null && r.subagentId !== 0) continue;
+      const parentKey = `${r.userId}-${r.runId}`;
+      if (seenParentRuns.has(parentKey)) continue;
+      seenParentRuns.add(parentKey);
+      map.set(r.username, (map.get(r.username) ?? 0) + count);
+    }
+    return map;
+  }, [runs, activeAgentUsernames]);
 
   // Latest activity by any user that lives outside the message bubbles. Used
   // to decide whether a footer on the last message is the true trailing edge
@@ -470,6 +504,33 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     backgroundColor: "var(--mantine-color-dark-5)" as const,
   };
 
+  const renderActiveSubagentBadge = (username: string, isOwn: boolean) => {
+    const count = activeSubagentCountByUsername.get(username) ?? 0;
+    if (count === 0) return null;
+    // Icon stroke takes a literal color, not a Mantine palette token —
+    // "magenta.4" works on Text but the icon would render invisible.
+    const color = isOwn ? "rgba(255,255,255,0.85)" : "magenta";
+    return (
+      <Group gap={4} wrap="nowrap" mb={4} style={{ alignSelf: "flex-start" }}>
+        <IconHierarchy2
+          size={14}
+          color={color}
+          style={{
+            animation: "commandIconPulse 1.2s ease-in-out infinite",
+            flexShrink: 0,
+          }}
+        />
+        <Text
+          size="xs"
+          c={isOwn ? "rgba(255,255,255,0.85)" : "magenta.4"}
+          fw={500}
+        >
+          {count} subagent{count === 1 ? "" : "s"} running
+        </Text>
+      </Group>
+    );
+  };
+
   // Bubble shown for command activity that has no chat message of its own.
   // active: trailing + agent online (blue border + spinner)
   // inactive: trailing + agent stopped (dashed + "(no reply)")
@@ -515,6 +576,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
               {title ? ` (${title})` : ""}
             </Text>
           )}
+          {kind === "active" && renderActiveSubagentBadge(username, isOwn)}
           {renderCommandList(cmds, expansionKey, isOwn, showSpinner, true)}
           {showNoReply && (
             <Text
@@ -529,6 +591,40 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
       </Box>
     );
   };
+
+  const lastMessage = messages[messages.length - 1] ?? null;
+  const lastMessageUsername = lastMessage?.fromUsername ?? null;
+  const lastMessageFooterCmds = lastMessage
+    ? (footerCommandBuckets.get(lastMessage.id) ?? [])
+    : [];
+  const lastMessageFooterLastTime =
+    lastMessageFooterCmds.length > 0
+      ? new Date(
+          lastMessageFooterCmds[lastMessageFooterCmds.length - 1].createdAt,
+        ).getTime()
+      : 0;
+  // Whether the last message's footer will surface the subagent badge. When
+  // it can't (another user has later trailing activity), the last-message
+  // sender falls back to a trailing subagent-only phantom so the count is
+  // still visible somewhere.
+  const lastMessageFooterShowsSubagentBadge =
+    lastMessageUsername !== null &&
+    (activeSubagentCountByUsername.get(lastMessageUsername) ?? 0) > 0 &&
+    onlineUsernames.has(lastMessageUsername) &&
+    (lastMessageFooterCmds.length > 0
+      ? lastMessageFooterLastTime >= latestTrailingCommandTime
+      : latestTrailingCommandTime === 0);
+
+  const trailingSubagentOnlyUsernames = Array.from(
+    activeSubagentCountByUsername.keys(),
+  )
+    .filter((username) => !trailingCommands.has(username))
+    .filter(
+      (username) =>
+        username !== lastMessageUsername ||
+        !lastMessageFooterShowsSubagentBadge,
+    )
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <ScrollArea
@@ -573,6 +669,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
               msg.id === lastMessageId &&
               onlineUsernames.has(msg.fromUsername) &&
               footerLastTime >= latestTrailingCommandTime;
+            const showFooterSubagentBadge =
+              msg.id === lastMessageId && lastMessageFooterShowsSubagentBadge;
+            const showFooterActivity =
+              footerCmds.length > 0 || showFooterSubagentBadge;
 
             return (
               <React.Fragment key={msg.id}>
@@ -694,8 +794,10 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                         })}
                       </Stack>
                     )}
-                    {footerCmds.length > 0 && (
+                    {showFooterActivity && (
                       <Box mt={4}>
+                        {showFooterSubagentBadge &&
+                          renderActiveSubagentBadge(msg.fromUsername, isOwn)}
                         {renderCommandList(
                           footerCmds,
                           `${msg.id}-footer`,
@@ -758,6 +860,14 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 onlineUsernames.has(username) ? "active" : "inactive",
               ),
             )}
+          {trailingSubagentOnlyUsernames.map((username) =>
+            renderPhantomBubble(
+              username,
+              [],
+              `phantom-subagents-${username}`,
+              "active",
+            ),
+          )}
           {trailingActivity && (
             <RunActivityRow
               activity={trailingActivity}
