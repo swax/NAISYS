@@ -6,6 +6,7 @@ import { NextCommandAction } from "../../command/commandRegistry.js";
 import type { DesktopService } from "../../computer-use/desktop.js";
 import type { LLMService } from "../../llm/llmService.js";
 import type { ModelService } from "../../services/modelService.js";
+import type { StartupAttachmentService } from "../../services/startupAttachmentService.js";
 import { createCommandLoopState } from "../../utils/commandLoopState.js";
 import { createInputMode } from "../../utils/inputMode.js";
 import { createPromptNotificationService } from "../../utils/promptNotificationService.js";
@@ -119,6 +120,10 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
     modelService,
     desktopService,
     createCommandLoopState(),
+    {
+      stage: vi.fn(),
+      getSummary: vi.fn(() => undefined),
+    } as unknown as StartupAttachmentService,
   );
 
   return { commandLoop, mocks };

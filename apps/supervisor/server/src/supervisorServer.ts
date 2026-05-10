@@ -60,6 +60,7 @@ import { initSupervisorDb } from "./database/supervisorDb.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
 import { refreshUserLookup } from "./services/agentService.js";
+import { startAttachmentGc } from "./services/attachmentGcService.js";
 import { initBrowserSocket } from "./services/browserSocketService.js";
 import {
   cleanupHubConnection,
@@ -175,7 +176,11 @@ export const supervisorPlugin: FastifyPluginAsync<
   if (hubUrl) {
     initHubConnection(hubUrl);
   }
+
+  const attachmentGc = startAttachmentGc();
+
   fastify.addHook("onClose", (_instance, done) => {
+    attachmentGc.stop();
     cleanupHubConnection();
     done();
   });

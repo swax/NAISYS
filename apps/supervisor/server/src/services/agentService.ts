@@ -366,6 +366,8 @@ export async function deleteAgent(id: number): Promise<void> {
     throw new Error(`Agent with ID ${id} not found`);
   }
 
+  // Uploads stay (uploaded_by SET NULL) and are reaped by attachmentGcService
+  // once their last link is gone — no per-attachment cleanup needed here.
   await hubDb.$transaction(async (hubTx) => {
     await hubTx.context_log.deleteMany({ where: { user_id: id } });
     await hubTx.costs.deleteMany({ where: { user_id: id } });

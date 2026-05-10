@@ -8,6 +8,19 @@ export const AgentStartInboundSchema = z.object({
 });
 export type AgentStartInbound = z.infer<typeof AgentStartInboundSchema>;
 
+/** Files for the host to materialize into the agent's home folder before
+ *  the shell starts. fileHash lets the host skip ones already on disk. */
+export const StartupAttachmentDispatchSchema = z.object({
+  publicId: z.string(),
+  filename: z.string(),
+  fileSize: z.number(),
+  fileHash: z.string(),
+  path: z.string(),
+});
+export type StartupAttachmentDispatch = z.infer<
+  typeof StartupAttachmentDispatchSchema
+>;
+
 /** Hub → target host. Runtime key is minted up front so the agent's
  *  authenticated from its first command; RUNTIME_KEY_REISSUE handles
  *  later hash mismatches. runId/sessionId are pre-allocated by the hub so
@@ -19,6 +32,7 @@ export const AgentStartDispatchSchema = z.object({
   runId: z.number(),
   sessionId: z.number(),
   sourceHostId: z.number().optional(),
+  startupAttachments: z.array(StartupAttachmentDispatchSchema).optional(),
 });
 export type AgentStartDispatch = z.infer<typeof AgentStartDispatchSchema>;
 

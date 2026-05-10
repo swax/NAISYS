@@ -61,7 +61,7 @@ export function createHeartbeatService(
       if (subagentId === undefined && !seenKeyUserIds.has(userId)) {
         runtimeApiKeys.push({
           userId,
-          runtimeApiKey: a.getRuntimeApiKey(),
+          runtimeApiKey: a.naisysApiService.getKey(),
         });
         seenKeyUserIds.add(userId);
       }

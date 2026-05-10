@@ -134,6 +134,31 @@ export function createHubAgentService(
     const startUserId = payload.startUserId;
     const runtimeApiKey = await issueRuntimeApiKey(startUserId);
 
+    // Fetch before run_session.create — a query failure here would otherwise
+    // leak the placeholder. Hashes ship so the host can skip already-on-disk files.
+    const startupAttachmentRows =
+      await hubDb.user_startup_attachments.findMany({
+        where: { user_id: startUserId },
+        orderBy: { path: "asc" },
+        include: {
+          attachment: {
+            select: {
+              public_id: true,
+              filename: true,
+              file_size: true,
+              file_hash: true,
+            },
+          },
+        },
+      });
+    const startupAttachments = startupAttachmentRows.map((r) => ({
+      publicId: r.attachment.public_id,
+      filename: r.attachment.filename,
+      fileSize: r.attachment.file_size,
+      fileHash: r.attachment.file_hash,
+      path: r.path,
+    }));
+
     const lastRun = await hubDb.run_session.findFirst({
       select: { run_id: true },
       orderBy: { run_id: "desc" },
@@ -172,7 +197,13 @@ export function createHubAgentService(
     const sent = naisysServer.sendMessage(
       bestHostId,
       HubEvents.AGENT_START,
-      { ...payload, runtimeApiKey, runId, sessionId },
+      {
+        ...payload,
+        runtimeApiKey,
+        runId,
+        sessionId,
+        ...(startupAttachments.length > 0 ? { startupAttachments } : {}),
+      },
       async (response: AgentStartResponse) => {
         if (response.success && response.modelName) {
           const modelName = response.modelName;

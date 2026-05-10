@@ -23,6 +23,7 @@ import type { MailService } from "../mail/mail.js";
 import type { LogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
 import type { RunService } from "../services/runService.js";
+import type { StartupAttachmentService } from "../services/startupAttachmentService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
 import { createEscKeyListener } from "../utils/escKeyListener.js";
 import type { InputModeService } from "../utils/inputMode.js";
@@ -69,6 +70,7 @@ export function createCommandLoop(
   modelService: ModelService,
   desktopService: DesktopService,
   commandLoopState: CommandLoopStateService,
+  startupAttachmentService: StartupAttachmentService,
 ) {
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current timed wait so preemptive compact can calculate remaining time */
@@ -86,6 +88,11 @@ export function createCommandLoop(
     output.commentAndLog(
       `Agent configured to use ${agentConfig().shellModel} model`,
     );
+
+    const startupSummary = startupAttachmentService.getSummary();
+    if (startupSummary) {
+      output.commentAndLog(startupSummary);
+    }
 
     // Show System Message
     output.commentAndLog("System Message:");

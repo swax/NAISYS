@@ -27,6 +27,9 @@ export function validateAndNormalizePath(rawPath: string): string {
   if (segments.some((s) => s === "..")) {
     throw new Error("Path cannot contain '..'");
   }
+  if (segments.some((s) => s === ".")) {
+    throw new Error("Path cannot contain '.' segments");
+  }
   if (segments.some((s) => s === "")) {
     throw new Error("Path cannot contain empty segments");
   }
@@ -124,6 +127,7 @@ export async function deleteStartupAttachment(
   userId: number,
   path: string,
 ): Promise<void> {
+  // attachmentGcService reaps the underlying row + file once unreferenced.
   await hubDb.user_startup_attachments.delete({
     where: { user_id_path: { user_id: userId, path } },
   });

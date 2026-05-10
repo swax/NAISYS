@@ -1,4 +1,5 @@
 import { ADMIN_USERNAME, sleep } from "@naisys/common";
+import type { StartupAttachmentDispatch } from "@naisys/hub-protocol";
 import {
   AgentPeekRequestSchema,
   AgentRunCommandRequestSchema,
@@ -64,6 +65,7 @@ export class AgentManager {
             undefined,
             undefined,
             { runId: parsed.runId, sessionId: parsed.sessionId },
+            parsed.startupAttachments,
           );
 
           ack({
@@ -213,7 +215,7 @@ export class AgentManager {
           (a) => a.agentUserId === parsed.userId,
         );
         if (!agent) return;
-        agent.rotateApiKey(parsed.runtimeApiKey);
+        agent.naisysApiService.rotateKey(parsed.runtimeApiKey);
       });
     }
   }
@@ -238,6 +240,7 @@ export class AgentManager {
     onStop?: (reason: string) => void,
     subagentContext?: SubagentContext,
     preallocated?: { runId: number; sessionId: number },
+    startupAttachments?: StartupAttachmentDispatch[],
   ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
@@ -259,14 +262,9 @@ export class AgentManager {
       this.desktopClaimService,
       subagentContext,
       preallocated,
+      runtimeApiKey,
+      startupAttachments,
     );
-
-    // Apply before push so the immediate onHeartbeatNeeded fires with the
-    // key already in runtimeKeyRef — otherwise the heartbeat sends an
-    // empty claim and the hub mints a redundant key.
-    if (runtimeApiKey) {
-      agent.rotateApiKey(runtimeApiKey);
-    }
 
     this.runningAgents.push(agent);
     this.onHeartbeatNeeded?.();

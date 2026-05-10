@@ -1,6 +1,7 @@
 import type { CommandLoopState } from "@naisys/hub-protocol";
 
 import type { CostTracker } from "../llm/costTracker.js";
+import type { NaisysApiService } from "../services/naisysApiService.js";
 
 /** When set, the agent runs as a local-only ephemeral child of the parent. */
 export interface SubagentContext {
@@ -38,7 +39,7 @@ export interface IAgentManager {
     isPaused: () => boolean;
     setPaused: (paused: boolean) => boolean;
     getState: () => CommandLoopState;
-    getRuntimeApiKey: () => string | undefined;
+    naisysApiService: NaisysApiService;
   }>;
   getBufferLines: (agentUserId: number) => string[];
   setActiveConsoleAgent: (agentUserId: number) => void;

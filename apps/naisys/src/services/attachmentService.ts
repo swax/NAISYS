@@ -5,6 +5,7 @@ import https from "https";
 import path from "path";
 
 import type { HubClient } from "../hub/hubClient.js";
+import type { NaisysApiService } from "./naisysApiService.js";
 
 /**
  * Upload a file to the hub and return the attachment ID.
@@ -71,7 +72,7 @@ function uploadFileToHub(
  */
 export function createAttachmentService(
   hubClient: HubClient | undefined,
-  getRuntimeApiKey: () => string | undefined,
+  naisysApiService: NaisysApiService,
 ) {
   /**
    * Upload a file to the hub and return the attachment ID.
@@ -84,7 +85,7 @@ export function createAttachmentService(
       throw `File not found: ${filepath}`;
     }
 
-    const runtimeApiKey = getRuntimeApiKey();
+    const runtimeApiKey = naisysApiService.getKey();
     if (!runtimeApiKey) throw "No API key configured for this user.";
 
     return uploadFileToHub(

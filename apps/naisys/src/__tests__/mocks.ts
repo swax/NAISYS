@@ -96,7 +96,6 @@ export function createMockShellWrapper() {
     isSecureContinuation: vi.fn(() => false),
     getCommandElapsedTimeString: vi.fn(() => ""),
     getCurrentCommandName: vi.fn(() => ""),
-    applyRuntimeApiKey: vi.fn(),
     commands: [],
   };
 
@@ -333,6 +332,7 @@ export function createMockAgentConfig(): AgentConfig {
     handleCommand: vi.fn(() => ""),
     reloadAgentConfig: vi.fn(async () => {}),
     updateConfigField: vi.fn(async () => {}),
+    getHomeDir: vi.fn(() => undefined),
     agentConfig: () => ({
       username: "test",
       title: "Test Agent",

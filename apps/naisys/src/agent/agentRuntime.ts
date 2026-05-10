@@ -1,3 +1,5 @@
+import type { StartupAttachmentDispatch } from "@naisys/hub-protocol";
+
 import { commentCmd } from "../command/commandDefs.js";
 import { createCommandHandler } from "../command/commandHandler.js";
 import { createCommandLoop } from "../command/commandLoop.js";
@@ -37,8 +39,10 @@ import { createAttachmentService } from "../services/attachmentService.js";
 import type { HostService } from "../services/hostService.js";
 import { createLogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
+import { createNaisysApiService } from "../services/naisysApiService.js";
 import { createRunService } from "../services/runService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
+import { createStartupAttachmentService } from "../services/startupAttachmentService.js";
 import { createCommandLoopState } from "../utils/commandLoopState.js";
 import { createInputMode } from "../utils/inputMode.js";
 import { createOutputService } from "../utils/output.js";
@@ -65,6 +69,8 @@ export async function createAgentRuntime(
   desktopClaimService: DesktopClaimService,
   subagentContext?: SubagentContext,
   preallocated?: { runId: number; sessionId: number },
+  runtimeApiKey?: string,
+  startupAttachments?: StartupAttachmentDispatch[],
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
   // local-mode branch. RunService keeps the parent's hubClient (as
@@ -86,6 +92,18 @@ export async function createAgentRuntime(
   // Agent-local foundation: config, run identity, attachments, logs, output.
   const agentConfig = createAgentConfig(localUserId, globalConfig, userService);
 
+  // Built before staging so the seed key is available to stage().
+  const naisysApiService = createNaisysApiService(runtimeApiKey);
+
+  const startupAttachmentService = createStartupAttachmentService(
+    hubClient,
+    agentConfig,
+    naisysApiService,
+  );
+  if (startupAttachments?.length) {
+    await startupAttachmentService.stage(startupAttachments);
+  }
+
   const runService = await createRunService(
     agentConfig,
     sessionHubClient,
@@ -93,13 +111,7 @@ export async function createAgentRuntime(
     subagentContext,
     preallocated,
   );
-  // Shared ref so attachmentService (built before shellWrapper) and
-  // shellWrapper read the same current key.
-  const runtimeKeyRef: { current: string | undefined } = { current: undefined };
-  const attachmentService = createAttachmentService(
-    hubClient,
-    () => runtimeKeyRef.current,
-  );
+  const attachmentService = createAttachmentService(hubClient, naisysApiService);
   const logService = createLogService(
     hubLogBuffer,
     runService,
@@ -115,7 +127,7 @@ export async function createAgentRuntime(
     globalConfig,
     agentConfig,
     output,
-    runtimeKeyRef,
+    naisysApiService,
     sessionHubClient?.getApiUrlBase(),
   );
   const workspaces = createWorkspacesFeature(shellWrapper);
@@ -379,6 +391,7 @@ export async function createAgentRuntime(
     modelService,
     desktopService,
     commandLoopState,
+    startupAttachmentService,
   );
 
   const abortController = new AbortController();
@@ -397,8 +410,7 @@ export async function createAgentRuntime(
     getState: commandLoopState.getState,
     output,
     subagentService,
-    getRuntimeApiKey: () => runtimeKeyRef.current,
-    rotateApiKey: shellWrapper.applyRuntimeApiKey,
+    naisysApiService,
     runCommandLoop: async () => {
       try {
         return await commandLoop.run(abortController.signal);

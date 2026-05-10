@@ -10,6 +10,10 @@ import treeKill from "tree-kill";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { GlobalConfig } from "../globalConfig.js";
+import {
+  createNaisysApiService,
+  type NaisysApiService,
+} from "../services/naisysApiService.js";
 import * as pathService from "../services/pathService.js";
 import { getPlatformConfig } from "../services/shellPlatform.js";
 import type { OutputService } from "../utils/output.js";
@@ -34,9 +38,9 @@ const OUTPUT_TAIL_MAX = 2_000_000;
 
 export function createShellWrapper(
   { globalConfig }: GlobalConfig,
-  { agentConfig }: AgentConfig,
+  { agentConfig, getHomeDir }: AgentConfig,
   output: OutputService,
-  runtimeKeyRef: { current: string | undefined } = { current: undefined },
+  naisysApiService: NaisysApiService = createNaisysApiService(),
   apiUrlBase: string | undefined = undefined,
 ) {
   let _process: ChildProcessWithoutNullStreams | undefined;
@@ -90,14 +94,27 @@ export function createShellWrapper(
    */
   function getCleanEnv() {
     const cleanEnv = { ...process.env, ...globalConfig().shellVariableMap };
-    if (runtimeKeyRef.current) {
-      cleanEnv.NAISYS_API_KEY = runtimeKeyRef.current;
+    const currentKey = naisysApiService.getKey();
+    if (currentKey) {
+      cleanEnv.NAISYS_API_KEY = currentKey;
     }
     if (apiUrlBase) {
       cleanEnv.NAISYS_API_URL_BASE = apiUrlBase;
     }
     return cleanEnv;
   }
+
+  // Queues if a command is in flight — see _pendingRuntimeApiKey for why.
+  naisysApiService.onChange((newKey) => {
+    if (!_process || !_process.stdin.writable) return;
+    if (_resolveCurrentCommand || _wrapperSuspended) {
+      _pendingRuntimeApiKey = newKey;
+      return;
+    }
+    const cmd = platformConfig.exportEnvCommand("NAISYS_API_KEY", newKey);
+    _process.stdin.write(`${cmd}\n`);
+    _pendingRuntimeApiKey = undefined;
+  });
 
   async function ensureOpen() {
     if (_process) {
@@ -145,15 +162,8 @@ export function createShellWrapper(
         `NEW ${platformConfig.shellName.toUpperCase()} SHELL OPENED. PID: ${pid}`,
       );
 
-      // Set initial working directory based on mode
-      const naisysFolder = process.env.NAISYS_FOLDER;
-      if (naisysFolder) {
-        // Hub mode: give each agent their own home directory
-        const homeDir = path.join(
-          naisysFolder,
-          "users",
-          agentConfig().username,
-        );
+      const homeDir = getHomeDir();
+      if (homeDir) {
         errorIfNotEmpty(
           await executeCommand(platformConfig.mkdirCommand(homeDir)),
         );
@@ -731,21 +741,6 @@ ${command.trim()}`;
     return _currentCommandText?.split(/\s/)[0] ?? "";
   }
 
-  /** Update the captured key (for next respawn) and push the export into the
-   *  running shell's stdin so child processes pick it up. Queues until idle
-   *  if a command is in flight — see _pendingRuntimeApiKey for why. */
-  function applyRuntimeApiKey(newKey: string) {
-    runtimeKeyRef.current = newKey;
-    if (!_process || !_process.stdin.writable) return;
-    if (_resolveCurrentCommand || _wrapperSuspended) {
-      _pendingRuntimeApiKey = newKey;
-      return;
-    }
-    const cmd = platformConfig.exportEnvCommand("NAISYS_API_KEY", newKey);
-    _process.stdin.write(`${cmd}\n`);
-    _pendingRuntimeApiKey = undefined;
-  }
-
   // ns-wait/ns-kill only do real work while a shell command is suspended; out-of-context
   // invocations get a friendly explanation instead of falling through to bash.
   const nsWaitCommand: RegistrableCommand = {
@@ -781,7 +776,6 @@ ${command.trim()}`;
     isSecureContinuation,
     getCommandElapsedTimeString,
     getCurrentCommandName,
-    applyRuntimeApiKey,
     commands: [nsWaitCommand, nsKillCommand] as RegistrableCommand[],
   };
 }

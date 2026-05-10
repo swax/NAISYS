@@ -1,5 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import { resolveTemplateString, sanitizeSpendLimit } from "@naisys/common";
+import path from "path";
 import table from "text-table";
 
 import { agentConfigCmd } from "../command/commandDefs.js";
@@ -145,6 +146,14 @@ export function createAgentConfig(
     handleCommand,
   };
 
+  // Hub mode only — returns undefined in local mode where the shell just
+  // inherits the parent process's cwd.
+  function getHomeDir(): string | undefined {
+    const naisysFolder = process.env.NAISYS_FOLDER;
+    if (!naisysFolder) return undefined;
+    return path.join(naisysFolder, "users", fullAgentConfig.username);
+  }
+
   return {
     ...registrableCommand,
     agentConfig: () => fullAgentConfig,
@@ -152,6 +161,7 @@ export function createAgentConfig(
       fullAgentConfig = loadConfig();
     },
     updateConfigField,
+    getHomeDir,
   };
 }
 

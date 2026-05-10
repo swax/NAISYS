@@ -501,7 +501,8 @@ export default function adminRoutes(
           fileSize: r.file_size,
           fileHash: r.file_hash,
           purpose: r.purpose,
-          uploadedBy: r.uploader.username,
+          // null between user deletion and the next attachmentGcService sweep.
+          uploadedBy: r.uploader?.username ?? "(deleted)",
           createdAt: r.created_at.toISOString(),
         })),
         total,

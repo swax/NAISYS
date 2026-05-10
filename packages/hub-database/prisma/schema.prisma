@@ -144,9 +144,9 @@ model attachments {
   file_size                 Int
   file_hash                 String
   purpose                   AttachmentPurpose
-  uploaded_by               Int
+  uploaded_by               Int?
   created_at                DateTime                    @default(now())
-  uploader                  users                       @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploader                  users?                      @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
   mail_attachments          mail_attachments[]
   context_logs              context_log[]
   user_startup_attachments user_startup_attachments[]
@@ -158,7 +158,7 @@ model user_startup_attachments {
   path          String
   created_at    DateTime    @default(now())
   user          users       @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  attachment    attachments @relation(fields: [attachment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment    attachments @relation(fields: [attachment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([user_id, path])
   @@index([attachment_id], map: "idx_user_startup_attachments_attachment_id")
@@ -169,7 +169,7 @@ model mail_attachments {
   attachment_id Int
   created_at    DateTime      @default(now())
   message       mail_messages @relation(fields: [message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  attachment    attachments   @relation(fields: [attachment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment    attachments   @relation(fields: [attachment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([message_id, attachment_id])
 }
