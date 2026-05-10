@@ -9,6 +9,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "@vitejs/plugin-react": "^6.0.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.0",
+    "vitest": "^4.1.0",
     "vite-plugin-istanbul": "^8.0.0"
   }
 }

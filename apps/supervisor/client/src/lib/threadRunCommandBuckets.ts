@@ -1,38 +1,57 @@
 import type { ThreadRunCommand } from "../hooks/useThreadRunCommands";
 
+// Polyfill for Array.prototype.findLast (ES2023). The codebase targets ES2022,
+// so the built-in isn't visible to TypeScript.
+function findLast<T>(arr: T[], predicate: (value: T) => boolean): T | undefined {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (predicate(arr[i])) return arr[i];
+  }
+  return undefined;
+}
+
 export interface BucketedRunCommands {
   /**
-   * Commands attached to the next chronological message (by any sender) when
-   * that message is from the command's own user. Render inline inside the
-   * message bubble.
+   * Header bucket — commands rendered at the top of the next same-user
+   * message bubble. Keeps activity grouped with the reply it led up to;
+   * preferred over the footer when both could fit.
    */
   beforeMessage: Map<number, ThreadRunCommand[]>;
   /**
-   * Commands attached to the next chronological message when that message is
-   * from a *different* user. Render as a per-user phantom bubble immediately
-   * before the message — captures activity the user did between two of the
-   * other user's messages, before they replied.
+   * Footer bucket — commands rendered at the bottom of the immediately
+   * preceding same-user message bubble. Absorbs follow-up activity (polling,
+   * idle waits) after a reply so it doesn't spawn its own bubble. Only used
+   * when no header attachment is available.
+   */
+  afterMessage: Map<number, ThreadRunCommand[]>;
+  /**
+   * Phantom bubble inserted before a different-user message, for commands
+   * whose user has no surrounding message of their own to host them.
    * Outer key = message id; inner key = command's username.
    */
   phantomsBeforeMessage: Map<number, Map<string, ThreadRunCommand[]>>;
   /**
-   * Commands with no chronological next message at all. Render as trailing
-   * phantom bubbles after the entire thread.
+   * Trailing phantom bubble after the entire thread, for commands with no
+   * following message and no preceding same-user message — the user has
+   * nothing in the visible thread to attach to.
    */
   trailing: Map<string, ThreadRunCommand[]>;
 }
 
 const EMPTY: BucketedRunCommands = {
   beforeMessage: new Map(),
+  afterMessage: new Map(),
   phantomsBeforeMessage: new Map(),
   trailing: new Map(),
 };
 
 /**
- * Bucket each command by the next message (any sender) at or after its time.
- * Same-user next msg → inline with that bubble. Different-user next msg →
- * phantom-before-msg, surfacing activity the user did before the conversation
- * moved on without them replying. No next msg → trailing phantom.
+ * Place each command into one of four buckets based on the surrounding
+ * messages. Priority order, first match wins:
+ *
+ *   1. Header on the next same-user message (preferred).
+ *   2. Footer on the immediately preceding same-user message.
+ *   3. Phantom before the next message (different user).
+ *   4. Trailing phantom (no following message at all).
  *
  * `hasOlderMessages` indicates that older messages exist outside the loaded
  * window. When true, commands timestamped before the oldest visible message
@@ -57,6 +76,7 @@ export function bucketRunCommandsByMessage(
       : null;
 
   const beforeMessage = new Map<number, ThreadRunCommand[]>();
+  const afterMessage = new Map<number, ThreadRunCommand[]>();
   const phantomsBeforeMessage = new Map<
     number,
     Map<string, ThreadRunCommand[]>
@@ -66,9 +86,33 @@ export function bucketRunCommandsByMessage(
   for (const cmd of commands) {
     const cmdTime = new Date(cmd.createdAt).getTime();
     if (oldestVisibleMs !== null && cmdTime < oldestVisibleMs) continue;
+
     const nextMsg = sortedMsgs.find(
       (m) => new Date(m.createdAt).getTime() >= cmdTime,
     );
+
+    if (nextMsg && nextMsg.fromUsername === cmd.username) {
+      const list = beforeMessage.get(nextMsg.id) ?? [];
+      list.push(cmd);
+      beforeMessage.set(nextMsg.id, list);
+      continue;
+    }
+
+    // Footer requires the *immediately* preceding message to be from this
+    // user. An other-user message in between disqualifies — by then the
+    // conversation has moved on and these commands no longer belong to the
+    // earlier reply.
+    const prevMsg = findLast(
+      sortedMsgs,
+      (m) => new Date(m.createdAt).getTime() < cmdTime,
+    );
+
+    if (prevMsg && prevMsg.fromUsername === cmd.username) {
+      const list = afterMessage.get(prevMsg.id) ?? [];
+      list.push(cmd);
+      afterMessage.set(prevMsg.id, list);
+      continue;
+    }
 
     if (!nextMsg) {
       const list = trailing.get(cmd.username) ?? [];
@@ -77,23 +121,20 @@ export function bucketRunCommandsByMessage(
       continue;
     }
 
-    if (nextMsg.fromUsername === cmd.username) {
-      const list = beforeMessage.get(nextMsg.id) ?? [];
-      list.push(cmd);
-      beforeMessage.set(nextMsg.id, list);
-    } else {
-      let perUser = phantomsBeforeMessage.get(nextMsg.id);
-      if (!perUser) {
-        perUser = new Map();
-        phantomsBeforeMessage.set(nextMsg.id, perUser);
-      }
-      const list = perUser.get(cmd.username) ?? [];
-      list.push(cmd);
-      perUser.set(cmd.username, list);
+    let perUser = phantomsBeforeMessage.get(nextMsg.id);
+    if (!perUser) {
+      perUser = new Map();
+      phantomsBeforeMessage.set(nextMsg.id, perUser);
     }
+    const list = perUser.get(cmd.username) ?? [];
+    list.push(cmd);
+    perUser.set(cmd.username, list);
   }
 
   for (const list of beforeMessage.values()) {
+    list.sort((a, b) => a.logId - b.logId);
+  }
+  for (const list of afterMessage.values()) {
     list.sort((a, b) => a.logId - b.logId);
   }
   for (const perUser of phantomsBeforeMessage.values()) {
@@ -105,5 +146,5 @@ export function bucketRunCommandsByMessage(
     list.sort((a, b) => a.logId - b.logId);
   }
 
-  return { beforeMessage, phantomsBeforeMessage, trailing };
+  return { beforeMessage, afterMessage, phantomsBeforeMessage, trailing };
 }

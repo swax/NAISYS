@@ -97,8 +97,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     lastMessageId: null,
   });
 
-  // Keyed by message id, `phantom-${username}`, or `phantom-before-${msgId}-${username}`.
-  // Absence == collapsed.
+  // Keyed by `${msgId}` (header), `${msgId}-footer`, `phantom-${username}`,
+  // or `phantom-before-${msgId}-${username}`. Absence == collapsed.
   const [expandedBubbles, setExpandedBubbles] = useState<Set<string>>(
     new Set(),
   );
@@ -229,6 +229,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
 
   const {
     beforeMessage: commandBuckets,
+    afterMessage: footerCommandBuckets,
     phantomsBeforeMessage: intercalatedPhantoms,
     trailing: trailingCommands,
   } = useMemo(
@@ -243,6 +244,20 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     }
     return set;
   }, [runs]);
+
+  // Latest activity by any user that lives outside the message bubbles. Used
+  // to decide whether a footer on the last message is the true trailing edge
+  // of the thread (and so should pulse).
+  const latestTrailingCommandTime = useMemo(() => {
+    let max = 0;
+    for (const cmds of trailingCommands.values()) {
+      for (const cmd of cmds) {
+        const t = new Date(cmd.createdAt).getTime();
+        if (t > max) max = t;
+      }
+    }
+    return max;
+  }, [trailingCommands]);
 
   const titleFor = useCallback(
     (username: string) => agents.find((a) => a.name === username)?.title ?? "",
@@ -332,11 +347,17 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     if (cmds.length === 0) return null;
 
     const expanded = expandedBubbles.has(expansionKey);
-    // Phantom collapsed surfaces the latest cmd so you can see what the agent
-    // is working on without expanding.
-    const visible = expanded ? cmds : isPhantom ? [cmds[cmds.length - 1]] : [];
+    // Surface the latest cmd while collapsed for any list with live activity
+    // — phantom bubbles always do this, and active footers do it too so the
+    // pulsing icon is visible without forcing the user to expand.
+    const surfaceLatestWhenCollapsed = isPhantom || isActive;
+    const visible = expanded
+      ? cmds
+      : surfaceLatestWhenCollapsed
+        ? [cmds[cmds.length - 1]]
+        : [];
     const latestId = cmds[cmds.length - 1].logId;
-    const showToggle = !isPhantom || cmds.length > 1;
+    const showToggle = !surfaceLatestWhenCollapsed || cmds.length > 1;
 
     const dimColor = isOwn ? "rgba(255,255,255,0.7)" : "dimmed";
     const cmdColor = isOwn ? "rgba(255,255,255,0.92)" : "magenta.4";
@@ -392,9 +413,8 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                 style={{ minWidth: 0, width: "100%" }}
               >
                 <Group gap={4} wrap="nowrap" align="center">
-                  {/* Gutter aligns cmd text with the "Ran N" label. Active
-                      commands pulse the icon; unrecognized prefixes fall back
-                      to a terminal icon. */}
+                  {/* Fixed-width gutter so cmd lines align under the chevron
+                      in the "Ran N" toggle above. */}
                   <Box
                     w={14}
                     h={14}
@@ -441,7 +461,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     );
   };
 
-  // Group messages by date
   let lastDate = "";
 
   const ownStyle = {
@@ -540,6 +559,20 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
             const showDateDivider = msgDate !== lastDate;
             lastDate = msgDate;
             const cmds = commandBuckets.get(msg.id) ?? [];
+            const footerCmds = footerCommandBuckets.get(msg.id) ?? [];
+            // Footer spinner only when this footer holds the freshest activity
+            // anywhere in the thread (no later message, no later trailing
+            // command from another user) and the agent is still online — same
+            // rule as the trailing phantom that footer commands replace.
+            const footerLastTime =
+              footerCmds.length > 0
+                ? new Date(footerCmds[footerCmds.length - 1].createdAt).getTime()
+                : 0;
+            const footerActive =
+              footerCmds.length > 0 &&
+              msg.id === lastMessageId &&
+              onlineUsernames.has(msg.fromUsername) &&
+              footerLastTime >= latestTrailingCommandTime;
 
             return (
               <React.Fragment key={msg.id}>
@@ -660,6 +693,17 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                           );
                         })}
                       </Stack>
+                    )}
+                    {footerCmds.length > 0 && (
+                      <Box mt={4}>
+                        {renderCommandList(
+                          footerCmds,
+                          `${msg.id}-footer`,
+                          isOwn,
+                          footerActive,
+                          false,
+                        )}
+                      </Box>
                     )}
                     <Text
                       size="xs"
