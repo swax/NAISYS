@@ -152,6 +152,7 @@ function canonicalConfigOrder(
 
   // Advanced
   if (config.autoCompact !== undefined) ordered.autoCompact = config.autoCompact;
+  if (config.continuity !== undefined) ordered.continuity = config.continuity;
   if (config.commandProtection !== undefined)
     ordered.commandProtection = config.commandProtection;
   if (config.debugPauseSeconds !== undefined)

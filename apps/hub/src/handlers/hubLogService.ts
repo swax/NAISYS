@@ -82,6 +82,18 @@ export function createHubLogService(
           },
         });
 
+        // Mirror compact entries into restore_summary; AGENT_START decides
+        // whether to ship it back based on the user's continuity setting.
+        // Skip subagents — their logs are re-stamped with the parent's userId,
+        // so without this guard a subagent compact would clobber the parent's
+        // seed.
+        if (entry.type === "compact" && subagentId === 0) {
+          await hubDb.users.update({
+            where: { id: entry.userId },
+            data: { restore_summary: message },
+          });
+        }
+
         // Push notification ID update via heartbeat
         heartbeatService.updateAgentNotification(
           entry.userId,

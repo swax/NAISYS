@@ -7,7 +7,13 @@ export const LogSourceSchema = z.enum([
   "console",
   "llm",
 ]);
-export const LogTypeSchema = z.enum(["comment", "error", "system", "tool"]);
+export const LogTypeSchema = z.enum([
+  "comment",
+  "error",
+  "system",
+  "tool",
+  "compact",
+]);
 export const LogRoleSchema = z.enum(["NAISYS", "LLM"]);
 
 export const LogAttachmentSchema = z.object({

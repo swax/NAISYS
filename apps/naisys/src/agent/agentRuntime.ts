@@ -71,6 +71,7 @@ export async function createAgentRuntime(
   preallocated?: { runId: number; sessionId: number },
   runtimeApiKey?: string,
   startupAttachments?: StartupAttachmentDispatch[],
+  restoreSummary?: string,
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
   // local-mode branch. RunService keeps the parent's hubClient (as
@@ -305,7 +306,9 @@ export async function createAgentRuntime(
     mailService,
     chatService,
     userService,
+    logService,
     localUserId,
+    restoreSummary,
   );
   const commandProtection = createCommandProtection(
     agentConfig,

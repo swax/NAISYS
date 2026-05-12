@@ -13,6 +13,7 @@ import { useImageGallery } from "./ImageGallery";
 export const getLogColor = (log: LogEntry) => {
   if (log.type === "comment") return "green";
   if (log.type === "error") return "red";
+  if (log.type === "compact") return "yellow";
   if (log.source === "llm" || log.source == "endPrompt") return "magenta";
   if (log.source === "startPrompt") return "white";
   return undefined;

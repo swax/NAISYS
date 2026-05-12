@@ -10,7 +10,15 @@ export const LogSourceEnum = z.enum([
   "console",
   "llm",
 ]);
-export const LogTypeEnum = z.enum(["comment", "error", "system", "tool"]);
+export const LogTypeEnum = z.enum([
+  "comment",
+  "error",
+  "system",
+  "tool",
+  /** Compact-LLM summary. The hub mirrors the latest such entry into
+   *  users.restore_summary for continuity = "summary". */
+  "compact",
+]);
 
 /** A single log entry sent from NAISYS instance to hub */
 export const LogWriteEntrySchema = z.object({

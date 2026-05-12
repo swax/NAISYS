@@ -1,6 +1,12 @@
 export type LlmRole = "assistant" | "user" | "system";
 
-export type LlmMessageType = "comment" | "error" | "system" | "tool";
+export type LlmMessageType =
+  | "comment"
+  | "error"
+  | "system"
+  | "tool"
+  /** Compact-LLM summary. The hub mirrors these into users.restore_summary. */
+  | "compact";
 
 export enum ContentSource {
   ConsolePrompt = "startPrompt",

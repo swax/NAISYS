@@ -20,6 +20,16 @@ import type { HubSendMailService } from "./hubSendMailService.js";
 
 type AgentResponse = { success: boolean; error?: string };
 
+function parseContinuity(configJson: string | null | undefined): string | undefined {
+  if (!configJson) return undefined;
+  try {
+    const parsed = JSON.parse(configJson) as { continuity?: unknown };
+    return typeof parsed.continuity === "string" ? parsed.continuity : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 type StartDecision =
   | { kind: "fail"; error: string }
   | { kind: "go"; bestHostId: number };
@@ -159,6 +169,16 @@ export function createHubAgentService(
       path: r.path,
     }));
 
+    // Summary writes are unconditional (audit trail); filter on read instead.
+    const userRow = await hubDb.users.findUnique({
+      where: { id: startUserId },
+      select: { restore_summary: true, config: true },
+    });
+    const restoreSummary =
+      parseContinuity(userRow?.config) === "summary"
+        ? userRow?.restore_summary
+        : null;
+
     const lastRun = await hubDb.run_session.findFirst({
       select: { run_id: true },
       orderBy: { run_id: "desc" },
@@ -203,6 +223,7 @@ export function createHubAgentService(
         runId,
         sessionId,
         ...(startupAttachments.length > 0 ? { startupAttachments } : {}),
+        ...(restoreSummary ? { restoreSummary } : {}),
       },
       async (response: AgentStartResponse) => {
         if (response.success && response.modelName) {

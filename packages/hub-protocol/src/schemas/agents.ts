@@ -33,6 +33,8 @@ export const AgentStartDispatchSchema = z.object({
   sessionId: z.number(),
   sourceHostId: z.number().optional(),
   startupAttachments: z.array(StartupAttachmentDispatchSchema).optional(),
+  /** Saved compact summary, shipped only when the user's continuity = "summary". */
+  restoreSummary: z.string().optional(),
 });
 export type AgentStartDispatch = z.infer<typeof AgentStartDispatchSchema>;
 

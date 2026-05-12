@@ -10,6 +10,8 @@ export const commandProtectionValues = [
   "auto",
 ] as const;
 
+export const continuityValues = ["fresh", "summary", "full"] as const;
+
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
   username: z
@@ -127,6 +129,13 @@ export const AgentConfigFileSchema = z.object({
     .optional()
     .describe(
       "Automatically compact the session after five minutes of idle time to save on API costs by avoiding cache-miss reads. Good for agents that idle for long periods.",
+    ),
+
+  continuity: z
+    .enum(continuityValues)
+    .optional()
+    .describe(
+      "How a new run starts: 'fresh' begins with no prior context, 'summary' restores from a compacted summary saved before the previous run ended, 'full' restores the entire prior context and only compacts when explicitly called",
     ),
 
   initialCommands: z

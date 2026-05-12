@@ -16,9 +16,11 @@ import {
 import type { ShellCommand } from "../command/shellCommand.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
+import { ContentSource } from "../llm/llmDtos.js";
 import type { LLMService } from "../llm/llmService.js";
 import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
+import type { LogService } from "../services/logService.js";
 import type { OutputService } from "../utils/output.js";
 import { getTokenCount, trimChars } from "../utils/utilities.js";
 
@@ -33,10 +35,52 @@ export function createSessionService(
   mailService: MailService,
   chatService: ChatService,
   userService: UserService,
+  logService: LogService,
   localUserId: number,
+  /** Saved summary shipped inline on AGENT_START when continuity = "summary". */
+  preloadedRestoreSummary: string | undefined,
 ) {
-  let restoreInfo = "";
+  let restoreInfo =
+    agentConfig().continuity === "summary"
+      ? (preloadedRestoreSummary ?? "")
+      : "";
   let resumeWaitSeconds: number | undefined;
+
+  if (restoreInfo) {
+    output.commentAndLog(
+      `Loaded restore summary from hub (${getTokenCount(restoreInfo)} tokens).`,
+    );
+  }
+
+  /** Extracted from handleCompact so handleComplete can reuse the LLM call
+   *  without triggering a session restart. */
+  async function produceRestoreSummary(): Promise<void> {
+    contextManager.append(
+      "Process this session log and reduce it down to important things to remember - " +
+        "references, plans, project structure, schemas, file locations, urls, and more. Focus on the near term, next logical steps. " +
+        "Check for and fix any inconsistencies in the current context to avoid passing them on the next session. " +
+        "The next session should be able to start with minimal bootstrapping or scanning of existing files. " +
+        "What are the things the next session should do when restored - tasks, goals, etc.. And ensure it has " +
+        "all the important context to do those things, as it will be starting from a blank slate. \n\n" +
+        "# Write the restored-session seed below (no preamble).",
+    );
+
+    const queryResult = await llmService.query(
+      agentConfig().shellModel,
+      systemMessage,
+      contextManager.getCombinedMessages(),
+      "compact",
+    );
+
+    restoreInfo = queryResult.responses.join("\n");
+
+    logService.write({
+      role: "assistant",
+      source: ContentSource.LLM,
+      type: "compact",
+      content: restoreInfo,
+    });
+  }
 
   async function handleCommand(
     args: string,
@@ -121,26 +165,9 @@ export function createSessionService(
       return "Session cannot be compacted while a shell command is active.";
     }
 
-    contextManager.append(
-      "Process this session log and reduce it down to important things to remember - " +
-        "references, plans, project structure, schemas, file locations, urls, and more. Focus on the near term, next logical steps. " +
-        "Check for and fix any inconsistencies in the current context to avoid passing them on the next session. " +
-        "The next session should be able to start with minimal bootstrapping or scanning of existing files. " +
-        "What are the things the next session should do when restored - tasks, goals, etc.. And ensure it has " +
-        "all the important context to do those things, as it will be starting from a blank slate. \n\n" +
-        "# Write the restored-session seed below (no preamble).",
-    );
-
     output.commentAndLog(`Compacting...`);
 
-    const queryResult = await llmService.query(
-      agentConfig().shellModel,
-      systemMessage,
-      contextManager.getCombinedMessages(),
-      "compact",
-    );
-
-    restoreInfo = queryResult.responses.join("\n");
+    await produceRestoreSummary();
 
     output.commentAndLog(
       `Session compacted to ${getTokenCount(restoreInfo)} tokens. Restarting Session.`,
@@ -213,6 +240,16 @@ export function createSessionService(
 
     if (!result) {
       return 'Please provide a result message, for example: ns-session complete "Task finished successfully"';
+    }
+
+    // Capture a fresh seed before exit so the next run can resume.
+    if (agentConfig().continuity === "summary") {
+      output.commentAndLog("Saving session summary before completing...");
+      try {
+        await produceRestoreSummary();
+      } catch (e) {
+        output.errorAndLog(`Failed to produce restore summary: ${e}`);
+      }
     }
 
     const localUser = userService.getUserById(localUserId);

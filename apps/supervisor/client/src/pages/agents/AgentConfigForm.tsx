@@ -87,6 +87,8 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
 
   if (values.commandProtection && values.commandProtection !== "none")
     result.commandProtection = values.commandProtection;
+  if (values.continuity && values.continuity !== "fresh")
+    result.continuity = values.continuity;
   if (typeof values.debugPauseSeconds === "number")
     result.debugPauseSeconds = values.debugPauseSeconds;
   if (values.initialCommands.trim())
@@ -119,6 +121,7 @@ interface FormValues {
   supervisorApiHints: boolean;
   autoCompact: boolean;
   commandProtection: string;
+  continuity: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
 }
@@ -224,6 +227,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       supervisorApiHints: config.supervisorApiHints ?? false,
       autoCompact: config.autoCompact ?? false,
       commandProtection: config.commandProtection ?? "none",
+      continuity: config.continuity ?? "fresh",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n\n") ?? "",
     },
@@ -377,6 +381,16 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
             input: { fontFamily: "monospace", fontSize: "0.875rem" },
           }}
           {...form.getInputProps("agentPrompt")}
+        />
+        <Select
+          label="Continuity"
+          description={desc("continuity")}
+          data={[
+            { value: "fresh", label: "Fresh" },
+            { value: "summary", label: "Summary" },
+            { value: "full", label: "Full" },
+          ]}
+          {...form.getInputProps("continuity")}
         />
 
         {/* Limits */}

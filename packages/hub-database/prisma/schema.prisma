@@ -30,6 +30,7 @@ enum ContextLogType {
   error
   system
   tool
+  compact
 }
 
 enum MessageKind {
@@ -199,6 +200,8 @@ model users {
   api_key_hash              String?                     @unique
   lead_user_id              Int?
   config                    String                      @default("{}")
+  /// Latest compact summary, used to seed the next run when continuity = "summary".
+  restore_summary           String?
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   enabled                   Boolean                     @default(true)

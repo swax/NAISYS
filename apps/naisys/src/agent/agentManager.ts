@@ -66,6 +66,7 @@ export class AgentManager {
             undefined,
             { runId: parsed.runId, sessionId: parsed.sessionId },
             parsed.startupAttachments,
+            parsed.restoreSummary,
           );
 
           ack({
@@ -241,6 +242,7 @@ export class AgentManager {
     subagentContext?: SubagentContext,
     preallocated?: { runId: number; sessionId: number },
     startupAttachments?: StartupAttachmentDispatch[],
+    restoreSummary?: string,
   ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
@@ -264,6 +266,7 @@ export class AgentManager {
       preallocated,
       runtimeApiKey,
       startupAttachments,
+      restoreSummary,
     );
 
     this.runningAgents.push(agent);
