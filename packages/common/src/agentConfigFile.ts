@@ -122,6 +122,13 @@ export const AgentConfigFileSchema = z.object({
       "None allows the LLM to run any command, Manual requires user confirmation for each command, and Auto uses a secondary LLM to try to validate a command is safe",
     ),
 
+  autoCompact: z
+    .boolean()
+    .optional()
+    .describe(
+      "Automatically compact the session after five minutes of idle time to save on API costs by avoiding cache-miss reads. Good for agents that idle for long periods.",
+    ),
+
   initialCommands: z
     .array(z.string())
     .optional()

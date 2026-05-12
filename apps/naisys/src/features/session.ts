@@ -165,6 +165,10 @@ export function createSessionService(
       throw new Error("Preemptive compact is not enabled");
     }
 
+    if (!agentConfig().autoCompact) {
+      throw new Error("Auto compact is not enabled for this agent");
+    }
+
     const remaining = remainingSecondsArg ? parseInt(remainingSecondsArg) : 0;
     if (isNaN(remaining) || remaining < 0) {
       throw new Error(

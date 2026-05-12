@@ -165,6 +165,7 @@ export function createCommandLoop(
     if (
       !globalConfig().compactSessionEnabled ||
       !globalConfig().preemptiveCompactEnabled ||
+      !agentConfig().autoCompact ||
       shellCommand.isShellSuspended()
     ) {
       return;

@@ -83,6 +83,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
   if (values.multipleCommandsEnabled) result.multipleCommandsEnabled = true;
   if (values.controlDesktop) result.controlDesktop = true;
   if (values.supervisorApiHints) result.supervisorApiHints = true;
+  if (values.autoCompact) result.autoCompact = true;
 
   if (values.commandProtection && values.commandProtection !== "none")
     result.commandProtection = values.commandProtection;
@@ -116,6 +117,7 @@ interface FormValues {
   multipleCommandsEnabled: boolean;
   controlDesktop: boolean;
   supervisorApiHints: boolean;
+  autoCompact: boolean;
   commandProtection: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
@@ -220,6 +222,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       multipleCommandsEnabled: config.multipleCommandsEnabled ?? false,
       controlDesktop: config.controlDesktop ?? false,
       supervisorApiHints: config.supervisorApiHints ?? false,
+      autoCompact: config.autoCompact ?? false,
       commandProtection: config.commandProtection ?? "none",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n\n") ?? "",
@@ -484,6 +487,11 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
               clearable
               data={imageModelOptions}
               {...form.getInputProps("imageModel")}
+            />
+            <Switch
+              label="Auto Compact"
+              description={desc("autoCompact")}
+              {...form.getInputProps("autoCompact", { type: "checkbox" })}
             />
             <Switch
               label="Mail Enabled"
