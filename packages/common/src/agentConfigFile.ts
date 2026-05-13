@@ -12,6 +12,25 @@ export const commandProtectionValues = [
 
 export const continuityValues = ["fresh", "summary", "full"] as const;
 
+const UserConfigContinuitySchema = z
+  .object({ continuity: z.string().optional() })
+  .loose();
+
+/** Pull just the `continuity` field out of a stored `users.config` JSON string.
+ *  Returns undefined on null/missing/parse failure so callers can treat
+ *  unset and invalid the same way (both mean "fresh"). Uses `passthrough`
+ *  so an otherwise-malformed config still yields a usable continuity value. */
+export function parseContinuityFromConfigJson(
+  configJson: string | null | undefined,
+): string | undefined {
+  if (!configJson) return undefined;
+  try {
+    return UserConfigContinuitySchema.parse(JSON.parse(configJson)).continuity;
+  } catch {
+    return undefined;
+  }
+}
+
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
   username: z

@@ -5,7 +5,7 @@ export type LlmMessageType =
   | "error"
   | "system"
   | "tool"
-  /** Compact-LLM summary. The hub mirrors these into users.restore_summary. */
+  /** Compact-LLM summary. The hub points users.compact_log_id at the row. */
   | "compact";
 
 export enum ContentSource {

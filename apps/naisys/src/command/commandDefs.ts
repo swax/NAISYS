@@ -285,6 +285,10 @@ export const sessionCmd: CommandDef = {
       description:
         "Complete the session, result will be mailed to the lead agent or admin.",
     },
+    clear: {
+      usage: "clear",
+      description: "Starts a new session with no context history (visible in debug only).",
+    },
   },
 };
 

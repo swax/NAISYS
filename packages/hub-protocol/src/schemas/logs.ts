@@ -15,8 +15,8 @@ export const LogTypeEnum = z.enum([
   "error",
   "system",
   "tool",
-  /** Compact-LLM summary. The hub mirrors the latest such entry into
-   *  users.restore_summary for continuity = "summary". */
+  /** Compact-LLM summary. The hub points users.compact_log_id at the latest
+   *  such entry; AGENT_START reads it as the resume cursor. */
   "compact",
 ]);
 

@@ -94,7 +94,7 @@ export function createCommandLoop(
       output.commentAndLog(startupSummary);
     }
 
-    // Show System Message
+    // System messages are logged with source=null and are not replayed, so write the current one every run.
     output.commentAndLog("System Message:");
     output.write(systemMessage);
     logService.write({
@@ -261,7 +261,13 @@ export function createCommandLoop(
 
     desktopService.logStartup();
 
-    output.commentAndLog("Starting Context:");
+    // `stale` only fires on the iteration that consumed the entries; a
+    // post-compact second pass sees replayed=false and falls through below.
+    const { replayed, stale } = await sessionService.replayRestoreEntries();
+
+    if (!replayed) {
+      output.commentAndLog("Starting Context:");
+    }
 
     // Check for mail that arrived before/during startup (e.g. task mail)
     if (hubClient) {
@@ -269,10 +275,31 @@ export function createCommandLoop(
       await sleep(1000);
     }
 
-    const initialCommands = [
-      ...structuredClone(agentConfig().initialCommands),
-      ...sessionService.getResumeCommands(),
-    ];
+    let checkMail = true;
+    let initialCommands: string[] = [];
+
+    if (!replayed) {
+      initialCommands = [
+        ...structuredClone(agentConfig().initialCommands),
+        ...sessionService.getResumeCommands(),
+      ];
+    }
+    // Else we're resuming the session, and if it is stale then we need to load
+    // the previous context and either compact it now, or if it's small enough
+    // skip the compact and just start from where it left off
+    else if (
+      stale &&
+      globalConfig().compactSessionEnabled &&
+      contextManager.getTokenCount() >= PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS
+    ) {
+      // Compact now so the saved snapshot catches up. Skipped below the
+      // auto-compact threshold — not worth an LLM call.
+      output.commentAndLog(
+        "Retroactively compacting previous session due to staleness...",
+      );
+      initialCommands = ["ns-session compact"];
+      checkMail = false;
+    }
 
     for (const initialCommand of initialCommands) {
       try {
@@ -291,14 +318,16 @@ export function createCommandLoop(
 
     // Even if mail/chat not enabled, we may be sent mail/chat from agents that do have it enabled, and we
     // need to receive these msgs and mark them as read as agents are auto-started to handle unread messages
-    try {
-      await mailService.checkAndNotify();
-      await chatService.checkAndNotify();
-      // Reviewable events only; commands (rare here) wait for the main loop
-      await processNotifications("nonCommand");
-    } catch (e) {
-      // Hub can flap during startup; don't crash the agent — let the main loop recover
-      handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+    if (checkMail) {
+      try {
+        await mailService.checkAndNotify();
+        await chatService.checkAndNotify();
+        // Reviewable events only; commands (rare here) wait for the main loop
+        await processNotifications("nonCommand");
+      } catch (e) {
+        // Hub can flap during startup; don't crash the agent — let the main loop recover
+        handleErrorAndSwitchToDebugMode(e, llmErrorCount, true);
+      }
     }
 
     inputMode.setDebug();

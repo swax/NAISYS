@@ -46,6 +46,7 @@ export function createContextManager(
   function append(
     content: string,
     source: ContentSource = ContentSource.Console,
+    options?: { skipLog?: boolean },
   ) {
     if (!content) {
       return;
@@ -85,16 +86,22 @@ export function createContextManager(
     const llmMessage = <LlmMessage>{ source, role, content };
     messages.push(llmMessage);
 
-    // Log the message
-    logService.write(llmMessage);
+    // skipLog: resume-replay re-injects entries that already exist in
+    // context_log, so we leave the log untouched to keep it chronological.
+    if (!options?.skipLog) {
+      logService.write(llmMessage);
+    }
   }
 
-  /** Append an image block to context. Returns the error reason (for the caller
-   *  to surface to the agent) if the image was rejected, or "" on success. */
+  /** Append an image block to context. Returns the error reason (for the
+   *  caller to surface to the agent) if the image was rejected, or "" on
+   *  success. `skipLog` is set by resume-replay so the log stays one clean
+   *  chronological record. */
   function appendImage(
     base64: string,
     mimeType: string,
     filepath: string,
+    options?: { skipLog?: boolean },
   ): string {
     const text = `[Image: ${filepath}]`;
 
@@ -123,20 +130,37 @@ export function createContextManager(
 
     messages.push(llmMessage);
 
-    // Log text only — pass filepath for hub attachment upload
-    logService.write(llmMessage, filepath);
+    if (!options?.skipLog) {
+      // Log text only — pass filepath for hub attachment upload
+      logService.write(llmMessage, filepath);
+    }
 
     // Display placeholder to console
     output.write(text, OutputColor.console);
     return "";
   }
 
-  function appendAudio(base64: string, mimeType: string, filepath: string) {
+  /** Append an audio block to context. Returns the error reason if rejected,
+   *  or "" on success — mirrors appendImage so resume-replay can fall back
+   *  to text when the current model doesn't support audio (e.g. agent
+   *  recorded under a hearing-capable model and restarted under one that
+   *  isn't). `skipLog` is set by resume-replay so the log stays clean. */
+  function appendAudio(
+    base64: string,
+    mimeType: string,
+    filepath: string,
+    options?: { skipLog?: boolean },
+  ): string {
     const text = `[Audio: ${filepath}]`;
 
     if (inputMode.isDebug()) {
       output.commentAndLog(text, filepath);
-      return;
+      return "";
+    }
+
+    const shellModel = modelService.getLlmModel(agentConfig().shellModel);
+    if (!shellModel.supportsHearing) {
+      return `Error: Model '${agentConfig().shellModel}' does not support audio input.`;
     }
 
     const contentBlocks: ContentBlock[] = [
@@ -152,11 +176,14 @@ export function createContextManager(
 
     messages.push(llmMessage);
 
-    // Log text only — pass filepath for hub attachment upload
-    logService.write(llmMessage, filepath);
+    if (!options?.skipLog) {
+      // Log text only — pass filepath for hub attachment upload
+      logService.write(llmMessage, filepath);
+    }
 
     // Display placeholder to console
     output.write(text, OutputColor.console);
+    return "";
   }
 
   /** Add an assistant message containing text and tool_use blocks (for computer use).

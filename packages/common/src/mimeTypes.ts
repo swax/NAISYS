@@ -28,3 +28,7 @@ export function mimeFromFilename(filename: string): string {
 export function isImageFilename(filename: string): boolean {
   return mimeFromFilename(filename).startsWith("image/");
 }
+
+export function isAudioFilename(filename: string): boolean {
+  return mimeFromFilename(filename).startsWith("audio/");
+}

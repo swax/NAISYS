@@ -1,5 +1,8 @@
 import { ADMIN_USERNAME, sleep } from "@naisys/common";
-import type { StartupAttachmentDispatch } from "@naisys/hub-protocol";
+import type {
+  RestoreData,
+  StartupAttachmentDispatch,
+} from "@naisys/hub-protocol";
 import {
   AgentPeekRequestSchema,
   AgentRunCommandRequestSchema,
@@ -66,7 +69,7 @@ export class AgentManager {
             undefined,
             { runId: parsed.runId, sessionId: parsed.sessionId },
             parsed.startupAttachments,
-            parsed.restoreSummary,
+            parsed.restoreData,
           );
 
           ack({
@@ -242,7 +245,7 @@ export class AgentManager {
     subagentContext?: SubagentContext,
     preallocated?: { runId: number; sessionId: number },
     startupAttachments?: StartupAttachmentDispatch[],
-    restoreSummary?: string,
+    restoreData?: RestoreData,
   ) {
     // Check if agent is already running
     const existing = this.runningAgents.find((a) => a.agentUserId === userId);
@@ -266,7 +269,7 @@ export class AgentManager {
       preallocated,
       runtimeApiKey,
       startupAttachments,
-      restoreSummary,
+      restoreData,
     );
 
     this.runningAgents.push(agent);

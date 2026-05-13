@@ -176,6 +176,10 @@ export function createMockSessionService() {
     command: sessionCmd,
     handleCommand: vi.fn(() => ""),
     getResumeCommands: vi.fn(() => []),
+    replayRestoreEntries: vi.fn(() =>
+      Promise.resolve({ replayed: false, stale: false }),
+    ),
+    hasPendingRestoreEntries: vi.fn(() => false),
   };
 
   return sessionService;
@@ -192,7 +196,7 @@ export function createMockContextManager() {
   };
 
   const appendImage = vi.fn(() => "");
-  const appendAudio = vi.fn();
+  const appendAudio = vi.fn(() => "");
 
   const contextManager: ContextManager = {
     append,

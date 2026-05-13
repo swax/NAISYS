@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "compact_log_id" INTEGER REFERENCES "context_log"("id") ON DELETE SET NULL ON UPDATE NO ACTION;

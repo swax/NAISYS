@@ -1,3 +1,8 @@
+import {
+  isAudioFilename,
+  isImageFilename,
+  parseContinuityFromConfigJson,
+} from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
@@ -9,6 +14,8 @@ import {
   type AgentStartResponse,
   AgentStopRequestSchema,
   HubEvents,
+  type RestoreData,
+  type ResumeEntry,
 } from "@naisys/hub-protocol";
 
 import type { HostRegistrar } from "../services/hostRegistrar.js";
@@ -19,16 +26,6 @@ import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
 
 type AgentResponse = { success: boolean; error?: string };
-
-function parseContinuity(configJson: string | null | undefined): string | undefined {
-  if (!configJson) return undefined;
-  try {
-    const parsed = JSON.parse(configJson) as { continuity?: unknown };
-    return typeof parsed.continuity === "string" ? parsed.continuity : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 type StartDecision =
   | { kind: "fail"; error: string }
@@ -135,6 +132,81 @@ export function createHubAgentService(
    * is pushed to supervisors and runId/sessionId returned to the caller
    * only on success. Any failure rolls back the placeholder.
    */
+
+  type CompactCursor = {
+    logId: number;
+    runId: number;
+    sessionId: number;
+    summary: string;
+  };
+
+  /** The user's latest compact, fetched via the cached pointer on
+   *  `users.compact_log_id`. Acts as both summary source and tail cursor. */
+  async function loadCompactCursor(
+    userId: number,
+  ): Promise<CompactCursor | null> {
+    const user = await hubDb.users.findUnique({
+      where: { id: userId },
+      select: { compact_log_id: true },
+    });
+    if (!user?.compact_log_id) return null;
+    const row = await hubDb.context_log.findUnique({
+      where: { id: user.compact_log_id },
+      select: { id: true, run_id: true, session_id: true, message: true },
+    });
+    if (!row) return null;
+    return {
+      logId: row.id,
+      runId: row.run_id,
+      sessionId: row.session_id,
+      summary: row.message,
+    };
+  }
+
+  /** Parent-agent entries logged after the compact cursor. `sinceLogId=null`
+   *  means "no compact ever" → return everything (continuity=full fallback
+   *  for brand-new agents). Replay re-injects without re-logging, so
+   *  context_log stays a single chronological record across runs. */
+  async function loadEntriesSinceCompact(
+    userId: number,
+    sinceLogId: number | null,
+  ): Promise<ResumeEntry[]> {
+    const rows = await hubDb.context_log.findMany({
+      where: {
+        user_id: userId,
+        subagent_id: 0,
+        source: { not: null },
+        ...(sinceLogId !== null ? { id: { gt: sinceLogId } } : {}),
+      },
+      orderBy: { id: "asc" },
+      select: {
+        source: true,
+        message: true,
+        attachment: { select: { public_id: true, filename: true } },
+      },
+    });
+    const entries: ResumeEntry[] = [];
+    for (const r of rows) {
+      if (!r.source) continue;
+      const entry: ResumeEntry = { source: r.source, message: r.message };
+      // Only console-source media is wired into contextManager (appendImage/
+      // appendAudio stamp console messages); everything else replays text-only.
+      if (
+        r.attachment &&
+        r.source === "console" &&
+        (isImageFilename(r.attachment.filename) ||
+          isAudioFilename(r.attachment.filename))
+      ) {
+        entry.attachment = {
+          publicId: r.attachment.public_id,
+          filename: r.attachment.filename,
+        };
+      }
+      entries.push(entry);
+    }
+    return entries;
+  }
+
   async function dispatchAgentStart(args: {
     bestHostId: number;
     payload: Omit<AgentStartDispatch, "runtimeApiKey" | "runId" | "sessionId">;
@@ -146,8 +218,8 @@ export function createHubAgentService(
 
     // Fetch before run_session.create — a query failure here would otherwise
     // leak the placeholder. Hashes ship so the host can skip already-on-disk files.
-    const startupAttachmentRows =
-      await hubDb.user_startup_attachments.findMany({
+    const startupAttachmentRows = await hubDb.user_startup_attachments.findMany(
+      {
         where: { user_id: startUserId },
         orderBy: { path: "asc" },
         include: {
@@ -160,7 +232,8 @@ export function createHubAgentService(
             },
           },
         },
-      });
+      },
+    );
     const startupAttachments = startupAttachmentRows.map((r) => ({
       publicId: r.attachment.public_id,
       filename: r.attachment.filename,
@@ -169,15 +242,58 @@ export function createHubAgentService(
       path: r.path,
     }));
 
-    // Summary writes are unconditional (audit trail); filter on read instead.
     const userRow = await hubDb.users.findUnique({
       where: { id: startUserId },
-      select: { restore_summary: true, config: true },
+      select: { config: true },
     });
-    const restoreSummary =
-      parseContinuity(userRow?.config) === "summary"
-        ? userRow?.restore_summary
-        : null;
+    const continuity = parseContinuityFromConfigJson(userRow?.config);
+
+    let restoreData: RestoreData | undefined;
+
+    if (continuity === "summary" || continuity === "full") {
+      const compact = await loadCompactCursor(startUserId);
+      // Tail ships unfiltered — the post-compact restore echo lives in it
+      // naturally; host scans for it on replay and falls back to prepending
+      // `summary` only if missing.
+      const tail = await loadEntriesSinceCompact(
+        startUserId,
+        compact?.logId ?? null,
+      );
+      const cursor = compact
+        ? { runId: compact.runId, sessionId: compact.sessionId }
+        : undefined;
+
+      if (continuity === "full") {
+        if (compact) {
+          // Always ship summary + cursor; entries if any past the cursor.
+          // Covers both the normal post-compact case and the rare gap where
+          // the post-restart restore echo never logged before the process died.
+          restoreData = {
+            summary: compact.summary,
+            ...(tail.length > 0 ? { entries: tail } : {}),
+            cursor,
+          };
+        } else if (tail.length > 0) {
+          // No compact ever — replay whole history (brand-new agents).
+          restoreData = { entries: tail };
+        }
+      } else {
+        // continuity === "summary"
+        // - compact + no tail past → snapshot is current
+        // - compact + tail         → stale, retro-compact after replay
+        // - no compact + tail      → seed first summary via retro-compact
+        if (compact && tail.length === 0) {
+          restoreData = { summary: compact.summary, cursor };
+        } else if (tail.length > 0) {
+          restoreData = {
+            ...(compact ? { summary: compact.summary } : {}),
+            entries: tail,
+            stale: true,
+            ...(cursor ? { cursor } : {}),
+          };
+        }
+      }
+    }
 
     const lastRun = await hubDb.run_session.findFirst({
       select: { run_id: true },
@@ -223,7 +339,7 @@ export function createHubAgentService(
         runId,
         sessionId,
         ...(startupAttachments.length > 0 ? { startupAttachments } : {}),
-        ...(restoreSummary ? { restoreSummary } : {}),
+        ...(restoreData ? { restoreData } : {}),
       },
       async (response: AgentStartResponse) => {
         if (response.success && response.modelName) {
@@ -383,9 +499,7 @@ export function createHubAgentService(
         recipientUserIds: [startUserId],
         // Agent will send a 'Session Completed' message when session is completed
         subject: mailEnabled ? "Agent Start" : "",
-        body: mailEnabled
-          ? taskDescription
-          : `Agent Start: ${taskDescription}`,
+        body: mailEnabled ? taskDescription : `Agent Start: ${taskDescription}`,
         kind: mailEnabled ? "mail" : "chat",
       });
     } catch (err) {

@@ -3,6 +3,7 @@ import {
   AgentConfigFileSchema,
   assertUrlSafeKey,
   buildDefaultAgentConfig,
+  parseContinuityFromConfigJson,
 } from "@naisys/common";
 
 import { hubDb } from "../database/hubDb.js";
@@ -203,6 +204,20 @@ export async function updateAgentConfigById(
     });
   }
 
+  // Wall off prior history when continuity leaves "fresh" so the first run
+  // under summary/full doesn't replay every prior log entry and retro-compact
+  // unrelated past sessions. Done before the config update so a concurrent
+  // AGENT_START never observes continuity=summary with a null cursor — the
+  // other ordering would trigger exactly the full-history bundle we're
+  // avoiding.
+  const oldContinuity = parseContinuityFromConfigJson(currentUser?.config);
+  if (
+    (oldContinuity === undefined || oldContinuity === "fresh") &&
+    (config.continuity === "summary" || config.continuity === "full")
+  ) {
+    await writeContinuityBoundary(id);
+  }
+
   await hubDb.users.update({
     where: { id },
     data: {
@@ -245,4 +260,52 @@ export async function getConfigRevisions(
     changedByUsername: r.changed_by.username,
     createdAt: r.created_at,
   }));
+}
+
+/** Same end state `ns-session clear` produces, just triggered by a config
+ *  change instead of an agent command: write a marker compact row anchored
+ *  to the user's latest session and point `compact_log_id` at it. The next
+ *  AGENT_START reads an empty tail past the cursor, so summary/full both
+ *  ship `{ summary, cursor }` without replay or LLM retro-compact. Skipped
+ *  for brand-new users with no prior entries (no boundary to draw). */
+async function writeContinuityBoundary(userId: number): Promise<void> {
+  const [user, latest] = await Promise.all([
+    hubDb.users.findUnique({
+      where: { id: userId },
+      select: { compact_log_id: true },
+    }),
+    hubDb.context_log.findFirst({
+      where: { user_id: userId, subagent_id: 0 },
+      orderBy: { id: "desc" },
+      select: { id: true, run_id: true, session_id: true, host_id: true },
+    }),
+  ]);
+  if (!latest) return;
+
+  // Cursor already at the head — happens on ping-pong (fresh → summary →
+  // fresh → summary with no activity in between, so the previous marker is
+  // still the latest row) or right after `ns-session compact`/`clear`
+  // landed a compact row that the hub mirror already advanced the cursor
+  // to. Either way, there's no tail to seal — skip the duplicate marker.
+  if (user?.compact_log_id === latest.id) return;
+
+  const marker = await hubDb.context_log.create({
+    data: {
+      user_id: userId,
+      run_id: latest.run_id,
+      subagent_id: 0,
+      session_id: latest.session_id,
+      host_id: latest.host_id,
+      role: "LLM",
+      source: "llm",
+      type: "compact",
+      message: "Continuity enabled — prior history not carried forward.",
+    },
+    select: { id: true },
+  });
+
+  await hubDb.users.update({
+    where: { id: userId },
+    data: { compact_log_id: marker.id },
+  });
 }

@@ -1,4 +1,11 @@
-import { ADMIN_USERNAME } from "@naisys/common";
+import {
+  ADMIN_USERNAME,
+  isAudioFilename,
+  isImageFilename,
+  mapWithConcurrency,
+  mimeFromFilename,
+} from "@naisys/common";
+import type { RestoreData, ResumeEntry } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
@@ -20,9 +27,15 @@ import { ContentSource } from "../llm/llmDtos.js";
 import type { LLMService } from "../llm/llmService.js";
 import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
+import type { HubAttachmentService } from "../services/hubAttachmentService.js";
 import type { LogService } from "../services/logService.js";
+import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
 import { getTokenCount, trimChars } from "../utils/utilities.js";
+
+/** Cap on concurrent hub attachment downloads during resume-replay so a
+ *  long-running agent's image-heavy log doesn't open dozens of sockets. */
+const RESUME_DOWNLOAD_CONCURRENCY = 4;
 
 export function createSessionService(
   { globalConfig }: GlobalConfig,
@@ -36,20 +49,157 @@ export function createSessionService(
   chatService: ChatService,
   userService: UserService,
   logService: LogService,
+  hubAttachmentService: HubAttachmentService,
+  inputMode: InputModeService,
   localUserId: number,
-  /** Saved summary shipped inline on AGENT_START when continuity = "summary". */
-  preloadedRestoreSummary: string | undefined,
+  /** Resume bundle — hub already filtered by continuity + staleness. */
+  preloadedRestore: RestoreData | undefined,
 ) {
-  let restoreInfo =
-    agentConfig().continuity === "summary"
-      ? (preloadedRestoreSummary ?? "")
-      : "";
+  let restoreInfo = preloadedRestore?.summary ?? "";
   let resumeWaitSeconds: number | undefined;
+  let pendingRestoreEntries: ResumeEntry[] | undefined =
+    preloadedRestore?.entries;
+  let restoreStale = preloadedRestore?.stale ?? false;
+  const restoreCursor = preloadedRestore?.cursor;
 
   if (restoreInfo) {
     output.commentAndLog(
       `Loaded restore summary from hub (${getTokenCount(restoreInfo)} tokens).`,
     );
+  }
+
+  function hasPendingRestoreEntries(): boolean {
+    return !!pendingRestoreEntries && pendingRestoreEntries.length > 0;
+  }
+
+  /** Consume the resume bundle. `replayed`/`stale` flip atomically so a
+   *  later iteration can't see stale=true after entries are gone.
+   *  `stale=true` → retro-compact after replay. The tail normally carries
+   *  the post-compact `ns-session restore` echo, so we scan for it and only
+   *  prepend the summary as a defensive fallback when missing.
+   *  Image/audio attachments rehydrate via appendImage/appendAudio,
+   *  fetched in parallel up front. */
+  async function replayRestoreEntries(): Promise<{
+    replayed: boolean;
+    stale: boolean;
+  }> {
+    if (!pendingRestoreEntries || pendingRestoreEntries.length === 0) {
+      return { replayed: false, stale: false };
+    }
+    const entries = pendingRestoreEntries;
+    const stale = restoreStale;
+    pendingRestoreEntries = undefined;
+    restoreStale = false;
+
+    const cursorLabel = restoreCursor
+      ? ` since run ${restoreCursor.runId} session ${restoreCursor.sessionId}`
+      : "";
+    output.commentAndLog(
+      `Replaying ${entries.length} entries from previous context${cursorLabel}...`,
+    );
+
+    const silent = { skipLog: true };
+
+    // Defensive fallback. The post-compact `ns-session restore` echo
+    // normally carries the summary into context via the tail. Hitting
+    // this branch means the echo wasn't logged — buffer dropped, hub
+    // write failed, restore didn't run, or some other regression. Log
+    // loudly so it gets noticed.
+    if (
+      restoreInfo &&
+      !entries.some(
+        (entry) => entry.source === "console" && entry.message === restoreInfo,
+      )
+    ) {
+      output.errorAndLog(
+        "Unexpected restore replay state: replayed entries did not include the compact summary; injecting fallback. This may indicate a restore logging bug.",
+      );
+      contextManager.append(
+        `[Restored summary]\n${restoreInfo}`,
+        ContentSource.Console,
+        silent,
+      );
+    }
+
+    const attachmentBuffers = await fetchAttachments(entries);
+
+    for (const entry of entries) {
+      const source = sourceFromString(entry.source);
+      if (!source) continue;
+
+      const buf = entry.attachment
+        ? attachmentBuffers.get(entry.attachment.publicId)
+        : undefined;
+
+      if (entry.attachment && buf) {
+        const { filename } = entry.attachment;
+        const mime = mimeFromFilename(filename);
+        const base64 = buf.toString("base64");
+        if (isImageFilename(filename)) {
+          // Falls through to text on a model-block reason (e.g. shellModel
+          // changed since the prior run and no longer accepts image context).
+          const blockReason = contextManager.appendImage(
+            base64,
+            mime,
+            filename,
+            silent,
+          );
+          if (blockReason) contextManager.append(entry.message, source, silent);
+        } else if (isAudioFilename(filename)) {
+          // Same fallback as images — guards against the agent recording audio
+          // under a hearing-capable model and restarting under one that isn't.
+          const blockReason = contextManager.appendAudio(
+            base64,
+            mime,
+            filename,
+            silent,
+          );
+          if (blockReason) contextManager.append(entry.message, source, silent);
+        } else {
+          // Hub already filters to image/audio; fall back to text just in case.
+          contextManager.append(entry.message, source, silent);
+        }
+      } else {
+        contextManager.append(entry.message, source, silent);
+      }
+    }
+    return { replayed: true, stale };
+  }
+
+  /** Parallel-fetch (capped) all attachment bodies. Failures are swallowed
+   *  so a missing/stale attachment doesn't abort the whole replay — the
+   *  affected entry just falls back to its text message. */
+  async function fetchAttachments(
+    entries: ResumeEntry[],
+  ): Promise<Map<string, Buffer>> {
+    const ids = Array.from(
+      new Set(
+        entries
+          .map((e) => e.attachment?.publicId)
+          .filter((id): id is string => !!id),
+      ),
+    );
+    if (ids.length === 0) return new Map();
+
+    output.commentAndLog(`Fetching ${ids.length} attachments for replay...`);
+
+    const results = await mapWithConcurrency(
+      ids,
+      RESUME_DOWNLOAD_CONCURRENCY,
+      async (id) => {
+        try {
+          return [id, await hubAttachmentService.downloadToBuffer(id)] as const;
+        } catch (e) {
+          output.errorAndLog(`Failed to fetch resume attachment ${id}: ${e}`);
+          return [id, null] as const;
+        }
+      },
+    );
+    const map = new Map<string, Buffer>();
+    for (const [id, buf] of results) {
+      if (buf) map.set(id, buf);
+    }
+    return map;
   }
 
   /** Extracted from handleCompact so handleComplete can reuse the LLM call
@@ -113,6 +263,9 @@ export function createSessionService(
       case "complete":
         return handleComplete(args.slice(subcommand.length).trim());
 
+      case "clear":
+        return handleClear();
+
       default:
         return `Unknown subcommand: ${subcommand}\n\n${getHelpText()}`;
     }
@@ -132,6 +285,11 @@ export function createSessionService(
     if (agentConfig().completeSessionEnabled) {
       helpText += `
   ${subs.complete.usage.padEnd(20)}${subs.complete.description}`;
+    }
+
+    if (inputMode.isDebug()) {
+      helpText += `
+  ${subs.clear.usage.padEnd(20)}${subs.clear.description}`;
     }
 
     return helpText;
@@ -229,6 +387,43 @@ export function createSessionService(
     };
   }
 
+  /** Like compact but no LLM call — writes a `type: "compact"` row whose
+   *  text is shown to the next session as its restored summary. The rest
+   *  flows through compact's normal path: hub mirror advances
+   *  `compact_log_id`, the restart queues `ns-session restore`, the echo
+   *  lands in the tail. Hidden from non-debug help but callable by the
+   *  agent if asked. */
+  function handleClear(): string | CommandResponse {
+    const clearMessage = "Previous Session Cleared";
+
+    logService.write({
+      role: "assistant",
+      source: ContentSource.LLM,
+      type: "compact",
+      content: clearMessage,
+    });
+
+    // Non-empty so getResumeCommands queues `ns-session restore` on the
+    // restart and the echo logs into the tail — otherwise next
+    // AGENT_START's scan misses the echo and trips the defensive fallback.
+    restoreInfo = clearMessage;
+
+    output.commentAndLog(
+      "Session Cleared — restarting with no context history or summary.",
+    );
+    output.commentAndLog(
+      "------------------------------------------------------",
+    );
+
+    return {
+      content: "",
+      nextCommandResponse: {
+        nextCommandAction: NextCommandAction.CompactSession,
+        wait: noWait(),
+      },
+    };
+  }
+
   async function handleComplete(
     resultArg: string,
   ): Promise<string | CommandResponse> {
@@ -311,7 +506,24 @@ export function createSessionService(
   return {
     ...registrableCommand,
     getResumeCommands,
+    replayRestoreEntries,
+    hasPendingRestoreEntries,
   };
+}
+
+/** Prompt-boundary markers (startPrompt/endPrompt) coerce to their content
+ *  role so the replay keeps the user/assistant text they carry. */
+function sourceFromString(s: string): ContentSource | undefined {
+  switch (s) {
+    case "console":
+    case "startPrompt":
+      return ContentSource.Console;
+    case "llm":
+    case "endPrompt":
+      return ContentSource.LLM;
+    default:
+      return undefined;
+  }
 }
 
 export type SessionService = ReturnType<typeof createSessionService>;

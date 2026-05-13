@@ -105,11 +105,11 @@ export function createListenService(
       return `[${filepath}]\n${result.responses.join("\n")}`;
     }
 
-    // Default: pin audio into context
-    contextManager.appendAudio(base64, mimeType, filepath);
-
-    // Return empty — the audio message is already in context
-    return "";
+    // Default: pin audio into context. appendAudio returns a block reason
+    // when the model can't ingest audio (e.g. shellModel changed) — surface
+    // it to the agent like look.ts does for appendImage. Mirrors the upfront
+    // supportsHearing check above as defense in depth.
+    return contextManager.appendAudio(base64, mimeType, filepath);
   }
 
   const registrableCommand: RegistrableCommand = {

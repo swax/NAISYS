@@ -90,6 +90,7 @@ model context_log {
   run_session   run_session       @relation(fields: [user_id, run_id, subagent_id, session_id], references: [user_id, run_id, subagent_id, session_id], onDelete: NoAction, onUpdate: NoAction)
   host          hosts             @relation(fields: [host_id], references: [id])
   attachment    attachments?      @relation(fields: [attachment_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  cursor_for    users[]           @relation("users_compact_log")
 
   @@index([user_id, run_id, subagent_id, session_id], map: "idx_context_log_user_run_subagent_session") // WHERE user_id, run_id, subagent_id, session_id in runsService.getContextLog
 }
@@ -200,8 +201,11 @@ model users {
   api_key_hash              String?                     @unique
   lead_user_id              Int?
   config                    String                      @default("{}")
-  /// Latest compact summary, used to seed the next run when continuity = "summary".
-  restore_summary           String?
+  /// Points at the most recent context_log row of type=compact. AGENT_START
+  /// uses it as a cursor: summary text lives on that row, anything with a
+  /// higher id is unsummarized activity.
+  compact_log_id            Int?
+  compact_log               context_log?                @relation("users_compact_log", fields: [compact_log_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   created_at                DateTime                    @default(now())
   updated_at                DateTime                    @updatedAt
   enabled                   Boolean                     @default(true)

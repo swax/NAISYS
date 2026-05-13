@@ -1,4 +1,7 @@
-import type { StartupAttachmentDispatch } from "@naisys/hub-protocol";
+import type {
+  RestoreData,
+  StartupAttachmentDispatch,
+} from "@naisys/hub-protocol";
 
 import { commentCmd } from "../command/commandDefs.js";
 import { createCommandHandler } from "../command/commandHandler.js";
@@ -37,6 +40,7 @@ import { createMailService } from "../mail/mail.js";
 import { createMailQueryService } from "../mail/mailQueryService.js";
 import { createAttachmentService } from "../services/attachmentService.js";
 import type { HostService } from "../services/hostService.js";
+import { createHubAttachmentService } from "../services/hubAttachmentService.js";
 import { createLogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
 import { createNaisysApiService } from "../services/naisysApiService.js";
@@ -71,7 +75,7 @@ export async function createAgentRuntime(
   preallocated?: { runId: number; sessionId: number },
   runtimeApiKey?: string,
   startupAttachments?: StartupAttachmentDispatch[],
-  restoreSummary?: string,
+  restoreData?: RestoreData,
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
   // local-mode branch. RunService keeps the parent's hubClient (as
@@ -96,10 +100,14 @@ export async function createAgentRuntime(
   // Built before staging so the seed key is available to stage().
   const naisysApiService = createNaisysApiService(runtimeApiKey);
 
-  const startupAttachmentService = createStartupAttachmentService(
+  const hubAttachmentService = createHubAttachmentService(
     hubClient,
-    agentConfig,
     naisysApiService,
+  );
+
+  const startupAttachmentService = createStartupAttachmentService(
+    hubAttachmentService,
+    agentConfig,
   );
   if (startupAttachments?.length) {
     await startupAttachmentService.stage(startupAttachments);
@@ -307,8 +315,10 @@ export async function createAgentRuntime(
     chatService,
     userService,
     logService,
+    hubAttachmentService,
+    inputMode,
     localUserId,
-    restoreSummary,
+    restoreData,
   );
   const commandProtection = createCommandProtection(
     agentConfig,

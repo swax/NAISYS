@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { LogSourceEnum } from "./logs.js";
+
 /** Client (supervisor / NAISYS host) → hub. runtimeApiKey is intentionally absent. */
 export const AgentStartInboundSchema = z.object({
   startUserId: z.number(),
@@ -7,6 +9,52 @@ export const AgentStartInboundSchema = z.object({
   requesterUserId: z.number(),
 });
 export type AgentStartInbound = z.infer<typeof AgentStartInboundSchema>;
+
+/** Attachment metadata carried on a ResumeEntry. Only image/audio attachments
+ *  on console-source entries are shipped — the host downloads via publicId
+ *  and injects them into context via appendImage/appendAudio. Replay doesn't
+ *  re-log, so no need to carry the existing attachment id. */
+export const ResumeAttachmentSchema = z.object({
+  publicId: z.string(),
+  filename: z.string(),
+});
+export type ResumeAttachment = z.infer<typeof ResumeAttachmentSchema>;
+
+/** One prior-run context_log entry, slimmed for replay into a new run. */
+export const ResumeEntrySchema = z.object({
+  source: LogSourceEnum,
+  message: z.string(),
+  attachment: ResumeAttachmentSchema.optional(),
+});
+export type ResumeEntry = z.infer<typeof ResumeEntrySchema>;
+
+/** AGENT_START resume bundle. The tail ships as-is; `summary` always carries
+ *  the compact's text when a compact exists. The host scans the tail for the
+ *  post-compact restore echo and only prepends `summary` if missing.
+ *  Valid shapes:
+ *  - `{ summary, cursor }`                  → continuity=summary current,
+ *                                             or continuity=full with no
+ *                                             post-compact activity yet
+ *  - `{ summary, entries, stale, cursor }`  → continuity=summary, tail past
+ *                                             snapshot — replay then
+ *                                             retroactively compact
+ *  - `{ summary, entries, cursor }`         → continuity=full, replay tail
+ *  - `{ entries, stale }`                   → continuity=summary, no
+ *                                             snapshot yet — replay then
+ *                                             compact to seed the first one
+ *  - `{ entries }`                          → continuity=full, no compact
+ *                                             ever — replay all history
+ *  `cursor` is the (runId, sessionId) of the compact log entry the tail
+ *  starts past — used for the host's resume notice on startup. */
+export const RestoreDataSchema = z.object({
+  summary: z.string().optional(),
+  entries: z.array(ResumeEntrySchema).optional(),
+  stale: z.boolean().optional(),
+  cursor: z
+    .object({ runId: z.number(), sessionId: z.number() })
+    .optional(),
+});
+export type RestoreData = z.infer<typeof RestoreDataSchema>;
 
 /** Files for the host to materialize into the agent's home folder before
  *  the shell starts. fileHash lets the host skip ones already on disk. */
@@ -33,8 +81,8 @@ export const AgentStartDispatchSchema = z.object({
   sessionId: z.number(),
   sourceHostId: z.number().optional(),
   startupAttachments: z.array(StartupAttachmentDispatchSchema).optional(),
-  /** Saved compact summary, shipped only when the user's continuity = "summary". */
-  restoreSummary: z.string().optional(),
+  /** Resume bundle (summary, entries, stale flag) — see RestoreDataSchema. */
+  restoreData: RestoreDataSchema.optional(),
 });
 export type AgentStartDispatch = z.infer<typeof AgentStartDispatchSchema>;
 
