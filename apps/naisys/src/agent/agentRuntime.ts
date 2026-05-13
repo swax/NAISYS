@@ -78,9 +78,9 @@ export async function createAgentRuntime(
   restoreData?: RestoreData,
 ) {
   // For subagents, strip the hub surface so hub-aware services take their
-  // local-mode branch. RunService keeps the parent's hubClient (as
-  // sessionHubClient) so SESSION_CREATE/INCREMENT can register the
-  // run_session row before any log or cost write references it.
+  // local-mode branch. The parent's hubClient is preserved as sessionHubClient
+  // for the few subagent paths that genuinely need hub round-trips — run
+  // session registration, $NAISYS_API_URL_BASE, and OpenAI Codex OAuth.
   const sessionHubClient = hubClient;
   if (subagentContext) {
     hubLogBuffer = wrapLogBufferForSubagent(hubLogBuffer, subagentContext);
@@ -189,6 +189,7 @@ export async function createAgentRuntime(
     tools,
     modelService,
     computerService,
+    sessionHubClient,
   );
 
   // Agent-facing feature commands.

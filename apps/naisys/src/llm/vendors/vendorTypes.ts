@@ -113,4 +113,12 @@ export interface VendorDeps {
   tools: CommandTools;
   useToolsForLlmConsoleResponses: boolean;
   desktopConfig?: DesktopConfig;
+  /**
+   * Returns a fresh Codex OAuth access token. Hub mode routes through the
+   * hub; standalone rotates locally. Pass `true` to bypass local caches
+   * after an observed auth failure.
+   */
+  getCodexAccessToken: (
+    forceRefresh?: boolean,
+  ) => Promise<string | undefined>;
 }

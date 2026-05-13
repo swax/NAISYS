@@ -24,10 +24,7 @@ import type {
   AgentStopResponse,
   RuntimeKeyReissue,
 } from "./schemas/agents.js";
-import type {
-  ConfigResponse,
-  VariablePatchRequest,
-} from "./schemas/config.js";
+import type { ConfigResponse } from "./schemas/config.js";
 import type {
   CostControl,
   CostPush,
@@ -57,6 +54,10 @@ import type {
   MailUnreadResponse,
 } from "./schemas/mail.js";
 import type { ModelsResponse } from "./schemas/models.js";
+import type {
+  OpenAiCodexAccessTokenRequest,
+  OpenAiCodexAccessTokenResponse,
+} from "./schemas/openAiCodex.js";
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
@@ -142,6 +143,10 @@ export interface HubRequestEvents {
     request: CostWriteRequest;
     response: CostWriteResponse;
   };
+  [HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET]: {
+    request: OpenAiCodexAccessTokenRequest;
+    response: OpenAiCodexAccessTokenResponse;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +157,6 @@ export interface HubRequestEvents {
 export interface HubFireAndForgetEvents {
   [HubEvents.HEARTBEAT]: Heartbeat;
   [HubEvents.LOG_WRITE]: LogWriteRequest;
-  [HubEvents.VARIABLE_PATCH]: VariablePatchRequest;
 }
 
 // ---------------------------------------------------------------------------

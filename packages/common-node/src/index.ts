@@ -9,6 +9,7 @@ export * from "./hubAttachmentStorage.js";
 export * from "./hubCertVerification.js";
 export * from "./logFileService.js";
 export * from "./migrationHelper.js";
+export * from "./openAiCodexAccessToken.js";
 export * from "./persistentApiKey.js";
 export * from "./sessionCookie.js";
 export * from "./setupWizard.js";

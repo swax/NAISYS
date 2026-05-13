@@ -73,8 +73,6 @@ export const HubEvents = {
   LOG_WRITE: "log_write",
   /** Batched cost/token entries */
   COST_WRITE: "cost_write",
-  /** Patch selected allowlisted global variables; hub persists and rebroadcasts */
-  VARIABLE_PATCH: "variable_patch",
 
   // ---------------------------------------------------------------------------
   // NAISYS -> Hub (request/response)
@@ -108,6 +106,13 @@ export const HubEvents = {
 
   /** Rotate the hub access key */
   ROTATE_ACCESS_KEY: "rotate_access_key",
+
+  // ---------------------------------------------------------------------------
+  // NAISYS/Supervisor -> Hub (request/response) – OAuth
+  // ---------------------------------------------------------------------------
+
+  /** Mint a fresh OpenAI Codex OAuth access token; hub owns the refresh token. */
+  OPENAI_CODEX_ACCESS_TOKEN_GET: "openai_codex_access_token_get",
 
   // ---------------------------------------------------------------------------
   // NAISYS/Supervisor -> Hub (request/response) – Mail

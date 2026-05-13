@@ -1,7 +1,6 @@
 import type { ClientConfig } from "@naisys/common";
 import { buildClientConfig } from "@naisys/common";
 import { ConfigResponseSchema, HubEvents } from "@naisys/hub-protocol";
-import type { VariablePatchEntry } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 import fs from "fs";
 import { readFile } from "fs/promises";
@@ -159,28 +158,6 @@ export function createGlobalConfig(
     patchRuntimeVariable(key, value, options);
   }
 
-  /** Hub mode: optimistic local patch + fire-and-forget hub send for fan-out
-   *  to other clients. Standalone: persist to .env. */
-  async function patchVariableValues(
-    updates: VariablePatchEntry[],
-  ): Promise<void> {
-    if (updates.length === 0) {
-      return;
-    }
-
-    if (hubClient) {
-      for (const update of updates) {
-        patchRuntimeVariable(update.key, update.value, { exportToShell: false });
-      }
-      hubClient.sendMessage(HubEvents.VARIABLE_PATCH, { updates });
-      return;
-    }
-
-    for (const update of updates) {
-      setVariableValue(update.key, update.value, { exportToShell: false });
-    }
-  }
-
   function updateEnvValue(key: string, value: string): void {
     setVariableValue(key, value);
   }
@@ -192,7 +169,6 @@ export function createGlobalConfig(
       configChangedHandler = handler;
     },
     setVariableValue,
-    patchVariableValues,
     updateEnvValue,
   };
 }

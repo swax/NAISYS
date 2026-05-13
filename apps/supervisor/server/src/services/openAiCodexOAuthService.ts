@@ -1,21 +1,17 @@
-import {
-  OPENAI_CODEX_ACCESS_TOKEN_VAR,
-  OPENAI_CODEX_EXPIRES_AT_VAR,
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
-} from "@naisys/common";
+import { OPENAI_CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
+import { OPENAI_CODEX_CLIENT_ID } from "@naisys/common-node";
 import { randomUUID } from "crypto";
 
-import { getVariableValue, saveVariable } from "./variableService.js";
+import { sendOpenAiCodexAccessTokenGet } from "./hubConnectionService.js";
+import { saveVariable } from "./variableService.js";
 
 const OPENAI_AUTH_BASE_URL = "https://auth.openai.com";
 const OPENAI_CHATGPT_BASE_URL = "https://chatgpt.com/backend-api";
-const OPENAI_CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 const OPENAI_CODEX_DEVICE_CALLBACK_URL = `${OPENAI_AUTH_BASE_URL}/deviceauth/callback`;
 const OPENAI_CODEX_USAGE_URL = `${OPENAI_CHATGPT_BASE_URL}/wham/usage`;
 const DEVICE_CODE_TIMEOUT_MS = 15 * 60_000;
 const DEVICE_CODE_DEFAULT_INTERVAL_MS = 5_000;
 const DEVICE_CODE_MIN_INTERVAL_MS = 1_000;
-const REFRESH_SKEW_MS = 5 * 60_000;
 
 type FetchLike = (
   input: string | URL | Request,
@@ -28,12 +24,6 @@ type DeviceFlow = {
   verificationUrl: string;
   intervalMs: number;
   expiresAt: number;
-};
-
-type TokenResult = {
-  access: string;
-  refresh: string;
-  expires: number;
 };
 
 type WhamUsageWindow = {
@@ -92,31 +82,6 @@ function formatOpenAiError(params: {
     : `${params.prefix}: HTTP ${params.status}`;
 }
 
-function resolveAccessTokenExpiry(token: string): number | undefined {
-  const payload = token.split(".")[1];
-  if (!payload) {
-    return undefined;
-  }
-
-  try {
-    const body = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return typeof body.exp === "number" && Number.isFinite(body.exp)
-      ? Math.trunc(body.exp * 1000)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function parseEpochMilliseconds(value: unknown): number | undefined {
-  const text = trimNonEmpty(value);
-  if (!text || !/^\d+$/.test(text)) {
-    return undefined;
-  }
-  const parsed = Number.parseInt(text, 10);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
 function normalizeFiniteNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
@@ -153,81 +118,6 @@ function summarizeUsage(limitReached: boolean | undefined) {
     return "OpenAI Codex usage is available.";
   }
   return "OpenAI Codex usage check completed.";
-}
-
-async function refreshOpenAiCodexToken(
-  refreshToken: string,
-  fetchFn: FetchLike,
-): Promise<TokenResult> {
-  const response = await fetchFn(`${OPENAI_AUTH_BASE_URL}/oauth/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: OPENAI_CODEX_CLIENT_ID,
-      refresh_token: refreshToken,
-    }),
-  });
-
-  const bodyText = await response.text();
-  if (!response.ok) {
-    throw new Error(
-      formatOpenAiError({
-        prefix: "OpenAI OAuth refresh failed",
-        status: response.status,
-        bodyText,
-      }),
-    );
-  }
-
-  const body = parseJsonObject(bodyText);
-  const access = trimNonEmpty(body?.access_token);
-  const refresh = trimNonEmpty(body?.refresh_token) ?? refreshToken;
-  if (!access || !refresh) {
-    throw new Error(
-      "OpenAI OAuth refresh succeeded but did not return usable tokens.",
-    );
-  }
-
-  const expiresInMs = normalizePositiveMilliseconds(body?.expires_in);
-  return {
-    access,
-    refresh,
-    expires:
-      expiresInMs !== undefined
-        ? Date.now() + expiresInMs
-        : (resolveAccessTokenExpiry(access) ?? Date.now()),
-  };
-}
-
-async function resolveUsageAccessToken(params: {
-  fetchFn: FetchLike;
-  userUuid: string;
-}) {
-  const accessToken = trimNonEmpty(
-    await getVariableValue(OPENAI_CODEX_ACCESS_TOKEN_VAR),
-  );
-  const refreshToken = trimNonEmpty(
-    await getVariableValue(OPENAI_CODEX_REFRESH_TOKEN_VAR),
-  );
-  const expires =
-    parseEpochMilliseconds(await getVariableValue(OPENAI_CODEX_EXPIRES_AT_VAR)) ??
-    (accessToken ? resolveAccessTokenExpiry(accessToken) : undefined);
-
-  if (
-    !refreshToken ||
-    (accessToken &&
-      expires !== undefined &&
-      expires > Date.now() + REFRESH_SKEW_MS)
-  ) {
-    return { accessToken, refreshed: false };
-  }
-
-  const refreshed = await refreshOpenAiCodexToken(refreshToken, params.fetchFn);
-  await saveOpenAiCodexOAuthVariables(refreshed, params.userUuid);
-  return { accessToken: refreshed.access, refreshed: true };
 }
 
 async function requestDeviceCode(fetchFn: FetchLike): Promise<DeviceFlow> {
@@ -329,7 +219,7 @@ async function exchangeDeviceAuthorization(params: {
   authorizationCode: string;
   codeVerifier: string;
   fetchFn: FetchLike;
-}): Promise<TokenResult> {
+}): Promise<{ refresh: string }> {
   const response = await params.fetchFn(`${OPENAI_AUTH_BASE_URL}/oauth/token`, {
     method: "POST",
     headers: {
@@ -358,48 +248,15 @@ async function exchangeDeviceAuthorization(params: {
   }
 
   const body = parseJsonObject(bodyText);
-  const access = trimNonEmpty(body?.access_token);
   const refresh = trimNonEmpty(body?.refresh_token);
-  if (!access || !refresh) {
-    throw new Error("OpenAI token exchange did not return OAuth tokens.");
+  if (!refresh) {
+    throw new Error(
+      "OpenAI token exchange did not return an OAuth refresh token.",
+    );
   }
 
-  const expiresInMs = normalizePositiveMilliseconds(body?.expires_in);
-  return {
-    access,
-    refresh,
-    expires:
-      expiresInMs !== undefined
-        ? Date.now() + expiresInMs
-        : (resolveAccessTokenExpiry(access) ?? Date.now()),
-  };
-}
-
-async function saveOpenAiCodexOAuthVariables(
-  token: TokenResult,
-  userUuid: string,
-) {
-  await saveVariable(
-    OPENAI_CODEX_ACCESS_TOKEN_VAR,
-    token.access,
-    false,
-    true,
-    userUuid,
-  );
-  await saveVariable(
-    OPENAI_CODEX_REFRESH_TOKEN_VAR,
-    token.refresh,
-    false,
-    true,
-    userUuid,
-  );
-  await saveVariable(
-    OPENAI_CODEX_EXPIRES_AT_VAR,
-    String(token.expires),
-    false,
-    true,
-    userUuid,
-  );
+  // Drop the initial access token — the hub mints fresh ones on demand.
+  return { refresh };
 }
 
 export async function startOpenAiCodexOAuthFlow(fetchFn: FetchLike = fetch) {
@@ -448,41 +305,41 @@ export async function pollOpenAiCodexOAuthFlow(params: {
     codeVerifier: authorization.codeVerifier,
     fetchFn: params.fetchFn ?? fetch,
   });
-  await saveOpenAiCodexOAuthVariables(token, params.userUuid);
+
+  await saveVariable(
+    OPENAI_CODEX_REFRESH_TOKEN_VAR,
+    token.refresh,
+    false,
+    true,
+    params.userUuid,
+  );
   flows.delete(params.flowId);
 
   return {
     success: true as const,
     status: "complete" as const,
-    message: "OpenAI Codex OAuth variables saved.",
-    savedKeys: [
-      OPENAI_CODEX_ACCESS_TOKEN_VAR,
-      OPENAI_CODEX_REFRESH_TOKEN_VAR,
-      OPENAI_CODEX_EXPIRES_AT_VAR,
-    ],
+    message: "OpenAI Codex OAuth refresh token saved.",
+    savedKeys: [OPENAI_CODEX_REFRESH_TOKEN_VAR],
   };
 }
 
 export async function checkOpenAiCodexOAuthUsage(params: {
-  userUuid: string;
   fetchFn?: FetchLike;
 }) {
   const fetchFn = params.fetchFn ?? fetch;
-  const { accessToken, refreshed } = await resolveUsageAccessToken({
-    fetchFn,
-    userUuid: params.userUuid,
-  });
-
-  if (!accessToken) {
+  // Route through the hub so rotation stays single-flight.
+  const tokenResult = await sendOpenAiCodexAccessTokenGet();
+  if (!tokenResult.success || !tokenResult.accessToken) {
     throw new Error(
-      `Set ${OPENAI_CODEX_ACCESS_TOKEN_VAR} or ${OPENAI_CODEX_REFRESH_TOKEN_VAR} before checking OpenAI Codex usage.`,
+      tokenResult.error ??
+        `Set ${OPENAI_CODEX_REFRESH_TOKEN_VAR} before checking OpenAI Codex usage.`,
     );
   }
 
   const response = await fetchFn(OPENAI_CODEX_USAGE_URL, {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${tokenResult.accessToken}`,
       Accept: "application/json",
     },
   });
@@ -518,7 +375,6 @@ export async function checkOpenAiCodexOAuthUsage(params: {
     limitReached,
     primaryWindow,
     secondaryWindow,
-    refreshed: refreshed || undefined,
     message: summarizeUsage(limitReached),
   };
 }

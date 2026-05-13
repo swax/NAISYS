@@ -28,18 +28,3 @@ export const ConfigResponseSchema = z.object({
     .optional(),
 });
 export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
-
-export const VariablePatchEntrySchema = z.object({
-  key: z
-    .string()
-    .min(1)
-    .max(128)
-    .regex(/^[A-Z_][A-Z0-9_]*$/),
-  value: z.string(),
-});
-export type VariablePatchEntry = z.infer<typeof VariablePatchEntrySchema>;
-
-export const VariablePatchRequestSchema = z.object({
-  updates: z.array(VariablePatchEntrySchema).min(1).max(25),
-});
-export type VariablePatchRequest = z.infer<typeof VariablePatchRequestSchema>;

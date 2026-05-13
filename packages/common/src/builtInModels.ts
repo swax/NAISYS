@@ -5,7 +5,7 @@ import {
   type LlmReasoningLevel,
 } from "./modelTypes.js";
 import {
-  OPENAI_CODEX_ACCESS_TOKEN_VAR,
+  OPENAI_CODEX_REFRESH_TOKEN_VAR,
   OPENAI_CODEX_RESPONSES_BASE_URL,
 } from "./openAiOAuth.js";
 
@@ -21,7 +21,10 @@ function openAiCodexOAuthModel(params: {
     versionName: params.versionName,
     baseUrl: OPENAI_CODEX_RESPONSES_BASE_URL,
     apiType: LlmApiType.OpenAIOAuth,
-    apiKeyVar: OPENAI_CODEX_ACCESS_TOKEN_VAR,
+    // Refresh token presence indicates the provider is configured; the
+    // access token itself is minted on demand by the hub and never lives
+    // in the variable map.
+    apiKeyVar: OPENAI_CODEX_REFRESH_TOKEN_VAR,
     maxTokens: 400_000,
     // Subscription-backed ChatGPT/Codex OAuth is not metered like API-key usage.
     inputCost: 0,

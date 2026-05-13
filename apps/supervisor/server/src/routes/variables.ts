@@ -174,15 +174,9 @@ export default function variablesRoutes(
         },
       },
     },
-    async (request, reply) => {
+    async (_request, reply) => {
       try {
-        const result = await checkOpenAiCodexOAuthUsage({
-          userUuid: request.supervisorUser!.uuid,
-        });
-        if (result.refreshed) {
-          sendVariablesChanged();
-        }
-        return result;
+        return await checkOpenAiCodexOAuthUsage({});
       } catch (error) {
         const message =
           error instanceof Error

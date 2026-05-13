@@ -207,8 +207,9 @@ export const OpenAiOAuthSetupDialog: React.FC<
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           Use this setup to utilize your OpenAI Codex subscription with NAISYS.
-          It stores OAuth access, refresh, and expiry values as sensitive
-          variables for the built-in OpenAI Codex OAuth models.
+          It stores the OAuth refresh token as a sensitive variable; the hub
+          mints short-lived access tokens on demand for the built-in OpenAI
+          Codex OAuth models.
         </Text>
 
         {error && (
@@ -219,7 +220,7 @@ export const OpenAiOAuthSetupDialog: React.FC<
 
         {isComplete && (
           <Alert color="green" icon={<IconCircleCheck size={18} />}>
-            OpenAI Codex OAuth variables were saved.
+            OpenAI Codex OAuth refresh token saved.
           </Alert>
         )}
 
@@ -241,7 +242,6 @@ export const OpenAiOAuthSetupDialog: React.FC<
               {secondaryUsage && <Text size="xs">{secondaryUsage}</Text>}
               <Text size="xs" c="dimmed">
                 Checked at {new Date(usageResult.checkedAt).toLocaleTimeString()}
-                {usageResult.refreshed ? "; access token refreshed" : ""}
               </Text>
             </Stack>
           </Alert>

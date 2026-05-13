@@ -29,12 +29,12 @@ import { createHubHostService } from "./handlers/hubHostService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubModelsService } from "./handlers/hubModelsService.js";
+import { createHubOpenAiCodexAuthService } from "./handlers/hubOpenAiCodexAuthService.js";
 import { createHubRedactionService } from "./handlers/hubRedactionService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubRuntimeKeyService } from "./handlers/hubRuntimeKeyService.js";
 import { createHubSendMailService } from "./handlers/hubSendMailService.js";
 import { createHubUserService } from "./handlers/hubUserService.js";
-import { createHubVariablePatchService } from "./handlers/hubVariablePatchService.js";
 import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
 import { seedAgentConfigs } from "./services/agentRegistrar.js";
 import { createHostRegistrar } from "./services/hostRegistrar.js";
@@ -128,10 +128,9 @@ export const startHub: StartHub = async (
       logService,
     );
 
-    createHubVariablePatchService(
+    createHubOpenAiCodexAuthService(
       naisysServer,
       hubDatabaseService,
-      configService,
       redactionService,
       logService,
     );

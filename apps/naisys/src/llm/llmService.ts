@@ -3,6 +3,7 @@ import { LlmApiType } from "@naisys/common";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { ComputerService } from "../computer-use/computerService.js";
 import type { GlobalConfig } from "../globalConfig.js";
+import type { HubClient } from "../hub/hubClient.js";
 import type { ModelService } from "../services/modelService.js";
 import type { CommandTools } from "./commandTool.js";
 import type { CostTracker } from "./costTracker.js";
@@ -11,7 +12,10 @@ import { sendWithAnthropic } from "./vendors/anthropic.js";
 import { sendWithGoogle } from "./vendors/google.js";
 import { sendWithMock } from "./vendors/mock.js";
 import { sendWithOpenAiCompatible } from "./vendors/openai-compatible.js";
-import { sendWithOpenAiOauth } from "./vendors/openai-oauth.js";
+import {
+  createCodexAccessTokenGetter,
+  sendWithOpenAiOauth,
+} from "./vendors/openai-oauth.js";
 import { sendWithOpenAiStandard } from "./vendors/openai-standard.js";
 import type {
   QueryResult,
@@ -26,8 +30,13 @@ export function createLLMService(
   tools: CommandTools,
   modelService: ModelService,
   computerService?: ComputerService,
+  hubClient?: HubClient,
 ) {
   const { globalConfig } = globalConfigService;
+  const getCodexAccessToken = createCodexAccessTokenGetter(
+    globalConfigService,
+    hubClient,
+  );
 
   async function query(
     modelKey: string,
@@ -87,6 +96,7 @@ export function createLLMService(
       useToolsForLlmConsoleResponses:
         globalConfig().useToolsForLlmConsoleResponses,
       desktopConfig: effectiveDesktopConfig,
+      getCodexAccessToken,
     };
 
     if (model.apiType == LlmApiType.Google) {

@@ -1,168 +1,79 @@
+import { OPENAI_CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
 import {
-  OPENAI_CODEX_ACCESS_TOKEN_VAR,
-  OPENAI_CODEX_EXPIRES_AT_VAR,
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
-} from "@naisys/common";
+  createOpenAiCodexAccessTokenProvider,
+  type OpenAiCodexAccessTokenProvider,
+} from "@naisys/common-node";
+import { HubEvents } from "@naisys/hub-protocol";
 
 import type { GlobalConfig } from "../../globalConfig.js";
+import type { HubClient } from "../../hub/hubClient.js";
 import type { LlmMessage } from "../llmDtos.js";
 import { sendWithOpenAiStandard } from "./openai-standard.js";
 import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 
-const OPENAI_AUTH_BASE_URL = "https://auth.openai.com";
-const OPENAI_CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
-const REFRESH_SKEW_MS = 5 * 60_000;
+// Standalone runs as a single-writer process, but multiple LLM services
+// (parent + subagents) share .env and must single-flight rotation through
+// one provider — otherwise concurrent refreshes burn the token lineage at
+// OpenAI. Module-scoped so all callers in the process share state. Hub
+// mode is stateless on the agent side (hub owns rotation).
+let standaloneProvider: OpenAiCodexAccessTokenProvider | undefined;
 
-type OpenAiCodexToken = {
-  access: string;
-  refresh: string;
-  expires: number;
-};
-
-type FetchLike = (
-  input: string | URL | Request,
-  init?: RequestInit,
-) => Promise<Response>;
-
-function trimNonEmpty(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function parseJsonObject(text: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(text);
-    return parsed && typeof parsed === "object"
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseEpochMilliseconds(value: unknown): number | undefined {
-  const text = trimNonEmpty(value);
-  if (!text || !/^\d+$/.test(text)) {
-    return undefined;
-  }
-  const parsed = Number.parseInt(text, 10);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-function normalizeLifetimeMs(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    return Math.trunc(value * 1000);
-  }
-  const text = trimNonEmpty(value);
-  if (!text || !/^\d+$/.test(text)) {
-    return undefined;
-  }
-  return Number.parseInt(text, 10) * 1000;
-}
-
-export function resolveOpenAiCodexAccessTokenExpiry(
-  token: string,
-): number | undefined {
-  const payload = token.split(".")[1];
-  if (!payload) {
-    return undefined;
+/**
+ * Builds the function vendors call to obtain a Codex OAuth access token.
+ *
+ * - Hub mode: each call round-trips the hub; the hub is the single-flight
+ *   authority and already caches minted tokens. No agent-side cache — the
+ *   socket hop is negligible vs LLM latency.
+ * - Standalone: rotate locally and persist the refresh token to .env. The
+ *   process is single-writer (no concurrent supervisor) so the save path
+ *   has no CAS to perform and always reports success.
+ */
+export function createCodexAccessTokenGetter(
+  globalConfigService: GlobalConfig,
+  hubClient: HubClient | undefined,
+): (forceRefresh?: boolean) => Promise<string | undefined> {
+  if (hubClient) {
+    return async (forceRefresh) => {
+      const response = await hubClient.sendRequest(
+        HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET,
+        forceRefresh ? { forceRefresh: true } : {},
+      );
+      if (!response.success || !response.accessToken) {
+        throw new Error(
+          response.error ?? "Hub did not return an OpenAI Codex access token.",
+        );
+      }
+      return response.accessToken;
+    };
   }
 
-  try {
-    const body = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return typeof body.exp === "number" && Number.isFinite(body.exp)
-      ? Math.trunc(body.exp * 1000)
-      : undefined;
-  } catch {
-    return undefined;
+  if (!standaloneProvider) {
+    standaloneProvider = createOpenAiCodexAccessTokenProvider({
+      getRefreshToken: () =>
+        globalConfigService.globalConfig().variableMap[
+          OPENAI_CODEX_REFRESH_TOKEN_VAR
+        ],
+      saveRefreshToken: async (refreshToken) => {
+        globalConfigService.setVariableValue(
+          OPENAI_CODEX_REFRESH_TOKEN_VAR,
+          refreshToken,
+          { exportToShell: false },
+        );
+        return true;
+      },
+    });
   }
-}
+  const provider = standaloneProvider;
 
-function formatRefreshError(status: number, bodyText: string): string {
-  const body = parseJsonObject(bodyText);
-  const error = trimNonEmpty(body?.error);
-  const description = trimNonEmpty(body?.error_description);
-  if (error && description) {
-    return `OpenAI OAuth refresh failed: ${error} (${description})`;
-  }
-  if (error) {
-    return `OpenAI OAuth refresh failed: ${error}`;
-  }
-  const bodySummary = bodyText.replace(/\s+/g, " ").trim();
-  return bodySummary
-    ? `OpenAI OAuth refresh failed: HTTP ${status} ${bodySummary}`
-    : `OpenAI OAuth refresh failed: HTTP ${status}`;
-}
-
-export async function refreshOpenAiCodexToken(
-  refreshToken: string,
-  fetchFn: FetchLike = fetch,
-): Promise<OpenAiCodexToken> {
-  const response = await fetchFn(`${OPENAI_AUTH_BASE_URL}/oauth/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: OPENAI_CODEX_CLIENT_ID,
-      refresh_token: refreshToken,
-    }),
-  });
-
-  const bodyText = await response.text();
-  if (!response.ok) {
-    throw new Error(formatRefreshError(response.status, bodyText));
-  }
-
-  const body = parseJsonObject(bodyText);
-  const access = trimNonEmpty(body?.access_token);
-  const refresh = trimNonEmpty(body?.refresh_token) ?? refreshToken;
-  if (!access || !refresh) {
-    throw new Error(
-      "OpenAI OAuth refresh succeeded but did not return usable tokens.",
-    );
-  }
-
-  const expiresInMs = normalizeLifetimeMs(body?.expires_in);
-  return {
-    access,
-    refresh,
-    expires:
-      expiresInMs !== undefined
-        ? Date.now() + expiresInMs
-        : (resolveOpenAiCodexAccessTokenExpiry(access) ?? Date.now()),
+  return async (forceRefresh) => {
+    if (forceRefresh) provider.invalidate();
+    return (await provider.getAccessToken())?.accessToken;
   };
 }
 
-export async function resolveOpenAiOauthAccessToken(
-  globalConfig: GlobalConfig,
-  fetchFn: FetchLike = fetch,
-  now = Date.now(),
-): Promise<string | undefined> {
-  const variables = globalConfig.globalConfig().variableMap;
-  const accessToken = trimNonEmpty(variables[OPENAI_CODEX_ACCESS_TOKEN_VAR]);
-  const refreshToken = trimNonEmpty(variables[OPENAI_CODEX_REFRESH_TOKEN_VAR]);
-  const expires =
-    parseEpochMilliseconds(variables[OPENAI_CODEX_EXPIRES_AT_VAR]) ??
-    (accessToken
-      ? resolveOpenAiCodexAccessTokenExpiry(accessToken)
-      : undefined);
-
-  if (
-    !refreshToken ||
-    (accessToken && expires !== undefined && expires > now + REFRESH_SKEW_MS)
-  ) {
-    return accessToken;
-  }
-
-  const refreshed = await refreshOpenAiCodexToken(refreshToken, fetchFn);
-  await globalConfig.patchVariableValues([
-    { key: OPENAI_CODEX_ACCESS_TOKEN_VAR, value: refreshed.access },
-    { key: OPENAI_CODEX_REFRESH_TOKEN_VAR, value: refreshed.refresh },
-    { key: OPENAI_CODEX_EXPIRES_AT_VAR, value: String(refreshed.expires) },
-  ]);
-
-  return refreshed.access;
+function isUnauthorizedError(err: unknown): boolean {
+  const status = (err as { status?: unknown })?.status;
+  return status === 401;
 }
 
 export async function sendWithOpenAiOauth(
@@ -173,15 +84,31 @@ export async function sendWithOpenAiOauth(
   source: QuerySources,
   abortSignal?: AbortSignal,
 ): Promise<QueryResult> {
-  const accessToken = await resolveOpenAiOauthAccessToken(deps.globalConfig);
+  const accessToken = await deps.getCodexAccessToken();
 
-  return sendWithOpenAiStandard(
-    deps,
-    modelKey,
-    systemMessage,
-    context,
-    source,
-    accessToken,
-    abortSignal,
-  );
+  try {
+    return await sendWithOpenAiStandard(
+      deps,
+      modelKey,
+      systemMessage,
+      context,
+      source,
+      accessToken,
+      abortSignal,
+    );
+  } catch (err) {
+    if (!isUnauthorizedError(err)) throw err;
+    // Token rejected mid-life (revocation, account switch). Force-refresh
+    // and retry once; a second 401 is fatal.
+    const refreshedToken = await deps.getCodexAccessToken(true);
+    return sendWithOpenAiStandard(
+      deps,
+      modelKey,
+      systemMessage,
+      context,
+      source,
+      refreshedToken,
+      abortSignal,
+    );
+  }
 }

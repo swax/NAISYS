@@ -5,6 +5,7 @@ import type {
   AgentStartResponse,
   AgentStopResponse,
   MailSendResponse,
+  OpenAiCodexAccessTokenResponse,
   RotateAccessKeyResponse,
   SupervisorEmitEvents,
   SupervisorListenEvents,
@@ -508,6 +509,19 @@ export function sendHostsChanged(): void {
   }
 
   socket.emit(HubEvents.HOSTS_CHANGED);
+}
+
+export function sendOpenAiCodexAccessTokenGet() {
+  return new Promise<OpenAiCodexAccessTokenResponse>((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    socket.emit(HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET, {}, (response) => {
+      resolve(response);
+    });
+  });
 }
 
 export function sendRotateAccessKey() {

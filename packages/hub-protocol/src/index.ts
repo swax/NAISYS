@@ -17,5 +17,6 @@ export * from "./schemas/hosts.js";
 export * from "./schemas/logs.js";
 export * from "./schemas/mail.js";
 export * from "./schemas/models.js";
+export * from "./schemas/openAiCodex.js";
 export * from "./schemas/sessions.js";
 export * from "./schemas/users.js";

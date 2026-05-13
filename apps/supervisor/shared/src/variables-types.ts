@@ -97,7 +97,6 @@ export const OpenAiCodexOAuthUsageResponseSchema = z.object({
   primaryWindow: OpenAiCodexUsageWindowSchema.optional(),
   secondaryWindow: OpenAiCodexUsageWindowSchema.optional(),
   message: z.string(),
-  refreshed: z.boolean().optional(),
 });
 
 export type OpenAiCodexOAuthUsageResponse = z.infer<
