@@ -7,6 +7,7 @@ import {
   IconCpu,
   IconDeviceDesktop,
   IconEye,
+  IconFunction,
   IconHeadphones,
   IconPhoto,
   IconPlus,
@@ -186,6 +187,15 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
                   </Group>
                   <Group gap={6} align="center" wrap="nowrap" mt={6}>
                     <ApiTypeBadge apiType={model.apiType} />
+                    {model.supportsToolUse && (
+                      <Tooltip label="Tool Use">
+                        <IconFunction
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
                     {model.supportsVision && (
                       <Tooltip label="Vision">
                         <IconEye

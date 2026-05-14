@@ -48,6 +48,10 @@ export async function sendWithOpenAiCompatible(
 
   const openAI = getClient(apiKey, model.baseUrl);
   const reasoningEffort = toOpenAiReasoningEffort(model.reasoningLevel);
+  const useConsoleTools =
+    source === "console" &&
+    useToolsForLlmConsoleResponses &&
+    model.supportsToolUse === true;
 
   const chatRequest: ChatCompletionCreateParamsNonStreaming = {
     model: model.versionName,
@@ -65,7 +69,7 @@ export async function sendWithOpenAiCompatible(
     ],
   };
 
-  if (source === "console" && useToolsForLlmConsoleResponses) {
+  if (useConsoleTools) {
     chatRequest.tools = [tools.consoleToolOpenAI];
     chatRequest.tool_choice = {
       type: "function",

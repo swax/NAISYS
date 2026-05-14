@@ -128,7 +128,9 @@ export async function sendWithOpenAiStandard(
   const isOpenAiOauth = model.apiType === LlmApiType.OpenAIOAuth;
 
   const useConsoleTools =
-    source === "console" && useToolsForLlmConsoleResponses;
+    source === "console" &&
+    useToolsForLlmConsoleResponses &&
+    model.supportsToolUse === true;
 
   // Build tools array — console and desktop tools can coexist
   const toolsDefs: Tool[] = [];

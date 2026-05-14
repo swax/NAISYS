@@ -354,6 +354,7 @@ function LlmReadOnlyTable({
     cacheWriteCost?: number;
     cacheReadCost?: number;
     cacheTtlSeconds?: number;
+    supportsToolUse?: boolean;
     supportsVision?: boolean;
     supportsHearing?: boolean;
     supportsComputerUse?: boolean;
@@ -380,6 +381,7 @@ function LlmReadOnlyTable({
   if (model.cacheTtlSeconds !== undefined) {
     rows.push(["Cache TTL (seconds)", model.cacheTtlSeconds]);
   }
+  rows.push(["Supports Tool Use", model.supportsToolUse ? "Yes" : "No"]);
   rows.push(["Supports Vision", model.supportsVision ? "Yes" : "No"]);
   rows.push(["Supports Hearing", model.supportsHearing ? "Yes" : "No"]);
   rows.push([

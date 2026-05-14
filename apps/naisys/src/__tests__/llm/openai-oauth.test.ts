@@ -40,6 +40,7 @@ function makeVendorDeps(overrides: {
         maxTokens: 400_000,
         inputCost: 0,
         outputCost: 0,
+        supportsToolUse: true,
         reasoningLevel: "medium",
       }),
     },

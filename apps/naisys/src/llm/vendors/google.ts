@@ -77,6 +77,10 @@ export async function sendWithGoogle(
 
   const ai = getClient(apiKey, model.baseUrl);
   const thinkingBudget = toGoogleThinkingBudget(model.reasoningLevel);
+  const useConsoleTools =
+    source === "console" &&
+    useToolsForLlmConsoleResponses &&
+    model.supportsToolUse === true;
 
   const lastMessage = context[context.length - 1];
 
@@ -122,7 +126,7 @@ export async function sendWithGoogle(
   // Build tools array — console and desktop tools can coexist
   const toolsDefs: Tool[] = [];
 
-  if (source === "console" && useToolsForLlmConsoleResponses) {
+  if (useConsoleTools) {
     // consoleToolGoogle's properties are typed as a union per
     // multipleCommandsEnabled; FunctionDeclaration expects a flat record,
     // so go through unknown to reconcile
@@ -143,11 +147,7 @@ export async function sendWithGoogle(
     chatConfig.config!.tools = toolsDefs;
 
     // Only force console tool when desktop is not also enabled
-    if (
-      source === "console" &&
-      useToolsForLlmConsoleResponses &&
-      !desktopConfig
-    ) {
+    if (useConsoleTools && !desktopConfig) {
       chatConfig.config!.toolConfig = {
         functionCallingConfig: {
           mode: FunctionCallingConfigMode.ANY,
@@ -215,7 +215,7 @@ export async function sendWithGoogle(
   const consoleFunctionCalls = responseParts
     .filter((p) => p.functionCall && p.functionCall.name === consoleToolName)
     .map((p) => p.functionCall!);
-  const consoleCommands = chatConfig.config!.tools
+  const consoleCommands = useConsoleTools
     ? tools.getCommandsFromGoogleToolUse(consoleFunctionCalls)
     : undefined;
 

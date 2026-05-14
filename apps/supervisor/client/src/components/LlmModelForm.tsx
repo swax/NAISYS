@@ -33,6 +33,7 @@ interface LlmFormValues {
   cacheWriteCost: number | string;
   cacheReadCost: number | string;
   cacheTtlSeconds: number | string;
+  supportsToolUse: boolean;
   supportsVision: boolean;
   supportsHearing: boolean;
   supportsComputerUse: boolean;
@@ -57,6 +58,7 @@ function transformFormValues(values: LlmFormValues): Record<string, unknown> {
     result.cacheReadCost = values.cacheReadCost;
   if (typeof values.cacheTtlSeconds === "number")
     result.cacheTtlSeconds = values.cacheTtlSeconds;
+  if (values.supportsToolUse) result.supportsToolUse = true;
   if (values.supportsVision) result.supportsVision = true;
   if (values.supportsHearing) result.supportsHearing = true;
   if (values.supportsComputerUse) result.supportsComputerUse = true;
@@ -108,6 +110,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
       cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
       cacheReadCost: model?.cacheReadCost ?? ("" as number | string),
       cacheTtlSeconds: model?.cacheTtlSeconds ?? ("" as number | string),
+      supportsToolUse: model?.supportsToolUse ?? false,
       supportsVision: model?.supportsVision ?? false,
       supportsHearing: model?.supportsHearing ?? false,
       supportsComputerUse: model?.supportsComputerUse ?? false,
@@ -221,6 +224,12 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
         <Text fw={600} size="sm" c="dimmed">
           Capabilities
         </Text>
+        <Switch
+          label="Supports Tool Use"
+          description="Model supports function/tool calling for structured command responses"
+          disabled={readOnly}
+          {...form.getInputProps("supportsToolUse", { type: "checkbox" })}
+        />
         <Switch
           label="Supports Vision"
           description="Model can process image inputs"

@@ -95,6 +95,10 @@ export async function sendWithAnthropic(
   }
 
   const anthropic = getClient(apiKey, model.baseUrl);
+  const useConsoleTools =
+    source === "console" &&
+    useToolsForLlmConsoleResponses &&
+    model.supportsToolUse === true;
 
   const createParams: Anthropic.MessageCreateParams = {
     model: model.versionName,
@@ -138,7 +142,7 @@ export async function sendWithAnthropic(
   }
 
   // Build tools array — console and desktop tools can coexist
-  if (source === "console" && useToolsForLlmConsoleResponses) {
+  if (useConsoleTools) {
     createParams.tools = [tools.consoleToolAnthropic];
     if (thinkingBudget !== undefined) {
       createParams.tool_choice = { type: "auto" };
@@ -210,7 +214,7 @@ export async function sendWithAnthropic(
     : [];
 
   // Extract console commands (submit_commands tool_use blocks)
-  const consoleCommands = createParams.tools
+  const consoleCommands = useConsoleTools
     ? tools.getCommandsFromAnthropicToolUse(msgResponse.content)
     : undefined;
 
