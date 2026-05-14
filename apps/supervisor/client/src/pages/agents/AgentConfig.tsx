@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   Group,
   Loader,
@@ -246,94 +247,103 @@ export const AgentConfig: React.FC = () => {
   }
 
   return (
-    <Stack p="md" maw={1000}>
-      {saveError && (
-        <Alert
-          color="red"
-          title="Error"
-          onClose={() => setSaveError(null)}
-          withCloseButton
-        >
-          {saveError}
-        </Alert>
-      )}
+    <Box
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: "auto",
+        position: "relative",
+      }}
+    >
+      <Stack p="md" maw={1000}>
+        {saveError && (
+          <Alert
+            color="red"
+            title="Error"
+            onClose={() => setSaveError(null)}
+            withCloseButton
+          >
+            {saveError}
+          </Alert>
+        )}
 
-      {config && (
-        <AgentConfigForm
-          key={configRevision}
-          config={config}
-          llmModelOptions={llmModelOptions}
-          imageModelOptions={imageModelOptions}
-          saving={saving}
-          onSave={handleSave}
-          assignedHosts={assignedHosts}
-          availableHosts={hosts.map((h) => ({ id: h.id, name: h.name }))}
-          hostActionInProgress={hostActionInProgress}
-          onAssignHost={
-            hasAction(actions, "update") ? handleAssignHost : undefined
-          }
-          onUnassignHost={
-            hasAction(actions, "update") ? handleUnassignHost : undefined
-          }
-          afterTitle={
-            hasAction(actions, "update") ? (
-              <Select
-                label="Lead Agent"
-                placeholder="None (top-level agent)"
-                data={leadAgentOptions}
-                value={currentLeadValue ?? null}
-                onChange={handleSetLead}
-                clearable
-                searchable
-                disabled={settingLead}
-                maw={300}
-              />
-            ) : undefined
-          }
-          advancedExtras={
-            hasAction(actions, "export-config") ||
-            hasAction(actions, "import-config") ? (
-              <>
-                <Text fw={600} size="sm" c="dimmed">
-                  Configuration File
-                </Text>
-                <Group>
-                  {hasAction(actions, "export-config") && (
-                    <Button
-                      variant="outline"
-                      leftSection={<IconFileExport size={16} />}
-                      onClick={() => setConfigDialogMode("export")}
-                    >
-                      Export
-                    </Button>
-                  )}
-                  {hasAction(actions, "import-config") && (
-                    <Button
-                      variant="outline"
-                      leftSection={<IconFileImport size={16} />}
-                      onClick={() => setConfigDialogMode("import")}
-                    >
-                      Import
-                    </Button>
-                  )}
-                </Group>
-              </>
-            ) : undefined
-          }
-        />
-      )}
+        {config && (
+          <AgentConfigForm
+            key={configRevision}
+            config={config}
+            llmModelOptions={llmModelOptions}
+            imageModelOptions={imageModelOptions}
+            saving={saving}
+            onSave={handleSave}
+            assignedHosts={assignedHosts}
+            availableHosts={hosts.map((h) => ({ id: h.id, name: h.name }))}
+            hostActionInProgress={hostActionInProgress}
+            onAssignHost={
+              hasAction(actions, "update") ? handleAssignHost : undefined
+            }
+            onUnassignHost={
+              hasAction(actions, "update") ? handleUnassignHost : undefined
+            }
+            afterTitle={
+              hasAction(actions, "update") ? (
+                <Select
+                  label="Lead Agent"
+                  placeholder="None (top-level agent)"
+                  data={leadAgentOptions}
+                  value={currentLeadValue ?? null}
+                  onChange={handleSetLead}
+                  clearable
+                  searchable
+                  disabled={settingLead}
+                  maw={300}
+                />
+              ) : undefined
+            }
+            advancedExtras={
+              hasAction(actions, "export-config") ||
+              hasAction(actions, "import-config") ? (
+                <>
+                  <Text fw={600} size="sm" c="dimmed">
+                    Configuration File
+                  </Text>
+                  <Group>
+                    {hasAction(actions, "export-config") && (
+                      <Button
+                        variant="outline"
+                        leftSection={<IconFileExport size={16} />}
+                        onClick={() => setConfigDialogMode("export")}
+                      >
+                        Export
+                      </Button>
+                    )}
+                    {hasAction(actions, "import-config") && (
+                      <Button
+                        variant="outline"
+                        leftSection={<IconFileImport size={16} />}
+                        onClick={() => setConfigDialogMode("import")}
+                      >
+                        Import
+                      </Button>
+                    )}
+                  </Group>
+                </>
+              ) : undefined
+            }
+          />
+        )}
 
-      {username && configDialogMode && (
-        <ConfigYamlDialog
-          agentUsername={username}
-          mode={configDialogMode}
-          opened={true}
-          onClose={() => setConfigDialogMode(null)}
-          onSuccess={fetchConfig}
-        />
-      )}
-      
-      {config && <AgentStartupAttachments username={username} />}
-    </Stack>
+        {username && configDialogMode && (
+          <ConfigYamlDialog
+            agentUsername={username}
+            mode={configDialogMode}
+            opened={true}
+            onClose={() => setConfigDialogMode(null)}
+            onSuccess={fetchConfig}
+          />
+        )}
+
+        {config && <AgentStartupAttachments username={username} />}
+      </Stack>
+    </Box>
   );
 };
