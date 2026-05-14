@@ -18,10 +18,7 @@ import { notifications } from "@mantine/notifications";
 import {
   IconHelp,
   IconList,
-  IconPlayerPauseFilled,
-  IconPlayerPlayFilled,
   IconPlayerStop,
-  IconRotateClockwise,
   IconSend,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,6 +31,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { AgentPauseToggle } from "../../components/AgentPauseToggle";
 import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import {
@@ -45,7 +43,7 @@ import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useLlmModels } from "../../hooks/useLlmModels";
 import { useRunsData } from "../../hooks/useRunsData";
 import { stopAgent } from "../../lib/apiAgents";
-import { pauseRun, resumeRun, sendRunCommand } from "../../lib/apiRuns";
+import { sendRunCommand } from "../../lib/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 import {
@@ -211,42 +209,6 @@ export const AgentRuns: React.FC = () => {
     },
     [agentName, readStatus],
   );
-
-  // The pause/resume POST doesn't return until the agent has acked, so a
-  // plain in-flight flag is enough — no need to race the heartbeat.
-  const [pauseLoading, setPauseLoading] = useState(false);
-
-  const handlePauseToggle = async (run: RunSession) => {
-    if (!username) return;
-    const target = !(run.paused ?? false);
-    setPauseLoading(true);
-    try {
-      const result = target
-        ? await pauseRun(username, run.runId, run.sessionId, run.subagentId)
-        : await resumeRun(username, run.runId, run.sessionId, run.subagentId);
-      if (result.success) {
-        // Flip locally on ack so the button label doesn't lag the
-        // heartbeat round-trip; the next heartbeat will confirm.
-        patchRun(run.userId, run.runId, run.sessionId, run.subagentId, {
-          paused: target,
-        });
-      } else {
-        notifications.show({
-          title: target ? "Pause Failed" : "Resume Failed",
-          message: result.message,
-          color: "red",
-        });
-      }
-    } catch (err) {
-      notifications.show({
-        title: target ? "Pause Failed" : "Resume Failed",
-        message: err instanceof Error ? err.message : "Unknown error",
-        color: "red",
-      });
-    } finally {
-      setPauseLoading(false);
-    }
-  };
 
   const [stopLoading, setStopLoading] = useState(false);
 
@@ -637,47 +599,23 @@ export const AgentRuns: React.FC = () => {
                       </Stack>
                     </HoverCard.Dropdown>
                   </HoverCard>
-                  {selectedRun.isOnline && (
-                    <Tooltip
-                      label={
-                        selectedRun.paused ? "Resume agent" : "Pause agent"
+                  {selectedRun.isOnline && username && (
+                    <AgentPauseToggle
+                      username={username}
+                      runId={selectedRun.runId}
+                      sessionId={selectedRun.sessionId}
+                      subagentId={selectedRun.subagentId}
+                      paused={selectedRun.paused ?? false}
+                      onPauseChanged={(paused) =>
+                        patchRun(
+                          selectedRun.userId,
+                          selectedRun.runId,
+                          selectedRun.sessionId,
+                          selectedRun.subagentId,
+                          { paused },
+                        )
                       }
-                    >
-                      <ActionIcon
-                        variant="subtle"
-                        color={selectedRun.paused ? "orange" : "gray"}
-                        size="lg"
-                        loading={pauseLoading}
-                        onClick={() => void handlePauseToggle(selectedRun)}
-                      >
-                        <Box
-                          style={{
-                            position: "relative",
-                            width: 22,
-                            height: 22,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <IconRotateClockwise
-                            size={22}
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              animation: !selectedRun.paused
-                                ? "agentRunSpin 2s linear infinite"
-                                : undefined,
-                            }}
-                          />
-                          {selectedRun.paused ? (
-                            <IconPlayerPlayFilled size={9} />
-                          ) : (
-                            <IconPlayerPauseFilled size={9} />
-                          )}
-                        </Box>
-                      </ActionIcon>
-                    </Tooltip>
+                    />
                   )}
                   <Textarea
                     ref={commandInputRef}

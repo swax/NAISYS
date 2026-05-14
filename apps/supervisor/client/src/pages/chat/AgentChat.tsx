@@ -16,12 +16,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+import { AgentPauseToggle } from "../../components/AgentPauseToggle";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { ParticipantInfo } from "../../components/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { useChatMessages } from "../../hooks/useChatMessages";
+import type { ThreadRun } from "../../hooks/useMessageThreadRuns";
+import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
 import { buildAgentCandidates } from "../../lib/agentCandidates";
 import { archiveAllChat, sendChatMessage } from "../../lib/apiChat";
 import { ChatConversationList } from "./ChatConversationList";
@@ -141,6 +144,63 @@ export const AgentChat: React.FC = () => {
     username ?? "",
     selectedParticipants,
     Boolean(selectedParticipants),
+  );
+
+  // Shared by the thread (for activity rows, phantom bubbles, etc.) and the
+  // input footer (for the pause/resume buttons next to the textarea).
+  const threadParticipants = useMemo(
+    () =>
+      selectedParticipants
+        ? selectedParticipants.split(",").filter(Boolean)
+        : [],
+    [selectedParticipants],
+  );
+  const { runs: threadRuns, patchRun: patchThreadRun } = useMessageThreadRuns(
+    "chat",
+    username ?? "",
+    threadParticipants,
+  );
+
+  // One pause/resume button per online parent run belonging to an "other"
+  // participant. Operators pause the agent they're talking to, not themselves.
+  // Multiple online parent runs for the same agent are unusual; first wins.
+  const pauseableRuns = useMemo(() => {
+    const byUsername = new Map<string, ThreadRun>();
+    for (const r of threadRuns) {
+      if (!r.isOnline) continue;
+      if (r.subagentId != null && r.subagentId !== 0) continue;
+      if (!r.username || r.username === username) continue;
+      if (byUsername.has(r.username)) continue;
+      byUsername.set(r.username, r);
+    }
+    return Array.from(byUsername.values()).sort((a, b) =>
+      (a.username ?? "").localeCompare(b.username ?? ""),
+    );
+  }, [threadRuns, username]);
+
+  const inputLeftSection = pauseableRuns.length > 0 && (
+    <>
+      {pauseableRuns.map((run) => (
+        <AgentPauseToggle
+          key={`${run.userId}-${run.runId}-${run.sessionId}-${run.subagentId ?? 0}`}
+          username={run.username!}
+          runId={run.runId}
+          sessionId={run.sessionId}
+          subagentId={run.subagentId}
+          paused={run.paused ?? false}
+          onPauseChanged={(paused) =>
+            patchThreadRun(
+              run.userId,
+              run.runId,
+              run.sessionId,
+              run.subagentId,
+              { paused },
+            )
+          }
+          tooltipLabel={(p) => `${p ? "Resume" : "Pause"} ${run.username}`}
+        />
+      ))}
+    </>
   );
 
   // Browser back/forward can reuse this route component with the module-level
@@ -383,11 +443,8 @@ export const AgentChat: React.FC = () => {
                 hasMore={hasMoreMessages}
                 loadingMore={loadingMoreMessages}
                 onLoadMore={loadMoreMessages}
-                participants={
-                  selectedParticipants
-                    ? selectedParticipants.split(",").filter(Boolean)
-                    : []
-                }
+                participants={threadParticipants}
+                runs={threadRuns}
               />
             )}
             {canSend && (
@@ -399,6 +456,7 @@ export const AgentChat: React.FC = () => {
                 showImpersonationWarning={
                   !!agent.shellModel && agent.shellModel !== "none"
                 }
+                leftSection={inputLeftSection}
               />
             )}
           </>

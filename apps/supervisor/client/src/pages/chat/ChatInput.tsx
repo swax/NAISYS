@@ -22,6 +22,8 @@ interface ChatInputProps {
   focusKey?: string | null;
   recipients?: string[];
   showImpersonationWarning?: boolean;
+  /** Rendered to the left of the attach/textarea/send row. */
+  leftSection?: React.ReactNode;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -30,6 +32,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   focusKey,
   recipients,
   showImpersonationWarning,
+  leftSection,
 }) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -152,6 +155,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </Group>
       )}
       <Group gap="xs" p="xs" align="flex-end">
+        {leftSection}
         <input
           ref={fileInputRef}
           type="file"

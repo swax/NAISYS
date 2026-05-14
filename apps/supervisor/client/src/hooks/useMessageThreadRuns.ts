@@ -1,17 +1,23 @@
 import type {
+  CommandLoopState,
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession } from "@naisys/supervisor-shared";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getMessageThreadRuns } from "../lib/apiRuns";
 import { isRunActive } from "./runStatus";
 import { getSocket } from "./useSocket";
 import { useTick } from "./useTick";
 
-export type ThreadRun = RunSession & { isOnline: boolean };
+type StoredRun = RunSession & {
+  paused?: boolean;
+  state?: CommandLoopState;
+};
+
+export type ThreadRun = StoredRun & { isOnline: boolean };
 
 type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
   type: "heartbeat-update";
@@ -40,7 +46,7 @@ export const useMessageThreadRuns = (
   currentAgentUsername: string,
   participants: string[],
 ) => {
-  const [runMap, setRunMap] = useState<Map<string, RunSession>>(new Map());
+  const [runMap, setRunMap] = useState<Map<string, StoredRun>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [refetchTick, setRefetchTick] = useState(0);
 
@@ -76,10 +82,20 @@ export const useMessageThreadRuns = (
     })
       .then((result) => {
         if (cancelled) return;
-        const next = new Map<string, RunSession>();
+        const next = new Map<string, StoredRun>();
         if (result.success && result.data) {
+          // Preserve heartbeat-derived paused/state across refetches — the
+          // REST payload doesn't carry them and we don't want a refetch to
+          // appear to "unpause" an agent.
+          const prev = runMapRef.current;
           for (const run of result.data.runs) {
-            next.set(runKey(run), run);
+            const key = runKey(run);
+            const existing = prev.get(key);
+            next.set(key, {
+              ...run,
+              paused: existing?.paused,
+              state: existing?.state,
+            });
           }
         }
         setRunMap(next);
@@ -133,7 +149,11 @@ export const useMessageThreadRuns = (
               ...existing,
               lastActive: event.lastActive,
               ...(event.type === "heartbeat-update"
-                ? { activeSubagentCount: event.activeSubagentCount }
+                ? {
+                    activeSubagentCount: event.activeSubagentCount,
+                    paused: event.paused,
+                    state: event.state,
+                  }
                 : {}),
             });
             return next;
@@ -209,5 +229,25 @@ export const useMessageThreadRuns = (
     [runMap, onlineFingerprint],
   );
 
-  return { runs, isLoading };
+  const patchRun = useCallback(
+    (
+      userId: number,
+      runId: number,
+      sessionId: number,
+      subagentId: number | null | undefined,
+      patch: Partial<StoredRun>,
+    ) => {
+      setRunMap((prev) => {
+        const key = runKey({ userId, runId, subagentId, sessionId });
+        const existing = prev.get(key);
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.set(key, { ...existing, ...patch });
+        return next;
+      });
+    },
+    [],
+  );
+
+  return { runs, isLoading, patchRun };
 };

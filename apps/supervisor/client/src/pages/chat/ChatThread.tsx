@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { RunActivityRow } from "../../components/RunActivityRow";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatScroll } from "../../hooks/useChatScroll";
-import { useMessageThreadRuns } from "../../hooks/useMessageThreadRuns";
+import type { ThreadRun } from "../../hooks/useMessageThreadRuns";
 import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
 import { useThreadRunCommands } from "../../hooks/useThreadRunCommands";
 import type { ChatMessage } from "../../lib/apiClient";
@@ -44,6 +44,7 @@ interface ChatThreadProps {
   loadingMore: boolean;
   onLoadMore: () => void;
   participants: string[];
+  runs: ThreadRun[];
 }
 
 export const ChatThread: React.FC<ChatThreadProps> = ({
@@ -55,6 +56,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
   loadingMore,
   onLoadMore,
   participants,
+  runs,
 }) => {
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
@@ -85,12 +87,6 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
     messageCount: messages.length,
     onThreadChange: handleThreadChange,
   });
-
-  const { runs } = useMessageThreadRuns(
-    "chat",
-    currentAgentUsername,
-    participants,
-  );
 
   const { beforeMessage: runActivity, trailing: trailingActivity } = useMemo(
     () => buildThreadRunActivity(messages, runs),
@@ -387,7 +383,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     }}
                   >
                     {!isOwn && (
-                      <Text size="xs" fw={600} c="dimmed" mb={2}>
+                      <Text size="xs" fw={600} c="dimmed" mb={4}>
                         {msg.fromUsername} ({msg.fromTitle})
                       </Text>
                     )}
