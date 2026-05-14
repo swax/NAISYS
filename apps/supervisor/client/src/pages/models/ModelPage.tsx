@@ -172,7 +172,7 @@ export const ModelPage: React.FC = () => {
     return (
       <Stack gap="md" maw={1000}>
         <Title order={2}>
-          {isNewLlm ? "Create LLM Model" : "Create Image Model"}
+          {isNewLlm ? "Add LLM Model" : "Add Image Model"}
         </Title>
         {saveError && (
           <Alert

@@ -92,6 +92,7 @@ export const ModelsLayout: React.FC = () => {
           imageModels={imageModels}
           actions={actions}
           isLoading={isLoading}
+          refreshModels={refreshModels}
         />
       </CollapsibleSidebar>
 
@@ -149,6 +150,7 @@ export const ModelsLayout: React.FC = () => {
           imageModels={imageModels}
           actions={actions}
           isLoading={isLoading}
+          refreshModels={refreshModels}
         />
       </Drawer>
     </Box>

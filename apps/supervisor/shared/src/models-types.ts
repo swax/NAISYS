@@ -105,6 +105,37 @@ export const SaveModelResponseSchema = z.object({
 
 export type SaveModelResponse = z.infer<typeof SaveModelResponseSchema>;
 
+// --- OpenRouter catalog proxy ---
+
+export const OpenRouterCatalogModelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  /** Provider slug from the id prefix, e.g. "anthropic", "openai", "deepseek". */
+  provider: z.string(),
+  /** Unix timestamp in seconds (OpenRouter `created` field). */
+  created: z.number().optional(),
+  contextLength: z.number().optional(),
+  inputCost: z.number(),
+  outputCost: z.number(),
+  cacheReadCost: z.number().optional(),
+  cacheWriteCost: z.number().optional(),
+  supportsToolUse: z.boolean(),
+  supportsVision: z.boolean(),
+  supportsHearing: z.boolean(),
+});
+
+export type OpenRouterCatalogModel = z.infer<
+  typeof OpenRouterCatalogModelSchema
+>;
+
+export const OpenRouterCatalogResponseSchema = z.object({
+  models: z.array(OpenRouterCatalogModelSchema),
+});
+
+export type OpenRouterCatalogResponse = z.infer<
+  typeof OpenRouterCatalogResponseSchema
+>;
+
 export const ModelTypeEnum = z.enum(["llm", "image"]);
 export type ModelType = z.infer<typeof ModelTypeEnum>;
 

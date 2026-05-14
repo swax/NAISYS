@@ -63,20 +63,6 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0,
   },
 
-  // ── Open Router ──────────────────────────────────────────────────────
-  {
-    key: "deepseek4pro",
-    label: "DeepSeek V4 Pro",
-    versionName: "deepseek/deepseek-v4-pro",
-    baseUrl: "https://openrouter.ai/api/v1",
-    apiType: LlmApiType.OpenAICompatible,
-    apiKeyVar: "OPENROUTER_API_KEY",
-    maxTokens: 1_000_000,
-    inputCost: 0.435,
-    outputCost: 0.87,
-    supportsToolUse: true,
-  },
-
   // ── xAI / Grok ──────────────────────────────────────────────────────
   // https://docs.x.ai/developers/models
   {

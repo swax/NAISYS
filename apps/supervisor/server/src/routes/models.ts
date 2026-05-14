@@ -11,6 +11,7 @@ import type {
   DeleteModelResponse,
   ErrorResponse,
   ModelsResponse,
+  OpenRouterCatalogResponse,
   SaveImageModelRequest,
   SaveLlmModelRequest,
   SaveModelResponse,
@@ -20,6 +21,7 @@ import {
   DeleteModelResponseSchema,
   ErrorResponseSchema,
   ModelsResponseSchema,
+  OpenRouterCatalogResponseSchema,
   SaveImageModelRequestSchema,
   SaveLlmModelRequestSchema,
   SaveModelResponseSchema,
@@ -114,6 +116,103 @@ export default function modelsRoutes(
         })),
         _actions: actions,
       };
+    },
+  );
+
+  // GET /models/openrouter-catalog — proxy OpenRouter's public model list
+  fastify.get<{ Reply: OpenRouterCatalogResponse | ErrorResponse }>(
+    "/models/openrouter-catalog",
+    {
+      schema: {
+        description:
+          "Fetch the list of models available on OpenRouter (proxied server-side to satisfy CSP)",
+        tags: ["Models"],
+        response: {
+          200: OpenRouterCatalogResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (_request, reply) => {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/models");
+        if (!res.ok) {
+          return reply.code(500).send({
+            success: false,
+            message: `OpenRouter responded with HTTP ${res.status}`,
+          });
+        }
+        const body = (await res.json()) as {
+          data?: Array<{
+            id?: unknown;
+            name?: unknown;
+            created?: unknown;
+            context_length?: unknown;
+            pricing?: {
+              prompt?: unknown;
+              completion?: unknown;
+              input_cache_read?: unknown;
+              input_cache_write?: unknown;
+            };
+            architecture?: { input_modalities?: unknown };
+            supported_parameters?: unknown;
+          }>;
+        };
+        const toNumPerMillion = (v: unknown): number | undefined => {
+          if (typeof v !== "string" && typeof v !== "number") return undefined;
+          const n = typeof v === "number" ? v : parseFloat(v);
+          return Number.isFinite(n) ? n * 1_000_000 : undefined;
+        };
+        const models = (body.data ?? []).flatMap((m) => {
+          if (typeof m.id !== "string" || typeof m.name !== "string") return [];
+          const input = toNumPerMillion(m.pricing?.prompt) ?? 0;
+          const output = toNumPerMillion(m.pricing?.completion) ?? 0;
+          // Negative prices show up occasionally (e.g. promotional rebates) and
+          // are nonsense for our cost tracking — drop them entirely.
+          if (input < 0 || output < 0) return [];
+          const cacheRead = toNumPerMillion(m.pricing?.input_cache_read);
+          const cacheWrite = toNumPerMillion(m.pricing?.input_cache_write);
+          const modalities = Array.isArray(m.architecture?.input_modalities)
+            ? (m.architecture.input_modalities as unknown[]).filter(
+                (x): x is string => typeof x === "string",
+              )
+            : [];
+          const params = Array.isArray(m.supported_parameters)
+            ? (m.supported_parameters as unknown[]).filter(
+                (x): x is string => typeof x === "string",
+              )
+            : [];
+          const slashIdx = m.id.indexOf("/");
+          const provider =
+            slashIdx > 0 ? m.id.slice(0, slashIdx) : "unknown";
+          return [
+            {
+              id: m.id,
+              name: m.name,
+              provider,
+              created: typeof m.created === "number" ? m.created : undefined,
+              contextLength:
+                typeof m.context_length === "number"
+                  ? m.context_length
+                  : undefined,
+              inputCost: input,
+              outputCost: output,
+              cacheReadCost: cacheRead,
+              cacheWriteCost: cacheWrite,
+              supportsToolUse: params.includes("tools"),
+              supportsVision: modalities.includes("image"),
+              supportsHearing: modalities.includes("audio"),
+            },
+          ];
+        });
+        return { models };
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch OpenRouter catalog";
+        return reply.code(500).send({ success: false, message });
+      }
     },
   );
 

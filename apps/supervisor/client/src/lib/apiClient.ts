@@ -39,6 +39,7 @@ import type {
   OpenAiCodexOAuthPollResponse,
   OpenAiCodexOAuthStartResponse,
   OpenAiCodexOAuthUsageResponse,
+  OpenRouterCatalogResponse,
   PasskeyCredential,
   PasskeyCredentialList,
   PasskeyRegistrationVerifyResponse,
@@ -112,6 +113,7 @@ export type {
   OpenAiCodexOAuthPollResponse,
   OpenAiCodexOAuthStartResponse,
   OpenAiCodexOAuthUsageResponse,
+  OpenRouterCatalogResponse,
   PasskeyCredential,
   PasskeyCredentialList,
   PasskeyRegistrationVerifyResponse,
@@ -309,6 +311,7 @@ export const apiEndpoints = {
   hostDelete: (hostname: string) => `/hosts/${hostname}`,
   hostRuns: (hostname: string) => `/hosts/${hostname}/runs`,
   models: "/models",
+  openRouterCatalog: "/models/openrouter-catalog",
   saveLlmModel: "/models/llm",
   saveImageModel: "/models/image",
   deleteModel: (type: "llm" | "image", key: string) =>

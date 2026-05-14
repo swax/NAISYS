@@ -19,12 +19,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ApiTypeBadge } from "../components/ApiTypeBadge";
 import { ROUTER_BASENAME } from "../constants";
 import type { ImageModelDetail, LlmModelDetail } from "../lib/apiClient";
+import { AddOpenRouterModelDialog } from "../pages/models/AddOpenRouterModelDialog";
 
 interface ModelSidebarProps {
   llmModels: LlmModelDetail[];
   imageModels: ImageModelDetail[];
   actions: HateoasAction[] | undefined;
   isLoading: boolean;
+  refreshModels: () => Promise<void>;
 }
 
 export const ModelSidebar: React.FC<ModelSidebarProps> = ({
@@ -32,7 +34,9 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
   imageModels,
   actions,
   isLoading,
+  refreshModels,
 }) => {
+  const [openRouterDialogOpen, setOpenRouterDialogOpen] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -144,6 +148,28 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
           LLM Models
         </Text>
         <Stack gap="xs">
+          {hasAction(actions, "save-llm") && (
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-sm"
+              leftSection={<IconPlus size="0.9rem" />}
+              onClick={() => navigate("/models/new-llm")}
+              fullWidth
+            >
+              Add Model Manually
+            </Button>
+          )}
+          <Button
+            variant="subtle"
+            color="gray"
+            size="compact-sm"
+            leftSection={<IconPlus size="0.9rem" />}
+            onClick={() => setOpenRouterDialogOpen(true)}
+            fullWidth
+          >
+            Add OpenRouter Model
+          </Button>
           {sortedLlmModels.map((model) => (
             <Card
               key={model.key}
@@ -238,20 +264,15 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               </Group>
             </Card>
           ))}
-          {hasAction(actions, "save-llm") && (
-            <Button
-              variant="subtle"
-              color="gray"
-              size="compact-sm"
-              leftSection={<IconPlus size="0.9rem" />}
-              onClick={() => navigate("/models/new-llm")}
-              fullWidth
-            >
-              Add LLM Model
-            </Button>
-          )}
         </Stack>
       </div>
+
+      <AddOpenRouterModelDialog
+        opened={openRouterDialogOpen}
+        onClose={() => setOpenRouterDialogOpen(false)}
+        onAdded={refreshModels}
+        canSave={!!hasAction(actions, "save-llm")}
+      />
 
       {/* Image Models Section */}
       <div>
@@ -259,6 +280,18 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
           Image Models
         </Text>
         <Stack gap="xs">
+          {hasAction(actions, "save-image") && (
+            <Button
+              variant="subtle"
+              color="gray"
+              size="compact-sm"
+              leftSection={<IconPlus size="0.9rem" />}
+              onClick={() => navigate("/models/new-image")}
+              fullWidth
+            >
+              Add Image Model
+            </Button>
+          )}
           {sortedImageModels.map((model) => (
             <Card
               key={model.key}
@@ -303,18 +336,6 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
               </Group>
             </Card>
           ))}
-          {hasAction(actions, "save-image") && (
-            <Button
-              variant="subtle"
-              color="gray"
-              size="compact-sm"
-              leftSection={<IconPlus size="0.9rem" />}
-              onClick={() => navigate("/models/new-image")}
-              fullWidth
-            >
-              Add Image Model
-            </Button>
-          )}
         </Stack>
       </div>
     </Stack>
