@@ -281,9 +281,9 @@ export const sessionCmd: CommandDef = {
       description: "Compact the session which will reset the token count.",
     },
     complete: {
-      usage: 'complete "<result>"',
+      usage: "complete",
       description:
-        "Complete the session, result will be mailed to the lead agent or admin.",
+        "Complete the session after reporting your results",
     },
     clear: {
       usage: "clear",

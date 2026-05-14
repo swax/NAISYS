@@ -53,8 +53,8 @@ shellModel: claude4sonnet
 #   dalle3-1024     - DALL-E 3 1024          (~$0.04/image)
 #imageModel: gptimage1medium
 
-# Show mail commands to the agent. Mail encourages verbose communication which can be distracting.
-#mailEnabled: true
+# Legacy: Mail encourages more verbose communication, but is more confusing to follow, especially when combined with chat
+#mailEnabled: false
 
 # Show chat commands to the agent. Chat encourages more concise communication.
 #chatEnabled: true
@@ -68,8 +68,9 @@ shellModel: claude4sonnet
 # Requires `npx playwright install chromium` on the host
 #browserEnabled: true
 
-# Allow the agent to end its session. Once ended, it can only be restarted explicitly or via
-# mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive.
+# Allow the agent to end its own session. Once ended, it can only be restarted explicitly or via chat/mail 
+# if wakeOnMessage is enabled. Turn off for agents you've instructed to wake periodically. The auto-compact
+# advanced setting can be used to minimize idling costs.
 #completeSessionEnabled: true
 
 # Seconds to wait at the debug prompt before auto-continuing, only applies when the agent's
@@ -79,7 +80,7 @@ shellModel: claude4sonnet
 # When mail or chat is received, start the agent automatically, or wake it from its wait state.
 #wakeOnMessage: true
 
-# None allows the LLM to run any command, Manual requires user confirmation for each command,
+# Only works in standalone mode. None allows the LLM to run any command, Manual requires user confirmation for each command,
 # Semi-auto uses a secondary LLM to validate but pauses on flagged commands,
 # and Auto uses a secondary LLM to try to validate a command is safe.
 # Values: none | manual | semi-auto | auto
@@ -92,7 +93,7 @@ shellModel: claude4sonnet
 #  - git status
 
 # Allow the LLM to run multiple commands per turn.
-# Faster but the LLM may get ahead of itself and produce errors.
+# Faster but the LLM may get ahead of itself and produce errors. Disable for weaker LLMs.
 #multipleCommandsEnabled: true
 
 # Experimental: Allows the LLM to pin files to the end of the context.

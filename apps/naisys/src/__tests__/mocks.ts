@@ -180,6 +180,7 @@ export function createMockSessionService() {
       Promise.resolve({ replayed: false, stale: false }),
     ),
     hasPendingRestoreEntries: vi.fn(() => false),
+    updateCanComplete: vi.fn(),
   };
 
   return sessionService;

@@ -89,7 +89,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "Show mail commands to the agent. Mail encourages verbose communication which can be distracting",
+      "Legacy: Mail encourages more verbose communication, but is more confusing to follow, especially when combined with chat",
     ),
 
   chatEnabled: z
@@ -117,7 +117,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "Allow the agent to end its session. Once ended, it can only be restarted explicitly or via chat/mail if wakeOnMessage is enabled. Disable on root agents to prevent the system from going unresponsive",
+      "Allow the agent to end its own session. Once ended, it can only be restarted explicitly or via chat/mail if wakeOnMessage is enabled. Turn off for agents you've instructed to wake periodically. The auto-compact advanced setting can be used to minimize idling costs.",
     ),
 
   debugPauseSeconds: z
@@ -140,7 +140,7 @@ export const AgentConfigFileSchema = z.object({
     .enum(commandProtectionValues)
     .optional()
     .describe(
-      "None allows the LLM to run any command, Manual requires user confirmation for each command, and Auto uses a secondary LLM to try to validate a command is safe",
+      "Only works in standalone mode. None allows the LLM to run any command, Manual requires user confirmation for each command, and Auto uses a secondary LLM to try to validate a command is safe",
     ),
 
   autoCompact: z
@@ -168,7 +168,7 @@ export const AgentConfigFileSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      "Allow the LLM to run multiple commands per turn. Faster but the LLM may get ahead of itself and produce errors",
+      "Allow the LLM to run multiple commands per turn. Faster but the LLM may get ahead of itself and produce errors. Disable for weaker LLMs.",
     ),
 
   workspacesEnabled: z

@@ -45,7 +45,7 @@ The `ns-session` command consolidates what used to be separate bin scripts. The 
 
 - `ns-session wait <seconds>` — Pause and wait (auto-wakes on new mail or other events). Replaces the old `pause` script; named `wait` because the loop can wake early.
 - `ns-session compact` — Compact the session and reset the token count. Replaces `endsession`.
-- `ns-session complete "<result>"` — Complete the session; result is mailed to the lead agent or admin. Replaces `completetask`.
+- `ns-session complete` — End the session. Refuses unless the agent's last meaningful command was `ns-chat send` / `ns-mail send` (a trailing `ns-session wait` is allowed). The send is the result; `complete` itself produces no event. See [004 — `ns-session complete`](./004-start-agents-on-mail.md#ns-session-complete) for why. Replaces `completetask`.
 
 The previously planned `ns-session trim <indexes>` was **not** implemented — trimming arbitrary prompts by index wasn't worth the complexity versus `compact`.
 

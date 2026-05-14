@@ -52,6 +52,7 @@ function createPopFirstCommand() {
     createMockOutputService(),
     inputMode,
     createMockCommandLoopState(),
+    createMockSessionService(),
   );
 
   return {

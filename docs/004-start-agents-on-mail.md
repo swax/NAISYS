@@ -15,7 +15,7 @@ Two running modes share a common policy but implement it differently:
 
 In both modes, the same global flag gates the behavior (`globalConfig.autoStartAgentsOnMessage`, currently hardcoded to `true` in `packages/common/src/globalConfigLoader.ts`). Separately, the mail service itself is globally gated by the `MAIL_ENABLED` env var (default off — chat is the default comm channel), surfaced as `globalConfig.mailServiceEnabled`. The auto-start code paths don't check this flag directly; they just don't fire because no mail gets generated when the service is disabled.
 
-Agents shut themselves down via `ns-session complete "<result>"`, which mails the result to the agent's lead (or admin as fallback) and exits the process.
+Agents shut themselves down via `ns-session complete`, which is gated on the agent having just sent a chat or mail message (see [§`ns-session complete`](#ns-session-complete)). The gate exists because `complete` itself produces no event — without a preceding send, an offline lead would have nothing to auto-start on.
 
 ---
 
@@ -121,11 +121,17 @@ The design doc originally proposed `HOST_ONLINE_THRESHOLD_MS` and `USER_ONLINE_T
 
 `apps/naisys/src/features/session.ts` — `handleComplete()`.
 
-Syntax: `ns-session complete "<result>"`.
+Syntax: `ns-session complete` (no arguments).
 
-Recipient resolution: `localUser.leadUserId ?? getUserByName(ADMIN_USERNAME).userId`. The original plan had the caller specify a target username (`complete <username> "<result>"`); this was simplified because in practice the result always goes to the lead (or admin as fallback), and adding a recipient parameter invited misuse.
+**The communication gate.** `complete` refuses to run unless the agent's last meaningful command was a successful `ns-chat send` or `ns-mail send`. A `ns-session wait` between the send and the complete is allowed; any other command in between (including shell commands, `ns-comment`, etc.) clears the gate and the agent has to send again.
 
-Gated by `agentConfig.completeSessionEnabled` — agents without that flag only have `wait`.
+The gate is the `canComplete` flag on `sessionService`, maintained by `updateCanComplete()` which the command handler calls after every successful dispatch. Sends set it to true, waits preserve it, anything else resets it to false. `complete` reads the flag; the read does not mutate.
+
+**Why the gate exists.** `complete` is a process exit — it produces no mail or chat event. This whole document is about idle agents being woken by an event addressed to them. If an agent could complete silently, its result would land nowhere: any offline lead would stay offline (no event to auto-start on), and the work would effectively hang. Forcing a prior `chat send` / `mail send` guarantees there is always a wake event carrying the agent's result, which is what `complete` itself can't produce.
+
+The original implementation accepted a result string (`complete "<result>"`) and posted it to `localUser.leadUserId ?? getUserByName(ADMIN_USERNAME).userId` from inside `handleComplete`. That coupling was removed — the agent's own chat/mail send is the result, so the lead/admin (or whichever recipient the agent chose) sees it directly through the normal mail/chat path, and `handleComplete` no longer knows about recipients.
+
+Gated by `agentConfig.completeSessionEnabled` — agents without that flag only have `wait`. The communication gate applies on top, only when complete is enabled.
 
 ---
 

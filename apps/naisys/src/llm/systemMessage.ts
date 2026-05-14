@@ -111,14 +111,14 @@ Supervisor API:
   // another option rather than the right move when idle / near token limit.
   const sessionSubs = sessionCmd.subcommands!;
 
-  let tokenNote = `\n  When there is nothing more to do, call \`${sessionCmd.name} ${sessionSubs.wait.usage}\` — the session auto-wakes on new mail or events.`;
+  let tokenNote = `\n  When there is nothing more to do, call \`${sessionCmd.name} ${sessionSubs.wait.usage}\` — the session auto-wakes on new messages or events.`;
 
   if (globalConfig().compactSessionEnabled) {
     tokenNote += `\n  Call \`${sessionCmd.name} ${sessionSubs.compact.usage}\` before the token limit is hit so you can continue your work without interruption.`;
   }
 
   if (agentConfig().completeSessionEnabled) {
-    tokenNote += `\n  Or call \`${sessionCmd.name} ${sessionSubs.complete.usage}\` if the task is fully done; new messages or events will start a new session.`;
+    tokenNote += `\n  Or, after reporting your results call \`${sessionCmd.name} ${sessionSubs.complete.usage}\` to end the session.`;
   }
 
   if (agentConfig().multipleCommandsEnabled) {

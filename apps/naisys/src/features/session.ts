@@ -1,5 +1,4 @@
 import {
-  ADMIN_USERNAME,
   isAudioFilename,
   isImageFilename,
   mapWithConcurrency,
@@ -9,8 +8,7 @@ import type { RestoreData, ResumeEntry } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { UserService } from "../agent/userService.js";
-import { sessionCmd } from "../command/commandDefs.js";
+import { chatCmd, mailCmd, sessionCmd } from "../command/commandDefs.js";
 import type {
   CommandResponse,
   RegistrableCommand,
@@ -25,13 +23,11 @@ import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { LLMService } from "../llm/llmService.js";
-import type { ChatService } from "../mail/chat.js";
-import type { MailService } from "../mail/mail.js";
 import type { HubAttachmentService } from "../services/hubAttachmentService.js";
 import type { LogService } from "../services/logService.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
-import { getTokenCount, trimChars } from "../utils/utilities.js";
+import { getTokenCount } from "../utils/utilities.js";
 
 /** Cap on concurrent hub attachment downloads during resume-replay so a
  *  long-running agent's image-heavy log doesn't open dozens of sockets. */
@@ -45,13 +41,9 @@ export function createSessionService(
   contextManager: ContextManager,
   systemMessage: string,
   llmService: LLMService,
-  mailService: MailService,
-  chatService: ChatService,
-  userService: UserService,
   logService: LogService,
   hubAttachmentService: HubAttachmentService,
   inputMode: InputModeService,
-  localUserId: number,
   /** Resume bundle — hub already filtered by continuity + staleness. */
   preloadedRestore: RestoreData | undefined,
 ) {
@@ -61,6 +53,19 @@ export function createSessionService(
     preloadedRestore?.entries;
   let restoreStale = preloadedRestore?.stale ?? false;
   const restoreCursor = preloadedRestore?.cursor;
+
+  /** Gates `ns-session complete`: true iff the agent's last meaningful
+   *  (non-wait) command was a successful chat-send or mail-send.
+   *
+   *  `complete` is a silent process exit — it produces no mail/chat
+   *  event, so on its own it can't wake an offline lead. The gate
+   *  forces a chat/mail send to immediately precede complete (waits
+   *  in between are fine), guaranteeing the auto-start path
+   *  (see docs/004) has an event to fire on. Without it, an agent
+   *  could finish its work and exit while the lead stayed asleep with
+   *  nothing to wake on — an effective hang. Waits preserve the flag;
+   *  any other command clears it. See `updateCanComplete`. */
+  let canComplete = false;
 
   if (restoreInfo) {
     output.commentAndLog(
@@ -261,7 +266,7 @@ export function createSessionService(
         return handleRestore();
 
       case "complete":
-        return handleComplete(args.slice(subcommand.length).trim());
+        return handleComplete();
 
       case "clear":
         return handleClear();
@@ -424,17 +429,15 @@ export function createSessionService(
     };
   }
 
-  async function handleComplete(
-    resultArg: string,
-  ): Promise<string | CommandResponse> {
+  async function handleComplete(): Promise<string | CommandResponse> {
     if (!agentConfig().completeSessionEnabled) {
       return 'The "ns-session complete" command is not enabled for you, please use wait command instead.';
     }
 
-    const result = trimChars(resultArg, '"');
-
-    if (!result) {
-      return 'Please provide a result message, for example: ns-session complete "Task finished successfully"';
+    // The send is what wakes an offline recipient via auto-start; complete
+    // itself is silent. See the `canComplete` doc above for the full why.
+    if (!canComplete) {
+      return `Report results to your lead, admin, or someone else via chat or mail before calling complete.`;
     }
 
     // Capture a fresh seed before exit so the next run can resume.
@@ -447,32 +450,7 @@ export function createSessionService(
       }
     }
 
-    const localUser = userService.getUserById(localUserId);
-    const recipientId =
-      localUser?.leadUserId ??
-      userService.getUserByName(ADMIN_USERNAME)?.userId;
-
-    const recipient = recipientId
-      ? userService.getUserById(recipientId)
-      : undefined;
-
-    if (recipient) {
-      const useMail =
-        globalConfig().mailServiceEnabled && agentConfig().mailEnabled;
-      if (useMail) {
-        await mailService.sendMessage([recipient], "Session Completed", result);
-      } else {
-        await chatService.sendToUser(
-          recipient.userId,
-          `Session Completed: ${result}`,
-        );
-      }
-      output.commentAndLog(
-        `Session completed. Result sent to ${recipient.username}. Exiting process.`,
-      );
-    } else {
-      output.commentAndLog("Session completed. Exiting process.");
-    }
+    output.commentAndLog("Session completed. Exiting process.");
 
     return {
       content: "",
@@ -503,11 +481,41 @@ export function createSessionService(
     return commands;
   }
 
+  /** Called by the command handler after each successful dispatch to
+   *  maintain the `canComplete` gate. Waits preserve the flag so
+   *  `chat send → wait → complete` is allowed; any other command clears
+   *  it. */
+  function updateCanComplete(commandName: string, cmdArgs: string): void {
+    const sub = stringArgv(cmdArgs)[0];
+
+    if (commandName === sessionCmd.name) {
+      // wait/continue-wait preserve the flag; complete is a read, not a
+      // write; other ns-session subs (compact, restore, clear) are real
+      // commands and should invalidate the prior chat/mail.
+      if (sub === "wait" || sub === "continue-wait" || sub === "complete") {
+        return;
+      }
+      canComplete = false;
+      return;
+    }
+
+    if (
+      (commandName === chatCmd.name || commandName === mailCmd.name) &&
+      sub === "send"
+    ) {
+      canComplete = true;
+      return;
+    }
+
+    canComplete = false;
+  }
+
   return {
     ...registrableCommand,
     getResumeCommands,
     replayRestoreEntries,
     hasPendingRestoreEntries,
+    updateCanComplete,
   };
 }
 

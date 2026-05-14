@@ -277,7 +277,7 @@ describe("CLI Session/Workspace E2E", () => {
       expect(out).toContain("No session restore information");
     }
     {
-      const out = await naisys.runCommand('ns-session complete "done"');
+      const out = await naisys.runCommand("ns-session complete");
       expect(out).toContain("not enabled for you");
     }
     {

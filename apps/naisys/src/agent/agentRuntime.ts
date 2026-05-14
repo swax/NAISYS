@@ -312,13 +312,9 @@ export async function createAgentRuntime(
     contextManager,
     systemMessage,
     llmService,
-    mailService,
-    chatService,
-    userService,
     logService,
     hubAttachmentService,
     inputMode,
-    localUserId,
     restoreData,
   );
   const commandProtection = createCommandProtection(
@@ -379,6 +375,7 @@ export async function createAgentRuntime(
     output,
     inputMode,
     commandLoopState,
+    sessionService,
   );
   const commandLoop = createCommandLoop(
     globalConfig,

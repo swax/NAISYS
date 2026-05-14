@@ -2,6 +2,7 @@ import chalk from "chalk";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
+import type { SessionService } from "../features/session.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
@@ -31,6 +32,7 @@ export function createCommandHandler(
   output: OutputService,
   inputMode: InputModeService,
   commandLoopState: CommandLoopStateService,
+  sessionService: SessionService,
 ) {
   async function processCommand(
     prompt: string,
@@ -119,6 +121,7 @@ export function createCommandHandler(
           const expandedArgs = await expandShellArgs(cmdArgs);
 
           const response = await registeredCommand.handleCommand(expandedArgs);
+          sessionService.updateCanComplete(command, expandedArgs);
 
           // Handle string or CommandResponse
           if (typeof response === "string") {
@@ -137,6 +140,7 @@ export function createCommandHandler(
           if (response !== undefined) {
             contextManager.append(response);
           }
+          sessionService.updateCanComplete(command, "");
 
           nextCommandAction = exitApp
             ? NextCommandAction.ExitApplication

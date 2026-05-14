@@ -6,7 +6,6 @@ import type { RestoreData } from "@naisys/hub-protocol";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AgentConfig } from "../../agent/agentConfig.js";
-import type { UserService } from "../../agent/userService.js";
 import { NextCommandAction } from "../../command/commandRegistry.js";
 import { createSessionService } from "../../features/session.js";
 import type { HubLogBuffer } from "../../hub/hubLogBuffer.js";
@@ -19,10 +18,8 @@ import type { ModelService } from "../../services/modelService.js";
 import type { RunService } from "../../services/runService.js";
 import {
   createMockAgentConfig,
-  createMockChatService,
   createMockGlobalConfig,
   createMockInputMode,
-  createMockMailService,
   createMockOutputService,
   createMockShellCommand,
   createMockWorkspacesFeature,
@@ -118,16 +115,9 @@ function buildRestoreHarness(
     contextManager,
     "system message",
     { query: vi.fn() } as unknown as LLMService,
-    createMockMailService(),
-    createMockChatService(),
-    {
-      getUserById: vi.fn(),
-      getUserByName: vi.fn(),
-    } as unknown as UserService,
     logService,
     hubAttachmentService,
     inputMode,
-    42,
     restoreData,
   );
 
