@@ -63,6 +63,18 @@ export const builtInLlmModels: LlmModel[] = [
     outputCost: 0,
   },
 
+  {
+    key: "lmstudio",
+    label: "LM Studio",
+    versionName: "qwen/qwen3.5-9b",
+    baseUrl: "http://127.0.0.1:1234/v1",
+    apiType: LlmApiType.OpenAICompatible,
+    apiKeyVar: "",
+    maxTokens: 100_000,
+    inputCost: 0,
+    outputCost: 0,
+  },
+
   // ── xAI / Grok ──────────────────────────────────────────────────────
   // https://docs.x.ai/developers/models
   {

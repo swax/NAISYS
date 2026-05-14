@@ -42,11 +42,8 @@ export async function sendWithOpenAiCompatible(
   } = deps;
   const model = modelService.getLlmModel(modelKey);
 
-  if (!apiKey) {
-    throw `Error, set ${model.apiKeyVar} variable`;
-  }
-
-  const openAI = getClient(apiKey, model.baseUrl);
+  // API key can be blank like in cases of local LLMs
+  const openAI = getClient(apiKey || "", model.baseUrl);
   const reasoningEffort = toOpenAiReasoningEffort(model.reasoningLevel);
   const useConsoleTools =
     source === "console" &&
@@ -71,10 +68,10 @@ export async function sendWithOpenAiCompatible(
 
   if (useConsoleTools) {
     chatRequest.tools = [tools.consoleToolOpenAI];
-    chatRequest.tool_choice = {
-      type: "function",
-      function: { name: tools.consoleToolOpenAI.function.name },
-    };
+    // Only one tool is ever offered, so "required" forces that tool while
+    // staying compatible with endpoints that reject the object form of
+    // tool_choice (e.g. some local OpenAI-compatible servers).
+    chatRequest.tool_choice = "required";
   }
 
   const chatResponse = await openAI.chat.completions.create(chatRequest, {
