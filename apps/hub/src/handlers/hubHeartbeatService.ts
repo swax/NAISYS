@@ -15,6 +15,14 @@ import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubRedactionService } from "./hubRedactionService.js";
 import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
 
+/** Per-session identity for an active agent session (parent or subagent). */
+export interface HubActiveSession {
+  userId: number;
+  runId: number;
+  subagentId: number | null;
+  sessionId: number;
+}
+
 /** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
 export function createHubHeartbeatService(
   naisysServer: NaisysServer,
@@ -294,9 +302,30 @@ export function createHubHeartbeatService(
     return allActiveUserIds;
   }
 
+  /**
+   * All currently-active sessions across hosts (parent + subagents), for
+   * callers that need the per-session identity — e.g. looking up each
+   * session's model in run_session, where historical rows are never deleted.
+   */
+  function getActiveSessions(): HubActiveSession[] {
+    const sessions: HubActiveSession[] = [];
+    for (const sessionMap of hostActiveSessions.values()) {
+      for (const info of sessionMap.values()) {
+        sessions.push({
+          userId: info.userId,
+          runId: info.runId,
+          subagentId: info.subagentId,
+          sessionId: info.sessionId,
+        });
+      }
+    }
+    return sessions;
+  }
+
   return {
     cleanup,
     getActiveUserIds,
+    getActiveSessions,
     getHostActiveAgentCount,
     findHostsForAgent,
     addStartedAgent,

@@ -21,6 +21,8 @@ export const ConfigResponseSchema = z.object({
       googleSearchEngineId: z.string().optional(),
       spendLimitDollars: z.number().optional(),
       spendLimitHours: z.number().optional(),
+      codexUsageLimitPercent: z.number().optional(),
+      codexUsageCheckMinutes: z.number().optional(),
       useToolsForLlmConsoleResponses: z.boolean(),
       autoStartAgentsOnMessage: z.boolean(),
       mailServiceEnabled: z.boolean(),

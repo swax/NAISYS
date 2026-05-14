@@ -1,12 +1,27 @@
-import { buildDefaultAgentConfig } from "@naisys/common";
+import { buildDefaultAgentConfig, LlmApiType } from "@naisys/common";
+import type * as CommonNode from "@naisys/common-node";
+import { fetchOpenAiCodexUsage } from "@naisys/common-node";
 import type { HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { NaisysServer } from "../services/naisysServer.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import { createHubCostService } from "./hubCostService.js";
-import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type {
+  HubActiveSession,
+  HubHeartbeatService,
+} from "./hubHeartbeatService.js";
+import type { HubOpenAiCodexAuthService } from "./hubOpenAiCodexAuthService.js";
+
+vi.mock("@naisys/common-node", async () => {
+  const actual =
+    await vi.importActual<typeof CommonNode>("@naisys/common-node");
+  return {
+    ...actual,
+    fetchOpenAiCodexUsage: vi.fn(),
+  };
+});
 
 type CostWriteAck = (response: unknown) => void;
 type CostWriteHandler = (
@@ -14,6 +29,10 @@ type CostWriteHandler = (
   data: unknown,
   ack: CostWriteAck,
 ) => Promise<void>;
+
+const CODEX_TEST_CHECK_MINUTES = 0.001;
+const CODEX_TEST_CHECK_MS = CODEX_TEST_CHECK_MINUTES * 60_000;
+const mockedFetchOpenAiCodexUsage = vi.mocked(fetchOpenAiCodexUsage);
 
 function createServerHarness() {
   const handlers = new Map<string, CostWriteHandler>();
@@ -49,6 +68,10 @@ function createHubDb() {
     },
     run_session: {
       updateMany: vi.fn(() => Promise.resolve({})),
+      findMany: vi.fn(() => Promise.resolve([])),
+    },
+    models: {
+      findMany: vi.fn(() => Promise.resolve([])),
     },
     users: {
       findMany: vi.fn(() => Promise.resolve([])),
@@ -90,9 +113,11 @@ function createLogger() {
 function createHeartbeatService(
   activeUserIds: number[],
   hostIdsByUser = new Map<number, number[]>([[1, [101]]]),
+  activeSessions: HubActiveSession[] = [],
 ) {
   return {
     getActiveUserIds: vi.fn(() => activeUserIds),
+    getActiveSessions: vi.fn(() => activeSessions),
     findHostsForAgent: vi.fn(
       (userId: number) => hostIdsByUser.get(userId) ?? [],
     ),
@@ -102,10 +127,41 @@ function createHeartbeatService(
 function createConfigService(config: {
   spendLimitDollars?: number;
   spendLimitHours?: number;
+  codexUsageLimitPercent?: number;
+  codexUsageCheckMinutes?: number;
 }) {
   return {
     getConfig: vi.fn(() => ({ config })),
   } as unknown as HubConfigService;
+}
+
+function createCodexAuthService(accessToken?: string) {
+  return {
+    getAccessToken: vi.fn(() =>
+      Promise.resolve(
+        accessToken
+          ? { accessToken, expiresAt: Date.now() + 60_000 }
+          : undefined,
+      ),
+    ),
+  } as unknown as HubOpenAiCodexAuthService;
+}
+
+function llmModelRow(key: string, apiType: LlmApiType) {
+  return {
+    id: key.length,
+    key,
+    type: "llm",
+    label: key,
+    version_name: key,
+    is_builtin: true,
+    is_custom: false,
+    meta: JSON.stringify({
+      apiType,
+      maxTokens: 1_000,
+      apiKeyVar: "OPENAI_API_KEY",
+    }),
+  };
 }
 
 function userRow(
@@ -126,6 +182,11 @@ function userRow(
 }
 
 describe("hubCostService", () => {
+  afterEach(() => {
+    mockedFetchOpenAiCodexUsage.mockReset();
+    vi.useRealTimers();
+  });
+
   test("persists subagent cost entries, pushes scoped deltas, and decrements budget", async () => {
     const { server, emitCostWrite } = createServerHarness();
     const { hubDb } = createHubDb();
@@ -138,6 +199,7 @@ describe("hubCostService", () => {
       logger,
       heartbeatService,
       configService,
+      createCodexAuthService(),
     );
 
     const ack = await emitCostWrite(42, {
@@ -227,6 +289,7 @@ describe("hubCostService", () => {
       logger,
       heartbeatService,
       configService,
+      createCodexAuthService(),
     );
 
     await emitCostWrite(42, {
@@ -287,6 +350,7 @@ describe("hubCostService", () => {
       logger,
       heartbeatService,
       configService,
+      createCodexAuthService(),
     );
 
     await service.checkSpendLimits();
@@ -355,5 +419,227 @@ describe("hubCostService", () => {
     });
 
     service.cleanup();
+  });
+
+  test("suspends and resumes active Codex OAuth users based on account usage", async () => {
+    vi.useFakeTimers();
+
+    const { server } = createServerHarness();
+    const { hubDb } = createHubDb();
+    const logger = createLogger();
+    const heartbeatService = createHeartbeatService(
+      [],
+      new Map([
+        [1, [101]],
+        [2, [202]],
+      ]),
+      [
+        { userId: 1, runId: 7, subagentId: null, sessionId: 1 },
+        { userId: 1, runId: 7, subagentId: -1, sessionId: 1 },
+        { userId: 2, runId: 8, subagentId: null, sessionId: 1 },
+      ],
+    );
+    const configService = createConfigService({
+      codexUsageLimitPercent: 80,
+      codexUsageCheckMinutes: CODEX_TEST_CHECK_MINUTES,
+    });
+    const codexAuthService = createCodexAuthService("access-token");
+    vi.mocked(hubDb.run_session.findMany as any).mockResolvedValue([
+      { user_id: 1, model_name: "gpt-4.1" },
+      { user_id: 1, model_name: "codex-oauth" },
+      { user_id: 2, model_name: "gpt-4.1" },
+    ]);
+    vi.mocked(hubDb.models.findMany as any).mockResolvedValue([
+      llmModelRow("gpt-4.1", LlmApiType.OpenAI),
+      llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth),
+    ]);
+    mockedFetchOpenAiCodexUsage
+      .mockResolvedValueOnce({
+        checkedAt: Date.now(),
+        limitReached: false,
+        primaryWindow: { usedPercent: 81 },
+      })
+      .mockResolvedValueOnce({
+        checkedAt: Date.now(),
+        limitReached: false,
+        primaryWindow: { usedPercent: 20 },
+      });
+
+    const service = createHubCostService(
+      server,
+      { hubDb } as HubDatabaseService,
+      logger,
+      heartbeatService,
+      configService,
+      codexAuthService,
+    );
+
+    try {
+      await vi.advanceTimersByTimeAsync(CODEX_TEST_CHECK_MS);
+
+      expect(hubDb.run_session.findMany).toHaveBeenCalledWith({
+        where: {
+          OR: [
+            { user_id: 1, run_id: 7, subagent_id: 0, session_id: 1 },
+            { user_id: 1, run_id: 7, subagent_id: -1, session_id: 1 },
+            { user_id: 2, run_id: 8, subagent_id: 0, session_id: 1 },
+          ],
+        },
+        select: { user_id: true, model_name: true },
+      });
+      expect(codexAuthService.getAccessToken).toHaveBeenCalledTimes(1);
+      expect(mockedFetchOpenAiCodexUsage).toHaveBeenCalledWith({
+        accessToken: "access-token",
+      });
+      expect(server.sendMessage).toHaveBeenCalledWith(
+        101,
+        HubEvents.COST_CONTROL,
+        {
+          userId: 1,
+          enabled: false,
+          reason: "OpenAI Codex usage at/over 80% (primary: 81%)",
+        },
+      );
+      expect(server.sendMessage).not.toHaveBeenCalledWith(
+        202,
+        HubEvents.COST_CONTROL,
+        expect.anything(),
+      );
+      expect(service.isUserSpendSuspended(1)).toBe(true);
+      expect(service.isUserSpendSuspended(2)).toBe(false);
+      expect(hubDb.user_notifications.updateMany).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+        data: {
+          cost_suspended_reason:
+            "OpenAI Codex usage at/over 80% (primary: 81%)",
+        },
+      });
+
+      vi.mocked(server.sendMessage).mockClear();
+      vi.mocked(hubDb.user_notifications.updateMany as any).mockClear();
+
+      await vi.advanceTimersByTimeAsync(CODEX_TEST_CHECK_MS);
+
+      expect(server.sendMessage).toHaveBeenCalledWith(
+        101,
+        HubEvents.COST_CONTROL,
+        {
+          userId: 1,
+          enabled: true,
+          reason: "OpenAI Codex usage back under limit (primary: 20%)",
+        },
+      );
+      expect(service.isUserSpendSuspended(1)).toBe(false);
+      expect(hubDb.user_notifications.updateMany).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+        data: { cost_suspended_reason: null },
+      });
+    } finally {
+      service.cleanup();
+    }
+  });
+
+  test("restores the spend-limit suspension when Codex usage drops below limit", async () => {
+    vi.useFakeTimers();
+
+    const { server } = createServerHarness();
+    const { hubDb } = createHubDb();
+    const logger = createLogger();
+    const heartbeatService = createHeartbeatService(
+      [1],
+      new Map([[1, [101]]]),
+      [{ userId: 1, runId: 7, subagentId: null, sessionId: 1 }],
+    );
+    const configService = createConfigService({
+      codexUsageLimitPercent: 80,
+      codexUsageCheckMinutes: CODEX_TEST_CHECK_MINUTES,
+    });
+    vi.mocked(hubDb.users.findMany as any).mockResolvedValue([
+      userRow(1, { spendLimitDollars: 1 }),
+    ]);
+    vi.mocked(hubDb.costs.aggregate as any).mockResolvedValue({
+      _sum: { cost: 1.25 },
+    });
+    vi.mocked(hubDb.run_session.findMany as any).mockResolvedValue([
+      { user_id: 1, model_name: "codex-oauth" },
+    ]);
+    vi.mocked(hubDb.models.findMany as any).mockResolvedValue([
+      llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth),
+    ]);
+    mockedFetchOpenAiCodexUsage
+      .mockResolvedValueOnce({
+        checkedAt: Date.now(),
+        limitReached: false,
+        primaryWindow: { usedPercent: 90 },
+      })
+      .mockResolvedValueOnce({
+        checkedAt: Date.now(),
+        limitReached: false,
+        primaryWindow: { usedPercent: 20 },
+      });
+
+    const service = createHubCostService(
+      server,
+      { hubDb } as HubDatabaseService,
+      logger,
+      heartbeatService,
+      configService,
+      createCodexAuthService("access-token"),
+    );
+
+    try {
+      await service.checkSpendLimits();
+
+      const spendReason = "Spend limit of $1 reached (current: $1.25)";
+      expect(server.sendMessage).toHaveBeenCalledWith(
+        101,
+        HubEvents.COST_CONTROL,
+        {
+          userId: 1,
+          enabled: false,
+          reason: spendReason,
+        },
+      );
+
+      vi.mocked(server.sendMessage).mockClear();
+      vi.mocked(hubDb.user_notifications.updateMany as any).mockClear();
+      await vi.advanceTimersByTimeAsync(CODEX_TEST_CHECK_MS);
+
+      const codexReason = "OpenAI Codex usage at/over 80% (primary: 90%)";
+      expect(server.sendMessage).toHaveBeenCalledWith(
+        101,
+        HubEvents.COST_CONTROL,
+        {
+          userId: 1,
+          enabled: false,
+          reason: codexReason,
+        },
+      );
+      expect(hubDb.user_notifications.updateMany).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+        data: { cost_suspended_reason: codexReason },
+      });
+
+      vi.mocked(server.sendMessage).mockClear();
+      vi.mocked(hubDb.user_notifications.updateMany as any).mockClear();
+      await vi.advanceTimersByTimeAsync(CODEX_TEST_CHECK_MS);
+
+      expect(server.sendMessage).toHaveBeenCalledWith(
+        101,
+        HubEvents.COST_CONTROL,
+        {
+          userId: 1,
+          enabled: false,
+          reason: spendReason,
+        },
+      );
+      expect(service.isUserSpendSuspended(1)).toBe(true);
+      expect(hubDb.user_notifications.updateMany).toHaveBeenCalledWith({
+        where: { user_id: 1 },
+        data: { cost_suspended_reason: spendReason },
+      });
+    } finally {
+      service.cleanup();
+    }
   });
 });

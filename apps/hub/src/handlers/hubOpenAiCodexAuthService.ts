@@ -23,7 +23,7 @@ export function createHubOpenAiCodexAuthService(
   { hubDb }: HubDatabaseService,
   redactionService: HubRedactionService,
   logService: DualLogger,
-): void {
+) {
   const provider = createOpenAiCodexAccessTokenProvider({
     failureCooldownMs: REFRESH_FAILURE_COOLDOWN_MS,
     getRefreshToken: async () => {
@@ -109,4 +109,12 @@ export function createHubOpenAiCodexAuthService(
   naisysServer.registerEvent(HubEvents.VARIABLES_CHANGED, () => {
     provider.reset();
   });
+
+  // Exposed so other hub services (e.g. the cost service's codex usage check)
+  // can mint a token through the same single-flight provider.
+  return { getAccessToken: provider.getAccessToken };
 }
+
+export type HubOpenAiCodexAuthService = ReturnType<
+  typeof createHubOpenAiCodexAuthService
+>;

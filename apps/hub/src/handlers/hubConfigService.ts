@@ -62,6 +62,8 @@ export async function createHubConfigService(
     { key: "GOOGLE_SEARCH_ENGINE_ID" },
     { key: "SPEND_LIMIT_DOLLARS" },
     { key: "SPEND_LIMIT_HOURS" },
+    { key: "CODEX_USAGE_LIMIT_PERCENT" },
+    { key: "CODEX_USAGE_CHECK_MINUTES" },
     { key: "TARGET_VERSION" },
     { key: "MAIL_ENABLED" },
   ]);

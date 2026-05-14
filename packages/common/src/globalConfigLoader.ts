@@ -14,6 +14,10 @@ export interface ClientConfig {
   googleSearchEngineId?: string;
   spendLimitDollars?: number;
   spendLimitHours?: number;
+  /** Suspend OpenAI Codex OAuth agents when account usage reaches this percent. */
+  codexUsageLimitPercent?: number;
+  /** How often the hub polls OpenAI Codex account usage, in minutes. */
+  codexUsageCheckMinutes?: number;
   variableMap: Record<string, string>;
   shellVariableMap: Record<string, string>;
   useToolsForLlmConsoleResponses: boolean;
@@ -71,6 +75,14 @@ export function buildClientConfig(
   const spendLimitDollars = sanitizeSpendLimit(variableMap.SPEND_LIMIT_DOLLARS);
   const spendLimitHours = sanitizeSpendLimit(variableMap.SPEND_LIMIT_HOURS);
 
+  // Reuse the spend-limit sanitizer: both must be positive finite numbers.
+  const codexUsageLimitPercent = sanitizeSpendLimit(
+    variableMap.CODEX_USAGE_LIMIT_PERCENT,
+  );
+  const codexUsageCheckMinutes = sanitizeSpendLimit(
+    variableMap.CODEX_USAGE_CHECK_MINUTES,
+  );
+
   const mailServiceEnabled = variableMap.MAIL_ENABLED === "true";
 
   const useToolsForLlmConsoleResponses = true;
@@ -88,6 +100,8 @@ export function buildClientConfig(
     googleSearchEngineId,
     spendLimitDollars,
     spendLimitHours,
+    codexUsageLimitPercent,
+    codexUsageCheckMinutes,
     useToolsForLlmConsoleResponses,
     autoStartAgentsOnMessage,
     mailServiceEnabled,

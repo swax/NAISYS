@@ -128,7 +128,7 @@ export const startHub: StartHub = async (
       logService,
     );
 
-    createHubOpenAiCodexAuthService(
+    const codexAuthService = createHubOpenAiCodexAuthService(
       naisysServer,
       hubDatabaseService,
       redactionService,
@@ -172,6 +172,7 @@ export const startHub: StartHub = async (
       logService,
       heartbeatService,
       configService,
+      codexAuthService,
     );
 
     // Register hub send mail service (pure mail sending, no auto-start logic)

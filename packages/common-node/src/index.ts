@@ -10,6 +10,8 @@ export * from "./hubCertVerification.js";
 export * from "./logFileService.js";
 export * from "./migrationHelper.js";
 export * from "./openAiCodexAccessToken.js";
+export * from "./openAiCodexHttp.js";
+export * from "./openAiCodexUsage.js";
 export * from "./persistentApiKey.js";
 export * from "./sessionCookie.js";
 export * from "./setupWizard.js";
