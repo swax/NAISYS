@@ -138,7 +138,20 @@ export class AgentManager {
             }
 
             const paused = event === HubEvents.AGENT_RUN_PAUSE;
-            const changed = agent.setPaused(paused);
+            let changed = agent.setPaused(paused);
+
+            // Cascade parent pause/resume to local subagents. Skipping
+            // run/session validation on children — the parent's match
+            // implicitly authorizes the cascade. Resuming the parent
+            // also resumes children that were paused directly.
+            if (!parsed.subagentId) {
+              for (const sub of this.runningAgents) {
+                if (sub.parentUserId === parsed.userId) {
+                  changed = sub.setPaused(paused) || changed;
+                }
+              }
+            }
+
             // Immediate heartbeat so the supervisor UI reflects the change
             // within roundtrip latency instead of waiting for the 2s tick
             if (changed) {

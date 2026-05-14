@@ -31,6 +31,8 @@ export interface IAgentManager {
   stopAll: (reason: string, excludeUserId?: number) => Promise<void>;
   runningAgents: Array<{
     agentUserId: number;
+    /** Set when this is a subagent — used to cascade parent pause/resume. */
+    parentUserId?: number;
     agentUsername: string;
     agentTitle: string;
     shellModel: string;

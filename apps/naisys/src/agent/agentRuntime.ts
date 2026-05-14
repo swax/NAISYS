@@ -411,6 +411,7 @@ export async function createAgentRuntime(
 
   return {
     agentUserId: localUserId,
+    parentUserId: subagentContext?.parentUserId,
     agentUsername: config.username,
     agentTitle: config.title,
     shellModel: config.shellModel,
