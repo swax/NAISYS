@@ -177,17 +177,14 @@ export async function updateAgentConfigById(
   // Snapshot the current config before overwriting
   const currentUser = await hubDb.users.findUnique({
     where: { id },
-    select: { config: true },
+    select: { config: true, username: true },
   });
 
   if (setUsername) {
     // Normal edit: push config.username to the DB column
-  } else {
+  } else if (currentUser) {
     // Import: preserve the DB username, override it in the config
-    const user = await hubDb.users.findUnique({ where: { id } });
-    if (user) {
-      config = { ...config, username: user.username };
-    }
+    config = { ...config, username: currentUser.username };
   }
 
   const ordered = canonicalConfigOrder(config);
@@ -218,13 +215,45 @@ export async function updateAgentConfigById(
     await writeContinuityBoundary(id);
   }
 
-  await hubDb.users.update({
-    where: { id },
-    data: {
-      config: jsonStr,
-      ...(setUsername && { username: config.username }),
-      title: config.title,
-    },
+  // mail_messages.participants is a denormalized sorted CSV of usernames used
+  // as the conversation lookup key. On rename, rewrite every row that names
+  // the old user so old threads stay reachable and don't fork on the next reply.
+  const oldUsername = currentUser?.username;
+  const newUsername = config.username;
+  const renaming =
+    setUsername && !!oldUsername && oldUsername !== newUsername;
+
+  await hubDb.$transaction(async (hubTx) => {
+    if (renaming) {
+      const rows = await hubTx.mail_messages.findMany({
+        where: { participants: { contains: oldUsername } },
+        select: { id: true, participants: true },
+      });
+      for (const row of rows) {
+        const names = row.participants.split(",");
+        // `contains` can substring-match (e.g. "alice" inside "alicia")
+        if (!names.includes(oldUsername)) continue;
+        const next = names
+          .map((n) => (n === oldUsername ? newUsername : n))
+          .sort()
+          .join(",");
+        if (next !== row.participants) {
+          await hubTx.mail_messages.update({
+            where: { id: row.id },
+            data: { participants: next },
+          });
+        }
+      }
+    }
+
+    await hubTx.users.update({
+      where: { id },
+      data: {
+        config: jsonStr,
+        ...(setUsername && { username: newUsername }),
+        title: config.title,
+      },
+    });
   });
 
   // Update user notification modified date
