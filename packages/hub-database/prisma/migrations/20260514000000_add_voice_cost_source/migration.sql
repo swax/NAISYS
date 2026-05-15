@@ -1,0 +1,4 @@
+-- SQLite has no enum types; Prisma stores CostSource as text.
+-- No ALTER TYPE needed — 'voice' is valid as soon as it's inserted.
+-- New cost source for supervisor-side gpt-realtime voice agent usage,
+-- attributed to the admin agent's session.

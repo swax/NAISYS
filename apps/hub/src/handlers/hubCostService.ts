@@ -1,17 +1,20 @@
 import {
-  AgentConfigFileSchema,
-  calculatePeriodBoundaries,
   dbFieldsToLlmModel,
+  dbSubagentIdToWire,
   LlmApiType,
   type ModelDbRow,
+  parseSpendLimitsFromConfigJson,
 } from "@naisys/common";
 import {
   type DualLogger,
   fetchOpenAiCodexUsage,
   type OpenAiCodexUsage,
 } from "@naisys/common-node";
-import type { HubDatabaseService } from "@naisys/hub-database";
-import type { PrismaClient } from "@naisys/hub-database";
+import {
+  type HubDatabaseService,
+  type PrismaClient,
+  sumUserCostsInPeriod,
+} from "@naisys/hub-database";
 import {
   type CostPushEntry,
   CostWriteRequestSchema,
@@ -61,8 +64,7 @@ export function createHubCostService(
 
         for (const entry of parsed.entries) {
           const subagentId = entry.subagentId ?? 0;
-          // Wire format: undefined for parent (subagent_id 0 in DB), number otherwise
-          const wireSubagentId = subagentId === 0 ? undefined : subagentId;
+          const wireSubagentId = dbSubagentIdToWire(subagentId);
 
           await hubDb.costs.create({
             data: {
@@ -212,13 +214,11 @@ export function createHubCostService(
     // Identify which users have per-agent spend limits (exempt from global)
     const usersWithAgentLimit = new Set<number>();
     for (const user of users) {
-      try {
-        const parsed = AgentConfigFileSchema.safeParse(JSON.parse(user.config));
-        if (parsed.success && parsed.data.spendLimitDollars !== undefined) {
-          usersWithAgentLimit.add(user.id);
-        }
-      } catch {
-        /* ignore parse errors */
+      if (
+        parseSpendLimitsFromConfigJson(user.config).spendLimitDollars !==
+        undefined
+      ) {
+        usersWithAgentLimit.add(user.id);
       }
     }
 
@@ -236,17 +236,15 @@ export function createHubCostService(
     // 2. Per-agent spend limit checks
     for (const user of users) {
       try {
-        const parsed = AgentConfigFileSchema.safeParse(JSON.parse(user.config));
-        if (!parsed.success) continue;
-
-        const config = parsed.data;
-        if (config.spendLimitDollars === undefined) continue;
+        const { spendLimitDollars, spendLimitHours } =
+          parseSpendLimitsFromConfigJson(user.config);
+        if (spendLimitDollars === undefined) continue;
 
         await checkAgentSpendLimit(
           hubDb,
           user.id,
-          config.spendLimitDollars,
-          config.spendLimitHours,
+          spendLimitDollars,
+          spendLimitHours,
           user.user_notifications?.spend_limit_reset_at ?? undefined,
         );
       } catch (userError) {
@@ -255,44 +253,6 @@ export function createHubCostService(
         );
       }
     }
-  }
-
-  /**
-   * Finds the total cost over the period, if this period is used up, we wait until the next period to resume.
-   * We don't use a sliding window as that would cause the LLM to get stuck in a cycle of sending off a query,
-   * only for the window to close again, and the LLM cache to *expire* creating constant cache misses.
-   */
-  async function queryCostSum(
-    hubDb: PrismaClient,
-    spendLimitHours: number | undefined,
-    userIdFilter?: number,
-    spendLimitResetAt?: Date,
-  ): Promise<number> {
-    const where: Record<string, unknown> = {};
-    if (userIdFilter) {
-      where.user_id = userIdFilter;
-    }
-
-    let effectiveStart: Date | undefined;
-    if (spendLimitHours !== undefined) {
-      const { periodStart } = calculatePeriodBoundaries(spendLimitHours);
-      effectiveStart = periodStart;
-    }
-    if (
-      spendLimitResetAt &&
-      (!effectiveStart || spendLimitResetAt > effectiveStart)
-    ) {
-      effectiveStart = spendLimitResetAt;
-    }
-    if (effectiveStart) {
-      where.created_at = { gte: effectiveStart };
-    }
-
-    const result = await hubDb.costs.aggregate({
-      where,
-      _sum: { cost: true },
-    });
-    return result._sum.cost ?? 0;
   }
 
   function sendCostControl(userId: number, enabled: boolean, reason: string) {
@@ -378,7 +338,7 @@ export function createHubCostService(
     spendLimitHours: number | undefined,
     usersWithAgentLimit: Set<number>,
   ) {
-    const totalCost = await queryCostSum(hubDb, spendLimitHours);
+    const totalCost = await sumUserCostsInPeriod(hubDb, { spendLimitHours });
     const isOverLimit = totalCost >= spendLimit;
 
     async function resumeFromGlobal(userId: number, reason: string) {
@@ -422,12 +382,11 @@ export function createHubCostService(
     spendLimitHours: number | undefined,
     spendLimitResetAt?: Date,
   ) {
-    const periodCost = await queryCostSum(
-      hubDb,
-      spendLimitHours,
+    const periodCost = await sumUserCostsInPeriod(hubDb, {
       userId,
+      spendLimitHours,
       spendLimitResetAt,
-    );
+    });
     const isOverLimit = periodCost >= spendLimit;
     const wasSuspended = suspendedByAgent.has(userId);
 

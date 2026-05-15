@@ -17,6 +17,7 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
+import { FloatingVoiceControl } from "./components/FloatingVoiceControl";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { RootErrorPage } from "./components/RootErrorPage";
 import { RouteErrorPage } from "./components/RouteErrorPage";
@@ -25,6 +26,7 @@ import { NAV_HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
+import { VoiceSessionProvider } from "./contexts/VoiceSessionContext";
 import { AppHeader } from "./headers/AppHeader";
 import { AppNavbar } from "./headers/AppNavbar";
 import { DisconnectedBanner } from "./headers/DisconnectedBanner";
@@ -116,49 +118,56 @@ const AppContent: React.FC = () => {
   return (
     <AgentDataProvider>
       <HostDataProvider>
-        <AppShell
-          header={{ height: NAV_HEADER_ROW_HEIGHT }}
-          navbar={{
-            width: 300,
-            breakpoint: "sm",
-            collapsed: { desktop: true, mobile: !opened },
-          }}
-          padding={0}
-        >
-          <AppShell.Header>
-            <AppHeader onBurgerClick={toggle} hasErp={hasErp} />
-          </AppShell.Header>
-
-          <AppShell.Navbar p="md">
-            <AppNavbar onClose={close} hasErp={hasErp} />
-          </AppShell.Navbar>
-
-          <AppShell.Main
-            style={{
-              height: "100dvh",
-              display: "flex",
-              flexDirection: "column",
+        <VoiceSessionProvider>
+          <AppShell
+            header={{ height: NAV_HEADER_ROW_HEIGHT }}
+            navbar={{
+              width: 300,
+              breakpoint: "sm",
+              collapsed: { desktop: true, mobile: !opened },
             }}
+            padding={0}
           >
-            <DisconnectedBanner />
-            <Box
-              px={{ base: 0, sm: "xs" }}
-              pt={0}
-              pb={0}
+            <AppShell.Header>
+              <AppHeader onBurgerClick={toggle} hasErp={hasErp} />
+            </AppShell.Header>
+
+            <AppShell.Navbar p="md">
+              <AppNavbar onClose={close} hasErp={hasErp} />
+            </AppShell.Navbar>
+
+            <AppShell.Main
               style={{
-                flex: 1,
-                minHeight: 0,
+                height: "100dvh",
                 display: "flex",
                 flexDirection: "column",
-                overflow: "auto",
               }}
             >
-              <Outlet
-                context={{ permissions, allowPasswordLogin, mailServiceEnabled }}
-              />
-            </Box>
-          </AppShell.Main>
-        </AppShell>
+              <DisconnectedBanner />
+              <Box
+                px={{ base: 0, sm: "xs" }}
+                pt={0}
+                pb={0}
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "auto",
+                }}
+              >
+                <Outlet
+                  context={{
+                    permissions,
+                    allowPasswordLogin,
+                    mailServiceEnabled,
+                  }}
+                />
+              </Box>
+            </AppShell.Main>
+          </AppShell>
+          <FloatingVoiceControl />
+        </VoiceSessionProvider>
       </HostDataProvider>
     </AgentDataProvider>
   );

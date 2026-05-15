@@ -68,6 +68,14 @@ import type {
   UpdateAgentConfigResponse,
   UserActionResult,
   VariablesResponse,
+  VoiceCostRequest,
+  VoiceCostResponse,
+  VoiceTokenRequest,
+  VoiceTokenResponse,
+  VoiceToolCallRequest,
+  VoiceToolCallResponse,
+  VoiceToolName,
+  VoiceUsage,
 } from "@naisys/supervisor-shared";
 
 export const API_BASE = "/supervisor/api";
@@ -142,6 +150,14 @@ export type {
   UpdateAgentConfigResponse,
   UserActionResult,
   VariablesResponse,
+  VoiceCostRequest,
+  VoiceCostResponse,
+  VoiceTokenRequest,
+  VoiceTokenResponse,
+  VoiceToolCallRequest,
+  VoiceToolCallResponse,
+  VoiceToolName,
+  VoiceUsage,
 };
 
 export const api = {
@@ -269,6 +285,9 @@ export const apiEndpoints = {
   agentMailArchive: (username: string) => `/agents/${username}/mail/archive`,
   agentStartupAttachments: (username: string) =>
     `/agents/${username}/startup-attachments`,
+  voiceToken: (username: string) => `/agents/${username}/voice/token`,
+  voiceTool: (username: string) => `/agents/${username}/voice/tool`,
+  voiceCost: (username: string) => `/agents/${username}/voice/cost`,
   agentContextLog: (
     username: string,
     runId: number,

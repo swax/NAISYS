@@ -15,6 +15,11 @@ export {
   getLatestRunInfoByUuid,
   sumCostsByUuid,
 } from "./hubSessionService.js";
+// Re-export Hub Costs Service
+export {
+  sumUserCostsInPeriod,
+  type SumUserCostsInPeriodOptions,
+} from "./hubCostsService.js";
 // Re-export Prisma Client and all generated types
 export * from "./generated/prisma/client.js";
 export { PrismaClient } from "./generated/prisma/client.js";

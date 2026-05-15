@@ -69,6 +69,7 @@ enum CostSource {
   listen
   genimg
   websearch
+  voice
 }
 
 // --- Models ---

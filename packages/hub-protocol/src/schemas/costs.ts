@@ -12,6 +12,7 @@ export const CostSourceEnum = z.enum([
   "listen",
   "genimg",
   "websearch",
+  "voice",
 ]);
 export type CostSource = z.infer<typeof CostSourceEnum>;
 

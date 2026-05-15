@@ -20,6 +20,7 @@ import schemaRoutes from "./schemas.js";
 import statusRoutes from "./status.js";
 import userRoutes from "./users.js";
 import variablesRoutes from "./variables.js";
+import voiceRoutes from "./voice.js";
 
 interface ApiRoutesOptions extends FastifyPluginOptions {
   plugins?: SupervisorPlugin[];
@@ -55,6 +56,7 @@ export default async function apiRoutes(
   await fastify.register(agentMailRoutes, { prefix: "/agents" });
   await fastify.register(agentChatRoutes, { prefix: "/agents" });
   await fastify.register(agentStartupAttachmentsRoutes, { prefix: "/agents" });
+  await fastify.register(voiceRoutes, { prefix: "/agents" });
 
   // Register hosts routes
   await fastify.register(hostsRoutes, { prefix: "/hosts" });

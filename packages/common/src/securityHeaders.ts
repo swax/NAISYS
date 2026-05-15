@@ -26,8 +26,12 @@ export function registerSecurityHeaders(
   },
   options: { enforceHsts: boolean },
 ): void {
+  // `connect-src` must include https://api.openai.com so the supervisor's
+  // voice client can POST the WebRTC SDP offer to OpenAI's realtime calls
+  // endpoint. WebRTC media itself isn't subject to CSP, but the SDP
+  // bootstrap fetch is.
   const strictCsp =
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; frame-ancestors 'none'";
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss: https://api.openai.com; font-src 'self' data:; frame-ancestors 'none'";
 
   // Scalar API reference needs inline scripts, eval (bundled Zod JIT),
   // CDN assets, and outbound fetches to its proxy/registry services.

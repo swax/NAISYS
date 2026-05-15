@@ -1,4 +1,4 @@
-import { ATTACHMENT_NO_ACCESS } from "@naisys/common";
+import { ATTACHMENT_NO_ACCESS, dbSubagentIdToWire } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import type {
   AgentRunLogEntry,
@@ -182,7 +182,7 @@ export async function getRunsData(
       userId: session.user_id,
       username: session.users.username,
       runId: session.run_id,
-      subagentId: session.subagent_id === 0 ? undefined : session.subagent_id,
+      subagentId: dbSubagentIdToWire(session.subagent_id),
       sessionId: session.session_id,
       createdAt: session.created_at.toISOString(),
       lastActive: session.last_active.toISOString(),
@@ -248,7 +248,7 @@ export async function getMessageThreadRuns(
     userId: session.user_id,
     username: session.users.username,
     runId: session.run_id,
-    subagentId: session.subagent_id === 0 ? undefined : session.subagent_id,
+    subagentId: dbSubagentIdToWire(session.subagent_id),
     sessionId: session.session_id,
     createdAt: session.created_at.toISOString(),
     lastActive: session.last_active.toISOString(),
@@ -385,7 +385,7 @@ export async function getAgentRunLogEntries(
     logId: r.id,
     runId: r.run_id,
     sessionId: r.session_id,
-    subagentId: r.subagent_id === 0 ? undefined : r.subagent_id,
+    subagentId: dbSubagentIdToWire(r.subagent_id),
     source: r.source as LogSource,
     message: r.message,
     createdAt: r.created_at.toISOString(),

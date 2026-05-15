@@ -19,6 +19,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AgentPauseToggle } from "../../components/AgentPauseToggle";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { ParticipantInfo } from "../../components/ParticipantInfo";
+import { VoiceMicButton } from "../../components/VoiceMicButton";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useChatConversations } from "../../hooks/useChatConversations";
@@ -178,8 +179,41 @@ export const AgentChat: React.FC = () => {
     );
   }, [threadRuns, username]);
 
-  const inputLeftSection = pauseableRuns.length > 0 && (
+  // Phase 1 voice sessions operate exactly one NAISYS agent. The button stays
+  // visible but disables-with-tooltip outside strict 1:1 with one LLM-driven
+  // agent (humans-only, multi-agent, 1 agent + extra humans, or an agent like
+  // admin that has shellModel "none" and so can't run commands the voice
+  // agent's tools need).
+  const otherParticipants = threadParticipants.filter((n) => n !== username);
+  const otherAgents = otherParticipants
+    .map((n) => agents.find((a) => a.name === n))
+    .filter((a): a is NonNullable<typeof a> => a !== undefined);
+  const voiceTargetAgent =
+    otherParticipants.length === 1 && otherAgents.length === 1
+      ? otherAgents[0]
+      : undefined;
+  let voiceDisabledReason: string | undefined;
+  if (otherParticipants.length > 0 && otherAgents.length === 0) {
+    voiceDisabledReason =
+      "Voice is only available in conversations with a NAISYS agent.";
+  } else if (!voiceTargetAgent) {
+    voiceDisabledReason =
+      "Voice operates a single agent — switch to a 1:1 chat with the agent you want to operate.";
+  } else if (voiceTargetAgent.shellModel === "none") {
+    voiceDisabledReason = `${voiceTargetAgent.name} has no shell model — voice operates LLM-driven agents that can run commands.`;
+  }
+
+  const inputLeftSection = (
     <>
+      {username && otherParticipants.length > 0 && (
+        <VoiceMicButton
+          fromUsername={username}
+          fromTitle={agent?.title ?? username}
+          targetUsername={voiceTargetAgent?.name ?? otherParticipants[0]}
+          targetTitle={voiceTargetAgent?.title ?? otherParticipants[0]}
+          disabledReason={voiceDisabledReason}
+        />
+      )}
       {pauseableRuns.map((run) => (
         <AgentPauseToggle
           key={`${run.userId}-${run.runId}-${run.sessionId}-${run.subagentId ?? 0}`}

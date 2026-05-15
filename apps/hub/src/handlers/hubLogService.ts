@@ -1,3 +1,4 @@
+import { dbSubagentIdToWire } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
@@ -35,8 +36,6 @@ export function createHubLogService(
         const message = redactionService.redact(entry.message);
         const lineCount = message.split("\n").length;
         const subagentId = entry.subagentId ?? 0;
-        // Wire format: undefined for parent (subagent_id 0 in DB), number otherwise
-        const wireSubagentId = subagentId === 0 ? undefined : subagentId;
 
         const log = await hubDb.context_log.create({
           data: {
@@ -126,7 +125,7 @@ export function createHubLogService(
           previousId,
           userId: entry.userId,
           runId: entry.runId,
-          subagentId: wireSubagentId,
+          subagentId: dbSubagentIdToWire(subagentId),
           sessionId: entry.sessionId,
           role: entry.role,
           source: entry.source,
@@ -150,7 +149,7 @@ export function createHubLogService(
           sessionUpdates.set(sessionKey, {
             userId: entry.userId,
             runId: entry.runId,
-            subagentId: wireSubagentId,
+            subagentId: dbSubagentIdToWire(subagentId),
             sessionId: entry.sessionId,
             lastActive: now,
             latestLogId: log.id,

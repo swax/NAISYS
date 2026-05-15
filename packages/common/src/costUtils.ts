@@ -35,3 +35,27 @@ export function calculatePeriodBoundaries(
 
   return { periodStart, periodEnd };
 }
+
+/**
+ * Resolve the inclusive start of the spend window. Shared by the hub's spend
+ * enforcement and the supervisor's voice budget check so both sum over the
+ * same period. With `spendLimitHours`, the floor is the current fixed period
+ * from `calculatePeriodBoundaries`; a later `spendLimitResetAt` overrides;
+ * undefined `spendLimitHours` → all-time (lifetime cap).
+ */
+export function calculateEffectiveSpendStart(
+  spendLimitHours: number | undefined,
+  spendLimitResetAt?: Date,
+): Date | undefined {
+  let effectiveStart: Date | undefined;
+  if (spendLimitHours !== undefined) {
+    effectiveStart = calculatePeriodBoundaries(spendLimitHours).periodStart;
+  }
+  if (
+    spendLimitResetAt &&
+    (!effectiveStart || spendLimitResetAt > effectiveStart)
+  ) {
+    effectiveStart = spendLimitResetAt;
+  }
+  return effectiveStart;
+}

@@ -15,3 +15,4 @@ export * from "./startup-attachments-types.js";
 export * from "./status-types.js";
 export * from "./user-types.js";
 export * from "./variables-types.js";
+export * from "./voice-types.js";

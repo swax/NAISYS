@@ -31,6 +31,31 @@ export function parseContinuityFromConfigJson(
   }
 }
 
+const UserConfigSpendLimitsSchema = z
+  .object({
+    spendLimitDollars: z.number().optional(),
+    spendLimitHours: z.number().optional(),
+  })
+  .loose();
+
+/** Pull spend-limit fields out of a stored `users.config` JSON string. Returns
+ *  `{}` on null/missing/parse failure — both mean "no per-agent limit". Shared
+ *  by the hub's spend enforcement and the supervisor's voice budget check. */
+export function parseSpendLimitsFromConfigJson(
+  configJson: string | null | undefined,
+): { spendLimitDollars?: number; spendLimitHours?: number } {
+  if (!configJson) return {};
+  try {
+    const parsed = UserConfigSpendLimitsSchema.parse(JSON.parse(configJson));
+    return {
+      spendLimitDollars: parsed.spendLimitDollars,
+      spendLimitHours: parsed.spendLimitHours,
+    };
+  } catch {
+    return {};
+  }
+}
+
 // Zod schema for validation
 export const AgentConfigFileSchema = z.object({
   username: z
@@ -236,7 +261,11 @@ export const adminAgentConfig = {
   chatEnabled: true,
   wakeOnMessage: true,
   webEnabled: true,
-  spendLimitDollars: 1, // Required on all agents
+  // Rolling daily cap. Admin does no LLM work (shellModel "none") but voice
+  // usage attributes to its session, so this is the real voice cost cap.
+  // Rolling so it auto-resets each period.
+  spendLimitDollars: 25,
+  spendLimitHours: 24,
 } satisfies AgentConfigFile;
 
 export interface UserEntry {
