@@ -7,7 +7,7 @@ import type {
   StepDiff,
 } from "@naisys/erp-shared";
 
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 
 // --- Prisma deep include for full revision tree ---
 

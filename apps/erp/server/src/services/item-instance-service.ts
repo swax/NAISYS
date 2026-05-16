@@ -1,6 +1,6 @@
-import erpDb from "../erpDb.js";
+import { includeUsers, type WithAuditUsers } from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
 import type { ItemInstanceModel } from "../generated/prisma/models/ItemInstance.js";
-import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
 
 // --- Prisma include & result type ---
 

@@ -3,10 +3,10 @@ import type { HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { HUB_HEARTBEAT_INTERVAL_MS, HubEvents } from "@naisys/hub-protocol";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import { createHubHeartbeatService } from "./hubHeartbeatService.js";
-import type { HubRedactionService } from "./hubRedactionService.js";
-import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
+import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
+import { createHubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubRedactionService } from "../observability/hubRedactionService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 type EventHandler = (hostId: number, data: unknown) => Promise<void> | void;
 

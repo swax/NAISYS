@@ -12,7 +12,7 @@ import type { HubLogBuffer } from "../../hub/hubLogBuffer.js";
 import { createContextManager } from "../../llm/contextManager.js";
 import type { LLMService } from "../../llm/llmService.js";
 import type { AttachmentService } from "../../services/attachmentService.js";
-import type { HubAttachmentService } from "../../services/hubAttachmentService.js";
+import type { HubAttachmentClient } from "../../services/hubAttachmentClient.js";
 import { createLogService } from "../../services/logService.js";
 import type { ModelService } from "../../services/modelService.js";
 import type { RunService } from "../../services/runService.js";
@@ -99,13 +99,13 @@ function buildRestoreHarness(
   );
 
   const buffers = opts.buffers ?? {};
-  const hubAttachmentService = {
+  const hubAttachmentClient = {
     downloadToBuffer: vi.fn((publicId: string) =>
       Promise.resolve(buffers[publicId] ?? Buffer.from(publicId)),
     ),
     downloadToFile: vi.fn(),
     sweepStaleTmpFiles: vi.fn(),
-  } as unknown as HubAttachmentService;
+  } as unknown as HubAttachmentClient;
 
   const sessionService = createSessionService(
     globalConfig,
@@ -116,14 +116,14 @@ function buildRestoreHarness(
     "system message",
     { query: vi.fn() } as unknown as LLMService,
     logService,
-    hubAttachmentService,
+    hubAttachmentClient,
     inputMode,
     restoreData,
   );
 
   return {
     contextManager,
-    hubAttachmentService,
+    hubAttachmentClient,
     output,
     pushEntry,
     sessionService,
@@ -135,7 +135,7 @@ describe("session restore replay", () => {
   test("replays media entries with existing attachment ids so future full restores retain media", async () => {
     const imageBytes = Buffer.from("image-bytes");
     const audioBytes = Buffer.from("audio-bytes");
-    const { contextManager, hubAttachmentService, pushEntry, sessionService, upload } =
+    const { contextManager, hubAttachmentClient, pushEntry, sessionService, upload } =
       buildRestoreHarness(
         {
           entries: [
@@ -172,10 +172,10 @@ describe("session restore replay", () => {
     });
     expect(sessionService.hasPendingRestoreEntries()).toBe(false);
 
-    expect(hubAttachmentService.downloadToBuffer).toHaveBeenCalledWith(
+    expect(hubAttachmentClient.downloadToBuffer).toHaveBeenCalledWith(
       "img-public",
     );
-    expect(hubAttachmentService.downloadToBuffer).toHaveBeenCalledWith(
+    expect(hubAttachmentClient.downloadToBuffer).toHaveBeenCalledWith(
       "audio-public",
     );
     expect(upload).not.toHaveBeenCalled();

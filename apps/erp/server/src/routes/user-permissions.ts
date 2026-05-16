@@ -3,8 +3,9 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { authCache, requirePermission } from "../auth-middleware.js";
-import { mutationResult } from "../route-helpers.js";
+import { mutationResult } from "../core/route-helpers.js";
+import { authCache, requirePermission } from "../middleware/auth-middleware.js";
+import { isSupervisorAuth } from "../middleware/supervisorAuth.js";
 import {
   getUserById,
   getUserByUsername,
@@ -13,7 +14,6 @@ import {
   revokePermission,
   rotateUserApiKey,
 } from "../services/user-service.js";
-import { isSupervisorAuth } from "../supervisorAuth.js";
 import { formatUser } from "./users.js";
 
 export default function userPermissionRoutes(fastify: FastifyInstance) {

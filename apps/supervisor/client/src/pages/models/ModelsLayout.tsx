@@ -12,7 +12,6 @@ import {
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
-import { ModelSidebar } from "../../headers/ModelSidebar";
 import {
   api,
   apiEndpoints,
@@ -20,6 +19,7 @@ import {
   type LlmModelDetail,
   type ModelsResponse,
 } from "../../lib/apiClient";
+import { ModelSidebar } from "../../nav/ModelSidebar";
 
 export interface ModelsOutletContext {
   llmModels: LlmModelDetail[];

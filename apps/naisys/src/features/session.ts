@@ -23,7 +23,7 @@ import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { LLMService } from "../llm/llmService.js";
-import type { HubAttachmentService } from "../services/hubAttachmentService.js";
+import type { HubAttachmentClient } from "../services/hubAttachmentClient.js";
 import type { LogService } from "../services/logService.js";
 import type { InputModeService } from "../utils/inputMode.js";
 import type { OutputService } from "../utils/output.js";
@@ -42,7 +42,7 @@ export function createSessionService(
   systemMessage: string,
   llmService: LLMService,
   logService: LogService,
-  hubAttachmentService: HubAttachmentService,
+  hubAttachmentClient: HubAttachmentClient,
   inputMode: InputModeService,
   /** Resume bundle — hub already filtered by continuity + staleness. */
   preloadedRestore: RestoreData | undefined,
@@ -193,7 +193,7 @@ export function createSessionService(
       RESUME_DOWNLOAD_CONCURRENCY,
       async (id) => {
         try {
-          return [id, await hubAttachmentService.downloadToBuffer(id)] as const;
+          return [id, await hubAttachmentClient.downloadToBuffer(id)] as const;
         } catch (e) {
           output.errorAndLog(`Failed to fetch resume attachment ${id}: ${e}`);
           return [id, null] as const;

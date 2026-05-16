@@ -7,18 +7,18 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import { requirePermission } from "../auth-middleware.js";
 import {
   badRequest,
   conflict,
   notFound,
   unprocessable,
-} from "../error-handler.js";
+} from "../core/error-handler.js";
 import {
   resolveOrderRun,
   useFullSerializer,
   wantsFullResponse,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import {
   checkOpsComplete,
   completeOrderRun,

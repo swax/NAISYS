@@ -14,10 +14,8 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import type { ErpUser } from "../auth-middleware.js";
-import { requirePermission } from "../auth-middleware.js";
-import { conflict, notFound } from "../error-handler.js";
-import { API_PREFIX, selfLink } from "../hateoas.js";
+import { conflict, notFound } from "../core/error-handler.js";
+import { API_PREFIX, selfLink } from "../core/hateoas.js";
 import {
   type ActionDef,
   calcNextSeqNo,
@@ -27,7 +25,9 @@ import {
   mutationResult,
   resolveActions,
   resolveOperation,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import {
   createStep,
   createSteps,

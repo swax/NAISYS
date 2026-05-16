@@ -16,7 +16,7 @@ const STALE_TMP_AGE_MS = 60 * 60 * 1000;
 /** Shared client for `GET /attachments/:publicId` against the hub. Used by
  *  the startup-attachment stager (downloads to disk) and the resume-replay
  *  image/audio fetcher (downloads to memory). */
-export function createHubAttachmentService(
+export function createHubAttachmentClient(
   hubClient: HubClient | undefined,
   naisysApiService: NaisysApiService,
 ) {
@@ -96,7 +96,7 @@ export function createHubAttachmentService(
   return { downloadToFile, downloadToBuffer, sweepStaleTmpFiles };
 }
 
-export type HubAttachmentService = ReturnType<typeof createHubAttachmentService>;
+export type HubAttachmentClient = ReturnType<typeof createHubAttachmentClient>;
 
 function openRequest(
   hubUrl: string,

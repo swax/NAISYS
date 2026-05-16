@@ -8,10 +8,10 @@ import {
   getValueFormatHint,
 } from "@naisys/erp-shared";
 
-import { writeAuditEntry } from "../audit.js";
-import erpDb from "../erpDb.js";
+import { API_PREFIX } from "../core/hateoas.js";
+import erpDb from "../database/erpDb.js";
 import type { OperationRunModel } from "../generated/prisma/models/OperationRun.js";
-import { API_PREFIX } from "../hateoas.js";
+import { writeAuditEntry } from "./audit.js";
 import {
   deserializeFieldValue,
   validateFieldValue,

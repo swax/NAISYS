@@ -1,8 +1,8 @@
 import { RevisionStatus } from "@naisys/erp-shared";
 
-import erpDb from "../erpDb.js";
+import { includeUsers, type WithAuditUsers } from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
 import type { OrderModel } from "../generated/prisma/models/Order.js";
-import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
 
 // --- Prisma include & result type ---
 

@@ -17,17 +17,17 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { requirePermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
-import { conflict, notFound, unprocessable } from "../error-handler.js";
-import { API_PREFIX } from "../hateoas.js";
+import { conflict, notFound, unprocessable } from "../core/error-handler.js";
+import { API_PREFIX } from "../core/hateoas.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
   checkWorkCenterAccess,
   mutationResult,
   resolveStepRun,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import { ensureStepRunFieldRecord } from "../services/field-service.js";
 import {
   checkFieldValueShape,

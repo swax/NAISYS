@@ -18,12 +18,12 @@ import {
   type ResumeEntry,
 } from "@naisys/hub-protocol";
 
-import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { NaisysServer } from "../services/naisysServer.js";
-import type { HubConfigService } from "./hubConfigService.js";
+import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
+import type { HubConfigService } from "../config/hubConfigService.js";
+import type { HubSendMailService } from "../mail/hubSendMailService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
+import type { HostRegistrar } from "./hostRegistrar.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
-import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
-import type { HubSendMailService } from "./hubSendMailService.js";
 
 type AgentResponse = { success: boolean; error?: string };
 

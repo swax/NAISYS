@@ -18,13 +18,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Scatter } from "react-chartjs-2";
 import { useNavigate } from "react-router-dom";
 
-import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
 import {
   api,
   apiEndpoints,
   type OpenRouterCatalogResponse,
 } from "../../lib/apiClient";
 import { saveLlmModel } from "../../lib/apiModels";
+import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
 
 type CatalogModel = OpenRouterCatalogResponse["models"][number];
 

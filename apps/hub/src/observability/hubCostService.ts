@@ -21,10 +21,10 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import type { HubCodexAuthService } from "./hubCodexAuthService.js";
-import type { HubConfigService } from "./hubConfigService.js";
-import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubCodexAuthService } from "../auth/hubCodexAuthService.js";
+import type { HubConfigService } from "../config/hubConfigService.js";
+import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 const DEFAULT_CODEX_USAGE_LIMIT_PERCENT = 80;

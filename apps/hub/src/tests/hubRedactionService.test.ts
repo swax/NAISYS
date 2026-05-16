@@ -3,8 +3,8 @@ import type { HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import { createHubRedactionService } from "./hubRedactionService.js";
+import { createHubRedactionService } from "../observability/hubRedactionService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 type EventHandler = (...args: unknown[]) => void | Promise<void>;
 

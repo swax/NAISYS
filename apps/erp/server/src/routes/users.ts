@@ -12,18 +12,19 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
 import {
-  authCache,
-  hasPermission,
-  requirePermission,
-} from "../auth-middleware.js";
-import {
   API_PREFIX,
   collectionLink,
   paginationLinks,
   schemaLink,
   selfLink,
-} from "../hateoas.js";
-import { mutationResult } from "../route-helpers.js";
+} from "../core/hateoas.js";
+import { mutationResult } from "../core/route-helpers.js";
+import {
+  authCache,
+  hasPermission,
+  requirePermission,
+} from "../middleware/auth-middleware.js";
+import { isSupervisorAuth } from "../middleware/supervisorAuth.js";
 import type { getUserById } from "../services/user-service.js";
 import {
   createUserForAgent,
@@ -35,7 +36,6 @@ import {
   listUsers,
   updateUser,
 } from "../services/user-service.js";
-import { isSupervisorAuth } from "../supervisorAuth.js";
 
 function userItemLinks(username: string): HateoasLink[] {
   return [

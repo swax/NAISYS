@@ -3,8 +3,8 @@ import React from "react";
 
 import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
 import { ActiveSubagentBadge } from "./ActiveSubagentBadge";
-import { CommandList } from "./CommandList";
 import { otherStyle, ownStyle } from "./chatThreadHelpers";
+import { CommandList } from "./CommandList";
 
 // Bubble shown for command activity that has no chat message of its own.
 // active: trailing + agent online (blue border + spinner)

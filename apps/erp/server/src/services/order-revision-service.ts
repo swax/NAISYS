@@ -3,10 +3,10 @@ import {
   RevisionStatus as RevisionStatusValues,
 } from "@naisys/erp-shared";
 
-import { writeAuditEntry } from "../audit.js";
-import erpDb from "../erpDb.js";
+import { includeUsers, type WithAuditUsers } from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
 import type { OrderRevisionModel } from "../generated/prisma/models/OrderRevision.js";
-import { includeUsers, type WithAuditUsers } from "../route-helpers.js";
+import { writeAuditEntry } from "./audit.js";
 
 // --- Prisma include & result type ---
 

@@ -1,7 +1,7 @@
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
+import { PrismaClient } from "../generated/prisma/client.js";
 import { erpDbUrl } from "./dbConfig.js";
-import { PrismaClient } from "./generated/prisma/client.js";
 
 let _db: PrismaClient | undefined;
 

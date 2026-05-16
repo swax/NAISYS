@@ -2,10 +2,10 @@ import type { DualLogger } from "@naisys/common-node";
 import type { HostList } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
-import type { HostRegistrar } from "../services/hostRegistrar.js";
-import type { NaisysConnection } from "../services/naisysConnection.js";
-import type { NaisysServer } from "../services/naisysServer.js";
+import type { NaisysConnection } from "../server/naisysConnection.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 import { getHubVersion } from "../version.js";
+import type { HostRegistrar } from "./hostRegistrar.js";
 
 /** Pushes the host list to all connections when connected hosts change */
 export function createHubHostService(

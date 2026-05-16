@@ -7,15 +7,15 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { requirePermission } from "../auth-middleware.js";
-import { conflict, notFound, unprocessable } from "../error-handler.js";
+import { conflict, notFound, unprocessable } from "../core/error-handler.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
   checkWorkCenterAccess,
   mutationResult,
   resolveStepRun,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import { validateCompletionFields } from "../services/field-value-service.js";
 import { isUserClockedIn } from "../services/labor-ticket-service.js";
 import {

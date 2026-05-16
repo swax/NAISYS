@@ -9,8 +9,8 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import type { HubRedactionService } from "./hubRedactionService.js";
+import type { HubRedactionService } from "../observability/hubRedactionService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 // During an OpenAI auth outage, hold a failure for this long before retrying
 // so N agents retrying their LLM queries don't fan out into N /oauth/token

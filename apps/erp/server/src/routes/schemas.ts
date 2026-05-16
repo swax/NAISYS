@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod/v4";
 
-import { schemaRegistry } from "../schema-registry.js";
+import { schemaRegistry } from "../core/schema-registry.js";
 
 export default function schemaRoutes(fastify: FastifyInstance) {
   // List all available schema names

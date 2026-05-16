@@ -8,15 +8,15 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { createReadStream, existsSync, statSync } from "fs";
 import { z } from "zod/v4";
 
-import { requirePermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
-import { conflict, notFound } from "../error-handler.js";
+import { conflict, notFound } from "../core/error-handler.js";
 import {
   checkOpRunInProgress,
   checkOrderRunStarted,
   checkWorkCenterAccess,
   resolveStepRun,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import {
   deleteFieldAttachment,
   getAttachmentFilePath,

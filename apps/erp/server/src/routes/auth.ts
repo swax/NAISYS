@@ -15,10 +15,10 @@ import { randomUUID } from "crypto";
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import { authCache } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
-import { unauthorized } from "../error-handler.js";
-import { isSupervisorAuth } from "../supervisorAuth.js";
+import { unauthorized } from "../core/error-handler.js";
+import erpDb from "../database/erpDb.js";
+import { authCache } from "../middleware/auth-middleware.js";
+import { isSupervisorAuth } from "../middleware/supervisorAuth.js";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

@@ -2,7 +2,7 @@ import {
   calculateEffectiveSpendStart,
   parseSpendLimitsFromConfigJson,
 } from "@naisys/common";
-import { sumUserCostsInPeriod, type PrismaClient } from "@naisys/hub-database";
+import { type PrismaClient,sumUserCostsInPeriod } from "@naisys/hub-database";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 function createHubDb(sum: number | null = 0) {

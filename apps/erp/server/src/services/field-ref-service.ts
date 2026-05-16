@@ -1,4 +1,4 @@
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 
 const includeFieldRef = {
   sourceStep: {

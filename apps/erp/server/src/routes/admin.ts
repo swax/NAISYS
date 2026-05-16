@@ -22,11 +22,11 @@ import { getHubVariable } from "@naisys/hub-database";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod/v4";
 
-import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { ERP_DB_VERSION, erpDbPath } from "../dbConfig.js";
-import erpDb from "../erpDb.js";
-import { notFound } from "../error-handler.js";
-import { paginationLinks } from "../hateoas.js";
+import { notFound } from "../core/error-handler.js";
+import { paginationLinks } from "../core/hateoas.js";
+import { ERP_DB_VERSION, erpDbPath } from "../database/dbConfig.js";
+import erpDb from "../database/erpDb.js";
+import { hasPermission, requirePermission } from "../middleware/auth-middleware.js";
 import { getErpLogPath, tailLogFile } from "../services/log-file-service.js";
 import { getPackageVersion } from "../version.js";
 

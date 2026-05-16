@@ -5,14 +5,14 @@ import type { HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import type { HubCodexAuthService } from "./hubCodexAuthService.js";
-import type { HubConfigService } from "./hubConfigService.js";
-import { createHubCostService } from "./hubCostService.js";
+import type { HubCodexAuthService } from "../auth/hubCodexAuthService.js";
+import type { HubConfigService } from "../config/hubConfigService.js";
 import type {
   HubActiveSession,
   HubHeartbeatService,
-} from "./hubHeartbeatService.js";
+} from "../lifecycle/hubHeartbeatService.js";
+import { createHubCostService } from "../observability/hubCostService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 vi.mock("@naisys/common-node", async () => {
   const actual =

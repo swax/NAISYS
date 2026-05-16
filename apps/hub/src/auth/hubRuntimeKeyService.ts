@@ -2,7 +2,7 @@ import { hashToken } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { randomBytes } from "crypto";
 
-import type { HubRedactionService } from "./hubRedactionService.js";
+import type { HubRedactionService } from "../observability/hubRedactionService.js";
 
 /**
  * Mints and revokes per-user runtime API keys. 32 random bytes; only the

@@ -10,7 +10,7 @@ import type { ConfigResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 import dotenv from "dotenv";
 
-import type { NaisysServer } from "../services/naisysServer.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 /** Pushes the global config to NAISYS instances when they connect or when variables change */
 export async function createHubConfigService(

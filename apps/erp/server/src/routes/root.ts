@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { hasPermission } from "../auth-middleware.js";
+import { hasPermission } from "../middleware/auth-middleware.js";
 
 export default function rootRoute(fastify: FastifyInstance) {
   fastify.get("/", {

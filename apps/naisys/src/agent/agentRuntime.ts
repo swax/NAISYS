@@ -40,7 +40,7 @@ import { createMailService } from "../mail/mail.js";
 import { createMailQueryService } from "../mail/mailQueryService.js";
 import { createAttachmentService } from "../services/attachmentService.js";
 import type { HostService } from "../services/hostService.js";
-import { createHubAttachmentService } from "../services/hubAttachmentService.js";
+import { createHubAttachmentClient } from "../services/hubAttachmentClient.js";
 import { createLogService } from "../services/logService.js";
 import type { ModelService } from "../services/modelService.js";
 import { createNaisysApiService } from "../services/naisysApiService.js";
@@ -100,13 +100,13 @@ export async function createAgentRuntime(
   // Built before staging so the seed key is available to stage().
   const naisysApiService = createNaisysApiService(runtimeApiKey);
 
-  const hubAttachmentService = createHubAttachmentService(
+  const hubAttachmentClient = createHubAttachmentClient(
     hubClient,
     naisysApiService,
   );
 
   const startupAttachmentService = createStartupAttachmentService(
-    hubAttachmentService,
+    hubAttachmentClient,
     agentConfig,
   );
   if (startupAttachments?.length) {
@@ -313,7 +313,7 @@ export async function createAgentRuntime(
     systemMessage,
     llmService,
     logService,
-    hubAttachmentService,
+    hubAttachmentClient,
     inputMode,
     restoreData,
   );

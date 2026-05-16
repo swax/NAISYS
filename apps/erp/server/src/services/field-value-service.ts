@@ -5,7 +5,7 @@ import {
   type FieldValue,
 } from "@naisys/erp-shared";
 
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 import type { PrismaClient } from "../generated/prisma/client.js";
 import type { StepRunWithStepAndFields } from "./step-run-service.js";
 

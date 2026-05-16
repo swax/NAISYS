@@ -1,8 +1,8 @@
 import type { DualLogger } from "@naisys/common-node";
 import { HubEvents, RotateAccessKeyRequestSchema } from "@naisys/hub-protocol";
 
-import { rotateAccessKey } from "../services/accessKeyService.js";
-import type { NaisysServer } from "../services/naisysServer.js";
+import type { NaisysServer } from "../server/naisysServer.js";
+import { rotateAccessKey } from "./accessKeyService.js";
 
 /**
  * Handles hub access key rotation requests from the supervisor.

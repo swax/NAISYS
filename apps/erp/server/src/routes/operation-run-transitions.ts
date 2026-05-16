@@ -8,14 +8,14 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import { requirePermission } from "../auth-middleware.js";
-import { conflict, notFound, unprocessable } from "../error-handler.js";
+import { conflict, notFound, unprocessable } from "../core/error-handler.js";
 import {
   checkOrderRunStarted,
   checkWorkCenterAccess,
   mutationResult,
   resolveOpRun,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import { requirePermission } from "../middleware/auth-middleware.js";
 import {
   clockIn,
   clockOutAllForOpRun,

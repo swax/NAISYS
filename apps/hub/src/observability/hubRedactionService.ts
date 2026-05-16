@@ -2,7 +2,7 @@ import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
 
-import type { NaisysServer } from "../services/naisysServer.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 const MIN_SECRET_LENGTH = 6;
 

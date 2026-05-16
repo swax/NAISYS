@@ -5,9 +5,9 @@ import {
   OrderRunStatus as OrderRunStatusValues,
 } from "@naisys/erp-shared";
 
-import { writeAuditEntry } from "../audit.js";
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 import type { OrderRunModel } from "../generated/prisma/models/OrderRun.js";
+import { writeAuditEntry } from "./audit.js";
 import {
   deserializeFieldValue,
   upsertFieldValue,

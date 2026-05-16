@@ -9,7 +9,7 @@ import {
 } from "fs";
 import { join } from "path";
 
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 
 function attachmentsDir(): string {
   return join(process.env.NAISYS_FOLDER || "", "attachments");

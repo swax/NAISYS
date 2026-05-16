@@ -18,7 +18,7 @@ import { HubEvents } from "@naisys/hub-protocol";
 import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
 
-import type { HostRegistrar } from "./hostRegistrar.js";
+import type { HostRegistrar } from "../lifecycle/hostRegistrar.js";
 import type { NaisysConnection } from "./naisysConnection.js";
 import { createNaisysConnection } from "./naisysConnection.js";
 

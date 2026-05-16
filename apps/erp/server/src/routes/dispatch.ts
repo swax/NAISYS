@@ -10,8 +10,8 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import erpDb from "../erpDb.js";
-import { API_PREFIX, paginationLinks } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../core/hateoas.js";
+import erpDb from "../database/erpDb.js";
 import { getUserWorkCenterIds } from "../services/work-center-service.js";
 
 const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];

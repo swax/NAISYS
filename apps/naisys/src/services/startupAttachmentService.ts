@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { HubAttachmentService } from "./hubAttachmentService.js";
+import type { HubAttachmentClient } from "./hubAttachmentClient.js";
 import { ensureFileDirExists } from "./pathService.js";
 
 /** Cap on concurrent startup-file downloads. Small because typical agent
@@ -16,7 +16,7 @@ const STARTUP_DOWNLOAD_CONCURRENCY = 4;
 // Constructed unconditionally so commandLoop can always call getSummary()
 // at startup, even when no files were configured.
 export function createStartupAttachmentService(
-  hubAttachmentService: HubAttachmentService,
+  hubAttachmentClient: HubAttachmentClient,
   agentConfig: AgentConfig,
 ) {
   let downloaded = 0;
@@ -37,7 +37,7 @@ export function createStartupAttachmentService(
 
     // Clear leftover .tmp.<pid>.<ts> files from prior crashes before
     // staging — same convention is used to write into this tree below.
-    await hubAttachmentService.sweepStaleTmpFiles(resolvedHome);
+    await hubAttachmentClient.sweepStaleTmpFiles(resolvedHome);
 
     await mapWithConcurrency(
       attachments,
@@ -54,7 +54,7 @@ export function createStartupAttachmentService(
           return;
         }
         ensureFileDirExists(targetPath);
-        await hubAttachmentService.downloadToFile(a.publicId, targetPath);
+        await hubAttachmentClient.downloadToFile(a.publicId, targetPath);
         downloaded++;
       },
     );

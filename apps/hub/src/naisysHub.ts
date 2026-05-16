@@ -19,26 +19,26 @@ import Fastify from "fastify";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
-import { createHubAccessKeyService } from "./handlers/hubAccessKeyService.js";
-import { createHubAgentService } from "./handlers/hubAgentService.js";
-import { createHubAttachmentService } from "./handlers/hubAttachmentService.js";
-import { createHubCodexAuthService } from "./handlers/hubCodexAuthService.js";
-import { createHubConfigService } from "./handlers/hubConfigService.js";
-import { createHubCostService } from "./handlers/hubCostService.js";
-import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
-import { createHubHostService } from "./handlers/hubHostService.js";
-import { createHubLogService } from "./handlers/hubLogService.js";
-import { createHubMailService } from "./handlers/hubMailService.js";
-import { createHubModelsService } from "./handlers/hubModelsService.js";
-import { createHubRedactionService } from "./handlers/hubRedactionService.js";
-import { createHubRunService } from "./handlers/hubRunService.js";
-import { createHubRuntimeKeyService } from "./handlers/hubRuntimeKeyService.js";
-import { createHubSendMailService } from "./handlers/hubSendMailService.js";
-import { createHubUserService } from "./handlers/hubUserService.js";
-import { loadOrCreateAccessKey } from "./services/accessKeyService.js";
-import { seedAgentConfigs } from "./services/agentRegistrar.js";
-import { createHostRegistrar } from "./services/hostRegistrar.js";
-import { createNaisysServer } from "./services/naisysServer.js";
+import { loadOrCreateAccessKey } from "./auth/accessKeyService.js";
+import { createHubAccessKeyService } from "./auth/hubAccessKeyService.js";
+import { createHubCodexAuthService } from "./auth/hubCodexAuthService.js";
+import { createHubRuntimeKeyService } from "./auth/hubRuntimeKeyService.js";
+import { createHubUserService } from "./auth/hubUserService.js";
+import { createHubConfigService } from "./config/hubConfigService.js";
+import { createHubModelsService } from "./config/hubModelsService.js";
+import { seedAgentConfigs } from "./lifecycle/agentRegistrar.js";
+import { createHostRegistrar } from "./lifecycle/hostRegistrar.js";
+import { createHubAgentService } from "./lifecycle/hubAgentService.js";
+import { createHubHeartbeatService } from "./lifecycle/hubHeartbeatService.js";
+import { createHubHostService } from "./lifecycle/hubHostService.js";
+import { createHubRunService } from "./lifecycle/hubRunService.js";
+import { createHubAttachmentService } from "./mail/hubAttachmentService.js";
+import { createHubMailService } from "./mail/hubMailService.js";
+import { createHubSendMailService } from "./mail/hubSendMailService.js";
+import { createHubCostService } from "./observability/hubCostService.js";
+import { createHubLogService } from "./observability/hubLogService.js";
+import { createHubRedactionService } from "./observability/hubRedactionService.js";
+import { createNaisysServer } from "./server/naisysServer.js";
 
 /**
  * Starts the Hub server with sync service.

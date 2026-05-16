@@ -17,7 +17,7 @@ import {
 import type { ModelsResponse } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 
-import type { NaisysServer } from "../services/naisysServer.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 import { ensureVariables } from "./hubConfigService.js";
 
 /** Hub handler that seeds models on startup, pushes them on connect, and broadcasts on change */

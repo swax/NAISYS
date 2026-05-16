@@ -1,8 +1,8 @@
 import { getLatestRunInfoByUuid, sumCostsByUuid } from "@naisys/hub-database";
 
-import { writeAuditEntry } from "../audit.js";
-import erpDb from "../erpDb.js";
+import erpDb from "../database/erpDb.js";
 import type { LaborTicketModel } from "../generated/prisma/models/LaborTicket.js";
+import { writeAuditEntry } from "./audit.js";
 
 // --- Prisma include & result type ---
 

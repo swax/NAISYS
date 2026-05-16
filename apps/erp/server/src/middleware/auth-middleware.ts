@@ -9,7 +9,7 @@ import { findAgentByApiKey } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import erpDb from "./erpDb.js";
+import erpDb from "../database/erpDb.js";
 import { isSupervisorAuth } from "./supervisorAuth.js";
 
 export interface ErpUser {

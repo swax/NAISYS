@@ -1,5 +1,5 @@
 import "dotenv/config";
-import "./schema-registry.js";
+import "./core/schema-registry.js";
 
 import {
   cwdWithTilde,
@@ -42,17 +42,17 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { takeCoverage } from "v8";
 
-import { registerApiReference } from "./api-reference.js";
-import { registerAuthMiddleware } from "./auth-middleware.js";
-import { ERP_DB_VERSION, erpDbPath } from "./dbConfig.js";
-import { initErpDb } from "./erpDb.js";
+import { registerApiReference } from "./core/api-reference.js";
+import { ERP_DB_VERSION, erpDbPath } from "./database/dbConfig.js";
+import { initErpDb } from "./database/erpDb.js";
 import { erpRoutes } from "./erpRoutes.js";
-import { isSupervisorAuth } from "./supervisorAuth.js";
+import { registerAuthMiddleware } from "./middleware/auth-middleware.js";
+import { isSupervisorAuth } from "./middleware/supervisorAuth.js";
 import {
   ensureLocalSuperAdmin,
   ensureSupervisorSuperAdmin,
-} from "./userService.js";
-export { enableSupervisorAuth } from "./supervisorAuth.js";
+} from "./services/user-service.js";
+export { enableSupervisorAuth } from "./middleware/supervisorAuth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

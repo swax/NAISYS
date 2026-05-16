@@ -6,10 +6,10 @@ import {
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
-import { API_PREFIX, paginationLinks } from "../hateoas.js";
+import { API_PREFIX, paginationLinks } from "../core/hateoas.js";
+import erpDb from "../database/erpDb.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { hasPermission } from "../middleware/auth-middleware.js";
 
 function buildInventoryActionTemplates(
   user: ErpUser | undefined,

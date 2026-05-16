@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 
+import { isSupervisorAuth } from "./middleware/supervisorAuth.js";
 import adminRoutes from "./routes/admin.js";
 import auditRoutes from "./routes/audit.js";
 import authRoutes from "./routes/auth.js";
@@ -31,7 +32,6 @@ import stepRoutes from "./routes/steps.js";
 import userPermissionRoutes from "./routes/user-permissions.js";
 import userRoutes from "./routes/users.js";
 import workCenterRoutes from "./routes/work-centers.js";
-import { isSupervisorAuth } from "./supervisorAuth.js";
 
 export const erpRoutes: FastifyPluginAsync = (fastify) => {
   fastify.register(adminRoutes, { prefix: "/erp/api/admin" });

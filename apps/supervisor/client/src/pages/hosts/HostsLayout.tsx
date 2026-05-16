@@ -6,7 +6,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
-import { HostSidebar } from "../../headers/HostSidebar";
+import { HostSidebar } from "../../nav/HostSidebar";
 
 export const HostsLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =

@@ -13,11 +13,8 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { conflict, notFound } from "../error-handler.js";
-import type { OperationModel } from "../generated/prisma/models/Operation.js";
-import { API_PREFIX, selfLink } from "../hateoas.js";
+import { conflict, notFound } from "../core/error-handler.js";
+import { API_PREFIX, selfLink } from "../core/hateoas.js";
 import {
   calcNextSeqNo,
   childItemLinks,
@@ -27,7 +24,10 @@ import {
   permGate,
   resolveRevision,
   type WithAuditUsers,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import type { OperationModel } from "../generated/prisma/models/Operation.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { hasPermission, requirePermission } from "../middleware/auth-middleware.js";
 import {
   createOperation,
   deleteOperation,

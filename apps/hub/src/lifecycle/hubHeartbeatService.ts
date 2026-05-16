@@ -11,9 +11,9 @@ import {
   HubEvents,
 } from "@naisys/hub-protocol";
 
-import type { NaisysServer } from "../services/naisysServer.js";
-import type { HubRedactionService } from "./hubRedactionService.js";
-import type { HubRuntimeKeyService } from "./hubRuntimeKeyService.js";
+import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
+import type { HubRedactionService } from "../observability/hubRedactionService.js";
+import type { NaisysServer } from "../server/naisysServer.js";
 
 /** Per-session identity for an active agent session (parent or subagent). */
 export interface HubActiveSession {

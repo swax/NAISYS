@@ -12,9 +12,9 @@ import {
 } from "@naisys/erp-shared";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { ErpUser } from "./auth-middleware.js";
-import { hasPermission } from "./auth-middleware.js";
-import erpDb from "./erpDb.js";
+import erpDb from "../database/erpDb.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { hasPermission } from "../middleware/auth-middleware.js";
 import { API_PREFIX, schemaLink, selfLink } from "./hateoas.js";
 
 // --- Prefer: return=representation (RFC 7240) ---

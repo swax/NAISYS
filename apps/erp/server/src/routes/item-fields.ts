@@ -11,18 +11,18 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
-import erpDb from "../erpDb.js";
-import { notFound } from "../error-handler.js";
-import { API_PREFIX, selfLink } from "../hateoas.js";
+import { notFound } from "../core/error-handler.js";
+import { API_PREFIX, selfLink } from "../core/hateoas.js";
 import {
   calcNextSeqNo,
   childItemLinks,
   formatAuditFields,
   mutationResult,
   permGate,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import erpDb from "../database/erpDb.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { hasPermission, requirePermission } from "../middleware/auth-middleware.js";
 import {
   createField,
   deleteField,

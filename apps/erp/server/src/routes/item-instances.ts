@@ -22,22 +22,22 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import type { ErpUser } from "../auth-middleware.js";
-import { hasPermission, requirePermission } from "../auth-middleware.js";
-import { notFound, unprocessable } from "../error-handler.js";
+import { notFound, unprocessable } from "../core/error-handler.js";
 import {
   API_PREFIX,
   paginationLinks,
   schemaLink,
   selfLink,
-} from "../hateoas.js";
+} from "../core/hateoas.js";
 import {
   formatAuditFields,
   mutationResult,
   permGate,
   useFullSerializer,
   wantsFullResponse,
-} from "../route-helpers.js";
+} from "../core/route-helpers.js";
+import type { ErpUser } from "../middleware/auth-middleware.js";
+import { hasPermission, requirePermission } from "../middleware/auth-middleware.js";
 import {
   checkFieldValueShape,
   deleteFieldValueSet,

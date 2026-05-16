@@ -12,8 +12,8 @@ import {
 import type { AppOutletContext } from "../../App";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
 import { HEADER_ROW_HEIGHT, SIDEBAR_WIDTH } from "../../constants";
-import { AgentNavHeader } from "../../headers/AgentNavHeader";
-import { AgentSidebar } from "../../headers/AgentSidebar";
+import { AgentNavHeader } from "../../nav/AgentNavHeader";
+import { AgentSidebar } from "../../nav/AgentSidebar";
 
 export const AgentsLayout: React.FC = () => {
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] =
