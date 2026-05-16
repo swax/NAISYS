@@ -85,7 +85,7 @@ export const erpPlugin: FastifyPluginAsync<ErpPluginOptions> = async (
 
   // Rate limiting — moderate global default, strict overrides on sensitive routes
   await fastify.register(rateLimit, {
-    max: 500,
+    max: Number(process.env.ERP_API_RATE_LIMIT) || 500,
     timeWindow: "1 minute",
     allowList: (request) => !request.url.match(/^\/(supervisor|erp)\/api\//),
   });

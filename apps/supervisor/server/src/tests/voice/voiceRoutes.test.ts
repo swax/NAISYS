@@ -28,7 +28,7 @@ vi.mock("../../authMiddleware.js", () => ({
       user?.permissions?.includes("supervisor_admin"),
     ),
   requirePermission:
-    (permission: string) => async (request: any, reply: any) => {
+    (permission: string) => (request: any, reply: any, done: () => void) => {
       const user = request.supervisorUser;
       if (!user) {
         reply.status(401).send({
@@ -45,7 +45,9 @@ vi.mock("../../authMiddleware.js", () => ({
           success: false,
           message: `Permission '${permission}' required`,
         });
+        return;
       }
+      done();
     },
 }));
 

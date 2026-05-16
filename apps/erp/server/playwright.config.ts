@@ -53,8 +53,9 @@ export default defineConfig({
         NAISYS_FOLDER: testNaisysFolder,
         SUPERVISOR_AUTH: "false",
         SERVER_PORT: "3302",
-        // Lift the auth login rate limit so parallel workers + multiple
-        // spec files don't trip the 5/min limit during beforeAll.
+        // Lift rate limits so parallel UI specs with multiple mounted panels
+        // don't trip the production defaults during beforeAll and page fetches.
+        ERP_API_RATE_LIMIT: "100000",
         AUTH_LOGIN_RATE_LIMIT: "1000",
         ...(process.env.NODE_V8_COVERAGE
           ? { NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE }

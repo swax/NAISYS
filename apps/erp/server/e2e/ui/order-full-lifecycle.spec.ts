@@ -148,8 +148,13 @@ test.describe.serial("Full order lifecycle with operations (UI)", () => {
     // The remaining Complete button is the operation run's.
     await page.getByRole("button", { name: "Complete" }).click();
 
-    // The "Completed by ..." text appears for the op run
-    await expect(page.getByText(/Completed by/)).toBeVisible();
+    // The operation run status changes to completed.
+    await expect(
+      page.getByText("completed", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Complete", exact: true }),
+    ).not.toBeVisible();
   });
 
   test("close the order run", async () => {
