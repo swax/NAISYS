@@ -30,7 +30,7 @@ describe("VoiceLogBuffer", () => {
     createVoiceLogBuffer((digest) => {
       onDigest(digest);
       return true;
-    });
+    }, "chat");
 
   test("coalesces meaningful entries into one timed digest", () => {
     vi.useFakeTimers();
@@ -52,6 +52,27 @@ describe("VoiceLogBuffer", () => {
     expect(onDigest).toHaveBeenCalledTimes(1);
     expect(onDigest.mock.calls[0][0]).toContain("first");
     expect(onDigest.mock.calls[0][0]).toContain("second");
+    expect(onDigest.mock.calls[0][0]).not.toContain("system noise");
+  });
+
+  test("console mode keeps console and startPrompt entries", () => {
+    vi.useFakeTimers();
+    const onDigest = vi.fn();
+    const buffer = createVoiceLogBuffer((digest) => {
+      onDigest(digest);
+      return true;
+    }, "console");
+
+    buffer.add([
+      entry(1, "console line", { source: "console" }),
+      entry(2, "startup prompt body", { source: "startPrompt" }),
+      entry(3, "system noise", { type: "system" }),
+    ]);
+    buffer.drainNow();
+
+    expect(onDigest).toHaveBeenCalledTimes(1);
+    expect(onDigest.mock.calls[0][0]).toContain("console line");
+    expect(onDigest.mock.calls[0][0]).toContain("startup prompt body");
     expect(onDigest.mock.calls[0][0]).not.toContain("system noise");
   });
 
@@ -108,7 +129,7 @@ describe("VoiceLogBuffer", () => {
       if (!open) return false;
       onDigest(digest);
       return true;
-    });
+    }, "chat");
 
     buffer.add([entry(1, "first")]);
     vi.advanceTimersByTime(2_000);

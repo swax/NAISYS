@@ -30,18 +30,45 @@ const logEntry = (
 });
 
 describe("voiceMessages", () => {
-  test("filters low-value log entries from narration", () => {
+  test("filters low-value log entries from narration in chat mode", () => {
     expect(
-      shouldNarrateLogEntry(logEntry(1, "hello", { type: "system" })),
+      shouldNarrateLogEntry(logEntry(1, "hello", { type: "system" }), "chat"),
     ).toBe(false);
-    expect(shouldNarrateLogEntry(logEntry(2, "console noise"))).toBe(false);
+    expect(shouldNarrateLogEntry(logEntry(2, "console noise"), "chat")).toBe(
+      false,
+    );
     expect(
       shouldNarrateLogEntry(
         logEntry(3, "prompt body", { source: "startPrompt" }),
+        "chat",
       ),
     ).toBe(false);
     expect(
-      shouldNarrateLogEntry(logEntry(4, "meaningful update", { source: "llm" })),
+      shouldNarrateLogEntry(
+        logEntry(4, "meaningful update", { source: "llm" }),
+        "chat",
+      ),
+    ).toBe(true);
+  });
+
+  test("console mode keeps console and startPrompt entries but still drops system", () => {
+    expect(
+      shouldNarrateLogEntry(logEntry(1, "hello", { type: "system" }), "console"),
+    ).toBe(false);
+    expect(shouldNarrateLogEntry(logEntry(2, "console noise"), "console")).toBe(
+      true,
+    );
+    expect(
+      shouldNarrateLogEntry(
+        logEntry(3, "prompt body", { source: "startPrompt" }),
+        "console",
+      ),
+    ).toBe(true);
+    expect(
+      shouldNarrateLogEntry(
+        logEntry(4, "meaningful update", { source: "llm" }),
+        "console",
+      ),
     ).toBe(true);
   });
 

@@ -1,5 +1,6 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
+import type { VoiceMode } from "./apiClient";
 import { buildLogDigest, shouldNarrateLogEntry } from "./voiceMessages";
 
 /** Hard bound on buffered log entries before flush. Oldest entries are
@@ -26,6 +27,7 @@ export interface VoiceLogBuffer {
 
 export function createVoiceLogBuffer(
   onDigest: (digest: string) => boolean,
+  mode: VoiceMode,
 ): VoiceLogBuffer {
   let pendingEntries: LogPushEntry[] = [];
   let omittedCount = 0;
@@ -37,10 +39,10 @@ export function createVoiceLogBuffer(
     clear,
   };
 
-  /** Append entries (filtered for narration relevance), cap the buffer,
-   *  arm the flush timer if not already armed. */
+  /** Append entries (filtered for narration relevance per mode), cap the
+   *  buffer, arm the flush timer if not already armed. */
   function add(entries: LogPushEntry[]): void {
-    const meaningful = entries.filter(shouldNarrateLogEntry);
+    const meaningful = entries.filter((e) => shouldNarrateLogEntry(e, mode));
     if (meaningful.length === 0) return;
 
     pendingEntries.push(...meaningful);

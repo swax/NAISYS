@@ -1,6 +1,6 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
-import type { VoiceToolCallRequest, VoiceUsage } from "./apiClient";
+import type { VoiceMode, VoiceToolCallRequest, VoiceUsage } from "./apiClient";
 
 /** Per-entry cap on injected run-log text — keeps a single huge command's
  *  output from blowing up realtime token cost. */
@@ -11,12 +11,18 @@ export const MAX_LOG_ENTRY_CHARS = 800;
  *  can still add up during a long response. */
 export const MAX_LOG_BUFFER_CHARS = 12_000;
 
-/** Run-log entries worth narrating. Drops system entries; the model's
- *  instructions handle other noise. */
-export function shouldNarrateLogEntry(e: LogPushEntry): boolean {
+/** Run-log entries worth narrating. Mode shapes what reaches the voice agent:
+ *  chat-mode mirrors what a chat user already sees (skips console + startPrompt);
+ *  console-mode is the verbose view and mirrors the full run log (includes them). */
+export function shouldNarrateLogEntry(
+  e: LogPushEntry,
+  mode: VoiceMode,
+): boolean {
   if (e.type === "system") return false;
-  if (e.source === "console") return false;
-  if (e.source === "startPrompt") return false;
+  if (mode === "chat") {
+    if (e.source === "console") return false;
+    if (e.source === "startPrompt") return false;
+  }
   return true;
 }
 

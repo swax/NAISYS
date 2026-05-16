@@ -205,15 +205,6 @@ export const AgentChat: React.FC = () => {
 
   const inputLeftSection = (
     <>
-      {username && otherParticipants.length > 0 && (
-        <VoiceMicButton
-          fromUsername={username}
-          fromTitle={agent?.title ?? username}
-          targetUsername={voiceTargetAgent?.name ?? otherParticipants[0]}
-          targetTitle={voiceTargetAgent?.title ?? otherParticipants[0]}
-          disabledReason={voiceDisabledReason}
-        />
-      )}
       {pauseableRuns.map((run) => (
         <AgentPauseToggle
           key={`${run.userId}-${run.runId}-${run.sessionId}-${run.subagentId ?? 0}`}
@@ -236,6 +227,18 @@ export const AgentChat: React.FC = () => {
       ))}
     </>
   );
+
+  const inputRightSection =
+    username && otherParticipants.length > 0 ? (
+      <VoiceMicButton
+        fromUsername={username}
+        fromTitle={agent?.title ?? username}
+        targetUsername={voiceTargetAgent?.name ?? otherParticipants[0]}
+        targetTitle={voiceTargetAgent?.title ?? otherParticipants[0]}
+        mode="chat"
+        disabledReason={voiceDisabledReason}
+      />
+    ) : null;
 
   // Browser back/forward can reuse this route component with the module-level
   // message cache already populated. Revalidate the active thread whenever the
@@ -491,6 +494,7 @@ export const AgentChat: React.FC = () => {
                   !!agent.shellModel && agent.shellModel !== "none"
                 }
                 leftSection={inputLeftSection}
+                rightSection={inputRightSection}
               />
             )}
           </>

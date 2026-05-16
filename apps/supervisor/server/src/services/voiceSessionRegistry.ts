@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 
+import type { VoiceMode } from "@naisys/supervisor-shared";
+
 /**
  * In-memory registry of active voice sessions. Hands out an opaque id at
- * /voice/token mint time, bound to (user, X, Y), checked on every /voice/cost
- * and /voice/tool post. Process-local — restarts invalidate sessions; the
- * client tears down on the next failed post.
+ * /voice/token mint time, bound to (user, X, Y, mode), checked on every
+ * /voice/cost and /voice/tool post. Process-local — restarts invalidate
+ * sessions; the client tears down on the next failed post.
  */
 
 const VOICE_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -16,6 +18,9 @@ export interface VoiceSessionRecord {
    *  come from `/agents/{this}/...` — the resolved identity the client echoes. */
   fromUsername: string;
   targetUsername: string;
+  /** Re-checked on /voice/tool so a tampered session config can't widen
+   *  the toolset past what the mint mode permits. */
+  mode: VoiceMode;
   /** Model id this session was minted with. Stashed at mint time so cost
    *  rows attribute the actually-negotiated model even if VOICE_AGENT_MODEL
    *  is changed mid-session. */
@@ -39,11 +44,12 @@ function maybeSweepExpired(now: number): void {
   }
 }
 
-/** Mint a new voice session id bound to (user, X, Y), checked on every post. */
+/** Mint a new voice session id bound to (user, X, Y, mode), checked on every post. */
 export function registerVoiceSession(opts: {
   userUuid: string;
   fromUsername: string;
   targetUsername: string;
+  mode: VoiceMode;
   model: string;
 }): string {
   const now = Date.now();
@@ -53,6 +59,7 @@ export function registerVoiceSession(opts: {
     userUuid: opts.userUuid,
     fromUsername: opts.fromUsername,
     targetUsername: opts.targetUsername,
+    mode: opts.mode,
     model: opts.model,
     createdAt: now,
     lastSeen: now,

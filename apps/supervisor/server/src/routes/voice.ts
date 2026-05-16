@@ -7,6 +7,7 @@ import {
   VoiceTokenResponseSchema,
   VoiceToolCallRequestSchema,
   VoiceToolCallResponseSchema,
+  voiceToolsForMode,
 } from "@naisys/supervisor-shared";
 import type {
   FastifyInstance,
@@ -126,7 +127,7 @@ export default function voiceRoutes(
     },
     async (request, reply) => {
       const { username } = request.params;
-      const { targetUsername } = request.body;
+      const { targetUsername, mode } = request.body;
 
       // The realtime model is billed outside the NAISYS COST_CONTROL path
       // (the admin agent has shellModel "none", so the hub's suspension has
@@ -154,6 +155,7 @@ export default function voiceRoutes(
           from: { username: from.username, title: from.title },
           target: { username: target.username, title: target.title },
           userUuid: request.supervisorUser!.uuid,
+          mode,
         });
         // Bind the session id to the *resolved* `from.username` (not the URL
         // param) so the admin-fallback case still validates: the client
@@ -163,6 +165,7 @@ export default function voiceRoutes(
           userUuid: request.supervisorUser!.uuid,
           fromUsername: from.username,
           targetUsername: target.username,
+          mode,
           model: minted.model,
         });
         return {
@@ -175,6 +178,7 @@ export default function voiceRoutes(
           fromTitle: from.title,
           targetUsername: target.username,
           targetTitle: target.title,
+          mode,
         };
       } catch (error) {
         getLogger().error(error, "[Voice] token mint failed");
@@ -232,8 +236,8 @@ export default function voiceRoutes(
         });
       }
 
-      // The session id binds (user, X, Y) at mint time; a stolen id can't
-      // be retargeted at a different Y or POSTed against a different X.
+      // The session id binds (user, X, Y, mode) at mint time; a stolen id
+      // can't be retargeted at a different Y or POSTed against a different X.
       const voiceSession = validateVoiceSession(
         call.voiceSessionId,
         request.supervisorUser!.uuid,
@@ -246,6 +250,15 @@ export default function voiceRoutes(
         return reply.code(403).send({
           success: false,
           message: "Voice session is invalid or expired.",
+        });
+      }
+
+      // Defence in depth — the realtime session config already hides these,
+      // but reject server-side in case the browser bypassed the locked config.
+      if (!voiceToolsForMode(voiceSession.mode).includes(call.tool)) {
+        return reply.code(403).send({
+          success: false,
+          message: `Tool '${call.tool}' is not available in this voice session.`,
         });
       }
 

@@ -19,6 +19,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
     });
 
@@ -27,6 +28,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
       lastSeen: Date.parse("2026-05-01T00:00:00.000Z"),
     });
@@ -45,6 +47,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
     });
 
@@ -62,6 +65,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
     });
 
@@ -79,6 +83,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
     });
 
@@ -87,6 +92,7 @@ describe("voiceSessionRegistry", () => {
       userUuid: "user-1",
       fromUsername: "admin",
       targetUsername: "worker",
+      mode: "console",
       model: "gpt-realtime-2",
     });
 

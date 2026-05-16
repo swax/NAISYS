@@ -2,12 +2,14 @@ import { createHash } from "node:crypto";
 
 import {
   ADMIN_USERNAME,
-  DEFAULT_REALTIME_MODEL_ID,
   computeRealtimeModelCost,
+  DEFAULT_REALTIME_MODEL_ID,
+  getRealtimeModel,
   parseSpendLimitsFromConfigJson,
 } from "@naisys/common";
 import { sumUserCostsInPeriod } from "@naisys/hub-database";
-import type { VoiceUsage } from "@naisys/supervisor-shared";
+import type { VoiceMode, VoiceUsage } from "@naisys/supervisor-shared";
+import { voiceToolsForMode } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { getLogger } from "../logger.js";
@@ -43,18 +45,66 @@ export async function getVoiceModel(): Promise<string> {
   return override?.trim() || DEFAULT_VOICE_MODEL;
 }
 
+export interface VoiceAvailability {
+  available: boolean;
+  /** Surfaced as the disabled-tooltip on the voice button. */
+  reason?: string;
+}
+
+/** Static voice availability for /client-config. Per-session checks (budget,
+ *  target shape) still run at mint. */
+export async function getVoiceAvailability(): Promise<VoiceAvailability> {
+  const apiKey = await getVariableCachedValue(OPENAI_API_KEY_VAR);
+  if (!apiKey?.trim()) {
+    return {
+      available: false,
+      reason: `Voice is unavailable: set the ${OPENAI_API_KEY_VAR} variable to enable it.`,
+    };
+  }
+
+  const override = (await getVariableCachedValue(VOICE_MODEL_VAR))?.trim();
+  const modelId = override || DEFAULT_VOICE_MODEL;
+  if (!getRealtimeModel(modelId)) {
+    return {
+      available: false,
+      reason: override
+        ? `Voice is unavailable: ${VOICE_MODEL_VAR} is set to "${modelId}", which is not a known realtime model.`
+        : `Voice is unavailable: default realtime model "${modelId}" is not in the known catalog.`,
+    };
+  }
+
+  return { available: true };
+}
+
 /** Stable, non-reversible per-user id for OpenAI's safety tooling. */
 function safetyIdentifier(userUuid: string): string {
   return createHash("sha256").update(userUuid).digest("hex").slice(0, 32);
 }
 
-/** Instructions baked into the locked session config. The voice agent is the
- *  real-time voice of the target agent — its ears and mouth — while the agent's
- *  main loop continues to do the actual work in the background. */
+/** System prompt baked into the locked session config. Mode shapes the
+ *  tool-list description; chat mode also tells the model commands are off. */
 function buildVoiceInstructions(
   from: VoiceParticipant,
   target: VoiceParticipant,
+  mode: VoiceMode,
 ): string {
+  const toolDescriptions =
+    mode === "chat"
+      ? [
+          `You have one tool for dispatching to your work loop:`,
+          `- talk_to_agent: queue a chat message to your work loop. It will be picked up on the next work cycle. Use this to take on new work or to converse with your own deeper reasoning. Responses are not immediate.`,
+          ``,
+          `You cannot run shell commands from this voice session — the operator opened it from a chat thread, so only the chat path is available. Use talk_to_agent to ask the work loop to run commands itself.`,
+        ]
+      : [
+          `You have three tools for dispatching to your work loop:`,
+          `- talk_to_agent: queue a chat message to your work loop. It will be picked up on the next work cycle. Use this to take on new work or to converse with your own deeper reasoning. Responses are not immediate.`,
+          `- run_debug_command: run a shell command on your host for diagnostics. The output comes back only to you here in the voice channel via the run log — your work loop does not see it. Use this to check on things without disturbing your working memory. Only works while your work loop is actively running.`,
+          `- run_command: run a shell command and place its input and output into your work loop's context, as if you had run it there yourself. Use this to hand your work loop a concrete result to act on. Only works while your work loop is actively running.`,
+          ``,
+          `If your work loop is not running, do not use the command tools. Use talk_to_agent to queue the operator's request; chat delivery can wake you, and you'll act on it when you start or reach your next cycle.`,
+        ];
+
   return [
     `You are the real-time voice interface for an AI agent on NAISYS, an AI agent platform. You are the ears and mouth of "${target.title}" (${target.username}). Speak as ${target.username} in the first person throughout — "I'm doing X", "I ran Y", "I found Z" — never in the third person, even when reporting work done by your background loop.`,
     `The human operator "${from.title}" (${from.username}) has opened a voice session to talk to you in real time, without waiting for your normal work-cycle chat replies.`,
@@ -63,12 +113,7 @@ function buildVoiceInstructions(
     ``,
     `Assume the operator cannot see any screen — voice is their only channel. They cannot read chat messages, command output, tool results, or the run log; only what you say out loud reaches them. When you do or retrieve something on their behalf, speak the substance, not just the action. "I sent it" or "I did it" without the actual content is a failed reply.`,
     ``,
-    `You have three tools for dispatching to your work loop:`,
-    `- talk_to_agent: queue a chat message to your work loop. It will be picked up on the next work cycle. Use this to take on new work or to converse with your own deeper reasoning. Responses are not immediate.`,
-    `- run_debug_command: run a shell command on your host for diagnostics. The output comes back only to you here in the voice channel via the run log — your work loop does not see it. Use this to check on things without disturbing your working memory. Only works while your work loop is actively running.`,
-    `- run_command: run a shell command and place its input and output into your work loop's context, as if you had run it there yourself. Use this to hand your work loop a concrete result to act on. Only works while your work loop is actively running.`,
-    ``,
-    `If your work loop is not running, do not use the command tools. Use talk_to_agent to queue the operator's request; chat delivery can wake you, and you'll act on it when you start or reach your next cycle.`,
+    ...toolDescriptions,
     ``,
     `You are continuously fed entries from your own run log. Use it as context; do NOT narrate it play-by-play. Most log activity passes silently. Speak up only when there's something the operator needs to hear: an answer to what they asked, a result they're waiting on, a blocker, a decision point, or a meaningful state change. Be concise — one or two sentences with the substance, not a recap. Skip routine tool calls, intermediate states, dead ends, false starts, spinners, and token-budget warnings.`,
     ``,
@@ -78,12 +123,12 @@ function buildVoiceInstructions(
   ].join("\n");
 }
 
-/** Realtime function-tool definitions. The target agent is implicit (the
- *  session is locked to one target in phase 1), so the model only supplies the
- *  message/command — the browser fills in the target when forwarding. */
-function buildVoiceTools() {
-  return [
-    {
+/** Function-tool definitions for the realtime session. The target agent is
+ *  locked at mint, so the model only supplies the message/command — the
+ *  browser fills in the target when forwarding. */
+function buildVoiceTools(mode: VoiceMode) {
+  const all = {
+    talk_to_agent: {
       type: "function",
       name: "talk_to_agent",
       description:
@@ -99,7 +144,7 @@ function buildVoiceTools() {
         required: ["message"],
       },
     },
-    {
+    run_debug_command: {
       type: "function",
       name: "run_debug_command",
       description:
@@ -115,7 +160,7 @@ function buildVoiceTools() {
         required: ["command"],
       },
     },
-    {
+    run_command: {
       type: "function",
       name: "run_command",
       description:
@@ -131,7 +176,9 @@ function buildVoiceTools() {
         required: ["command"],
       },
     },
-  ];
+  } as const;
+
+  return voiceToolsForMode(mode).map((name) => all[name]);
 }
 
 export interface MintedVoiceToken {
@@ -144,12 +191,14 @@ export interface MintedVoiceToken {
  * Mint an ephemeral gpt-realtime client secret with the locked session config.
  * The browser uses the returned secret to open a WebRTC call directly to
  * OpenAI; the session config (instructions, tools, voice) is baked in here and
- * cannot be changed client-side.
+ * cannot be changed client-side. Mode scopes the baked tool set and shapes the
+ * system message accordingly.
  */
 export async function mintVoiceToken(opts: {
   from: VoiceParticipant;
   target: VoiceParticipant;
   userUuid: string;
+  mode: VoiceMode;
 }): Promise<MintedVoiceToken> {
   const apiKey = await getVariableCachedValue(OPENAI_API_KEY_VAR);
   if (!apiKey) {
@@ -163,9 +212,9 @@ export async function mintVoiceToken(opts: {
   const session = {
     type: "realtime",
     model,
-    instructions: buildVoiceInstructions(opts.from, opts.target),
+    instructions: buildVoiceInstructions(opts.from, opts.target, opts.mode),
     audio: { output: { voice: VOICE_AGENT_VOICE } },
-    tools: buildVoiceTools(),
+    tools: buildVoiceTools(opts.mode),
     tool_choice: "auto",
   };
 

@@ -24,6 +24,8 @@ interface ChatInputProps {
   showImpersonationWarning?: boolean;
   /** Rendered to the left of the attach/textarea/send row. */
   leftSection?: React.ReactNode;
+  /** Rendered to the right of the send button. */
+  rightSection?: React.ReactNode;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -33,6 +35,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   recipients,
   showImpersonationWarning,
   leftSection,
+  rightSection,
 }) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -209,6 +212,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         >
           <IconSend size={18} />
         </ActionIcon>
+        {rightSection}
       </Group>
     </Stack>
   );

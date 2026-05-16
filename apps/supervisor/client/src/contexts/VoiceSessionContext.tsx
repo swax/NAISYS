@@ -17,6 +17,7 @@ import React, {
 
 import { isRunActive } from "../hooks/runStatus";
 import { useSubscription } from "../hooks/useSubscription";
+import type { VoiceMode } from "../lib/apiClient";
 import { getRunsData } from "../lib/apiRuns";
 import {
   createVoiceSession,
@@ -47,6 +48,8 @@ export interface VoiceSessionState {
   /** Y — the target agent being operated. */
   targetUsername: string;
   targetTitle: string;
+  /** Mode the session was started in — drives the toolset and narration filter. */
+  mode: VoiceMode;
   /** Mic is suppressed locally; the call stays connected. */
   muted: boolean;
   /** Running dollar total for this call, summed from each turn's recorded
@@ -61,6 +64,7 @@ export interface StartVoiceSessionParams {
   fromTitle: string;
   targetUsername: string;
   targetTitle: string;
+  mode: VoiceMode;
 }
 
 interface VoiceSessionContextValue {
@@ -186,6 +190,7 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
         fromTitle: params.fromTitle,
         targetUsername: params.targetUsername,
         targetTitle: params.targetTitle,
+        mode: params.mode,
         muted: false,
         totalCost: 0,
       });

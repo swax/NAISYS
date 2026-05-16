@@ -56,10 +56,16 @@ import { UserDetail } from "./pages/users/UserDetail";
 import { UserList } from "./pages/users/UserList";
 import { VariablesPage } from "./pages/variables/VariablesPage";
 
+export interface VoiceAvailability {
+  available: boolean;
+  reason?: string;
+}
+
 export interface AppOutletContext {
   permissions: Permission[];
   allowPasswordLogin: boolean;
   mailServiceEnabled: boolean;
+  voice: VoiceAvailability;
 }
 
 const AppContent: React.FC = () => {
@@ -71,6 +77,10 @@ const AppContent: React.FC = () => {
   const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(false);
   const [permissions, setPermissions] = React.useState<Permission[]>([]);
   const [mailServiceEnabled, setMailServiceEnabled] = React.useState(false);
+  // Fail-closed until /client-config resolves.
+  const [voice, setVoice] = React.useState<VoiceAvailability>({
+    available: false,
+  });
   const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
 
@@ -84,6 +94,11 @@ const AppContent: React.FC = () => {
         setAllowPasswordLogin(d.allowPasswordLogin === true);
         setPermissions(d.permissions);
         setMailServiceEnabled(d.mailServiceEnabled === true);
+        setVoice(
+          d.voice && typeof d.voice.available === "boolean"
+            ? { available: d.voice.available, reason: d.voice.reason }
+            : { available: false },
+        );
       })
       .catch(() => {})
       .finally(() => setClientConfigLoaded(true));
@@ -105,7 +120,12 @@ const AppContent: React.FC = () => {
   if (basenameStripped.startsWith("/register")) {
     return (
       <Outlet
-        context={{ permissions: [], allowPasswordLogin, mailServiceEnabled }}
+        context={{
+          permissions: [],
+          allowPasswordLogin,
+          mailServiceEnabled,
+          voice,
+        }}
       />
     );
   }
@@ -161,6 +181,7 @@ const AppContent: React.FC = () => {
                     permissions,
                     allowPasswordLogin,
                     mailServiceEnabled,
+                    voice,
                   }}
                 />
               </Box>

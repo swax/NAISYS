@@ -27,10 +27,12 @@ import {
   Link,
   useLocation,
   useNavigate,
+  useOutletContext,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 
+import type { AppOutletContext } from "../../App";
 import { AgentPauseToggle } from "../../components/AgentPauseToggle";
 import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
@@ -38,6 +40,7 @@ import {
   getPlatformBadge,
   getPlatformBadgeColor,
 } from "../../components/PlatformBadge";
+import { VoiceMicButton } from "../../components/VoiceMicButton";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useLlmModels } from "../../hooks/useLlmModels";
@@ -72,6 +75,7 @@ export const AgentRuns: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { agents, readStatus } = useAgentDataContext();
+  const { permissions, voice } = useOutletContext<AppOutletContext>();
   const llmModels = useLlmModels();
   const [freshData, setFreshData] = useState<"loading" | "loaded">("loading");
   const [searchParams] = useSearchParams();
@@ -329,6 +333,15 @@ export const AgentRuns: React.FC = () => {
       </Alert>
     );
   }
+
+  // Static system gate → per-user permission gate. shellModel isn't checked:
+  // console mode dispatches commands through the host's shell wrapper, which
+  // every running agent has even when its own LLM loop is idle.
+  const voiceDisabledReason = !voice.available
+    ? voice.reason ?? "Voice is unavailable."
+    : !permissions.includes("agent_communication")
+      ? "You need the agent_communication permission to start a voice session."
+      : undefined;
 
   const sidebarContent = (
     <RunsSidebar
@@ -648,6 +661,16 @@ export const AgentRuns: React.FC = () => {
                   >
                     <IconSend size={18} />
                   </ActionIcon>
+                  {username && (
+                    <VoiceMicButton
+                      fromUsername="admin"
+                      fromTitle="Admin"
+                      targetUsername={username}
+                      targetTitle={agent.title ?? username}
+                      mode="console"
+                      disabledReason={voiceDisabledReason}
+                    />
+                  )}
                   {selectedRun.isOnline && selectedRun.paused && (
                     <Tooltip label="Step over — same as pressing Enter on a blank line, sends a blank command">
                       <ActionIcon

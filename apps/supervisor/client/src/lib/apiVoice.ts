@@ -1,6 +1,7 @@
 import type {
   VoiceCostRequest,
   VoiceCostResponse,
+  VoiceMode,
   VoiceTokenRequest,
   VoiceTokenResponse,
   VoiceToolCallRequest,
@@ -17,14 +18,16 @@ import { api, apiEndpoints } from "./apiClient";
 
 /** Mint an ephemeral gpt-realtime session token. `fromUsername` is X — the
  *  page's `{agent}` perspective the session speaks as; `targetUsername` is Y —
- *  the agent being operated. Throws on failure (caller surfaces the error). */
+ *  the agent being operated. `mode` scopes the baked tools and instructions.
+ *  Throws on failure (caller surfaces the error). */
 export const mintVoiceToken = async (
   fromUsername: string,
   targetUsername: string,
+  mode: VoiceMode,
 ): Promise<VoiceTokenResponse> => {
   return await api.post<VoiceTokenRequest, VoiceTokenResponse>(
     apiEndpoints.voiceToken(fromUsername),
-    { targetUsername },
+    { targetUsername, mode },
   );
 };
 

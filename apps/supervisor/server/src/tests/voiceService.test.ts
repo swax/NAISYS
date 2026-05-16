@@ -36,6 +36,7 @@ vi.mock("../services/variableService.js", () => ({
 import {
   checkVoiceBudget,
   computeVoiceCost,
+  getVoiceAvailability,
   getVoiceModel,
   mintVoiceToken,
 } from "../services/voiceService.js";
@@ -87,13 +88,54 @@ describe("voiceService", () => {
     await expect(getVoiceModel()).resolves.toBe("gpt-realtime");
   });
 
+  test("voice availability requires OPENAI_API_KEY to be set", async () => {
+    mocks.getVariableCachedValue.mockImplementation((name: string) =>
+      name === "OPENAI_API_KEY" ? "" : undefined,
+    );
+
+    await expect(getVoiceAvailability()).resolves.toEqual({
+      available: false,
+      reason:
+        "Voice is unavailable: set the OPENAI_API_KEY variable to enable it.",
+    });
+  });
+
+  test("voice availability is true with API key and known default model", async () => {
+    mocks.getVariableCachedValue.mockImplementation((name: string) =>
+      name === "OPENAI_API_KEY" ? "sk-test" : undefined,
+    );
+
+    await expect(getVoiceAvailability()).resolves.toEqual({
+      available: true,
+    });
+  });
+
+  test("voice availability rejects an unknown VOICE_AGENT_MODEL override", async () => {
+    mocks.getVariableCachedValue.mockImplementation((name: string) => {
+      if (name === "OPENAI_API_KEY") return "sk-test";
+      if (name === "VOICE_AGENT_MODEL") return "gpt-not-a-model";
+      return undefined;
+    });
+
+    await expect(getVoiceAvailability()).resolves.toEqual({
+      available: false,
+      reason:
+        'Voice is unavailable: VOICE_AGENT_MODEL is set to "gpt-not-a-model", which is not a known realtime model.',
+    });
+  });
+
   test("fails token minting when OPENAI_API_KEY is not configured", async () => {
     mocks.getVariableCachedValue.mockResolvedValue(undefined);
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
 
     await expect(
-      mintVoiceToken({ from, target, userUuid: "operator-uuid" }),
+      mintVoiceToken({
+        from,
+        target,
+        userUuid: "operator-uuid",
+        mode: "console",
+      }),
     ).rejects.toThrow(
       "Voice agent unavailable: the OPENAI_API_KEY variable is not set.",
     );
@@ -116,6 +158,7 @@ describe("voiceService", () => {
       from,
       target,
       userUuid: "operator-uuid",
+      mode: "console",
     });
 
     expect(result).toEqual({
@@ -152,9 +195,44 @@ describe("voiceService", () => {
     );
     expect(body.session.instructions).toContain('"Admin" (admin)');
     expect(body.session.instructions).toContain('"Worker" (worker)');
+    expect(body.session.instructions).toContain(
+      "You have three tools for dispatching to your work loop",
+    );
     expect(
       body.session.tools.map((tool: { name: string }) => tool.name),
     ).toEqual(["talk_to_agent", "run_debug_command", "run_command"]);
+  });
+
+  test("chat mode only exposes the talk_to_agent tool and adjusts instructions", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          value: "ephemeral-secret",
+          expires_at: 1_893_456_000,
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    await mintVoiceToken({
+      from,
+      target,
+      userUuid: "operator-uuid",
+      mode: "chat",
+    });
+
+    const [, init] = fetch.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(
+      body.session.tools.map((tool: { name: string }) => tool.name),
+    ).toEqual(["talk_to_agent"]);
+    expect(body.session.instructions).toContain(
+      "You have one tool for dispatching to your work loop",
+    );
+    expect(body.session.instructions).toContain(
+      "You cannot run shell commands from this voice session",
+    );
   });
 
   test("accepts the older nested client_secret response shape", async () => {
@@ -172,7 +250,12 @@ describe("voiceService", () => {
     vi.stubGlobal("fetch", fetch);
 
     await expect(
-      mintVoiceToken({ from, target, userUuid: "operator-uuid" }),
+      mintVoiceToken({
+        from,
+        target,
+        userUuid: "operator-uuid",
+        mode: "console",
+      }),
     ).resolves.toEqual({
       clientSecret: "nested-secret",
       expiresAt: "2030-01-01T00:00:00.000Z",
@@ -191,7 +274,12 @@ describe("voiceService", () => {
     vi.stubGlobal("fetch", fetch);
 
     await expect(
-      mintVoiceToken({ from, target, userUuid: "operator-uuid" }),
+      mintVoiceToken({
+        from,
+        target,
+        userUuid: "operator-uuid",
+        mode: "console",
+      }),
     ).resolves.toMatchObject({
       clientSecret: "ephemeral-secret",
       expiresAt: "2026-05-01T00:01:00.000Z",
@@ -205,7 +293,12 @@ describe("voiceService", () => {
     vi.stubGlobal("fetch", fetch);
 
     await expect(
-      mintVoiceToken({ from, target, userUuid: "operator-uuid" }),
+      mintVoiceToken({
+        from,
+        target,
+        userUuid: "operator-uuid",
+        mode: "console",
+      }),
     ).rejects.toThrow("Failed to start voice session (OpenAI returned 401).");
     expect(mocks.loggerError).toHaveBeenCalledWith(
       "[Voice] client_secrets mint failed (401): bad key",
@@ -219,7 +312,12 @@ describe("voiceService", () => {
     vi.stubGlobal("fetch", fetch);
 
     await expect(
-      mintVoiceToken({ from, target, userUuid: "operator-uuid" }),
+      mintVoiceToken({
+        from,
+        target,
+        userUuid: "operator-uuid",
+        mode: "console",
+      }),
     ).rejects.toThrow("Failed to start voice session (no token returned).");
     expect(mocks.loggerError).toHaveBeenCalledWith(
       "[Voice] client_secrets response missing token value: {}",

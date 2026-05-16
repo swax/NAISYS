@@ -85,6 +85,7 @@ function createSession(callbackSet = callbacks()): VoiceSession {
       fromTitle: "Admin",
       targetUsername: "worker",
       targetTitle: "Worker",
+      mode: "console",
     },
     callbackSet,
   );
@@ -143,6 +144,7 @@ describe("VoiceSession", () => {
       fromTitle: "Admin",
       targetUsername: "worker",
       targetTitle: "Worker",
+      mode: "console",
     });
     mocks.executeVoiceTool.mockResolvedValue({
       success: true,
@@ -177,7 +179,11 @@ describe("VoiceSession", () => {
     const callbackSet = callbacks();
     const { pc } = await startSession(callbackSet);
 
-    expect(mocks.mintVoiceToken).toHaveBeenCalledWith("admin", "worker");
+    expect(mocks.mintVoiceToken).toHaveBeenCalledWith(
+      "admin",
+      "worker",
+      "console",
+    );
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
       audio: true,
     });

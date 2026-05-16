@@ -16,15 +16,31 @@ export const VoiceToolNameSchema = z.enum([
 ]);
 export type VoiceToolName = z.infer<typeof VoiceToolNameSchema>;
 
+/** Perspective the voice session is opened from. `chat` impersonates a chat
+ *  sender (talk-only); `console` speaks as the admin operator (full shell
+ *  toolset, full run-log narration — the more verbose mode). */
+export const VoiceModeSchema = z.enum(["chat", "console"]);
+export type VoiceMode = z.infer<typeof VoiceModeSchema>;
+
+/** Tools allowed for a given mode. Baked into the realtime session config and
+ *  re-checked on /voice/tool so a tampered client can't widen its toolset. */
+export function voiceToolsForMode(mode: VoiceMode): VoiceToolName[] {
+  return mode === "chat"
+    ? ["talk_to_agent"]
+    : ["talk_to_agent", "run_debug_command", "run_command"];
+}
+
 /** Opaque server-minted session id, bound to (user, X, Y) at mint. Required
  *  on /voice/cost and /voice/tool so neither trusts raw browser claims. */
 export const VoiceSessionIdSchema = z.string().min(16).max(128);
 
 /** POST /agents/:username/voice/token — mint an ephemeral gpt-realtime session.
- *  `:username` is X; the body carries Y (the target agent being operated). */
+ *  `:username` is X; the body carries Y (the target agent being operated)
+ *  and the mode the session is opened in. */
 export const VoiceTokenRequestSchema = z
   .object({
     targetUsername: z.string().min(1),
+    mode: VoiceModeSchema,
   })
   .strict();
 export type VoiceTokenRequest = z.infer<typeof VoiceTokenRequestSchema>;
@@ -45,6 +61,9 @@ export const VoiceTokenResponseSchema = z.object({
   fromTitle: z.string(),
   targetUsername: z.string(),
   targetTitle: z.string(),
+  /** Echoed back so the client can branch on mode without remembering the
+   *  request body. */
+  mode: VoiceModeSchema,
 });
 export type VoiceTokenResponse = z.infer<typeof VoiceTokenResponseSchema>;
 

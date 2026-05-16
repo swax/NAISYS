@@ -1,10 +1,30 @@
 # Voice Agent
 
-Real-time voice chat with a running agent, started from an agent's `ChatThread` page. You
-talk to a **voice agent**, and it operates the console agent on your behalf — issuing chat
-and shell commands, watching the agent's run log, and narrating progress back to you in
-real time instead of making you wait for the agent to finish a cycle and reply. The
-session lives in a persistent floating control that follows you around the app.
+Real-time voice chat with a running agent, started from either the chat thread or the
+runs page. You talk to a **voice agent**, and it operates the console agent on your
+behalf — issuing chat and (in console mode) shell commands, watching the agent's run log,
+and narrating progress back to you in real time instead of making you wait for the agent
+to finish a cycle and reply. The session lives in a persistent floating control that
+follows you around the app.
+
+## Modes
+
+Voice sessions are minted in one of two modes, which scope what the voice agent can do
+and what it narrates:
+
+- **`chat` mode** — entry point on the chat thread. The session speaks _as the page's
+  chat user_. Only `talk_to_agent` is exposed; shell tools are hidden in both the system
+  message and the realtime session config. Narration filters log entries to the same set
+  the chat user already sees (skips `console` and `startPrompt` sources).
+- **`console` mode** — entry point on the runs page. The session speaks _as the admin
+  operator_, regardless of who is viewing the page. This is the more verbose mode: all
+  three tools are available, and narration carries the full run-log view (including
+  `console` and `startPrompt`) so the voice agent has the same context as someone
+  watching the run log live.
+
+The mode is baked in at mint time and stored on the server-side voice session record;
+`/voice/tool` rejects any tool the session's mode never had access to, even if the
+browser bypassed the locked realtime session config.
 
 ## Goal
 
@@ -68,11 +88,21 @@ while the conversation continues. Lower-right corner, showing:
 - Links to jump to Y's chat or run log.
 - A hang-up button.
 
-The mic button on `ChatThread.tsx` is the **entry point**: it starts a session into the
-floating control, seeded with the page's `{agent}` as X and the `{participant}` as Y. It's
-enabled only in a 1:1 chat with a NAISYS agent; in human-only or multi-agent threads it
-stays visible but disabled, with a tooltip explaining why (Phase 1 operates exactly one
-agent). Silently hiding it taught operators wrong things about when voice is available.
+The mic button has two entry points, both rendered to the right of the send button:
+
+- `ChatThread.tsx` — opens a **chat-mode** session, seeded with the page's `{agent}` as
+  X and the `{participant}` as Y. Enabled only in a 1:1 chat with a NAISYS agent; in
+  human-only or multi-agent threads it stays visible but disabled, with a tooltip
+  explaining why (Phase 1 operates exactly one agent).
+- `AgentRuns.tsx` — opens a **console-mode** session, seeded with `admin` as X and the
+  page's `{agent}` as Y. This is the more verbose mode — full toolset, full run-log
+  narration — intended for an operator who is already looking at the live log. Not
+  gated on `shellModel`: the run-command tools dispatch through the host's NAISYS
+  shell wrapper, which every running agent has regardless of whether it also has an
+  LLM driving its own loop (e.g. the admin agent itself, which runs with
+  `shellModel: "none"`).
+
+Silently hiding either taught operators wrong things about when voice is available.
 
 The session machinery lives in a `VoiceSession` class held by a `VoiceSessionContext`
 provider at the app root. Each call is one instance with its own `AbortController`. The
@@ -108,7 +138,10 @@ so it needs no persona transplant.
 ## The three tools
 
 All three are built on existing mechanisms; tool calls are forwarded from the browser to
-the supervisor's `VoiceToolBridge` for execution.
+the supervisor's `VoiceToolBridge` for execution. **Chat-mode sessions only see Tool 1**
+— Tools 2 and 3 are dropped from both the realtime session config and the system message,
+and `/voice/tool` rejects them server-side as defence in depth. **Console mode** sees all
+three.
 
 | Tool | Mechanism | bob's LLM sees output? | Use |
 | --- | --- | --- | --- |
@@ -312,3 +345,12 @@ agent's session**.
   persisted (e.g. as `context_log` on the admin session, or as chat messages).
 - **Session duration limits.** `gpt-realtime` sessions have a max length; a long voice
   conversation may need transparent re-establishment.
+- **Multi-participant chats.** Phase 1's chat-mode session locks to a single 1:1
+  thread. Phase 2: support group chats — subscribe to every participating agent's
+  run log so the voice agent can narrate progress across all of them, not just the
+  one target. Overlaps with retargeting (above) on the log-multiplexing side.
+- **Images into the voice context.** Phase 1 feeds the voice agent text-only run-log
+  digests. Phase 2: inject image attachments seen in chat / run output as
+  `input_image` items on `gpt-realtime` so the operator can ask "what's in that
+  screenshot?" without dropping out of the call. Per-turn cost and the realtime
+  model's image-token rates need to flow through `computeVoiceCost`.

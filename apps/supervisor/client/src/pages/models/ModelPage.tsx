@@ -1,6 +1,8 @@
 import {
   Alert,
+  Anchor,
   Button,
+  Code,
   Group,
   Modal,
   Stack,
@@ -8,10 +10,15 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { hasAction } from "@naisys/common";
+import {
+  builtInRealtimeModels,
+  DEFAULT_REALTIME_MODEL_ID,
+  hasAction,
+  type RealtimeModel,
+} from "@naisys/common";
 import { IconEdit, IconInfoCircle, IconTrash } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { useBlocker, useNavigate, useParams } from "react-router-dom";
+import { Link, useBlocker, useNavigate, useParams } from "react-router-dom";
 
 import { ImageModelForm } from "../../components/ImageModelForm";
 import { LlmModelForm } from "../../components/LlmModelForm";
@@ -77,16 +84,49 @@ export const ModelPage: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [handleBeforeUnload]);
 
-  // Find existing model
   const llm = !isNew ? llmModels.find((m) => m.key === key) : undefined;
   const img = !isNew ? imageModels.find((m) => m.key === key) : undefined;
+  // Realtime catalog lives in @naisys/common — read-only, no edit/create.
+  const realtime =
+    !isNew && !llm && !img
+      ? builtInRealtimeModels.find((m) => m.key === key)
+      : undefined;
 
-  if (!isNew && !llm && !img) {
+  if (!isNew && !llm && !img && !realtime) {
     return (
       <Stack gap="md">
         <Text c="dimmed" ta="center">
           Model not found
         </Text>
+      </Stack>
+    );
+  }
+
+  // Early return so the edit/create branches below don't need to special-case it.
+  if (realtime) {
+    const isDefault = realtime.key === DEFAULT_REALTIME_MODEL_ID;
+    return (
+      <Stack gap="md" maw={1000}>
+        <Title order={2}>{realtime.label}</Title>
+        <Alert color="blue" icon={<IconInfoCircle size={16} />}>
+          <Text size="sm">
+            Realtime models are built in and not editable. Pricing is per
+            modality (text / audio / image, separately for input and output),
+            and includes a cached-input rate. The voice agent uses one of
+            these for its browser-held gpt-realtime session.
+          </Text>
+          <Text size="sm" mt="xs">
+            The voice agent uses{" "}
+            <strong>{DEFAULT_REALTIME_MODEL_ID}</strong> by default
+            {isDefault ? " (this model)" : ""}. Override by setting the{" "}
+            <Code>VOICE_AGENT_MODEL</Code>{" "}
+            <Anchor component={Link} to="/variables">
+              variable
+            </Anchor>
+            .
+          </Text>
+        </Alert>
+        <RealtimeReadOnlyTable model={realtime} />
       </Stack>
     );
   }
@@ -432,6 +472,45 @@ function ImageReadOnlyTable({
   if (model.quality) {
     rows.push(["Quality", model.quality]);
   }
+
+  return (
+    <Table striped style={{ maxWidth: 600 }}>
+      <Table.Tbody>
+        {rows.map(([label, value]) => (
+          <Table.Tr key={label}>
+            <Table.Td fw={500} w="40%">
+              {label}
+            </Table.Td>
+            <Table.Td>{value}</Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
+  );
+}
+
+function RealtimeReadOnlyTable({ model }: { model: RealtimeModel }) {
+  const p = model.pricingPerMTok;
+  const dollars = (n: number | undefined) =>
+    n === undefined ? "\u2014" : `$${n}`;
+  const rows: [string, string | number][] = [
+    ["Key", model.key],
+    ["Label", model.label],
+    ["Version Name", model.versionName],
+    ["Model IDs", model.modelIds.join(", ")],
+    ["API Key Var", model.apiKeyVar],
+    ["Max Tokens", model.maxTokens.toLocaleString()],
+    ["Input Text (per 1M tokens)", dollars(p.inputText)],
+    ["Input Audio (per 1M tokens)", dollars(p.inputAudio)],
+    ["Input Image (per 1M tokens)", dollars(p.inputImage)],
+    ["Cached Input Text (per 1M tokens)", dollars(p.inputCachedText)],
+    ["Cached Input Audio (per 1M tokens)", dollars(p.inputCachedAudio)],
+    ["Cached Input Image (per 1M tokens)", dollars(p.inputCachedImage)],
+    ["Output Text (per 1M tokens)", dollars(p.outputText)],
+    ["Output Audio (per 1M tokens)", dollars(p.outputAudio)],
+    ["Supports Vision", model.supportsVision ? "Yes" : "No"],
+    ["Supports Reasoning", model.supportsReasoning ? "Yes" : "No"],
+  ];
 
   return (
     <Table striped style={{ maxWidth: 600 }}>

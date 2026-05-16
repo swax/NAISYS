@@ -1,5 +1,6 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
+import type { VoiceMode } from "./apiClient";
 import { createVoiceLogBuffer } from "./voiceLogBuffer";
 
 /**
@@ -44,6 +45,8 @@ export interface NarrationSchedulerCallbacks {
   isChannelOpen: () => boolean;
   sendEvent: (event: Record<string, unknown>) => void;
   getTargetUsername: () => string;
+  /** Drives the run-log narration filter via shouldNarrateLogEntry. */
+  mode: VoiceMode;
 }
 
 export interface NarrationScheduler {
@@ -99,7 +102,7 @@ export function createNarrationScheduler(
   // digest via handleLogDigest. If realtime is speaking or output audio is
   // draining, the callback refuses delivery and VoiceLogBuffer keeps the
   // entries under its normal caps until the gate opens.
-  const logBuffer = createVoiceLogBuffer(handleLogDigest);
+  const logBuffer = createVoiceLogBuffer(handleLogDigest, cb.mode);
 
   function injectLogEntries(entries: LogPushEntry[]): void {
     if (cb.isAborted()) return;

@@ -1,5 +1,9 @@
 import { Badge, Button, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
-import { hasAction, type HateoasAction } from "@naisys/common";
+import {
+  builtInRealtimeModels,
+  hasAction,
+  type HateoasAction,
+} from "@naisys/common";
 import {
   IconBrain,
   IconCalculator,
@@ -48,6 +52,13 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
   const sortedImageModels = React.useMemo(
     () => [...imageModels].sort((a, b) => a.label.localeCompare(b.label)),
     [imageModels],
+  );
+
+  // Catalog lives in @naisys/common — no API fetch, no editing.
+  const sortedRealtimeModels = React.useMemo(
+    () =>
+      [...builtInRealtimeModels].sort((a, b) => a.label.localeCompare(b.label)),
+    [],
   );
 
   const isModelSelected = (key: string) => {
@@ -332,6 +343,68 @@ export const ModelSidebar: React.FC<ModelSidebarProps> = ({
                   <Text size="xs" c="dimmed" truncate="end">
                     {model.size} &middot; ${model.cost}
                   </Text>
+                </div>
+              </Group>
+            </Card>
+          ))}
+        </Stack>
+      </div>
+
+      {/* Realtime Models — read-only (ModelPage detects the key). */}
+      <div>
+        <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb="xs">
+          Realtime Models
+        </Text>
+        <Stack gap="xs">
+          {sortedRealtimeModels.map((model) => (
+            <Card
+              key={model.key}
+              padding="sm"
+              radius="md"
+              withBorder
+              component="a"
+              href={getModelAbsoluteUrl(model.key)}
+              onClick={(e) => handleClick(e, model.key)}
+              style={{
+                cursor: "pointer",
+                backgroundColor: isModelSelected(model.key)
+                  ? "var(--mantine-color-blue-9)"
+                  : undefined,
+                textDecoration: "none",
+                color: "inherit",
+                display: "block",
+              }}
+            >
+              <Group gap="xs" align="center" wrap="nowrap">
+                <IconHeadphones size="1rem" style={{ flexShrink: 0 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Text size="sm" fw={500} truncate="end">
+                    {model.label}
+                  </Text>
+                  <Text size="xs" c="dimmed" truncate="end">
+                    Audio ${model.pricingPerMTok.inputAudio}/$
+                    {model.pricingPerMTok.outputAudio} per 1M
+                  </Text>
+                  <Group gap={6} align="center" wrap="nowrap" mt={6}>
+                    {model.supportsVision && (
+                      <Tooltip label="Vision">
+                        <IconEye
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
+                    {model.supportsReasoning && (
+                      <Tooltip label="Reasoning">
+                        <IconBrain
+                          size={14}
+                          color="var(--mantine-color-dimmed)"
+                          style={{ flexShrink: 0 }}
+                        />
+                      </Tooltip>
+                    )}
+                  </Group>
                 </div>
               </Group>
             </Card>

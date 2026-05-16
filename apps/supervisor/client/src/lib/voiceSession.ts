@@ -1,5 +1,6 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
+import type { VoiceMode } from "./apiClient";
 import { executeVoiceTool, mintVoiceToken, recordVoiceCost } from "./apiVoice";
 import { buildToolCall, extractVoiceUsage } from "./voiceMessages";
 import { createNarrationScheduler } from "./voiceNarrationScheduler";
@@ -31,6 +32,7 @@ export interface VoiceSessionParams {
   fromTitle: string;
   targetUsername: string;
   targetTitle: string;
+  mode: VoiceMode;
 }
 
 export interface VoiceSessionCallbacks {
@@ -54,6 +56,7 @@ export interface VoiceSession {
   readonly fromTitle: string;
   readonly targetUsername: string;
   readonly targetTitle: string;
+  readonly mode: VoiceMode;
   readonly aborted: boolean;
   start(): Promise<void>;
   abort(): void;
@@ -67,7 +70,7 @@ export function createVoiceSession(
   params: VoiceSessionParams,
   callbacks: VoiceSessionCallbacks,
 ): VoiceSession {
-  const { fromUsername, fromTitle, targetUsername, targetTitle } = params;
+  const { fromUsername, fromTitle, targetUsername, targetTitle, mode } = params;
 
   let voiceSessionId: string | undefined;
   let resolved: VoiceSessionDisplay | undefined;
@@ -87,6 +90,7 @@ export function createVoiceSession(
     isChannelOpen: () => transport.isChannelOpen(),
     sendEvent: (event) => transport.sendEvent(event),
     getTargetUsername: () => resolved?.targetUsername ?? params.targetUsername,
+    mode,
   });
 
   const session: VoiceSession = {
@@ -94,6 +98,7 @@ export function createVoiceSession(
     fromTitle,
     targetUsername,
     targetTitle,
+    mode,
     get aborted() {
       return isAborted();
     },
@@ -115,7 +120,7 @@ export function createVoiceSession(
    *  (the data channel reaches `open`). */
   async function start(): Promise<void> {
     try {
-      const token = await mintVoiceToken(fromUsername, targetUsername);
+      const token = await mintVoiceToken(fromUsername, targetUsername, mode);
       if (isAborted()) return;
 
       voiceSessionId = token.voiceSessionId;

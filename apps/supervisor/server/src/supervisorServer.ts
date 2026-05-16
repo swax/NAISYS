@@ -71,6 +71,7 @@ import {
   userHasEnabledPassword,
 } from "./services/passwordLoginConfig.js";
 import { getVariableCachedValue } from "./services/variableService.js";
+import { getVoiceAvailability } from "./services/voiceService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -256,6 +257,7 @@ export const supervisorPlugin: FastifyPluginAsync<
       permissions: PermissionEnum.options,
       mailServiceEnabled:
         (await getVariableCachedValue("MAIL_ENABLED")) === "true",
+      voice: await getVoiceAvailability(),
     }),
   );
 
