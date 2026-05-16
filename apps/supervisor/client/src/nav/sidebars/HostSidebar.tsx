@@ -29,7 +29,7 @@ export const HostSidebar: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { hosts, listActions, isLoading } = useHostDataContext();
-  const { status: connectionStatus } = useConnectionStatus();
+  const { serverReachable } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [showManualCreate, setShowManualCreate] = useState(false);
@@ -146,7 +146,7 @@ export const HostSidebar: React.FC = () => {
                   )}
                 </Group>
               </div>
-              {connectionStatus === "connected" && (
+              {serverReachable && (
                 <Badge
                   size="xs"
                   variant="light"

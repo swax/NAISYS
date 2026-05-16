@@ -10,9 +10,11 @@ export const ConnectionStatus: React.FC = () => {
   const color =
     status === "disconnected"
       ? "var(--mantine-color-red-6)"
-      : status === "degraded"
-        ? "var(--mantine-color-yellow-6)"
-        : "var(--mantine-color-green-6)";
+      : status === "hub-disconnected"
+        ? "var(--mantine-color-orange-6)"
+        : status === "polling"
+          ? "var(--mantine-color-yellow-6)"
+          : "var(--mantine-color-green-6)";
 
   return (
     <Tooltip label={label}>

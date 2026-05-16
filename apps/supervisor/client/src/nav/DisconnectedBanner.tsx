@@ -33,14 +33,22 @@ export const DisconnectedBanner: React.FC = () => {
     );
   }
 
-  if (status === "connected") {
+  // Polling is fully functional, just slower - the status icon's tooltip is
+  // sufficient signal without taking over the top of the screen.
+  if (status === "connected" || status === "polling") {
     return null;
   }
 
   return (
     <Alert
       variant="filled"
-      color={status === "disconnected" ? "red" : "yellow"}
+      color={
+        status === "disconnected"
+          ? "red"
+          : status === "hub-disconnected"
+            ? "orange"
+            : "yellow"
+      }
       icon={
         status === "disconnected" ? (
           <IconPlugConnectedX size="1rem" />

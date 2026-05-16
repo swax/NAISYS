@@ -31,7 +31,7 @@ export const AgentSidebar: React.FC = () => {
   const location = useLocation();
   const { username: currentUsername } = useParams<{ username: string }>();
   const { agents, actions, isLoading, readStatus } = useAgentDataContext();
-  const { status: connectionStatus } = useConnectionStatus();
+  const { serverReachable } = useConnectionStatus();
   const [modalOpened, setModalOpened] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [collapsedAgents, setExpandedAgents] = useState<Set<string>>(() => {
@@ -299,7 +299,7 @@ export const AgentSidebar: React.FC = () => {
             {getUnreadLogBadge(agent)}
             {getUnreadMailBadge(agent)}
           </Group>
-          {connectionStatus === "connected" && (
+          {serverReachable && (
             <Badge
               size="xs"
               variant="light"

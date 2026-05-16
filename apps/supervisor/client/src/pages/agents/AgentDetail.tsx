@@ -60,7 +60,7 @@ export const AgentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
-  const { status: connectionStatus } = useConnectionStatus();
+  const { serverReachable } = useConnectionStatus();
 
   const agentData = username ? agents.find((a) => a.name === username) : null;
   const [config, setConfig] = useState<AgentDetailResponse["config"] | null>(
@@ -635,7 +635,7 @@ export const AgentDetail: React.FC = () => {
         )}
       </Group>
 
-      {agentData && connectionStatus === "connected" && (
+      {agentData && serverReachable && (
         <Group gap="xs" align="center">
           <Badge
             size="sm"

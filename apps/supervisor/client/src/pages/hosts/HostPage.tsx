@@ -52,7 +52,7 @@ export const HostPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
-  const { status: connectionStatus } = useConnectionStatus();
+  const { serverReachable } = useConnectionStatus();
   const llmModels = useLlmModels();
 
   const [hostDetail, setHostDetail] = useState<HostDetailResponse | null>(null);
@@ -370,7 +370,7 @@ export const HostPage: React.FC = () => {
               </Table.Td>
             </Table.Tr>
           )}
-          {connectionStatus === "connected" && (
+          {serverReachable && (
             <Table.Tr>
               <Table.Td c="dimmed">Status</Table.Td>
               <Table.Td>
