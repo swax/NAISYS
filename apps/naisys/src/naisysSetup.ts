@@ -23,6 +23,7 @@ interface NaisysWizardConfigOptions {
 
 export function getNaisysWizardConfig(
   hubClient: boolean,
+  integratedHub: boolean,
   options: NaisysWizardConfigOptions = {},
 ): WizardConfig {
   if (hubClient) {
@@ -124,15 +125,22 @@ export function getNaisysWizardConfig(
           { key: "SPEND_LIMIT_HOURS", label: "Spend Limit Period (hours)" },
         ],
       },
-      {
-        type: "fields",
-        comment:
-          "Integrated server configuration if the --integrated-hub option is used on startup",
-        fields: [
-          { key: "SERVER_PORT", label: "Server Port" },
-          { key: "ALLOW_PASSWORD_LOGIN", label: "Allow Password Sign-in" },
-        ],
-      },
+      ...(integratedHub
+        ? [
+            {
+              type: "fields" as const,
+              comment:
+                "Integrated hub/supervisor server (--integrated-hub mode)",
+              fields: [
+                { key: "SERVER_PORT", label: "Server Port" },
+                {
+                  key: "ALLOW_PASSWORD_LOGIN",
+                  label: "Allow Supervisor Password Sign-in",
+                },
+              ],
+            },
+          ]
+        : []),
     ],
   };
 }

@@ -38,9 +38,10 @@ import { createPromptNotificationService } from "./utils/output/promptNotificati
 const isHubClient = process.argv.some(
   (a) => a === "--hub" || a.startsWith("--hub="),
 );
+const isIntegratedHub = process.argv.includes("--integrated-hub");
 
 let codexSubscriptionSelected = false;
-const wizardConfig = getNaisysWizardConfig(isHubClient, {
+const wizardConfig = getNaisysWizardConfig(isHubClient, isIntegratedHub, {
   onCodexSubscriptionSelected: () => {
     codexSubscriptionSelected = true;
   },

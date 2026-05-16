@@ -19,6 +19,6 @@ export function ensureDirExists(dirPath: string) {
 }
 
 export function getInstallPath() {
-  const packageUrl = new URL("../../", import.meta.url);
+  const packageUrl = new URL("../../../", import.meta.url);
   return fileURLToPath(packageUrl);
 }

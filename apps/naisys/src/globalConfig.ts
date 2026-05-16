@@ -75,22 +75,11 @@ export function createGlobalConfig(
     };
   }
 
-  /** Can only get version from env variable when naisys is started with npm,
-   * otherwise need to rip it from the package ourselves relative to where this file is located */
-  async function getVersion() {
-    try {
-      /* Removed for compatibility with https://bundlephobia.com/package/naisys
-      const packageJson = await import(packageJsonUrl.href, {
-        assert: { type: "json" },
-      });*/
-
-      const installPath = pathService.getInstallPath();
-      const packageJsonPath = path.join(installPath, "package.json");
-      const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
-      return packageJson.version;
-    } catch (_e) {
-      return "Error getting NAISYS verison";
-    }
+  async function getVersion(): Promise<string> {
+    const installPath = pathService.getInstallPath();
+    const packageJsonPath = path.join(installPath, "package.json");
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+    return packageJson.version;
   }
 
   /** Patch process.env and the cached config so runtime changes are visible. */

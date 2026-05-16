@@ -24,15 +24,10 @@ export function createHubClientConfig(hubUrl: string) {
   const instanceId = randomUUID();
   const processStartedAt = Date.now();
 
-  let clientVersion = "";
-  try {
-    const pkg = JSON.parse(
-      readFileSync(`${getInstallPath()}/package.json`, "utf-8"),
-    );
-    clientVersion = pkg.version;
-  } catch {
-    // version unavailable
-  }
+  const pkg = JSON.parse(
+    readFileSync(`${getInstallPath()}/package.json`, "utf-8"),
+  );
+  let clientVersion: string = pkg.version;
 
   const commitHash = getGitCommitHash(getInstallPath());
   if (commitHash) {
