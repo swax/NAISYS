@@ -2,7 +2,7 @@ import {
   buildClientConfig,
   builtInImageModels,
   builtInLlmModels,
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
+  CODEX_REFRESH_TOKEN_VAR,
 } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
@@ -28,7 +28,7 @@ export async function createHubConfigService(
     [...builtInLlmModels, ...builtInImageModels]
       .map((m) => m.apiKeyVar)
       .filter(Boolean)
-      .concat([OPENAI_CODEX_REFRESH_TOKEN_VAR]),
+      .concat([CODEX_REFRESH_TOKEN_VAR]),
   );
 
   // Seed DB from .env on first run

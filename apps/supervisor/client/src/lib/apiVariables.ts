@@ -1,31 +1,31 @@
 import type {
+  CodexOAuthPollResponse,
+  CodexOAuthStartResponse,
+  CodexOAuthUsageResponse,
   DeleteVariableResponse,
-  OpenAiCodexOAuthPollResponse,
-  OpenAiCodexOAuthStartResponse,
-  OpenAiCodexOAuthUsageResponse,
   SaveVariableResponse,
 } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
-export const startOpenAiCodexOAuth =
-  async (): Promise<OpenAiCodexOAuthStartResponse> =>
-    await api.post<Record<string, never>, OpenAiCodexOAuthStartResponse>(
-      apiEndpoints.openAiCodexOAuthStart,
+export const startCodexOAuth =
+  async (): Promise<CodexOAuthStartResponse> =>
+    await api.post<Record<string, never>, CodexOAuthStartResponse>(
+      apiEndpoints.codexOAuthStart,
       {},
     );
 
-export const pollOpenAiCodexOAuth = async (
+export const pollCodexOAuth = async (
   flowId: string,
-): Promise<OpenAiCodexOAuthPollResponse> =>
-  await api.post<{ flowId: string }, OpenAiCodexOAuthPollResponse>(
-    apiEndpoints.openAiCodexOAuthPoll,
+): Promise<CodexOAuthPollResponse> =>
+  await api.post<{ flowId: string }, CodexOAuthPollResponse>(
+    apiEndpoints.codexOAuthPoll,
     { flowId },
   );
 
-export const checkOpenAiCodexOAuthUsage =
-  async (): Promise<OpenAiCodexOAuthUsageResponse> =>
-    await api.post<Record<string, never>, OpenAiCodexOAuthUsageResponse>(
-      apiEndpoints.openAiCodexOAuthUsage,
+export const checkCodexOAuthUsage =
+  async (): Promise<CodexOAuthUsageResponse> =>
+    await api.post<Record<string, never>, CodexOAuthUsageResponse>(
+      apiEndpoints.codexOAuthUsage,
       {},
     );
 

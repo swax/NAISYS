@@ -27,7 +27,7 @@ import { createHubLogBuffer } from "./hub/hubLogBuffer.js";
 import {
   ensureAgentConfig,
   getNaisysWizardConfig,
-  printOpenAiCodexSubscriptionSetupInstructions,
+  printCodexSubscriptionSetupInstructions,
 } from "./naisysSetup.js";
 import { createHeartbeatService } from "./services/heartbeatService.js";
 import { createHostService } from "./services/hostService.js";
@@ -43,10 +43,10 @@ const isHubClient = process.argv.some(
   (a) => a === "--hub" || a.startsWith("--hub="),
 );
 
-let openAiCodexSubscriptionSelected = false;
+let codexSubscriptionSelected = false;
 const wizardConfig = getNaisysWizardConfig(isHubClient, {
-  onOpenAiCodexSubscriptionSelected: () => {
-    openAiCodexSubscriptionSelected = true;
+  onCodexSubscriptionSelected: () => {
+    codexSubscriptionSelected = true;
   },
 });
 const exampleUrl = new URL(
@@ -91,10 +91,10 @@ program
 
 if (!isHubClient) {
   await ensureAgentConfig(program.args[0], {
-    useOpenAiCodexSubscription: openAiCodexSubscriptionSelected,
+    useCodexSubscription: codexSubscriptionSelected,
   });
-  if (openAiCodexSubscriptionSelected) {
-    printOpenAiCodexSubscriptionSetupInstructions();
+  if (codexSubscriptionSelected) {
+    printCodexSubscriptionSetupInstructions();
   }
 }
 

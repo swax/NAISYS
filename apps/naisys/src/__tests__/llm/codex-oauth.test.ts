@@ -1,13 +1,13 @@
 import {
+  CODEX_REFRESH_TOKEN_VAR,
+  CODEX_RESPONSES_BASE_URL,
   LlmApiType,
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
-  OPENAI_CODEX_RESPONSES_BASE_URL,
 } from "@naisys/common";
 import {
-  createOpenAiCodexAccessTokenCache,
-  createOpenAiCodexAccessTokenProvider,
-  refreshOpenAiCodexToken,
-  resolveOpenAiCodexAccessTokenExpiry,
+  createCodexAccessTokenCache,
+  createCodexAccessTokenProvider,
+  refreshCodexToken,
+  resolveCodexAccessTokenExpiry,
 } from "@naisys/common-node";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -34,9 +34,9 @@ function makeVendorDeps(overrides: {
         key: "gpt5oauth",
         label: "GPT 5.4 (OpenAI Codex OAuth)",
         versionName: "gpt-5.4",
-        baseUrl: OPENAI_CODEX_RESPONSES_BASE_URL,
+        baseUrl: CODEX_RESPONSES_BASE_URL,
         apiType: LlmApiType.OpenAIOAuth,
-        apiKeyVar: OPENAI_CODEX_REFRESH_TOKEN_VAR,
+        apiKeyVar: CODEX_REFRESH_TOKEN_VAR,
         maxTokens: 400_000,
         inputCost: 0,
         outputCost: 0,
@@ -87,7 +87,7 @@ describe("OpenAI Codex access-token provider", () => {
   test("returns undefined when no refresh token is configured", async () => {
     const fetchFn = vi.fn();
     const saveRefreshToken = vi.fn();
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => undefined,
       saveRefreshToken,
       fetchFn,
@@ -112,8 +112,8 @@ describe("OpenAI Codex access-token provider", () => {
         }),
       ),
     );
-    const saveRefreshToken = vi.fn(async () => true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const saveRefreshToken = vi.fn(() => Promise.resolve(true));
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => "old-refresh",
       saveRefreshToken,
       fetchFn,
@@ -144,7 +144,7 @@ describe("OpenAI Codex access-token provider", () => {
       ),
     );
     const saveRefreshToken = vi.fn();
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => "same-refresh",
       saveRefreshToken,
       fetchFn,
@@ -165,8 +165,8 @@ describe("OpenAI Codex access-token provider", () => {
           resolveFetch = resolve;
         }),
     );
-    const saveRefreshToken = vi.fn(async () => true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const saveRefreshToken = vi.fn(() => Promise.resolve(true));
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => "refresh-token",
       saveRefreshToken,
       fetchFn,
@@ -203,9 +203,9 @@ describe("OpenAI Codex access-token provider", () => {
         }),
       );
     });
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => "refresh-token",
-      saveRefreshToken: vi.fn(async () => true),
+      saveRefreshToken: vi.fn(() => Promise.resolve(true)),
       fetchFn,
     });
 
@@ -231,7 +231,7 @@ describe("OpenAI Codex access-token provider", () => {
         accessToken: "second",
         expiresAt: now + 30 * 60_000,
       });
-    const cache = createOpenAiCodexAccessTokenCache({
+    const cache = createCodexAccessTokenCache({
       resolveFresh,
       now: () => currentTime,
     });
@@ -264,7 +264,7 @@ describe("OpenAI Codex access-token provider", () => {
         accessToken: "recovered",
         expiresAt: now + 10 * 60_000,
       });
-    const cache = createOpenAiCodexAccessTokenCache({
+    const cache = createCodexAccessTokenCache({
       resolveFresh,
       failureCooldownMs: 30_000,
       now: () => currentTime,
@@ -292,7 +292,7 @@ describe("OpenAI Codex access-token provider", () => {
         accessToken: "recovered",
         expiresAt: Date.now() + 10 * 60_000,
       });
-    const cache = createOpenAiCodexAccessTokenCache({
+    const cache = createCodexAccessTokenCache({
       resolveFresh,
       failureCooldownMs: 30_000,
     });
@@ -331,7 +331,7 @@ describe("OpenAI Codex access-token provider", () => {
       .fn()
       .mockRejectedValueOnce(new Error("db down"))
       .mockResolvedValueOnce(true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedRefresh,
       saveRefreshToken,
       fetchFn,
@@ -364,9 +364,9 @@ describe("OpenAI Codex access-token provider", () => {
           expires_in: 3600,
         }),
       );
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedRefresh,
-      saveRefreshToken: vi.fn(async () => true),
+      saveRefreshToken: vi.fn(() => Promise.resolve(true)),
       fetchFn,
     });
 
@@ -405,8 +405,8 @@ describe("OpenAI Codex access-token provider", () => {
           expires_in: 3600,
         }),
       );
-    const saveRefreshToken = vi.fn(async () => true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const saveRefreshToken = vi.fn(() => Promise.resolve(true));
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedRefresh,
       saveRefreshToken,
       fetchFn,
@@ -474,7 +474,7 @@ describe("OpenAI Codex access-token provider", () => {
       >()
       .mockResolvedValueOnce(false) // first attempt: CAS fails
       .mockResolvedValueOnce(true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedAtStart,
       saveRefreshToken,
       fetchFn,
@@ -516,11 +516,11 @@ describe("OpenAI Codex access-token provider", () => {
           expires_in: 3600,
         }),
       );
-    const saveRefreshToken = vi.fn(async (newToken: string) => {
+    const saveRefreshToken = vi.fn((newToken: string) => {
       persisted = newToken;
-      return true;
+      return Promise.resolve(true);
     });
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persisted,
       saveRefreshToken,
       fetchFn,
@@ -542,7 +542,7 @@ describe("OpenAI Codex access-token provider", () => {
   });
 
   test("treats external clear of persisted token as dead lineage and aborts rotation", async () => {
-    // Operator clears OPENAI_CODEX_REFRESH_TOKEN via the supervisor. Even
+    // Operator clears CODEX_REFRESH_TOKEN via the supervisor. Even
     // though we hold a valid in-memory refresh from a prior rotation, we
     // must not call OAuth and silently recreate the row the operator just
     // removed.
@@ -554,8 +554,8 @@ describe("OpenAI Codex access-token provider", () => {
         expires_in: 3600,
       }),
     );
-    const saveRefreshToken = vi.fn(async () => true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const saveRefreshToken = vi.fn(() => Promise.resolve(true));
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persisted,
       saveRefreshToken,
       fetchFn,
@@ -607,7 +607,7 @@ describe("OpenAI Codex access-token provider", () => {
       >()
       .mockRejectedValueOnce(new Error("db down"))
       .mockResolvedValueOnce(true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedRefresh,
       saveRefreshToken,
       fetchFn,
@@ -648,7 +648,7 @@ describe("OpenAI Codex access-token provider", () => {
       .fn()
       .mockRejectedValueOnce(new Error("db down"))
       .mockResolvedValueOnce(true);
-    const provider = createOpenAiCodexAccessTokenProvider({
+    const provider = createCodexAccessTokenProvider({
       getRefreshToken: () => persistedRefresh,
       saveRefreshToken,
       fetchFn,
@@ -677,14 +677,14 @@ describe("OpenAI Codex access-token provider", () => {
       ),
     );
 
-    await expect(refreshOpenAiCodexToken("bad-refresh", fetchFn)).rejects.toThrow(
+    await expect(refreshCodexToken("bad-refresh", fetchFn)).rejects.toThrow(
       "OpenAI OAuth refresh failed: invalid_grant (Refresh token expired)",
     );
   });
 
   test("resolves expiry from access token JWT payloads", () => {
     const exp = 1_700_000_000;
-    expect(resolveOpenAiCodexAccessTokenExpiry(makeJwt({ exp }))).toBe(
+    expect(resolveCodexAccessTokenExpiry(makeJwt({ exp }))).toBe(
       exp * 1000,
     );
   });

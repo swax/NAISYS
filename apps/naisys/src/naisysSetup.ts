@@ -1,8 +1,8 @@
 import {
   buildDefaultAgentConfig,
   builtInLlmModels,
+  CODEX_REFRESH_TOKEN_VAR,
   LlmApiType,
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
 } from "@naisys/common";
 import {
   askQuestion,
@@ -15,10 +15,10 @@ import yaml from "js-yaml";
 import os from "os";
 import path from "path";
 
-const OPENAI_CODEX_SUBSCRIPTION_PROVIDER_NAME = "OpenAI Codex Subscription";
+const CODEX_SUBSCRIPTION_PROVIDER_NAME = "OpenAI Codex Subscription";
 
 interface NaisysWizardConfigOptions {
-  onOpenAiCodexSubscriptionSelected?: () => void;
+  onCodexSubscriptionSelected?: () => void;
 }
 
 export function getNaisysWizardConfig(
@@ -86,9 +86,9 @@ export function getNaisysWizardConfig(
             fields: [{ key: "OPENAI_API_KEY", label: "OpenAI API Key" }],
           },
           {
-            name: OPENAI_CODEX_SUBSCRIPTION_PROVIDER_NAME,
+            name: CODEX_SUBSCRIPTION_PROVIDER_NAME,
             fields: [],
-            onSelected: options.onOpenAiCodexSubscriptionSelected,
+            onSelected: options.onCodexSubscriptionSelected,
           },
           {
             name: "Google",
@@ -153,11 +153,11 @@ function hasConfiguredCredentials(model: (typeof availableModels)[number]) {
   return Boolean(
     process.env[model.apiKeyVar] ||
       (model.apiType === LlmApiType.OpenAIOAuth &&
-        process.env[OPENAI_CODEX_REFRESH_TOKEN_VAR]),
+        process.env[CODEX_REFRESH_TOKEN_VAR]),
   );
 }
 
-export function printOpenAiCodexSubscriptionSetupInstructions() {
+export function printCodexSubscriptionSetupInstructions() {
   console.log(
     "\n  OpenAI Codex Subscription selected. After Supervisor opens, go to Variables and click OpenAI Codex OAuth Setup.",
   );
@@ -175,7 +175,7 @@ export function printOpenAiCodexSubscriptionSetupInstructions() {
  */
 export async function ensureAgentConfig(
   agentPath: string | undefined,
-  options: { useOpenAiCodexSubscription?: boolean } = {},
+  options: { useCodexSubscription?: boolean } = {},
 ): Promise<void> {
   if (agentPath) return;
 
@@ -192,7 +192,7 @@ export async function ensureAgentConfig(
 
   const configuredModel = availableModels.find(hasConfiguredCredentials);
   const model =
-    (options.useOpenAiCodexSubscription ? preferredCodexModel : undefined) ??
+    (options.useCodexSubscription ? preferredCodexModel : undefined) ??
     configuredModel;
 
   if (!model) {

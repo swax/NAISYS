@@ -1,25 +1,25 @@
 import { buildDefaultAgentConfig, LlmApiType } from "@naisys/common";
 import type * as CommonNode from "@naisys/common-node";
-import { fetchOpenAiCodexUsage } from "@naisys/common-node";
+import { fetchCodexUsage } from "@naisys/common-node";
 import type { HubDatabaseService, PrismaClient } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubCodexAuthService } from "./hubCodexAuthService.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import { createHubCostService } from "./hubCostService.js";
 import type {
   HubActiveSession,
   HubHeartbeatService,
 } from "./hubHeartbeatService.js";
-import type { HubOpenAiCodexAuthService } from "./hubOpenAiCodexAuthService.js";
 
 vi.mock("@naisys/common-node", async () => {
   const actual =
     await vi.importActual<typeof CommonNode>("@naisys/common-node");
   return {
     ...actual,
-    fetchOpenAiCodexUsage: vi.fn(),
+    fetchCodexUsage: vi.fn(),
   };
 });
 
@@ -32,7 +32,7 @@ type CostWriteHandler = (
 
 const CODEX_TEST_CHECK_MINUTES = 0.001;
 const CODEX_TEST_CHECK_MS = CODEX_TEST_CHECK_MINUTES * 60_000;
-const mockedFetchOpenAiCodexUsage = vi.mocked(fetchOpenAiCodexUsage);
+const mockedFetchCodexUsage = vi.mocked(fetchCodexUsage);
 
 function createServerHarness() {
   const handlers = new Map<string, CostWriteHandler>();
@@ -144,7 +144,7 @@ function createCodexAuthService(accessToken?: string) {
           : undefined,
       ),
     ),
-  } as unknown as HubOpenAiCodexAuthService;
+  } as unknown as HubCodexAuthService;
 }
 
 function llmModelRow(key: string, apiType: LlmApiType) {
@@ -183,7 +183,7 @@ function userRow(
 
 describe("hubCostService", () => {
   afterEach(() => {
-    mockedFetchOpenAiCodexUsage.mockReset();
+    mockedFetchCodexUsage.mockReset();
     vi.useRealTimers();
   });
 
@@ -453,7 +453,7 @@ describe("hubCostService", () => {
       llmModelRow("gpt-4.1", LlmApiType.OpenAI),
       llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth),
     ]);
-    mockedFetchOpenAiCodexUsage
+    mockedFetchCodexUsage
       .mockResolvedValueOnce({
         checkedAt: Date.now(),
         limitReached: false,
@@ -488,7 +488,7 @@ describe("hubCostService", () => {
         select: { user_id: true, model_name: true },
       });
       expect(codexAuthService.getAccessToken).toHaveBeenCalledTimes(1);
-      expect(mockedFetchOpenAiCodexUsage).toHaveBeenCalledWith({
+      expect(mockedFetchCodexUsage).toHaveBeenCalledWith({
         accessToken: "access-token",
       });
       expect(server.sendMessage).toHaveBeenCalledWith(
@@ -566,7 +566,7 @@ describe("hubCostService", () => {
     vi.mocked(hubDb.models.findMany as any).mockResolvedValue([
       llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth),
     ]);
-    mockedFetchOpenAiCodexUsage
+    mockedFetchCodexUsage
       .mockResolvedValueOnce({
         checkedAt: Date.now(),
         limitReached: false,

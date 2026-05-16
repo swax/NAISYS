@@ -24,6 +24,10 @@ import type {
   AgentStopResponse,
   RuntimeKeyReissue,
 } from "./schemas/agents.js";
+import type {
+  CodexAccessTokenRequest,
+  CodexAccessTokenResponse,
+} from "./schemas/codex.js";
 import type { ConfigResponse } from "./schemas/config.js";
 import type {
   CostControl,
@@ -54,10 +58,6 @@ import type {
   MailUnreadResponse,
 } from "./schemas/mail.js";
 import type { ModelsResponse } from "./schemas/models.js";
-import type {
-  OpenAiCodexAccessTokenRequest,
-  OpenAiCodexAccessTokenResponse,
-} from "./schemas/openAiCodex.js";
 import type {
   SessionCreateRequest,
   SessionCreateResponse,
@@ -143,9 +143,9 @@ export interface HubRequestEvents {
     request: CostWriteRequest;
     response: CostWriteResponse;
   };
-  [HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET]: {
-    request: OpenAiCodexAccessTokenRequest;
-    response: OpenAiCodexAccessTokenResponse;
+  [HubEvents.CODEX_ACCESS_TOKEN_GET]: {
+    request: CodexAccessTokenRequest;
+    response: CodexAccessTokenResponse;
   };
 }
 

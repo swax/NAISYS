@@ -112,7 +112,7 @@ export const HubEvents = {
   // ---------------------------------------------------------------------------
 
   /** Mint a fresh OpenAI Codex OAuth access token; hub owns the refresh token. */
-  OPENAI_CODEX_ACCESS_TOKEN_GET: "openai_codex_access_token_get",
+  CODEX_ACCESS_TOKEN_GET: "codex_access_token_get",
 
   // ---------------------------------------------------------------------------
   // NAISYS/Supervisor -> Hub (request/response) – Mail

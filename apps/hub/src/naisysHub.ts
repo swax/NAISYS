@@ -22,6 +22,7 @@ import { fileURLToPath } from "url";
 import { createHubAccessKeyService } from "./handlers/hubAccessKeyService.js";
 import { createHubAgentService } from "./handlers/hubAgentService.js";
 import { createHubAttachmentService } from "./handlers/hubAttachmentService.js";
+import { createHubCodexAuthService } from "./handlers/hubCodexAuthService.js";
 import { createHubConfigService } from "./handlers/hubConfigService.js";
 import { createHubCostService } from "./handlers/hubCostService.js";
 import { createHubHeartbeatService } from "./handlers/hubHeartbeatService.js";
@@ -29,7 +30,6 @@ import { createHubHostService } from "./handlers/hubHostService.js";
 import { createHubLogService } from "./handlers/hubLogService.js";
 import { createHubMailService } from "./handlers/hubMailService.js";
 import { createHubModelsService } from "./handlers/hubModelsService.js";
-import { createHubOpenAiCodexAuthService } from "./handlers/hubOpenAiCodexAuthService.js";
 import { createHubRedactionService } from "./handlers/hubRedactionService.js";
 import { createHubRunService } from "./handlers/hubRunService.js";
 import { createHubRuntimeKeyService } from "./handlers/hubRuntimeKeyService.js";
@@ -128,7 +128,7 @@ export const startHub: StartHub = async (
       logService,
     );
 
-    const codexAuthService = createHubOpenAiCodexAuthService(
+    const codexAuthService = createHubCodexAuthService(
       naisysServer,
       hubDatabaseService,
       redactionService,

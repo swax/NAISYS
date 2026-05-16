@@ -4,8 +4,8 @@ import type {
   AgentRunPauseResponse,
   AgentStartResponse,
   AgentStopResponse,
+  CodexAccessTokenResponse,
   MailSendResponse,
-  OpenAiCodexAccessTokenResponse,
   RotateAccessKeyResponse,
   SupervisorEmitEvents,
   SupervisorListenEvents,
@@ -511,14 +511,14 @@ export function sendHostsChanged(): void {
   socket.emit(HubEvents.HOSTS_CHANGED);
 }
 
-export function sendOpenAiCodexAccessTokenGet() {
-  return new Promise<OpenAiCodexAccessTokenResponse>((resolve, reject) => {
+export function sendCodexAccessTokenGet() {
+  return new Promise<CodexAccessTokenResponse>((resolve, reject) => {
     if (!socket || !connected) {
       reject(new Error("Not connected to hub"));
       return;
     }
 
-    socket.emit(HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET, {}, (response) => {
+    socket.emit(HubEvents.CODEX_ACCESS_TOKEN_GET, {}, (response) => {
       resolve(response);
     });
   });

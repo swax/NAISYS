@@ -6,9 +6,9 @@ import {
   parseSpendLimitsFromConfigJson,
 } from "@naisys/common";
 import {
+  type CodexUsage,
   type DualLogger,
-  fetchOpenAiCodexUsage,
-  type OpenAiCodexUsage,
+  fetchCodexUsage,
 } from "@naisys/common-node";
 import {
   type HubDatabaseService,
@@ -22,9 +22,9 @@ import {
 } from "@naisys/hub-protocol";
 
 import type { NaisysServer } from "../services/naisysServer.js";
+import type { HubCodexAuthService } from "./hubCodexAuthService.js";
 import type { HubConfigService } from "./hubConfigService.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
-import type { HubOpenAiCodexAuthService } from "./hubOpenAiCodexAuthService.js";
 
 const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
 const DEFAULT_CODEX_USAGE_LIMIT_PERCENT = 80;
@@ -41,7 +41,7 @@ export function createHubCostService(
   logService: DualLogger,
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
-  codexAuthService: HubOpenAiCodexAuthService,
+  codexAuthService: HubCodexAuthService,
 ) {
   // Suspended users → original suspension reason. Stored so a defensive
   // re-send (when a suspended user keeps writing costs) can use the same text.
@@ -490,7 +490,7 @@ export function createHubCostService(
     return codexUserIds;
   }
 
-  function formatUsagePercents(usage: OpenAiCodexUsage): string {
+  function formatUsagePercents(usage: CodexUsage): string {
     const parts: string[] = [];
     const primary = usage.primaryWindow?.usedPercent;
     const secondary = usage.secondaryWindow?.usedPercent;
@@ -546,7 +546,7 @@ export function createHubCostService(
       return;
     }
 
-    const usage = await fetchOpenAiCodexUsage({
+    const usage = await fetchCodexUsage({
       accessToken: token.accessToken,
     });
 

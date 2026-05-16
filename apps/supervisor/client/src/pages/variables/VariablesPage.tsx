@@ -30,7 +30,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { VariablesResponse } from "../../lib/apiClient";
 import { api, apiEndpoints } from "../../lib/apiClient";
 import { deleteVariable, saveVariable } from "../../lib/apiVariables";
-import { OpenAiOAuthSetupDialog } from "./OpenAiOAuthSetupDialog";
+import { CodexOAuthSetupDialog } from "./CodexOAuthSetupDialog";
 
 interface VariableRow {
   key: string;
@@ -463,7 +463,7 @@ export const VariablesPage: React.FC = () => {
           </Table.Tbody>
         </Table>
       )}
-      <OpenAiOAuthSetupDialog
+      <CodexOAuthSetupDialog
         opened={oauthOpened}
         onClose={() => setOauthOpened(false)}
         onComplete={() => void fetchData()}

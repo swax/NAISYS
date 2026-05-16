@@ -2,7 +2,7 @@
 // writer can safely hold it — this module single-flights the refresh path.
 
 const OPENAI_AUTH_BASE_URL = "https://auth.openai.com";
-export const OPENAI_CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
+export const CODEX_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 const REFRESH_SKEW_MS = 5 * 60_000;
 
 export type FetchLike = (
@@ -10,13 +10,13 @@ export type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>;
 
-export type OpenAiCodexToken = {
+export type CodexToken = {
   access: string;
   refresh: string;
   expires: number;
 };
 
-export interface OpenAiCodexAccessTokenResult {
+export interface CodexAccessTokenResult {
   accessToken: string;
   /** Unix epoch milliseconds when the access token expires (from JWT `exp` or `expires_in`). */
   expiresAt: number;
@@ -48,7 +48,7 @@ function normalizeLifetimeMs(value: unknown): number | undefined {
   return Number.parseInt(text, 10) * 1000;
 }
 
-export function resolveOpenAiCodexAccessTokenExpiry(
+export function resolveCodexAccessTokenExpiry(
   token: string,
 ): number | undefined {
   const payload = token.split(".")[1];
@@ -82,10 +82,10 @@ function formatRefreshError(status: number, bodyText: string): string {
     : `OpenAI OAuth refresh failed: HTTP ${status}`;
 }
 
-export async function refreshOpenAiCodexToken(
+export async function refreshCodexToken(
   refreshToken: string,
   fetchFn: FetchLike = fetch,
-): Promise<OpenAiCodexToken> {
+): Promise<CodexToken> {
   const response = await fetchFn(`${OPENAI_AUTH_BASE_URL}/oauth/token`, {
     method: "POST",
     headers: {
@@ -93,7 +93,7 @@ export async function refreshOpenAiCodexToken(
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      client_id: OPENAI_CODEX_CLIENT_ID,
+      client_id: CODEX_CLIENT_ID,
       refresh_token: refreshToken,
     }),
   });
@@ -119,20 +119,20 @@ export async function refreshOpenAiCodexToken(
     expires:
       expiresInMs !== undefined
         ? Date.now() + expiresInMs
-        : (resolveOpenAiCodexAccessTokenExpiry(access) ?? Date.now()),
+        : (resolveCodexAccessTokenExpiry(access) ?? Date.now()),
   };
 }
 
 /** Becomes `stale: true` mid-flight if reset() is called while resolveFresh is awaiting. Resolvers with persistence side effects should check before committing. */
-export interface OpenAiCodexResolveFreshSignal {
+export interface CodexResolveFreshSignal {
   readonly stale: boolean;
 }
 
-export interface OpenAiCodexAccessTokenCacheOptions {
+export interface CodexAccessTokenCacheOptions {
   /** Fetches a fresh access token + expiry. The cache calls this when no cached entry is valid. */
   resolveFresh: (
-    signal: OpenAiCodexResolveFreshSignal,
-  ) => Promise<OpenAiCodexAccessTokenResult | undefined>;
+    signal: CodexResolveFreshSignal,
+  ) => Promise<CodexAccessTokenResult | undefined>;
   /** How early to treat a cached token as stale (defaults to 5 min). */
   skewMs?: number;
   /** Cache resolveFresh failures for this many ms — subsequent calls within the window throw the cached error without retrying. Zero (default) disables. */
@@ -141,8 +141,8 @@ export interface OpenAiCodexAccessTokenCacheOptions {
   now?: () => number;
 }
 
-export interface OpenAiCodexAccessTokenProvider {
-  getAccessToken(): Promise<OpenAiCodexAccessTokenResult | undefined>;
+export interface CodexAccessTokenProvider {
+  getAccessToken(): Promise<CodexAccessTokenResult | undefined>;
   /** Drops the access-token cache + failure cooldown. Use for force-refresh after an observed auth failure — keeps any in-memory rotated refresh token. */
   invalidate(): void;
   /** Harder reset that also drops the in-memory rotated refresh token. Use after external re-auth replaces the persisted refresh value. */
@@ -150,9 +150,9 @@ export interface OpenAiCodexAccessTokenProvider {
 }
 
 /** Single-flight expiring cache. Use when the caller produces tokens directly (e.g. agent fetching from the hub). */
-export function createOpenAiCodexAccessTokenCache(
-  options: OpenAiCodexAccessTokenCacheOptions,
-): OpenAiCodexAccessTokenProvider {
+export function createCodexAccessTokenCache(
+  options: CodexAccessTokenCacheOptions,
+): CodexAccessTokenProvider {
   const skewMs = options.skewMs ?? REFRESH_SKEW_MS;
   const failureCooldownMs = options.failureCooldownMs ?? 0;
   const now = options.now ?? Date.now;
@@ -161,15 +161,15 @@ export function createOpenAiCodexAccessTokenCache(
   // its commit if a reset arrived during the await — protects against an
   // old-account refresh repopulating cache state after re-auth.
   let resetGeneration = 0;
-  let cached: OpenAiCodexAccessTokenResult | undefined;
+  let cached: CodexAccessTokenResult | undefined;
   let cachedFailure: { error: Error; until: number } | undefined;
   let inFlight:
-    | Promise<OpenAiCodexAccessTokenResult | undefined>
+    | Promise<CodexAccessTokenResult | undefined>
     | undefined;
 
-  async function refresh(): Promise<OpenAiCodexAccessTokenResult | undefined> {
+  async function refresh(): Promise<CodexAccessTokenResult | undefined> {
     const myGen = resetGeneration;
-    const signal: OpenAiCodexResolveFreshSignal = {
+    const signal: CodexResolveFreshSignal = {
       get stale() {
         return myGen !== resetGeneration;
       },
@@ -190,7 +190,7 @@ export function createOpenAiCodexAccessTokenCache(
   }
 
   async function getAccessToken(): Promise<
-    OpenAiCodexAccessTokenResult | undefined
+    CodexAccessTokenResult | undefined
   > {
     if (cached && cached.expiresAt > now() + skewMs) {
       return cached;
@@ -228,7 +228,7 @@ export function createOpenAiCodexAccessTokenCache(
   return { getAccessToken, invalidate, reset };
 }
 
-export interface OpenAiCodexAccessTokenProviderOptions {
+export interface CodexAccessTokenProviderOptions {
   /** Reads the latest persisted refresh token (or undefined if not configured). */
   getRefreshToken: () => Promise<string | undefined> | string | undefined;
   /**
@@ -275,9 +275,9 @@ export interface OpenAiCodexAccessTokenProviderOptions {
  *      throws (DB down) the next attempt must use the new value we hold, not
  *      the stale persisted one OpenAI has already burned.
  */
-export function createOpenAiCodexAccessTokenProvider(
-  options: OpenAiCodexAccessTokenProviderOptions,
-): OpenAiCodexAccessTokenProvider {
+export function createCodexAccessTokenProvider(
+  options: CodexAccessTokenProviderOptions,
+): CodexAccessTokenProvider {
   const fetchFn = options.fetchFn ?? fetch;
   // Most-recent rotation from OpenAI, used to bridge transient save failures.
   let inMemoryRefresh: string | undefined;
@@ -285,7 +285,7 @@ export function createOpenAiCodexAccessTokenProvider(
   // read means an external writer replaced the value.
   let expectedPersistedRefresh: string | undefined;
 
-  const cache = createOpenAiCodexAccessTokenCache({
+  const cache = createCodexAccessTokenCache({
     now: options.now,
     failureCooldownMs: options.failureCooldownMs,
     resolveFresh: async (signal) => {
@@ -316,7 +316,7 @@ export function createOpenAiCodexAccessTokenProvider(
         return undefined;
       }
 
-      const refreshed = await refreshOpenAiCodexToken(refreshToken, fetchFn);
+      const refreshed = await refreshCodexToken(refreshToken, fetchFn);
       if (signal.stale) {
         // reset() fired during the OAuth call — caller replaced the
         // persisted refresh token. Don't write inMemoryRefresh and don't

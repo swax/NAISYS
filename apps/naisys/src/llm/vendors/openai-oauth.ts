@@ -1,7 +1,7 @@
-import { OPENAI_CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
+import { CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
 import {
-  createOpenAiCodexAccessTokenProvider,
-  type OpenAiCodexAccessTokenProvider,
+  type CodexAccessTokenProvider,
+  createCodexAccessTokenProvider,
 } from "@naisys/common-node";
 import { HubEvents } from "@naisys/hub-protocol";
 
@@ -16,7 +16,7 @@ import type { QueryResult, QuerySources, VendorDeps } from "./vendorTypes.js";
 // one provider — otherwise concurrent refreshes burn the token lineage at
 // OpenAI. Module-scoped so all callers in the process share state. Hub
 // mode is stateless on the agent side (hub owns rotation).
-let standaloneProvider: OpenAiCodexAccessTokenProvider | undefined;
+let standaloneProvider: CodexAccessTokenProvider | undefined;
 
 /**
  * Builds the function vendors call to obtain a Codex OAuth access token.
@@ -35,7 +35,7 @@ export function createCodexAccessTokenGetter(
   if (hubClient) {
     return async (forceRefresh) => {
       const response = await hubClient.sendRequest(
-        HubEvents.OPENAI_CODEX_ACCESS_TOKEN_GET,
+        HubEvents.CODEX_ACCESS_TOKEN_GET,
         forceRefresh ? { forceRefresh: true } : {},
       );
       if (!response.success || !response.accessToken) {
@@ -48,18 +48,18 @@ export function createCodexAccessTokenGetter(
   }
 
   if (!standaloneProvider) {
-    standaloneProvider = createOpenAiCodexAccessTokenProvider({
+    standaloneProvider = createCodexAccessTokenProvider({
       getRefreshToken: () =>
         globalConfigService.globalConfig().variableMap[
-          OPENAI_CODEX_REFRESH_TOKEN_VAR
+          CODEX_REFRESH_TOKEN_VAR
         ],
-      saveRefreshToken: async (refreshToken) => {
+      saveRefreshToken: (refreshToken) => {
         globalConfigService.setVariableValue(
-          OPENAI_CODEX_REFRESH_TOKEN_VAR,
+          CODEX_REFRESH_TOKEN_VAR,
           refreshToken,
           { exportToShell: false },
         );
-        return true;
+        return Promise.resolve(true);
       },
     });
   }

@@ -1,15 +1,15 @@
 import {
+  CODEX_REFRESH_TOKEN_VAR,
+  CODEX_RESPONSES_BASE_URL,
+} from "./codexOAuth.js";
+import {
   type ImageModel,
   LlmApiType,
   type LlmModel,
   type LlmReasoningLevel,
 } from "./modelTypes.js";
-import {
-  OPENAI_CODEX_REFRESH_TOKEN_VAR,
-  OPENAI_CODEX_RESPONSES_BASE_URL,
-} from "./openAiOAuth.js";
 
-function openAiCodexOAuthModel(params: {
+function codexOAuthModel(params: {
   key: string;
   label: string;
   versionName: string;
@@ -19,12 +19,12 @@ function openAiCodexOAuthModel(params: {
     key: params.key,
     label: params.label,
     versionName: params.versionName,
-    baseUrl: OPENAI_CODEX_RESPONSES_BASE_URL,
+    baseUrl: CODEX_RESPONSES_BASE_URL,
     apiType: LlmApiType.OpenAIOAuth,
     // Refresh token presence indicates the provider is configured; the
     // access token itself is minted on demand by the hub and never lives
     // in the variable map.
-    apiKeyVar: OPENAI_CODEX_REFRESH_TOKEN_VAR,
+    apiKeyVar: CODEX_REFRESH_TOKEN_VAR,
     maxTokens: 400_000,
     // Subscription-backed ChatGPT/Codex OAuth is not metered like API-key usage.
     inputCost: 0,
@@ -163,25 +163,25 @@ export const builtInLlmModels: LlmModel[] = [
     supportsVision: true,
     reasoningLevel: "medium",
   },
-  openAiCodexOAuthModel({
+  codexOAuthModel({
     key: "gpt55oauth",
     label: "GPT 5.5 Codex OAuth",
     versionName: "gpt-5.5",
     reasoningLevel: "medium",
   }),
-  openAiCodexOAuthModel({
+  codexOAuthModel({
     key: "gpt5oauth",
     label: "GPT 5.4 Codex OAuth",
     versionName: "gpt-5.4",
     reasoningLevel: "medium",
   }),
-  openAiCodexOAuthModel({
+  codexOAuthModel({
     key: "gpt54minioauth",
     label: "GPT 5.4 Mini Codex OAuth",
     versionName: "gpt-5.4-mini",
     reasoningLevel: "medium",
   }),
-  openAiCodexOAuthModel({
+  codexOAuthModel({
     key: "gpt52oauth",
     label: "GPT 5.2 Codex OAuth",
     versionName: "gpt-5.2",

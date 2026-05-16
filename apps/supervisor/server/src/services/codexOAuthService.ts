@@ -1,19 +1,19 @@
-import { OPENAI_CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
+import { CODEX_REFRESH_TOKEN_VAR } from "@naisys/common";
 import {
-  fetchOpenAiCodexUsage,
+  CODEX_CLIENT_ID,
+  fetchCodexUsage,
   formatOpenAiError,
   normalizePositiveMilliseconds,
-  OPENAI_CODEX_CLIENT_ID,
   parseJsonObject,
   trimNonEmpty,
 } from "@naisys/common-node";
 import { randomUUID } from "crypto";
 
-import { sendOpenAiCodexAccessTokenGet } from "./hubConnectionService.js";
+import { sendCodexAccessTokenGet } from "./hubConnectionService.js";
 import { saveVariable } from "./variableService.js";
 
 const OPENAI_AUTH_BASE_URL = "https://auth.openai.com";
-const OPENAI_CODEX_DEVICE_CALLBACK_URL = `${OPENAI_AUTH_BASE_URL}/deviceauth/callback`;
+const CODEX_DEVICE_CALLBACK_URL = `${OPENAI_AUTH_BASE_URL}/deviceauth/callback`;
 const DEVICE_CODE_TIMEOUT_MS = 15 * 60_000;
 const DEVICE_CODE_DEFAULT_INTERVAL_MS = 5_000;
 const DEVICE_CODE_MIN_INTERVAL_MS = 1_000;
@@ -54,7 +54,7 @@ async function requestDeviceCode(fetchFn: FetchLike): Promise<DeviceFlow> {
         "User-Agent": "naisys",
       },
       body: JSON.stringify({
-        client_id: OPENAI_CODEX_CLIENT_ID,
+        client_id: CODEX_CLIENT_ID,
       }),
     },
   );
@@ -153,8 +153,8 @@ async function exchangeDeviceAuthorization(params: {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code: params.authorizationCode,
-      redirect_uri: OPENAI_CODEX_DEVICE_CALLBACK_URL,
-      client_id: OPENAI_CODEX_CLIENT_ID,
+      redirect_uri: CODEX_DEVICE_CALLBACK_URL,
+      client_id: CODEX_CLIENT_ID,
       code_verifier: params.codeVerifier,
     }),
   });
@@ -182,7 +182,7 @@ async function exchangeDeviceAuthorization(params: {
   return { refresh };
 }
 
-export async function startOpenAiCodexOAuthFlow(fetchFn: FetchLike = fetch) {
+export async function startCodexOAuthFlow(fetchFn: FetchLike = fetch) {
   const flow = await requestDeviceCode(fetchFn);
   const flowId = randomUUID();
   flows.set(flowId, flow);
@@ -196,7 +196,7 @@ export async function startOpenAiCodexOAuthFlow(fetchFn: FetchLike = fetch) {
   };
 }
 
-export async function pollOpenAiCodexOAuthFlow(params: {
+export async function pollCodexOAuthFlow(params: {
   flowId: string;
   userUuid: string;
   fetchFn?: FetchLike;
@@ -230,7 +230,7 @@ export async function pollOpenAiCodexOAuthFlow(params: {
   });
 
   await saveVariable(
-    OPENAI_CODEX_REFRESH_TOKEN_VAR,
+    CODEX_REFRESH_TOKEN_VAR,
     token.refresh,
     false,
     true,
@@ -242,23 +242,23 @@ export async function pollOpenAiCodexOAuthFlow(params: {
     success: true as const,
     status: "complete" as const,
     message: "OpenAI Codex OAuth refresh token saved.",
-    savedKeys: [OPENAI_CODEX_REFRESH_TOKEN_VAR],
+    savedKeys: [CODEX_REFRESH_TOKEN_VAR],
   };
 }
 
-export async function checkOpenAiCodexOAuthUsage(params: {
+export async function checkCodexOAuthUsage(params: {
   fetchFn?: FetchLike;
 }) {
   // Route through the hub so rotation stays single-flight.
-  const tokenResult = await sendOpenAiCodexAccessTokenGet();
+  const tokenResult = await sendCodexAccessTokenGet();
   if (!tokenResult.success || !tokenResult.accessToken) {
     throw new Error(
       tokenResult.error ??
-        `Set ${OPENAI_CODEX_REFRESH_TOKEN_VAR} before checking OpenAI Codex usage.`,
+        `Set ${CODEX_REFRESH_TOKEN_VAR} before checking OpenAI Codex usage.`,
     );
   }
 
-  const usage = await fetchOpenAiCodexUsage({
+  const usage = await fetchCodexUsage({
     accessToken: tokenResult.accessToken,
     fetchFn: params.fetchFn,
   });

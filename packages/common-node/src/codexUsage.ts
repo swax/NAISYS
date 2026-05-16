@@ -2,15 +2,15 @@
 // Pure HTTP + parse — callers supply the token (the hub mints one locally, the
 // supervisor routes through the hub).
 
-import type { FetchLike } from "./openAiCodexAccessToken.js";
+import type { FetchLike } from "./codexAccessToken.js";
 import {
   formatOpenAiError,
   normalizeFiniteNumber,
   parseJsonObject,
-} from "./openAiCodexHttp.js";
+} from "./codexHttp.js";
 
 const OPENAI_CHATGPT_BASE_URL = "https://chatgpt.com/backend-api";
-const OPENAI_CODEX_USAGE_URL = `${OPENAI_CHATGPT_BASE_URL}/wham/usage`;
+const CODEX_USAGE_URL = `${OPENAI_CHATGPT_BASE_URL}/wham/usage`;
 
 type WhamUsageWindow = {
   limit_window_seconds?: unknown;
@@ -19,24 +19,24 @@ type WhamUsageWindow = {
   reset_after_seconds?: unknown;
 };
 
-export interface OpenAiCodexUsageWindow {
+export interface CodexUsageWindow {
   limitWindowSeconds?: number;
   usedPercent?: number;
   resetAt?: number;
   resetAfterSeconds?: number;
 }
 
-export interface OpenAiCodexUsage {
+export interface CodexUsage {
   /** Unix epoch milliseconds when usage was fetched. */
   checkedAt: number;
   limitReached?: boolean;
-  primaryWindow?: OpenAiCodexUsageWindow;
-  secondaryWindow?: OpenAiCodexUsageWindow;
+  primaryWindow?: CodexUsageWindow;
+  secondaryWindow?: CodexUsageWindow;
 }
 
 function normalizeUsageWindow(
   value: unknown,
-): OpenAiCodexUsageWindow | undefined {
+): CodexUsageWindow | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
   }
@@ -53,12 +53,12 @@ function normalizeUsageWindow(
 }
 
 /** GET the Codex usage windows for the account behind `accessToken`. */
-export async function fetchOpenAiCodexUsage(params: {
+export async function fetchCodexUsage(params: {
   accessToken: string;
   fetchFn?: FetchLike;
-}): Promise<OpenAiCodexUsage> {
+}): Promise<CodexUsage> {
   const fetchFn = params.fetchFn ?? fetch;
-  const response = await fetchFn(OPENAI_CODEX_USAGE_URL, {
+  const response = await fetchFn(CODEX_USAGE_URL, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${params.accessToken}`,

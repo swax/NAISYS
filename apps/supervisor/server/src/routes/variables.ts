@@ -1,24 +1,24 @@
 import type { HateoasAction } from "@naisys/common";
 import type {
+  CodexOAuthPollRequest,
+  CodexOAuthPollResponse,
+  CodexOAuthStartResponse,
+  CodexOAuthUsageResponse,
   DeleteVariableParams,
   DeleteVariableResponse,
   ErrorResponse,
-  OpenAiCodexOAuthPollRequest,
-  OpenAiCodexOAuthPollResponse,
-  OpenAiCodexOAuthStartResponse,
-  OpenAiCodexOAuthUsageResponse,
   SaveVariableRequest,
   SaveVariableResponse,
   VariablesResponse,
 } from "@naisys/supervisor-shared";
 import {
+  CodexOAuthPollRequestSchema,
+  CodexOAuthPollResponseSchema,
+  CodexOAuthStartResponseSchema,
+  CodexOAuthUsageResponseSchema,
   DeleteVariableParamsSchema,
   DeleteVariableResponseSchema,
   ErrorResponseSchema,
-  OpenAiCodexOAuthPollRequestSchema,
-  OpenAiCodexOAuthPollResponseSchema,
-  OpenAiCodexOAuthStartResponseSchema,
-  OpenAiCodexOAuthUsageResponseSchema,
   SaveVariableRequestSchema,
   SaveVariableResponseSchema,
   VariablesResponseSchema,
@@ -28,12 +28,12 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { hasPermission, requirePermission } from "../auth-middleware.js";
 import { API_PREFIX } from "../hateoas.js";
 import { permGate } from "../route-helpers.js";
-import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
-  checkOpenAiCodexOAuthUsage,
-  pollOpenAiCodexOAuthFlow,
-  startOpenAiCodexOAuthFlow,
-} from "../services/openAiCodexOAuthService.js";
+  checkCodexOAuthUsage,
+  pollCodexOAuthFlow,
+  startCodexOAuthFlow,
+} from "../services/codexOAuthService.js";
+import { sendVariablesChanged } from "../services/hubConnectionService.js";
 import {
   deleteVariable,
   getVariables,
@@ -98,22 +98,22 @@ export default function variablesRoutes(
     },
   );
 
-  fastify.post<{ Reply: OpenAiCodexOAuthStartResponse | ErrorResponse }>(
-    "/openai-codex-oauth/start",
+  fastify.post<{ Reply: CodexOAuthStartResponse | ErrorResponse }>(
+    "/codex-oauth/start",
     {
       preHandler: [requirePermission("manage_variables")],
       schema: {
         description: "Start OpenAI Codex OAuth device-code setup",
         tags: ["Variables"],
         response: {
-          200: OpenAiCodexOAuthStartResponseSchema,
+          200: CodexOAuthStartResponseSchema,
           500: ErrorResponseSchema,
         },
       },
     },
     async (_request, reply) => {
       try {
-        return await startOpenAiCodexOAuthFlow();
+        return await startCodexOAuthFlow();
       } catch (error) {
         const message =
           error instanceof Error
@@ -125,25 +125,25 @@ export default function variablesRoutes(
   );
 
   fastify.post<{
-    Body: OpenAiCodexOAuthPollRequest;
-    Reply: OpenAiCodexOAuthPollResponse | ErrorResponse;
+    Body: CodexOAuthPollRequest;
+    Reply: CodexOAuthPollResponse | ErrorResponse;
   }>(
-    "/openai-codex-oauth/poll",
+    "/codex-oauth/poll",
     {
       preHandler: [requirePermission("manage_variables")],
       schema: {
         description: "Poll OpenAI Codex OAuth device-code setup",
         tags: ["Variables"],
-        body: OpenAiCodexOAuthPollRequestSchema,
+        body: CodexOAuthPollRequestSchema,
         response: {
-          200: OpenAiCodexOAuthPollResponseSchema,
+          200: CodexOAuthPollResponseSchema,
           500: ErrorResponseSchema,
         },
       },
     },
     async (request, reply) => {
       try {
-        const result = await pollOpenAiCodexOAuthFlow({
+        const result = await pollCodexOAuthFlow({
           flowId: request.body.flowId,
           userUuid: request.supervisorUser!.uuid,
         });
@@ -161,22 +161,22 @@ export default function variablesRoutes(
     },
   );
 
-  fastify.post<{ Reply: OpenAiCodexOAuthUsageResponse | ErrorResponse }>(
-    "/openai-codex-oauth/usage",
+  fastify.post<{ Reply: CodexOAuthUsageResponse | ErrorResponse }>(
+    "/codex-oauth/usage",
     {
       preHandler: [requirePermission("manage_variables")],
       schema: {
         description: "Check OpenAI Codex OAuth usage windows",
         tags: ["Variables"],
         response: {
-          200: OpenAiCodexOAuthUsageResponseSchema,
+          200: CodexOAuthUsageResponseSchema,
           500: ErrorResponseSchema,
         },
       },
     },
     async (_request, reply) => {
       try {
-        return await checkOpenAiCodexOAuthUsage({});
+        return await checkCodexOAuthUsage({});
       } catch (error) {
         const message =
           error instanceof Error

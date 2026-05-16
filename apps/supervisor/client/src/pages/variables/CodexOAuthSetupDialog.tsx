@@ -17,17 +17,17 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import type {
-  OpenAiCodexOAuthPollResponse,
-  OpenAiCodexOAuthStartResponse,
-  OpenAiCodexOAuthUsageResponse,
+  CodexOAuthPollResponse,
+  CodexOAuthStartResponse,
+  CodexOAuthUsageResponse,
 } from "../../lib/apiClient";
 import {
-  checkOpenAiCodexOAuthUsage,
-  pollOpenAiCodexOAuth,
-  startOpenAiCodexOAuth,
+  checkCodexOAuthUsage,
+  pollCodexOAuth,
+  startCodexOAuth,
 } from "../../lib/apiVariables";
 
-interface OpenAiOAuthSetupDialogProps {
+interface CodexOAuthSetupDialogProps {
   opened: boolean;
   onClose: () => void;
   onComplete: () => void;
@@ -52,7 +52,7 @@ const formatDuration = (seconds: number) => {
 };
 
 const formatResetTime = (
-  window: NonNullable<OpenAiCodexOAuthUsageResponse["primaryWindow"]>,
+  window: NonNullable<CodexOAuthUsageResponse["primaryWindow"]>,
 ) => {
   if (window.resetAfterSeconds !== undefined) {
     return `resets in ${formatDuration(window.resetAfterSeconds)}`;
@@ -70,7 +70,7 @@ const formatResetTime = (
 
 const formatUsageWindow = (
   label: string,
-  window: OpenAiCodexOAuthUsageResponse["primaryWindow"],
+  window: CodexOAuthUsageResponse["primaryWindow"],
 ) => {
   if (!window) return undefined;
   const parts: string[] = [];
@@ -84,14 +84,14 @@ const formatUsageWindow = (
   return parts.length ? `${label}: ${parts.join(", ")}` : undefined;
 };
 
-export const OpenAiOAuthSetupDialog: React.FC<
-  OpenAiOAuthSetupDialogProps
+export const CodexOAuthSetupDialog: React.FC<
+  CodexOAuthSetupDialogProps
 > = ({ opened, onClose, onComplete }) => {
-  const [flow, setFlow] = useState<OpenAiCodexOAuthStartResponse | null>(null);
+  const [flow, setFlow] = useState<CodexOAuthStartResponse | null>(null);
   const [pollResult, setPollResult] =
-    useState<OpenAiCodexOAuthPollResponse | null>(null);
+    useState<CodexOAuthPollResponse | null>(null);
   const [usageResult, setUsageResult] =
-    useState<OpenAiCodexOAuthUsageResponse | null>(null);
+    useState<CodexOAuthUsageResponse | null>(null);
   const [starting, setStarting] = useState(false);
   const [polling, setPolling] = useState(false);
   const [checkingUsage, setCheckingUsage] = useState(false);
@@ -118,7 +118,7 @@ export const OpenAiOAuthSetupDialog: React.FC<
     setPollResult(null);
     setUsageResult(null);
     try {
-      const result = await startOpenAiCodexOAuth();
+      const result = await startCodexOAuth();
       setFlow(result);
       setPollResult({
         success: true,
@@ -141,7 +141,7 @@ export const OpenAiOAuthSetupDialog: React.FC<
     setCheckingUsage(true);
     setError(null);
     try {
-      setUsageResult(await checkOpenAiCodexOAuthUsage());
+      setUsageResult(await checkCodexOAuthUsage());
     } catch (err) {
       setUsageResult(null);
       setError(
@@ -159,7 +159,7 @@ export const OpenAiOAuthSetupDialog: React.FC<
     setPolling(true);
     setError(null);
     try {
-      const result = await pollOpenAiCodexOAuth(flow.flowId);
+      const result = await pollCodexOAuth(flow.flowId);
       setPollResult(result);
       if (result.status === "complete") {
         setFlow(null);

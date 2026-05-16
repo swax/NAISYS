@@ -47,7 +47,7 @@ export type DeleteVariableResponse = z.infer<
   typeof DeleteVariableResponseSchema
 >;
 
-export const OpenAiCodexOAuthStartResponseSchema = z.object({
+export const CodexOAuthStartResponseSchema = z.object({
   success: z.literal(true),
   flowId: z.string(),
   verificationUrl: z.string(),
@@ -56,49 +56,49 @@ export const OpenAiCodexOAuthStartResponseSchema = z.object({
   intervalMs: z.number(),
 });
 
-export type OpenAiCodexOAuthStartResponse = z.infer<
-  typeof OpenAiCodexOAuthStartResponseSchema
+export type CodexOAuthStartResponse = z.infer<
+  typeof CodexOAuthStartResponseSchema
 >;
 
-export const OpenAiCodexOAuthPollRequestSchema = z.object({
+export const CodexOAuthPollRequestSchema = z.object({
   flowId: z.string(),
 });
 
-export type OpenAiCodexOAuthPollRequest = z.infer<
-  typeof OpenAiCodexOAuthPollRequestSchema
+export type CodexOAuthPollRequest = z.infer<
+  typeof CodexOAuthPollRequestSchema
 >;
 
-export const OpenAiCodexOAuthPollResponseSchema = z.object({
+export const CodexOAuthPollResponseSchema = z.object({
   success: z.literal(true),
   status: z.enum(["pending", "complete", "expired"]),
   message: z.string(),
   savedKeys: z.array(z.string()).optional(),
 });
 
-export type OpenAiCodexOAuthPollResponse = z.infer<
-  typeof OpenAiCodexOAuthPollResponseSchema
+export type CodexOAuthPollResponse = z.infer<
+  typeof CodexOAuthPollResponseSchema
 >;
 
-export const OpenAiCodexUsageWindowSchema = z.object({
+export const CodexUsageWindowSchema = z.object({
   limitWindowSeconds: z.number().optional(),
   usedPercent: z.number().optional(),
   resetAt: z.number().optional(),
   resetAfterSeconds: z.number().optional(),
 });
 
-export type OpenAiCodexUsageWindow = z.infer<
-  typeof OpenAiCodexUsageWindowSchema
+export type CodexUsageWindow = z.infer<
+  typeof CodexUsageWindowSchema
 >;
 
-export const OpenAiCodexOAuthUsageResponseSchema = z.object({
+export const CodexOAuthUsageResponseSchema = z.object({
   success: z.literal(true),
   checkedAt: z.number(),
   limitReached: z.boolean().optional(),
-  primaryWindow: OpenAiCodexUsageWindowSchema.optional(),
-  secondaryWindow: OpenAiCodexUsageWindowSchema.optional(),
+  primaryWindow: CodexUsageWindowSchema.optional(),
+  secondaryWindow: CodexUsageWindowSchema.optional(),
   message: z.string(),
 });
 
-export type OpenAiCodexOAuthUsageResponse = z.infer<
-  typeof OpenAiCodexOAuthUsageResponseSchema
+export type CodexOAuthUsageResponse = z.infer<
+  typeof CodexOAuthUsageResponseSchema
 >;
