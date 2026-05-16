@@ -20,8 +20,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { useHostDataContext } from "../../contexts/HostDataContext";
-import type { NpmVersionsResponse } from "../../lib/apiClient";
-import { api, apiEndpoints } from "../../lib/apiClient";
+import type { NpmVersionsResponse } from "../../lib/api/apiClient";
+import { api, apiEndpoints } from "../../lib/api/apiClient";
 
 interface UpdateDialogProps {
   opened: boolean;

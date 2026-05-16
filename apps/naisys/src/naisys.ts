@@ -14,7 +14,7 @@ import dotenv from "dotenv";
 import {
   runWithRestartWrapper,
   shouldUseRestartWrapper,
-} from "./services/restartManager.js";
+} from "./services/runtime/restartManager.js";
 
 // Load .env before the wrapper guard so users can set NAISYS_* knobs
 // (notably NAISYS_DISABLE_RESTART_WRAPPER) in .env rather than having to

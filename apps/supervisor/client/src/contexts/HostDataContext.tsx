@@ -1,7 +1,7 @@
 import type { HateoasAction } from "@naisys/common";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-import { useHostData } from "../hooks/useHostData";
+import { useHostData } from "../hooks/data/useHostData";
 import type { Host } from "../types/agent";
 
 interface HostDataContextType {

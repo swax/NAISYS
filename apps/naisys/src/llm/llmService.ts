@@ -4,7 +4,7 @@ import type { AgentConfig } from "../agent/agentConfig.js";
 import type { ComputerService } from "../computer-use/computerService.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
-import type { ModelService } from "../services/modelService.js";
+import type { ModelService } from "../services/agent/modelService.js";
 import type { CommandTools } from "./commandTool.js";
 import type { CostTracker } from "./costTracker.js";
 import type { LlmMessage } from "./llmDtos.js";

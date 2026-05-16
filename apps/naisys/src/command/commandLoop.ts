@@ -4,10 +4,10 @@ import * as readline from "readline";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { DesktopService } from "../computer-use/desktop.js";
-import type { BrowserService } from "../features/browser.js";
-import type { LynxService } from "../features/lynx.js";
-import type { SessionService } from "../features/session.js";
-import type { WorkspacesFeature } from "../features/workspaces.js";
+import type { SessionService } from "../features/shell/session.js";
+import type { WorkspacesFeature } from "../features/shell/workspaces.js";
+import type { BrowserService } from "../features/web/browser.js";
+import type { LynxService } from "../features/web/lynx.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { ContextManager } from "../llm/contextManager.js";
@@ -20,19 +20,19 @@ import type { LLMService } from "../llm/llmService.js";
 import type { DesktopAction } from "../llm/vendors/vendorTypes.js";
 import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
-import type { LogService } from "../services/logService.js";
-import type { ModelService } from "../services/modelService.js";
-import type { RunService } from "../services/runService.js";
-import type { StartupAttachmentService } from "../services/startupAttachmentService.js";
+import type { LogService } from "../services/agent/logService.js";
+import type { ModelService } from "../services/agent/modelService.js";
+import type { RunService } from "../services/agent/runService.js";
+import type { StartupAttachmentService } from "../services/agent/startupAttachmentService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
-import { createEscKeyListener } from "../utils/escKeyListener.js";
-import type { InputModeService } from "../utils/inputMode.js";
-import type { OutputService } from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import { createEscKeyListener } from "../utils/input/escKeyListener.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
+import type { OutputService } from "../utils/output/output.js";
+import { OutputColor } from "../utils/output/output.js";
 import type {
   NotificationKind,
   PromptNotificationService,
-} from "../utils/promptNotificationService.js";
+} from "../utils/output/promptNotificationService.js";
 import type { CommandHandler } from "./commandHandler.js";
 import type { WaitBehavior } from "./commandRegistry.js";
 import {

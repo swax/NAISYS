@@ -9,9 +9,9 @@ import type { AgentConfig } from "../agent/agentConfig.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { HubCostBuffer } from "../hub/hubCostBuffer.js";
-import type { ModelService } from "../services/modelService.js";
-import type { RunService } from "../services/runService.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { ModelService } from "../services/agent/modelService.js";
+import type { RunService } from "../services/agent/runService.js";
+import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 
 export const SPEND_LIMIT_TIMEOUT_SECONDS = 60;
 

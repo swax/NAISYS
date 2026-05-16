@@ -18,8 +18,8 @@ import { IconApi, IconEye, IconLogout, IconUser } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
-import { RouteErrorBoundary } from "./ErrorBoundary";
-import { LoginModal } from "./LoginModal";
+import { RouteErrorBoundary } from "./error/ErrorBoundary";
+import { LoginModal } from "./forms/LoginModal";
 
 const navLinks = [
   { label: "Items", path: "/items" },

@@ -30,10 +30,10 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
-import { AgentModelIcon } from "../../components/AgentModelIcon";
+import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
 import { HelpTooltip } from "../../components/HelpTooltip";
-import { getAgentData } from "../../lib/apiAgents";
-import { createAgentUser, createUser, getUsers } from "../../lib/apiUsers";
+import { getAgentData } from "../../lib/api/apiAgents";
+import { createAgentUser, createUser, getUsers } from "../../lib/api/apiUsers";
 
 const cellLinkStyle = {
   display: "block",

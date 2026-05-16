@@ -20,12 +20,12 @@ import type {
   CodexOAuthPollResponse,
   CodexOAuthStartResponse,
   CodexOAuthUsageResponse,
-} from "../../lib/apiClient";
+} from "../../lib/api/apiClient";
 import {
   checkCodexOAuthUsage,
   pollCodexOAuth,
   startCodexOAuth,
-} from "../../lib/apiVariables";
+} from "../../lib/api/apiVariables";
 
 interface CodexOAuthSetupDialogProps {
   opened: boolean;

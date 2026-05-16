@@ -1,5 +1,5 @@
 import "dotenv/config";
-import "./core/schema-registry.js";
+import "./schema-registry.js";
 
 import {
   cwdWithTilde,
@@ -42,7 +42,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { takeCoverage } from "v8";
 
-import { registerApiReference } from "./core/api-reference.js";
+import { registerApiReference } from "./api-reference.js";
 import { ERP_DB_VERSION, erpDbPath } from "./database/dbConfig.js";
 import { initErpDb } from "./database/erpDb.js";
 import { erpRoutes } from "./erpRoutes.js";

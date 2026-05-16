@@ -28,8 +28,8 @@ import {
   workspaceCmd,
 } from "../command/commandDefs.js";
 import type { GlobalConfig } from "../globalConfig.js";
-import type { ModelService } from "../services/modelService.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
+import type { ModelService } from "../services/agent/modelService.js";
+import { getPlatformConfig } from "../services/runtime/shellPlatform.js";
 
 export function createSystemMessage(
   { globalConfig }: GlobalConfig,

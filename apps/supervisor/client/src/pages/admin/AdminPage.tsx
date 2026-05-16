@@ -29,9 +29,9 @@ import {
 import { IconInfoCircle } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { downloadExportConfig, rotateHubAccessKey } from "../../lib/apiAdmin";
-import type { AdminInfoResponse } from "../../lib/apiClient";
-import { api, API_BASE, apiEndpoints } from "../../lib/apiClient";
+import { downloadExportConfig, rotateHubAccessKey } from "../../lib/api/apiAdmin";
+import type { AdminInfoResponse } from "../../lib/api/apiClient";
+import { api, API_BASE, apiEndpoints } from "../../lib/api/apiClient";
 import { UpdateDialog } from "./UpdateDialog";
 
 export const AdminPage: React.FC = () => {

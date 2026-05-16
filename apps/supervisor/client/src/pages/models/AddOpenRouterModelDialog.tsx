@@ -22,8 +22,8 @@ import {
   api,
   apiEndpoints,
   type OpenRouterCatalogResponse,
-} from "../../lib/apiClient";
-import { saveLlmModel } from "../../lib/apiModels";
+} from "../../lib/api/apiClient";
+import { saveLlmModel } from "../../lib/api/apiModels";
 import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
 
 type CatalogModel = OpenRouterCatalogResponse["models"][number];

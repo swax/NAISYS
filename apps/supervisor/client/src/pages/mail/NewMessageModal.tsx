@@ -17,8 +17,8 @@ import { Dropzone } from "@mantine/dropzone";
 import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 
-import { RecipientMultiSelect } from "../../components/RecipientMultiSelect";
-import type { Agent } from "../../lib/apiClient";
+import { RecipientMultiSelect } from "../../components/forms/RecipientMultiSelect";
+import type { Agent } from "../../lib/api/apiClient";
 
 interface FileAttachment {
   file: File;

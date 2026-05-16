@@ -14,9 +14,9 @@ import { chatCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { HubClient } from "../hub/hubClient.js";
-import type { AttachmentService } from "../services/attachmentService.js";
-import type { RunService } from "../services/runService.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { AttachmentService } from "../services/agent/attachmentService.js";
+import type { RunService } from "../services/agent/runService.js";
+import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
 function formatAttachmentSuffix(attachments?: MailAttachmentData[]): string {

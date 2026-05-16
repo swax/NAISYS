@@ -1,13 +1,13 @@
 import type { AuthUser, Permission } from "@naisys/supervisor-shared";
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-import { disconnectSocket, reconnectSocket } from "../hooks/useSocket";
+import { disconnectSocket, reconnectSocket } from "../hooks/socket/useSocket";
 import {
   getMe,
   logout as apiLogout,
   passkeyLogin,
   passwordLogin,
-} from "../lib/apiAuth";
+} from "../lib/api/apiAuth";
 import { queryClient } from "../lib/queryClient";
 
 interface SessionContextType {

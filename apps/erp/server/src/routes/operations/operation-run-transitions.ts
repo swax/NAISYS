@@ -1,0 +1,398 @@
+import {
+  ErrorResponseSchema,
+  OperationRunStatus,
+  OperationRunTransitionSlimSchema,
+  OrderRunStatus,
+  TransitionNoteSchema,
+} from "@naisys/erp-shared";
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+
+import { conflict, notFound, unprocessable } from "../../error-handler.js";
+import { requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  checkOrderRunStarted,
+  checkWorkCenterAccess,
+  mutationResult,
+  resolveOpRun,
+} from "../../route-helpers.js";
+import {
+  checkPredecessorsComplete,
+  checkStepsComplete,
+  reblockSuccessors,
+  transitionStatus,
+  unblockSuccessors,
+  validateStatusFor,
+} from "../../services/operations/operation-run-service.js";
+import { transitionStatus as transitionOrderRunStatus } from "../../services/orders/order-run-service.js";
+import {
+  clockIn,
+  clockOutAllForOpRun,
+  isUserClockedIn,
+  sumLaborTicketCosts,
+} from "../../services/production/labor-ticket-service.js";
+import { formatOpRunTransition, SeqNoParamsSchema } from "./operation-runs.js";
+
+export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  // START (pending → in_progress)
+  app.post("/:seqNo/start", {
+    schema: {
+      description: "Start an operation run (pending → in_progress)",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
+      response: {
+        200: OperationRunTransitionSlimSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      // Auto-start the order run if it's still in released status
+      if (resolved.run.status === OrderRunStatus.released) {
+        await transitionOrderRunStatus(
+          resolved.run.id,
+          "start",
+          OrderRunStatus.released,
+          OrderRunStatus.started,
+          userId,
+        );
+      } else {
+        const orderErr = checkOrderRunStarted(resolved.run.status);
+        if (orderErr) return conflict(reply, orderErr);
+      }
+
+      const statusErr = validateStatusFor("start", resolved.opRun.status, [
+        OperationRunStatus.pending,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const priorErr = await checkPredecessorsComplete(
+        resolved.run.id,
+        resolved.opRun.operationId,
+      );
+      if (priorErr) return unprocessable(reply, priorErr);
+
+      const opRun = await transitionStatus(
+        resolved.opRun.id,
+        "start",
+        OperationRunStatus.pending,
+        OperationRunStatus.in_progress,
+        userId,
+        { assignedToId: userId, statusNote: note ?? null },
+      );
+      await clockIn(resolved.opRun.id, userId, userId);
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
+      return mutationResult(request, reply, full, {
+        status: opRun.status,
+        _actions: full._actions,
+      });
+    },
+  });
+
+  // COMPLETE (in_progress → completed)
+  app.post("/:seqNo/complete", {
+    schema: {
+      description: "Complete an operation run (in_progress → completed)",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
+      response: {
+        200: OperationRunTransitionSlimSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const statusErr = validateStatusFor("complete", resolved.opRun.status, [
+        OperationRunStatus.in_progress,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const clockedIn = await isUserClockedIn(resolved.opRun.id, userId);
+      if (!clockedIn)
+        return conflict(
+          reply,
+          `You must be clocked in to complete an operation`,
+        );
+
+      const stepsErr = await checkStepsComplete(resolved.opRun.id);
+      if (stepsErr) return unprocessable(reply, stepsErr);
+
+      await clockOutAllForOpRun(resolved.opRun.id, userId);
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const opRun = await transitionStatus(
+        resolved.opRun.id,
+        "complete",
+        OperationRunStatus.in_progress,
+        OperationRunStatus.completed,
+        userId,
+        {
+          completedAt: new Date(),
+          cost,
+          statusNote: note ?? null,
+        },
+      );
+      await unblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
+        userId,
+      );
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
+      return mutationResult(request, reply, full, {
+        status: opRun.status,
+        _actions: full._actions,
+      });
+    },
+  });
+
+  // SKIP (blocked/pending/in_progress → skipped)
+  app.post("/:seqNo/skip", {
+    schema: {
+      description:
+        "Skip an operation run (blocked/pending/in_progress → skipped). " +
+        "When skipping an in_progress op, any open labor tickets are clocked out.",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
+      response: {
+        200: OperationRunTransitionSlimSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_manager"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const statusErr = validateStatusFor("skip", resolved.opRun.status, [
+        OperationRunStatus.blocked,
+        OperationRunStatus.pending,
+        OperationRunStatus.in_progress,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      // If the op was in progress, close out any active labor tickets so the
+      // recorded cost is accurate before we mark the op skipped.
+      if (resolved.opRun.status === OperationRunStatus.in_progress) {
+        await clockOutAllForOpRun(resolved.opRun.id, userId);
+      }
+
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const opRun = await transitionStatus(
+        resolved.opRun.id,
+        "skip",
+        resolved.opRun.status as
+          | typeof OperationRunStatus.blocked
+          | typeof OperationRunStatus.pending
+          | typeof OperationRunStatus.in_progress,
+        OperationRunStatus.skipped,
+        userId,
+        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
+      );
+      await unblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
+        userId,
+      );
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
+      return mutationResult(request, reply, full, {
+        status: opRun.status,
+        _actions: full._actions,
+      });
+    },
+  });
+
+  // FAIL (in_progress → failed)
+  app.post("/:seqNo/fail", {
+    schema: {
+      description: "Fail an operation run (in_progress → failed)",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
+      response: {
+        200: OperationRunTransitionSlimSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_manager"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const statusErr = validateStatusFor("fail", resolved.opRun.status, [
+        OperationRunStatus.in_progress,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      await clockOutAllForOpRun(resolved.opRun.id, userId);
+      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const opRun = await transitionStatus(
+        resolved.opRun.id,
+        "fail",
+        OperationRunStatus.in_progress,
+        OperationRunStatus.failed,
+        userId,
+        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
+      );
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
+      return mutationResult(request, reply, full, {
+        status: opRun.status,
+        _actions: full._actions,
+      });
+    },
+  });
+
+  // REOPEN (completed/skipped/failed → in_progress/pending)
+  app.post("/:seqNo/reopen", {
+    schema: {
+      description: "Reopen an operation run (completed → in_progress)",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: TransitionNoteSchema,
+      response: {
+        200: OperationRunTransitionSlimSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_manager"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const { note } = request.body;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const wcErr = await checkWorkCenterAccess(
+        resolved.opRun.operationId,
+        request.erpUser!,
+      );
+      if (wcErr) return conflict(reply, wcErr);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const statusErr = validateStatusFor("reopen", resolved.opRun.status, [
+        OperationRunStatus.completed,
+        OperationRunStatus.skipped,
+        OperationRunStatus.failed,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const reopenTo =
+        resolved.opRun.status === OperationRunStatus.skipped
+          ? OperationRunStatus.pending
+          : OperationRunStatus.in_progress;
+
+      const opRun = await transitionStatus(
+        resolved.opRun.id,
+        "reopen",
+        resolved.opRun.status,
+        reopenTo,
+        userId,
+        { completedAt: null, statusNote: note ?? null },
+      );
+      // Re-block successor ops that are still pending
+      await reblockSuccessors(
+        resolved.run.id,
+        resolved.opRun.operationId,
+        userId,
+      );
+      const full = await formatOpRunTransition(
+        orderKey,
+        runNo,
+        request.erpUser,
+        opRun,
+      );
+      return mutationResult(request, reply, full, {
+        status: opRun.status,
+        _actions: full._actions,
+      });
+    },
+  });
+}

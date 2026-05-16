@@ -27,9 +27,9 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import type { VariablesResponse } from "../../lib/apiClient";
-import { api, apiEndpoints } from "../../lib/apiClient";
-import { deleteVariable, saveVariable } from "../../lib/apiVariables";
+import type { VariablesResponse } from "../../lib/api/apiClient";
+import { api, apiEndpoints } from "../../lib/api/apiClient";
+import { deleteVariable, saveVariable } from "../../lib/api/apiVariables";
 import { CodexOAuthSetupDialog } from "./CodexOAuthSetupDialog";
 
 interface VariableRow {

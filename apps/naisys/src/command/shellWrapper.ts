@@ -13,10 +13,10 @@ import type { GlobalConfig } from "../globalConfig.js";
 import {
   createNaisysApiService,
   type NaisysApiService,
-} from "../services/naisysApiService.js";
-import * as pathService from "../services/pathService.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
-import type { OutputService } from "../utils/output.js";
+} from "../services/hub/naisysApiService.js";
+import * as pathService from "../services/runtime/pathService.js";
+import { getPlatformConfig } from "../services/runtime/shellPlatform.js";
+import type { OutputService } from "../utils/output/output.js";
 import { killCmd, waitCmd } from "./commandDefs.js";
 import type { RegistrableCommand } from "./commandRegistry.js";
 import { createOutputBuffer } from "./outputBuffer.js";

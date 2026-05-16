@@ -2,7 +2,7 @@ import { Container, Title } from "@mantine/core";
 import type { CreateOrder } from "@naisys/erp-shared";
 import { useNavigate } from "react-router";
 
-import { OrderForm } from "../../components/OrderForm";
+import { OrderForm } from "../../components/forms/OrderForm";
 import { api, apiEndpoints } from "../../lib/api";
 
 export const OrderCreate: React.FC = () => {

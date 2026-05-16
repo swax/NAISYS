@@ -17,11 +17,11 @@ import { useNavigate } from "react-router-dom";
 
 import { RunActivityRow } from "../../components/RunActivityRow";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useChatScroll } from "../../hooks/useChatScroll";
-import type { ThreadRun } from "../../hooks/useMessageThreadRuns";
-import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
-import { useThreadRunCommands } from "../../hooks/useThreadRunCommands";
-import type { ChatMessage } from "../../lib/apiClient";
+import { useChatScroll } from "../../hooks/chat/useChatScroll";
+import type { ThreadRun } from "../../hooks/threadRuns/useMessageThreadRuns";
+import type { ThreadRunCommand } from "../../hooks/threadRuns/useThreadRunCommands";
+import { useThreadRunCommands } from "../../hooks/threadRuns/useThreadRunCommands";
+import type { ChatMessage } from "../../lib/api/apiClient";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 import { bucketRunCommandsByMessage } from "../../lib/threadRunCommandBuckets";
 import { ActiveSubagentBadge } from "./ActiveSubagentBadge";

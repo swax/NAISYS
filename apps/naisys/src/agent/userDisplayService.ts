@@ -2,7 +2,7 @@ import table from "text-table";
 
 import { usersCmd } from "../command/commandDefs.js";
 import type { RegistrableCommand } from "../command/commandRegistry.js";
-import type { InputModeService } from "../utils/inputMode.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
 import type { UserService } from "./userService.js";
 
 interface UserNode {

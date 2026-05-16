@@ -11,8 +11,8 @@ import { IconArchive, IconPlus } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
-import { AgentCandidatesSection } from "../../components/AgentCandidatesSection";
-import { AgentModelIcon } from "../../components/AgentModelIcon";
+import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
+import { AgentCandidatesSection } from "../../components/feature/AgentCandidatesSection";
 import type { Agent } from "../../types/agent";
 import type { MailConversation } from "./mailConversations";
 

@@ -5,8 +5,8 @@ import type { UserListResponse } from "@naisys/hub-protocol";
 import { HubEvents, UserListResponseSchema } from "@naisys/hub-protocol";
 
 import type { HubClient } from "../hub/hubClient.js";
-import type { HostService } from "../services/hostService.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { HostService } from "../services/hub/hostService.js";
+import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 
 export type { UserEntry };
 

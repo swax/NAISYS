@@ -29,11 +29,11 @@ import {
   getNaisysWizardConfig,
   printCodexSubscriptionSetupInstructions,
 } from "./naisysSetup.js";
-import { createHeartbeatService } from "./services/heartbeatService.js";
-import { createHostService } from "./services/hostService.js";
-import { createModelService } from "./services/modelService.js";
-import { createUpdateService } from "./services/updateService.js";
-import { createPromptNotificationService } from "./utils/promptNotificationService.js";
+import { createModelService } from "./services/agent/modelService.js";
+import { createHeartbeatService } from "./services/hub/heartbeatService.js";
+import { createHostService } from "./services/hub/hostService.js";
+import { createUpdateService } from "./services/runtime/updateService.js";
+import { createPromptNotificationService } from "./utils/output/promptNotificationService.js";
 
 // dotenv.config() runs in the dispatcher (./naisys.ts) before the wrapper
 // guard, so .env-set NAISYS_* vars take effect there. The spawned wrapper

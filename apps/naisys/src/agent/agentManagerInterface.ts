@@ -1,7 +1,7 @@
 import type { CommandLoopState } from "@naisys/hub-protocol";
 
 import type { CostTracker } from "../llm/costTracker.js";
-import type { NaisysApiService } from "../services/naisysApiService.js";
+import type { NaisysApiService } from "../services/hub/naisysApiService.js";
 
 /** When set, the agent runs as a local-only ephemeral child of the parent. */
 export interface SubagentContext {

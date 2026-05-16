@@ -1,0 +1,292 @@
+import {
+  Button,
+  Group,
+  NumberInput,
+  Select,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import {
+  LLM_REASONING_LEVELS,
+  LlmApiType,
+  LlmModelSchema,
+  MIN_CACHE_TTL_SECONDS,
+} from "@naisys/common";
+import { zodResolver } from "@naisys/common-browser";
+import { IconCheck, IconX } from "@tabler/icons-react";
+
+import type { LlmModelDetail } from "../../lib/api/apiClient";
+
+interface LlmFormValues {
+  key: string;
+  label: string;
+  versionName: string;
+  apiType: string;
+  maxTokens: number | string;
+  baseUrl: string;
+  apiKeyVar: string;
+  inputCost: number | string;
+  outputCost: number | string;
+  cacheWriteCost: number | string;
+  cacheReadCost: number | string;
+  cacheTtlSeconds: number | string;
+  supportsToolUse: boolean;
+  supportsVision: boolean;
+  supportsHearing: boolean;
+  supportsComputerUse: boolean;
+  reasoningLevel: string;
+}
+
+function transformFormValues(values: LlmFormValues): Record<string, unknown> {
+  const result: Record<string, unknown> = {
+    key: values.key,
+    label: values.label,
+    versionName: values.versionName,
+    apiType: values.apiType,
+    maxTokens: values.maxTokens,
+    apiKeyVar: values.apiKeyVar,
+    inputCost: typeof values.inputCost === "number" ? values.inputCost : 0,
+    outputCost: typeof values.outputCost === "number" ? values.outputCost : 0,
+  };
+  if (values.baseUrl) result.baseUrl = values.baseUrl;
+  if (typeof values.cacheWriteCost === "number")
+    result.cacheWriteCost = values.cacheWriteCost;
+  if (typeof values.cacheReadCost === "number")
+    result.cacheReadCost = values.cacheReadCost;
+  if (typeof values.cacheTtlSeconds === "number")
+    result.cacheTtlSeconds = values.cacheTtlSeconds;
+  if (values.supportsToolUse) result.supportsToolUse = true;
+  if (values.supportsVision) result.supportsVision = true;
+  if (values.supportsHearing) result.supportsHearing = true;
+  if (values.supportsComputerUse) result.supportsComputerUse = true;
+  if (values.reasoningLevel) result.reasoningLevel = values.reasoningLevel;
+  return result;
+}
+
+interface LlmModelFormProps {
+  model?: LlmModelDetail;
+  isNew?: boolean;
+  readOnly?: boolean;
+  saving?: boolean;
+  onSave?: (model: Record<string, unknown>) => void;
+  onCancel?: () => void;
+}
+
+const apiTypeOptions = Object.values(LlmApiType).map((v) => ({
+  value: v,
+  label: v,
+}));
+
+const reasoningLevelOptions = [
+  { value: "", label: "Not supported" },
+  ...LLM_REASONING_LEVELS.map((level) => ({
+    value: level,
+    label: level === "max" ? "Max" : level[0].toUpperCase() + level.slice(1),
+  })),
+];
+
+export const LlmModelForm: React.FC<LlmModelFormProps> = ({
+  model,
+  isNew,
+  readOnly,
+  saving,
+  onSave,
+  onCancel,
+}) => {
+  const form = useForm<LlmFormValues>({
+    initialValues: {
+      key: model?.key ?? "",
+      label: model?.label ?? "",
+      versionName: model?.versionName ?? "",
+      apiType: model?.apiType ?? LlmApiType.OpenAI,
+      maxTokens: model?.maxTokens ?? 128000,
+      baseUrl: model?.baseUrl ?? "",
+      apiKeyVar: model?.apiKeyVar ?? "",
+      inputCost: model?.inputCost ?? 0,
+      outputCost: model?.outputCost ?? 0,
+      cacheWriteCost: model?.cacheWriteCost ?? ("" as number | string),
+      cacheReadCost: model?.cacheReadCost ?? ("" as number | string),
+      cacheTtlSeconds: model?.cacheTtlSeconds ?? ("" as number | string),
+      supportsToolUse: model?.supportsToolUse ?? false,
+      supportsVision: model?.supportsVision ?? false,
+      supportsHearing: model?.supportsHearing ?? false,
+      supportsComputerUse: model?.supportsComputerUse ?? false,
+      reasoningLevel: model?.reasoningLevel ?? "",
+    },
+    validate: (values) =>
+      zodResolver(LlmModelSchema)(transformFormValues(values)),
+  });
+
+  const handleSubmit = (values: LlmFormValues) => {
+    onSave?.(transformFormValues(values));
+  };
+
+  return (
+    <form onSubmit={form.onSubmit(handleSubmit)}>
+      <Stack gap="lg">
+        <Text fw={600} size="sm" c="dimmed">
+          Identity
+        </Text>
+        <TextInput
+          label="Key"
+          description="Unique identifier for this model"
+          withAsterisk
+          disabled={readOnly || (!isNew && !!model)}
+          {...form.getInputProps("key")}
+        />
+        <TextInput
+          label="Label"
+          description="Display name"
+          withAsterisk
+          disabled={readOnly}
+          {...form.getInputProps("label")}
+        />
+        <TextInput
+          label="Version Name"
+          description="Model version string sent to the API"
+          withAsterisk
+          disabled={readOnly}
+          {...form.getInputProps("versionName")}
+        />
+
+        <Text fw={600} size="sm" c="dimmed">
+          API Configuration
+        </Text>
+        <Select
+          label="API Type"
+          withAsterisk
+          disabled={readOnly}
+          data={apiTypeOptions}
+          {...form.getInputProps("apiType")}
+        />
+        <TextInput
+          label="Base URL"
+          description="Custom API endpoint (optional)"
+          disabled={readOnly}
+          {...form.getInputProps("baseUrl")}
+        />
+        <TextInput
+          label="API Key Var"
+          description="Variable name for the API key"
+          disabled={readOnly}
+          {...form.getInputProps("apiKeyVar")}
+        />
+        <NumberInput
+          label="Max Tokens"
+          withAsterisk
+          disabled={readOnly}
+          min={1}
+          {...form.getInputProps("maxTokens")}
+        />
+
+        <Text fw={600} size="sm" c="dimmed">
+          Costs (per 1M tokens)
+        </Text>
+        <NumberInput
+          label="Input Cost ($)"
+          disabled={readOnly}
+          min={0}
+          decimalScale={4}
+          {...form.getInputProps("inputCost")}
+        />
+        <NumberInput
+          label="Output Cost ($)"
+          disabled={readOnly}
+          min={0}
+          decimalScale={4}
+          {...form.getInputProps("outputCost")}
+        />
+        <NumberInput
+          label="Cache Write Cost ($)"
+          disabled={readOnly}
+          min={0}
+          decimalScale={4}
+          {...form.getInputProps("cacheWriteCost")}
+        />
+        <NumberInput
+          label="Cache Read Cost ($)"
+          disabled={readOnly}
+          min={0}
+          decimalScale={4}
+          {...form.getInputProps("cacheReadCost")}
+        />
+        <NumberInput
+          label="Cache TTL (seconds)"
+          description={`How long the provider caches prompt context (minimum ${MIN_CACHE_TTL_SECONDS})`}
+          disabled={readOnly}
+          min={MIN_CACHE_TTL_SECONDS}
+          {...form.getInputProps("cacheTtlSeconds")}
+        />
+
+        <Text fw={600} size="sm" c="dimmed">
+          Capabilities
+        </Text>
+        <Switch
+          label="Supports Tool Use"
+          description="Model supports function/tool calling for structured command responses"
+          disabled={readOnly}
+          {...form.getInputProps("supportsToolUse", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supports Vision"
+          description="Model can process image inputs"
+          disabled={readOnly}
+          {...form.getInputProps("supportsVision", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supports Hearing"
+          description="Model can process audio inputs"
+          disabled={readOnly}
+          {...form.getInputProps("supportsHearing", { type: "checkbox" })}
+        />
+        <Switch
+          label="Supports Computer Use"
+          description="Model has native tooling to control a computer via screenshots and actions. (Models without computer use, but have vision still have access to all the same computer use functionality through ns-desktop)"
+          disabled={readOnly}
+          {...form.getInputProps("supportsComputerUse", { type: "checkbox" })}
+        />
+        <Select
+          label="Reasoning Level"
+          description="Provider-specific reasoning effort. Leave as not supported for models that do not accept reasoning settings."
+          disabled={readOnly}
+          data={reasoningLevelOptions}
+          {...form.getInputProps("reasoningLevel")}
+        />
+      </Stack>
+
+      {!readOnly && (
+        <Group
+          style={{
+            position: "sticky",
+            bottom: 0,
+            backgroundColor: "var(--mantine-color-body)",
+            borderTop: "1px solid var(--mantine-color-default-border)",
+            padding: "var(--mantine-spacing-sm) 0",
+            zIndex: 10,
+          }}
+        >
+          <Button
+            type="submit"
+            color="green"
+            leftSection={<IconCheck size={16} />}
+            loading={saving}
+            disabled={saving}
+          >
+            Save
+          </Button>
+          <Button
+            color="gray"
+            leftSection={<IconX size={16} />}
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Discard
+          </Button>
+        </Group>
+      )}
+    </form>
+  );
+};

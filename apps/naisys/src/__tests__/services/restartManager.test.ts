@@ -8,7 +8,7 @@ import {
   RESTART_WRAPPER_ACTIVE_ENV,
   RESTART_WRAPPER_CHILD_ENV,
   shouldUseRestartWrapper,
-} from "../../services/restartManager.js";
+} from "../../services/runtime/restartManager.js";
 
 describe("restartManager", () => {
   test("does not use the restart wrapper for standalone runs", () => {

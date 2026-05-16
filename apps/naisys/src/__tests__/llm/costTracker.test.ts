@@ -13,9 +13,9 @@ import {
   type LlmModelCosts,
   SpendLimitError,
 } from "../../llm/costTracker.js";
-import type { ModelService } from "../../services/modelService.js";
-import type { RunService } from "../../services/runService.js";
-import type { PromptNotificationService } from "../../utils/promptNotificationService.js";
+import type { ModelService } from "../../services/agent/modelService.js";
+import type { RunService } from "../../services/agent/runService.js";
+import type { PromptNotificationService } from "../../utils/output/promptNotificationService.js";
 
 function createTracker({
   userId,

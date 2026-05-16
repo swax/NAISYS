@@ -10,7 +10,7 @@ import React, {
   useState,
 } from "react";
 
-import type { LogEntry } from "../../lib/apiClient";
+import type { LogEntry } from "../../lib/api/apiClient";
 
 type GalleryImage = {
   url: string;

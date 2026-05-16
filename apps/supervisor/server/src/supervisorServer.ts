@@ -59,19 +59,19 @@ import { initHubDb } from "./database/hubDb.js";
 import { initSupervisorDb } from "./database/supervisorDb.js";
 import { initLogger } from "./logger.js";
 import apiRoutes from "./routes/api.js";
-import { refreshUserLookup } from "./services/agentService.js";
-import { startAttachmentGc } from "./services/attachmentGcService.js";
-import { initBrowserSocket } from "./services/browserSocketService.js";
-import {
-  cleanupHubConnection,
-  initHubConnection,
-} from "./services/hubConnectionService.js";
+import { refreshUserLookup } from "./services/agents/agentService.js";
 import {
   isPasswordLoginAllowed,
   userHasEnabledPassword,
-} from "./services/passwordLoginConfig.js";
-import { getVariableCachedValue } from "./services/variableService.js";
-import { getVoiceAvailability } from "./services/voiceService.js";
+} from "./services/auth/passwordLoginConfig.js";
+import { initBrowserSocket } from "./services/comms/browserSocketService.js";
+import {
+  cleanupHubConnection,
+  initHubConnection,
+} from "./services/comms/hubConnectionService.js";
+import { getVariableCachedValue } from "./services/infra/variableService.js";
+import { startAttachmentGc } from "./services/observability/attachmentGcService.js";
+import { getVoiceAvailability } from "./services/voice/voiceService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

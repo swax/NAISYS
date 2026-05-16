@@ -1,5 +1,5 @@
 import type { GlobalConfig } from "../../globalConfig.js";
-import type { ModelService } from "../../services/modelService.js";
+import type { ModelService } from "../../services/agent/modelService.js";
 import type { CommandTools } from "../commandTool.js";
 import type { CostTracker } from "../costTracker.js";
 

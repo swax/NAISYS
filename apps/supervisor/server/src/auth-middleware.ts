@@ -13,7 +13,7 @@ import { sendForbidden, sendUnauthorized } from "./error-helpers.js";
 import {
   getUserPermissions,
   upsertUserForAgent,
-} from "./services/userService.js";
+} from "./services/infra/userService.js";
 
 export interface SupervisorUser {
   id: number;

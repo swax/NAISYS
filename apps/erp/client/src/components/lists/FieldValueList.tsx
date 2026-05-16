@@ -1,0 +1,804 @@
+import {
+  ActionIcon,
+  Anchor,
+  Button,
+  Checkbox,
+  FileButton,
+  Group,
+  Image,
+  Loader,
+  Stack,
+  Switch,
+  Text,
+  TextInput,
+} from "@mantine/core";
+import { DateInput, DateTimePicker } from "@mantine/dates";
+import { isImageFilename } from "@naisys/common";
+import { hasActionTemplate } from "@naisys/common";
+import type {
+  FieldAttachment,
+  FieldValue,
+  FieldValueEntry,
+  FieldValueUpdateResponse,
+  HateoasAction,
+  HateoasActionTemplate,
+  UploadAttachmentResponse,
+} from "@naisys/erp-shared";
+import { FieldType } from "@naisys/erp-shared";
+import {
+  IconAlertCircle,
+  IconCheck,
+  IconFile,
+  IconPlus,
+  IconTrash,
+  IconUpload,
+  IconX,
+} from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
+
+import { api, showErrorNotification } from "../../lib/api";
+
+function formatDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDateTime(d: Date): string {
+  return `${formatDate(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Check if a field type represents an array (e.g. "string[]") */
+function isArrayType(type: string): boolean {
+  return type.endsWith("[]");
+}
+
+/** Strip the "[]" suffix to get the base field type */
+function baseFieldType(type: string): string {
+  return type.endsWith("[]") ? type.slice(0, -2) : type;
+}
+
+/** Composite key for edits map: fieldId + setIndex */
+function editKey(fieldId: number, setIndex: number): string {
+  return `${fieldId}_${setIndex}`;
+}
+
+/** Build edits map from field values */
+function buildEdits(
+  fieldValues: FieldValueEntry[],
+): Record<string, FieldValue> {
+  return Object.fromEntries(
+    fieldValues.map((fv) => [editKey(fv.fieldId, fv.setIndex), fv.value]),
+  );
+}
+
+/** Get a string value from FieldValue (for scalar fields) */
+function asString(v: FieldValue): string {
+  return typeof v === "string" ? v : v.join(", ");
+}
+
+/** Get an array value from FieldValue (for array fields) */
+function asArray(v: FieldValue): string[] {
+  if (Array.isArray(v)) return v.length > 0 ? v : [""];
+  return v ? [v] : [""];
+}
+
+type FieldSaveStatus = "saving" | "saved" | "error";
+
+interface FieldValueRunListProps {
+  fieldValues: FieldValueEntry[];
+  multiSet: boolean;
+  completed: boolean;
+  _actionTemplates?: HateoasActionTemplate[];
+  fieldValueEndpoint: (fieldSeqNo: number | string, setIndex: number) => string;
+  deleteSetEndpoint: (setIndex: number) => string;
+  attachmentEndpoint: (fieldSeqNo: number | string, setIndex: number) => string;
+  attachmentDownloadUrl: (
+    fieldSeqNo: number | string,
+    attachmentId: number | string,
+  ) => string;
+  onSetDeleted: () => void;
+  onActionsUpdated?: (
+    actions: HateoasAction[],
+    actionTemplates: HateoasActionTemplate[],
+  ) => void;
+}
+
+function StatusIcon({ status }: { status?: FieldSaveStatus }) {
+  if (status === "saving") return <Loader size={14} />;
+  if (status === "saved") return <IconCheck size={14} color="green" />;
+  if (status === "error") return <IconAlertCircle size={14} color="red" />;
+  return null;
+}
+
+export { buildEdits, editKey };
+
+export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
+  fieldValues: fieldValuesProp,
+  multiSet,
+  completed,
+  _actionTemplates,
+  fieldValueEndpoint,
+  deleteSetEndpoint,
+  attachmentEndpoint,
+  attachmentDownloadUrl,
+  onSetDeleted,
+  onActionsUpdated,
+}) => {
+  // --- Internal state ---
+  const [fieldValues, setFieldValues] = useState(fieldValuesProp);
+  const [edits, setEdits] = useState<Record<string, FieldValue>>(() =>
+    buildEdits(fieldValuesProp),
+  );
+  const [fieldStatus, setFieldStatus] = useState<
+    Record<string, FieldSaveStatus>
+  >({});
+  const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [deletingSet, setDeletingSet] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // Re-sync internal state when prop changes (e.g. parent refetched)
+  const prevPropRef = useRef(fieldValuesProp);
+  useEffect(() => {
+    if (fieldValuesProp !== prevPropRef.current) {
+      prevPropRef.current = fieldValuesProp;
+      setFieldValues(fieldValuesProp);
+      setEdits(buildEdits(fieldValuesProp));
+    }
+  }, [fieldValuesProp]);
+
+  // --- Field change / save ---
+
+  const onFieldChange = (
+    fieldId: number,
+    setIndex: number,
+    value: FieldValue,
+  ) => {
+    const k = editKey(fieldId, setIndex);
+    setEdits((prev) => ({ ...prev, [k]: value }));
+  };
+
+  const onFieldSaved = (
+    fieldId: number,
+    setIndex: number,
+    updated: FieldValueEntry,
+  ) => {
+    const k = editKey(fieldId, setIndex);
+    setFieldValues((prev) => {
+      const exists = prev.some(
+        (fv) => fv.fieldId === fieldId && fv.setIndex === setIndex,
+      );
+      return exists
+        ? prev.map((fv) =>
+            fv.fieldId === fieldId && fv.setIndex === setIndex ? updated : fv,
+          )
+        : [...prev, updated];
+    });
+    setEdits((prev: Record<string, FieldValue>) => ({
+      ...prev,
+      [k]: updated.value,
+    }));
+  };
+
+  // --- Set management ---
+
+  const onSetAdded = () => {
+    const maxSetIndex = fieldValues.reduce(
+      (max, fv) => Math.max(max, fv.setIndex),
+      -1,
+    );
+    const nextSetIndex = maxSetIndex + 1;
+    const fieldDefs = fieldValues.filter((fv) => fv.setIndex === 0);
+    if (fieldDefs.length === 0) return;
+
+    const newFieldValues: FieldValueEntry[] = fieldDefs.map((fv) => ({
+      ...fv,
+      setIndex: nextSetIndex,
+      value: isArrayType(fv.type) ? [] : "",
+      validation: fv.required
+        ? { valid: false, error: "Required" }
+        : { valid: true },
+    }));
+
+    setFieldValues((prev) => [...prev, ...newFieldValues]);
+  };
+
+  // --- Attachment ---
+
+  const onAttachmentUploaded = (
+    fieldId: number,
+    setIndex: number,
+    attachment: FieldAttachment,
+  ) => {
+    setFieldValues((prev) =>
+      prev.map((fv) =>
+        fv.fieldId === fieldId && fv.setIndex === setIndex
+          ? { ...fv, attachments: [...(fv.attachments ?? []), attachment] }
+          : fv,
+      ),
+    );
+  };
+
+  // Determine distinct set indexes from field values
+  const setIndexes = [...new Set(fieldValues.map((fv) => fv.setIndex))].sort(
+    (a, b) => a - b,
+  );
+  if (setIndexes.length === 0) setIndexes.push(0);
+
+  // Clamp currentSetIndex if sets were deleted
+  const clampedSetIndex = Math.min(
+    currentSetIndex,
+    setIndexes[setIndexes.length - 1],
+  );
+  if (clampedSetIndex !== currentSetIndex) {
+    setCurrentSetIndex(clampedSetIndex);
+  }
+
+  // Filter field values for the current set
+  const currentFieldValues = fieldValues.filter(
+    (fv) => fv.setIndex === clampedSetIndex,
+  );
+
+  const setFieldSaveStatus = (
+    fieldId: number,
+    setIdx: number,
+    status: FieldSaveStatus,
+  ) => {
+    const key = editKey(fieldId, setIdx);
+    if (savedTimers.current[key]) {
+      clearTimeout(savedTimers.current[key]);
+      delete savedTimers.current[key];
+    }
+    if (status === "saved") {
+      savedTimers.current[key] = setTimeout(() => {
+        setFieldStatus((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        delete savedTimers.current[key];
+      }, 1500);
+    }
+    setFieldStatus((prev) => ({ ...prev, [key]: status }));
+  };
+
+  const saveFieldValue = async (fv: FieldValueEntry, newValue: FieldValue) => {
+    const currentValue = fv.value;
+    if (JSON.stringify(newValue) === JSON.stringify(currentValue)) return;
+
+    setFieldSaveStatus(fv.fieldId, fv.setIndex, "saving");
+
+    try {
+      const updated = await api.put<FieldValueUpdateResponse>(
+        fieldValueEndpoint(fv.fieldSeqNo, fv.setIndex),
+        { value: newValue },
+      );
+      onFieldSaved(fv.fieldId, fv.setIndex, updated);
+      setFieldSaveStatus(fv.fieldId, fv.setIndex, "saved");
+      if (updated._actions && updated._actionTemplates) {
+        onActionsUpdated?.(updated._actions, updated._actionTemplates);
+      }
+    } catch (err) {
+      showErrorNotification(err);
+      setFieldSaveStatus(fv.fieldId, fv.setIndex, "error");
+    }
+  };
+
+  /** Save immediately (for controls that don't have a blur event) */
+  const changeAndSave = (fv: FieldValueEntry, newValue: FieldValue) => {
+    onFieldChange(fv.fieldId, fv.setIndex, newValue);
+    void saveFieldValue(fv, newValue);
+  };
+
+  // --- multi-value helpers ---
+
+  const setArrayItem = (fv: FieldValueEntry, index: number, item: string) => {
+    const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
+    const items = [...asArray(currentValue)];
+    items[index] = item;
+    onFieldChange(fv.fieldId, fv.setIndex, items);
+  };
+
+  const addArrayItem = (fv: FieldValueEntry) => {
+    const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
+    const items = [...asArray(currentValue), ""];
+    onFieldChange(fv.fieldId, fv.setIndex, items);
+  };
+
+  const removeArrayItem = (fv: FieldValueEntry, index: number) => {
+    const currentValue = edits[editKey(fv.fieldId, fv.setIndex)] ?? fv.value;
+    const items = [...asArray(currentValue)];
+    items.splice(index, 1);
+    onFieldChange(fv.fieldId, fv.setIndex, items);
+    void saveFieldValue(fv, items);
+  };
+
+  // --- set management ---
+
+  const handleAddSet = () => {
+    const nextSetIndex =
+      setIndexes.length > 0 ? setIndexes[setIndexes.length - 1] + 1 : 0;
+    setCurrentSetIndex(nextSetIndex);
+    onSetAdded();
+  };
+
+  const handleDeleteSet = async (setIdx: number) => {
+    setDeletingSet(true);
+    try {
+      await api.delete(deleteSetEndpoint(setIdx));
+      // Move to previous set if deleting current
+      if (clampedSetIndex >= setIdx && clampedSetIndex > 0) {
+        setCurrentSetIndex(clampedSetIndex - 1);
+      }
+      onSetDeleted();
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setDeletingSet(false);
+    }
+  };
+
+  // --- attachment upload ---
+
+  const canUploadAttachment = !!hasActionTemplate(
+    _actionTemplates,
+    "uploadAttachment",
+  );
+  const canDeleteAttachment = !!hasActionTemplate(
+    _actionTemplates,
+    "deleteAttachment",
+  );
+
+  const handleAttachmentUpload = async (
+    fv: FieldValueEntry,
+    file: File | null,
+  ) => {
+    if (!file) return;
+    const key = editKey(fv.fieldId, fv.setIndex);
+    setUploadingField(key);
+    try {
+      const result = await api.upload<UploadAttachmentResponse>(
+        attachmentEndpoint(fv.fieldSeqNo, fv.setIndex),
+        file,
+      );
+      onAttachmentUploaded(fv.fieldId, fv.setIndex, {
+        id: result.attachmentId,
+        filename: result.filename,
+        fileSize: result.fileSize,
+      });
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  const [deletingAttachment, setDeletingAttachment] = useState<string | null>(
+    null,
+  );
+
+  const handleAttachmentDelete = async (
+    fv: FieldValueEntry,
+    attachmentId: string,
+  ) => {
+    const delKey = `${editKey(fv.fieldId, fv.setIndex)}_${attachmentId}`;
+    setDeletingAttachment(delKey);
+    try {
+      await api.delete(
+        `${attachmentEndpoint(fv.fieldSeqNo, fv.setIndex)}/${attachmentId}`,
+      );
+      setFieldValues((prev) =>
+        prev.map((f) =>
+          f.fieldId === fv.fieldId && f.setIndex === fv.setIndex
+            ? {
+                ...f,
+                attachments: (f.attachments ?? []).filter(
+                  (a) => a.id !== attachmentId,
+                ),
+              }
+            : f,
+        ),
+      );
+    } catch (err) {
+      showErrorNotification(err);
+    } finally {
+      setDeletingAttachment(null);
+    }
+  };
+
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function renderAttachmentField(
+    fv: FieldValueEntry,
+    fieldLabel: string,
+    canEdit: boolean,
+  ) {
+    const attachments = fv.attachments ?? [];
+    const key = editKey(fv.fieldId, fv.setIndex);
+    const isUploading = uploadingField === key;
+    const showUpload =
+      canEdit &&
+      canUploadAttachment &&
+      (isArrayType(fv.type) || attachments.length === 0);
+
+    return (
+      <Stack key={key} gap={4}>
+        <Text size="xs" fw={500}>
+          {fieldLabel}
+        </Text>
+        {attachments.map((att) => {
+          const delKey = `${key}_${att.id}`;
+          const isDeleting = deletingAttachment === delKey;
+          const downloadUrl = attachmentDownloadUrl(fv.fieldSeqNo, att.id);
+          const isImage = isImageFilename(att.filename);
+          return (
+            <Stack key={att.id} gap={4}>
+              {isImage && (
+                <Anchor href={downloadUrl} target="_blank">
+                  <Image
+                    src={downloadUrl}
+                    alt={att.filename}
+                    maw={200}
+                    mah={200}
+                    fit="contain"
+                    radius="sm"
+                  />
+                </Anchor>
+              )}
+              <Group gap="xs">
+                {!isImage && <IconFile size={14} />}
+                <Anchor size="xs" href={downloadUrl} target="_blank">
+                  {att.filename}
+                </Anchor>
+                <Text size="xs" c="dimmed">
+                  ({formatFileSize(att.fileSize)})
+                </Text>
+                {canEdit && canDeleteAttachment && (
+                  <ActionIcon
+                    size="xs"
+                    variant="subtle"
+                    color="red"
+                    loading={isDeleting}
+                    onClick={() => handleAttachmentDelete(fv, att.id)}
+                    title="Remove attachment"
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                )}
+              </Group>
+            </Stack>
+          );
+        })}
+        {attachments.length === 0 && !canEdit && (
+          <Text size="xs" c="dimmed">
+            No attachments
+          </Text>
+        )}
+        {showUpload && (
+          <FileButton onChange={(file) => handleAttachmentUpload(fv, file)}>
+            {(props) => (
+              <Button
+                {...props}
+                size="compact-xs"
+                variant="light"
+                leftSection={
+                  isUploading ? <Loader size={14} /> : <IconUpload size={14} />
+                }
+                loading={isUploading}
+              >
+                Upload File
+              </Button>
+            )}
+          </FileButton>
+        )}
+      </Stack>
+    );
+  }
+
+  // --- single-value input renderer ---
+
+  function renderInput(
+    fv: FieldValueEntry,
+    value: string,
+    status: FieldSaveStatus | undefined,
+    opts: {
+      label?: string;
+      onTextChange: (newValue: string) => void;
+      onImmediateChange: (newValue: string) => void;
+      onBlurSave?: () => void;
+    },
+  ) {
+    const { label, onTextChange, onImmediateChange, onBlurSave } = opts;
+    const errorMsg =
+      fv.validation && !fv.validation.valid ? fv.validation.error : undefined;
+
+    switch (baseFieldType(fv.type)) {
+      case FieldType.date:
+        return (
+          <DateInput
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            valueFormat="YYYY-MM-DD"
+            clearable
+            error={errorMsg}
+            value={value ? new Date(value + "T00:00:00") : null}
+            onChange={(d) =>
+              onImmediateChange(
+                d ? (typeof d === "string" ? d : formatDate(d)) : "",
+              )
+            }
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+
+      case FieldType.datetime:
+        return (
+          <DateTimePicker
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            valueFormat="YYYY-MM-DD HH:mm"
+            clearable
+            error={errorMsg}
+            value={value ? new Date(value) : null}
+            onChange={(d) =>
+              onImmediateChange(
+                d ? (typeof d === "string" ? d : formatDateTime(d)) : "",
+              )
+            }
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+
+      case FieldType.yesNo:
+        return (
+          <Group gap="xs" align="center">
+            {label && (
+              <Text size="xs" fw={500}>
+                {label}
+              </Text>
+            )}
+            <Switch
+              size="xs"
+              onLabel="Yes"
+              offLabel="No"
+              checked={value === "Yes"}
+              onChange={(e) =>
+                onImmediateChange(e.currentTarget.checked ? "Yes" : "No")
+              }
+            />
+            <StatusIcon status={status} />
+          </Group>
+        );
+
+      case FieldType.checkbox:
+        return (
+          <Group gap="xs" align="center">
+            <Checkbox
+              label={label}
+              size="xs"
+              checked={value === "checked"}
+              onChange={(e) =>
+                onImmediateChange(e.currentTarget.checked ? "checked" : "")
+              }
+            />
+            <StatusIcon status={status} />
+          </Group>
+        );
+
+      case FieldType.attachment:
+        // Handled separately by renderAttachmentField
+        return null;
+
+      default:
+        // string, number — plain text input
+        return (
+          <TextInput
+            label={label}
+            size="xs"
+            style={{ flex: 1 }}
+            error={errorMsg}
+            value={value}
+            onChange={(e) => onTextChange(e.currentTarget.value)}
+            onBlur={onBlurSave}
+            rightSection={<StatusIcon status={status} />}
+          />
+        );
+    }
+  }
+
+  // --- read-only display ---
+
+  function formatReadOnlyValue(fv: FieldValueEntry): string {
+    const v = asString(fv.value);
+    if (!v) return "\u2014";
+    if (isArrayType(fv.type) && Array.isArray(fv.value)) {
+      return fv.value.filter(Boolean).join(", ") || "\u2014";
+    }
+    switch (baseFieldType(fv.type)) {
+      case FieldType.date:
+        return new Date(v + "T00:00:00").toLocaleDateString();
+      case FieldType.datetime:
+        return new Date(v).toLocaleString();
+      case FieldType.checkbox:
+        return v === "checked" ? "Checked" : "\u2014";
+      default:
+        return v;
+    }
+  }
+
+  const canEdit =
+    !completed && !!hasActionTemplate(_actionTemplates, "updateField");
+
+  return (
+    <Stack gap="xs" mt="xs">
+      <Text size="xs" fw={600} c="dimmed">
+        Data Fields
+      </Text>
+
+      {/* Set selector bar for multiSet steps */}
+      {multiSet && (
+        <Group gap={4}>
+          {setIndexes.map((si) => (
+            <Button
+              key={si}
+              size="compact-xs"
+              variant={si === clampedSetIndex ? "filled" : "light"}
+              onClick={() => setCurrentSetIndex(si)}
+            >
+              Set {si + 1}
+            </Button>
+          ))}
+          {canEdit && (
+            <>
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                onClick={handleAddSet}
+                title="Add set"
+              >
+                <IconPlus size={14} />
+              </ActionIcon>
+              {setIndexes.length > 1 && (
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="red"
+                  loading={deletingSet}
+                  onClick={() => handleDeleteSet(clampedSetIndex)}
+                  title="Delete current set"
+                >
+                  <IconTrash size={14} />
+                </ActionIcon>
+              )}
+            </>
+          )}
+        </Group>
+      )}
+
+      {currentFieldValues.map((fv) => {
+        const key = editKey(fv.fieldId, fv.setIndex);
+        const status = fieldStatus[key];
+        const fieldLabel = fv.required ? `${fv.label} *` : fv.label;
+        const fieldCanEdit = canEdit;
+        const editedValue = edits[key] ?? fv.value;
+
+        // Attachment fields have their own renderer
+        if (baseFieldType(fv.type) === FieldType.attachment) {
+          return renderAttachmentField(fv, fieldLabel, fieldCanEdit);
+        }
+
+        if (!fieldCanEdit) {
+          // Multi-value: show each item on its own line
+          if (
+            isArrayType(fv.type) &&
+            Array.isArray(fv.value) &&
+            fv.value.filter(Boolean).length > 0
+          ) {
+            return (
+              <Stack key={key} gap={2}>
+                <Text size="xs" fw={500}>
+                  {fieldLabel}:
+                </Text>
+                {fv.value.filter(Boolean).map((item, i) => (
+                  <Text key={i} size="xs" pl="sm">
+                    • {item}
+                  </Text>
+                ))}
+              </Stack>
+            );
+          }
+
+          return (
+            <Group key={key} gap="xs">
+              <Text size="xs" fw={500}>
+                {fieldLabel}:
+              </Text>
+              {typeof fv.value === "string" && fv.value?.startsWith("http") ? (
+                <Anchor size="xs" href={fv.value} target="_blank">
+                  {fv.value}
+                </Anchor>
+              ) : (
+                <Text size="xs">{formatReadOnlyValue(fv)}</Text>
+              )}
+              {fv.validation && !fv.validation.valid && (
+                <Text size="xs" c="red">
+                  {fv.validation.error}
+                </Text>
+              )}
+            </Group>
+          );
+        }
+
+        if (isArrayType(fv.type)) {
+          const items = asArray(editedValue);
+          return (
+            <Stack key={key} gap={4}>
+              <Group gap="xs" align="center">
+                <Text size="xs" fw={500}>
+                  {fieldLabel}
+                </Text>
+                <StatusIcon status={status} />
+              </Group>
+              {items.map((item, index) => (
+                <Group key={index} gap={4} align="flex-end">
+                  {renderInput(fv, item, undefined, {
+                    onTextChange: (v) => setArrayItem(fv, index, v),
+                    onImmediateChange: (v) => {
+                      const newItems = [...items];
+                      newItems[index] = v;
+                      onFieldChange(fv.fieldId, fv.setIndex, newItems);
+                      void saveFieldValue(fv, newItems);
+                    },
+                    onBlurSave: () => void saveFieldValue(fv, editedValue),
+                  })}
+                  {items.length > 1 && (
+                    <ActionIcon
+                      size="xs"
+                      variant="subtle"
+                      color="red"
+                      onClick={() => removeArrayItem(fv, index)}
+                      title="Remove item"
+                    >
+                      <IconX size={14} />
+                    </ActionIcon>
+                  )}
+                </Group>
+              ))}
+              <Group>
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  onClick={() => addArrayItem(fv)}
+                  title="Add item"
+                >
+                  <IconPlus size={14} />
+                </ActionIcon>
+              </Group>
+              {fv.validation && !fv.validation.valid && (
+                <Text size="xs" c="red">
+                  {fv.validation.error}
+                </Text>
+              )}
+            </Stack>
+          );
+        }
+
+        return (
+          <Group key={key} gap="xs" align="flex-end">
+            {renderInput(fv, asString(editedValue), status, {
+              label: fieldLabel,
+              onTextChange: (v) => onFieldChange(fv.fieldId, fv.setIndex, v),
+              onImmediateChange: (v) => changeAndSave(fv, v),
+              onBlurSave: () => void saveFieldValue(fv, editedValue),
+            })}
+          </Group>
+        );
+      })}
+    </Stack>
+  );
+};

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createEscKeyListener } from "../../utils/escKeyListener.js";
+import { createEscKeyListener } from "../../utils/input/escKeyListener.js";
 
 describe("escKeyListener", () => {
   const originalIsTTY = process.stdin.isTTY;

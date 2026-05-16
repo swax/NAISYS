@@ -15,7 +15,7 @@ import type { Item, UpdateItem } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { FieldDefList } from "../../components/FieldDefList";
+import { FieldDefList } from "../../components/lists/FieldDefList";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 

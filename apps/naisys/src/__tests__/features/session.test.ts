@@ -7,15 +7,15 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { AgentConfig } from "../../agent/agentConfig.js";
 import { NextCommandAction } from "../../command/commandRegistry.js";
-import { createSessionService } from "../../features/session.js";
+import { createSessionService } from "../../features/shell/session.js";
 import type { HubLogBuffer } from "../../hub/hubLogBuffer.js";
 import { createContextManager } from "../../llm/contextManager.js";
 import type { LLMService } from "../../llm/llmService.js";
-import type { AttachmentService } from "../../services/attachmentService.js";
-import type { HubAttachmentClient } from "../../services/hubAttachmentClient.js";
-import { createLogService } from "../../services/logService.js";
-import type { ModelService } from "../../services/modelService.js";
-import type { RunService } from "../../services/runService.js";
+import type { AttachmentService } from "../../services/agent/attachmentService.js";
+import { createLogService } from "../../services/agent/logService.js";
+import type { ModelService } from "../../services/agent/modelService.js";
+import type { RunService } from "../../services/agent/runService.js";
+import type { HubAttachmentClient } from "../../services/hub/hubAttachmentClient.js";
 import {
   createMockAgentConfig,
   createMockGlobalConfig,

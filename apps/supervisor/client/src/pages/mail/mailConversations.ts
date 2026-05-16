@@ -1,4 +1,4 @@
-import type { MailMessage } from "../../lib/apiClient";
+import type { MailMessage } from "../../lib/api/apiClient";
 
 /** Strip leading RE: prefixes and trim; fallback to "(No Subject)" */
 export function normalizeSubject(subject: string): string {

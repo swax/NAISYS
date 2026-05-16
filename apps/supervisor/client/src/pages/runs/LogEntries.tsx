@@ -7,7 +7,7 @@ import {
 import { IconFile } from "@tabler/icons-react";
 import React from "react";
 
-import type { LogEntry } from "../../lib/apiClient";
+import type { LogEntry } from "../../lib/api/apiClient";
 import { useImageGallery } from "./ImageGallery";
 
 export const getLogColor = (log: LogEntry) => {

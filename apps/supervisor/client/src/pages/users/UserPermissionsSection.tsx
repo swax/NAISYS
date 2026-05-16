@@ -17,7 +17,7 @@ import React, { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
-import { grantPermission, revokePermission } from "../../lib/apiUsers";
+import { grantPermission, revokePermission } from "../../lib/api/apiUsers";
 
 interface UserPermissionsSectionProps {
   routeUsername: string;

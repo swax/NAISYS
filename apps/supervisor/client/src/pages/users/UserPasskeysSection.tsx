@@ -32,7 +32,7 @@ import {
   passkeyRegister,
   renameUserPasskey,
   resetUserPasskeys,
-} from "../../lib/apiAuth";
+} from "../../lib/api/apiAuth";
 
 // True when the registration URL points at a loopback address. Phones can't
 // reach localhost on the operator's machine, so the QR would be misleading.

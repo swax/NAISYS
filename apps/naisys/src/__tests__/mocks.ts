@@ -19,21 +19,21 @@ import type { CommandProtection } from "../command/commandProtection.js";
 import type { PromptBuilder } from "../command/promptBuilder.js";
 import type { ShellCommand } from "../command/shellCommand.js";
 import type { ShellWrapper } from "../command/shellWrapper.js";
-import type { BrowserService } from "../features/browser.js";
-import type { GenImg } from "../features/genImg.js";
-import type { LynxService } from "../features/lynx.js";
-import type { SessionService } from "../features/session.js";
-import type { SubagentService } from "../features/subagent.js";
-import type { WorkspacesFeature } from "../features/workspaces.js";
+import type { GenImg } from "../features/media/genImg.js";
+import type { SessionService } from "../features/shell/session.js";
+import type { SubagentService } from "../features/shell/subagent.js";
+import type { WorkspacesFeature } from "../features/shell/workspaces.js";
+import type { BrowserService } from "../features/web/browser.js";
+import type { LynxService } from "../features/web/lynx.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { CostTracker } from "../llm/costTracker.js";
 import type { LlmMessage } from "../llm/llmDtos.js";
 import type { ChatService } from "../mail/chat.js";
 import type { MailService } from "../mail/mail.js";
-import type { LogService } from "../services/logService.js";
-import type { RunService } from "../services/runService.js";
-import type { OutputService } from "../utils/output.js";
+import type { LogService } from "../services/agent/logService.js";
+import type { RunService } from "../services/agent/runService.js";
+import type { OutputService } from "../utils/output/output.js";
 
 export function createMockDatabaseService(): HubDatabaseService {
   return {

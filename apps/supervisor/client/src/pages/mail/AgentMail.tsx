@@ -24,12 +24,12 @@ import {
 
 import type { AppOutletContext } from "../../App";
 import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
-import { ParticipantInfo } from "../../components/ParticipantInfo";
+import { ParticipantInfo } from "../../components/feature/ParticipantInfo";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import { useMailData } from "../../hooks/useMailData";
+import { useMailData } from "../../hooks/data/useMailData";
 import { buildAgentCandidates } from "../../lib/agentCandidates";
-import { archiveAllMail, sendMail } from "../../lib/apiMail";
+import { archiveAllMail, sendMail } from "../../lib/api/apiMail";
 import type { Agent } from "../../types/agent";
 import { MailConversationList } from "./MailConversationList";
 import {

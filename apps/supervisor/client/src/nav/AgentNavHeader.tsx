@@ -18,10 +18,10 @@ import {
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { AgentModelIcon } from "../components/AgentModelIcon";
+import { AgentModelIcon } from "../components/badges/AgentModelIcon";
 import { ROUTER_BASENAME } from "../constants";
 import { useAgentDataContext } from "../contexts/AgentDataContext";
-import { getAgentDetail } from "../lib/apiAgents";
+import { getAgentDetail } from "../lib/api/apiAgents";
 
 interface AgentNavHeaderProps {
   agentUsername?: string;

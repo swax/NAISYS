@@ -2,8 +2,8 @@ import type { HubStatusEvent } from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { useSession } from "../contexts/SessionContext";
-import { getSocket } from "./useSocket";
-import { useSubscription } from "./useSubscription";
+import { getSocket } from "./socket/useSocket";
+import { useSubscription } from "./socket/useSubscription";
 
 export type ConnectionState = "connected" | "degraded" | "disconnected";
 

@@ -33,20 +33,20 @@ import {
 } from "react-router-dom";
 
 import type { AppOutletContext } from "../../App";
-import { AgentPauseToggle } from "../../components/AgentPauseToggle";
-import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
-import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
+import { getApiTypeBadgeColor } from "../../components/badges/ApiTypeBadge";
 import {
   getPlatformBadge,
   getPlatformBadgeColor,
-} from "../../components/PlatformBadge";
-import { VoiceMicButton } from "../../components/VoiceMicButton";
+} from "../../components/badges/PlatformBadge";
+import { CollapsibleSidebar } from "../../components/CollapsibleSidebar";
+import { AgentPauseToggle } from "../../components/feature/AgentPauseToggle";
+import { VoiceMicButton } from "../../components/feature/VoiceMicButton";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { useRunsData } from "../../hooks/data/useRunsData";
 import { useLlmModels } from "../../hooks/useLlmModels";
-import { useRunsData } from "../../hooks/useRunsData";
-import { stopAgent } from "../../lib/apiAgents";
-import { sendRunCommand } from "../../lib/apiRuns";
+import { stopAgent } from "../../lib/api/apiAgents";
+import { sendRunCommand } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { RunSessionLog } from "./RunSessionLog";
 import {

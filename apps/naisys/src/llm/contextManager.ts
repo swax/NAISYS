@@ -1,12 +1,12 @@
 import { TARGET_MEGAPIXELS } from "@naisys/common";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { WorkspacesFeature } from "../features/workspaces.js";
-import type { LogService } from "../services/logService.js";
-import type { ModelService } from "../services/modelService.js";
-import type { InputModeService } from "../utils/inputMode.js";
-import type { OutputService } from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import type { WorkspacesFeature } from "../features/shell/workspaces.js";
+import type { LogService } from "../services/agent/logService.js";
+import type { ModelService } from "../services/agent/modelService.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
+import type { OutputService } from "../utils/output/output.js";
+import { OutputColor } from "../utils/output/output.js";
 import * as utilities from "../utils/utilities.js";
 import type {
   ContentBlock,

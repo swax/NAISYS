@@ -1,8 +1,8 @@
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { LLMService } from "../llm/llmService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
-import { getConfirmation } from "../utils/confirmation.js";
-import type { OutputService } from "../utils/output.js";
+import { getConfirmation } from "../utils/input/confirmation.js";
+import type { OutputService } from "../utils/output/output.js";
 
 interface ValidateCommandResponse {
   commandAllowed: boolean;

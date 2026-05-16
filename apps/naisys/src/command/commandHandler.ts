@@ -2,14 +2,14 @@ import chalk from "chalk";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
-import type { SessionService } from "../features/session.js";
+import type { SessionService } from "../features/shell/session.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import { ContentSource } from "../llm/llmDtos.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
-import type { InputModeService } from "../utils/inputMode.js";
-import type { OutputService } from "../utils/output.js";
-import { OutputColor } from "../utils/output.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
+import type { OutputService } from "../utils/output/output.js";
+import { OutputColor } from "../utils/output/output.js";
 import type { CommandProtection } from "./commandProtection.js";
 import type {
   CommandRegistry,

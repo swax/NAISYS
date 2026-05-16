@@ -7,10 +7,6 @@
 
 import type { HubEvents } from "./events.js";
 import type {
-  RotateAccessKeyRequest,
-  RotateAccessKeyResponse,
-} from "./schemas/admin.js";
-import type {
   AgentPeekRequest,
   AgentPeekResponse,
   AgentRunCommandRequest,
@@ -23,21 +19,23 @@ import type {
   AgentStopRequest,
   AgentStopResponse,
   RuntimeKeyReissue,
-} from "./schemas/agents.js";
+} from "./schemas/agents/agents.js";
+import type { AgentsStatus, Heartbeat } from "./schemas/agents/heartbeat.js";
 import type {
-  CodexAccessTokenRequest,
-  CodexAccessTokenResponse,
-} from "./schemas/codex.js";
-import type { ConfigResponse } from "./schemas/config.js";
+  SessionCreateRequest,
+  SessionCreateResponse,
+  SessionHeartbeat,
+  SessionIncrementRequest,
+  SessionIncrementResponse,
+  SessionPush,
+} from "./schemas/agents/sessions.js";
 import type {
   CostControl,
   CostPush,
   CostWriteRequest,
   CostWriteResponse,
-} from "./schemas/costs.js";
-import type { AgentsStatus, Heartbeat } from "./schemas/heartbeat.js";
-import type { HostList, HostRegistered } from "./schemas/hosts.js";
-import type { LogPush, LogWriteRequest } from "./schemas/logs.js";
+} from "./schemas/comms/costs.js";
+import type { LogPush, LogWriteRequest } from "./schemas/comms/logs.js";
 import type {
   MailArchiveRequest,
   MailArchiveResponse,
@@ -56,17 +54,19 @@ import type {
   MailSendResponse,
   MailUnreadRequest,
   MailUnreadResponse,
-} from "./schemas/mail.js";
-import type { ModelsResponse } from "./schemas/models.js";
+} from "./schemas/comms/mail.js";
 import type {
-  SessionCreateRequest,
-  SessionCreateResponse,
-  SessionHeartbeat,
-  SessionIncrementRequest,
-  SessionIncrementResponse,
-  SessionPush,
-} from "./schemas/sessions.js";
-import type { UserListResponse } from "./schemas/users.js";
+  RotateAccessKeyRequest,
+  RotateAccessKeyResponse,
+} from "./schemas/identity/admin.js";
+import type {
+  CodexAccessTokenRequest,
+  CodexAccessTokenResponse,
+} from "./schemas/identity/codex.js";
+import type { UserListResponse } from "./schemas/identity/users.js";
+import type { ConfigResponse } from "./schemas/infra/config.js";
+import type { HostList, HostRegistered } from "./schemas/infra/hosts.js";
+import type { ModelsResponse } from "./schemas/infra/models.js";
 
 // ---------------------------------------------------------------------------
 // Request/response events (use sendRequest / ack callback)

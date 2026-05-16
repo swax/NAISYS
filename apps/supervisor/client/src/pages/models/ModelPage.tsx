@@ -20,9 +20,9 @@ import { IconEdit, IconInfoCircle, IconTrash } from "@tabler/icons-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useBlocker, useNavigate, useParams } from "react-router-dom";
 
-import { ImageModelForm } from "../../components/ImageModelForm";
-import { LlmModelForm } from "../../components/LlmModelForm";
-import { deleteModel, saveImageModel, saveLlmModel } from "../../lib/apiModels";
+import { ImageModelForm } from "../../components/forms/ImageModelForm";
+import { LlmModelForm } from "../../components/forms/LlmModelForm";
+import { deleteModel, saveImageModel, saveLlmModel } from "../../lib/api/apiModels";
 import { useModelsContext } from "./ModelsLayout";
 
 type ModelType = "llm" | "image";

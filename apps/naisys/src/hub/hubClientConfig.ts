@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { getGitCommitHash, resolveHubAccessKey } from "@naisys/common-node";
 import os from "os";
 
-import { getInstallPath } from "../services/pathService.js";
+import { getInstallPath } from "../services/runtime/pathService.js";
 import { detectHostEnvironment } from "./hostEnvironment.js";
 
 export function createHubClientConfig(hubUrl: string) {

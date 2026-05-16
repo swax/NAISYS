@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-vi.mock("../../utils/escKeyListener.js", () => ({
+vi.mock("../../utils/input/escKeyListener.js", () => ({
   createEscKeyListener: () => ({
     start: (onEsc: () => void) => {
       onEsc();

@@ -5,7 +5,7 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { isHubConnected } from "../services/hubConnectionService.js";
+import { isHubConnected } from "../services/comms/hubConnectionService.js";
 
 export default function statusRoutes(
   fastify: FastifyInstance,

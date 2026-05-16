@@ -1,0 +1,185 @@
+import erpDb from "../../database/erpDb.js";
+import type { OperationModel } from "../../generated/prisma/models/Operation.js";
+import {
+  calcNextSeqNo,
+  includeUsers,
+  type WithAuditUsers,
+} from "../../route-helpers.js";
+
+// --- Prisma include & result type ---
+
+const includeWorkCenter = {
+  workCenter: { select: { key: true } },
+} as const;
+
+export type OperationWithUsers = OperationModel &
+  WithAuditUsers & { workCenter?: { key: string } | null };
+
+export type OperationWithSummary = OperationWithUsers & {
+  _count: { steps: number };
+  predecessors: Array<{
+    predecessor: { seqNo: number; title: string };
+  }>;
+};
+
+// --- Lookups ---
+
+export async function listOperations(
+  orderRevId: number,
+): Promise<OperationWithSummary[]> {
+  return erpDb.operation.findMany({
+    where: { orderRevId },
+    include: {
+      ...includeUsers,
+      ...includeWorkCenter,
+      _count: { select: { steps: true } },
+      predecessors: {
+        include: { predecessor: { select: { seqNo: true, title: true } } },
+        orderBy: { predecessor: { seqNo: "asc" } },
+      },
+    },
+    orderBy: { seqNo: "asc" },
+  });
+}
+
+export type OperationWithStepSummary = OperationWithUsers & {
+  steps: Array<{ seqNo: number; title: string }>;
+};
+
+export async function getOperation(
+  orderRevId: number,
+  seqNo: number,
+): Promise<OperationWithStepSummary | null> {
+  return erpDb.operation.findFirst({
+    where: { orderRevId, seqNo },
+    include: {
+      ...includeUsers,
+      ...includeWorkCenter,
+      steps: {
+        select: { seqNo: true, title: true },
+        orderBy: { seqNo: "asc" },
+      },
+    },
+  });
+}
+
+export async function findExisting(orderRevId: number, seqNo: number) {
+  return erpDb.operation.findFirst({
+    where: { orderRevId, seqNo },
+  });
+}
+
+// --- Mutations ---
+
+export async function createOperation(
+  orderRevId: number,
+  requestedSeqNo: number | undefined,
+  title: string,
+  description: string | undefined,
+  workCenterId: number | null | undefined,
+  predecessorSeqNos: number[] | undefined,
+  userId: number,
+): Promise<OperationWithSummary> {
+  return erpDb.$transaction(async (erpTx) => {
+    const maxSeq = await erpTx.operation.findFirst({
+      where: { orderRevId },
+      orderBy: { seqNo: "desc" },
+      select: { seqNo: true },
+    });
+    const defaultSeqNo = calcNextSeqNo(maxSeq?.seqNo ?? 0);
+    const nextSeqNo = requestedSeqNo ?? defaultSeqNo;
+
+    const created = await erpTx.operation.create({
+      data: {
+        orderRevId,
+        seqNo: nextSeqNo,
+        title,
+        description: description ?? "",
+        ...(workCenterId !== undefined ? { workCenterId } : {}),
+        createdById: userId,
+        updatedById: userId,
+      },
+    });
+
+    if (predecessorSeqNos !== undefined) {
+      // Use explicitly provided predecessors
+      for (const predSeqNo of predecessorSeqNos) {
+        const predOp = await erpTx.operation.findFirst({
+          where: { orderRevId, seqNo: predSeqNo },
+          select: { id: true },
+        });
+        if (predOp) {
+          await erpTx.operationDependency.create({
+            data: {
+              successorId: created.id,
+              predecessorId: predOp.id,
+              createdById: userId,
+            },
+          });
+        }
+      }
+    } else {
+      // Auto-create dependency on the previous operation (by seqNo)
+      const previousOp = await erpTx.operation.findFirst({
+        where: { orderRevId, seqNo: { lt: nextSeqNo } },
+        orderBy: { seqNo: "desc" },
+        select: { id: true },
+      });
+
+      if (previousOp) {
+        await erpTx.operationDependency.create({
+          data: {
+            successorId: created.id,
+            predecessorId: previousOp.id,
+            createdById: userId,
+          },
+        });
+      }
+    }
+
+    // Re-fetch with summary data (predecessors + step count)
+    return erpTx.operation.findUniqueOrThrow({
+      where: { id: created.id },
+      include: {
+        ...includeUsers,
+        ...includeWorkCenter,
+        _count: { select: { steps: true } },
+        predecessors: {
+          include: { predecessor: { select: { seqNo: true, title: true } } },
+          orderBy: { predecessor: { seqNo: "asc" } },
+        },
+      },
+    });
+  });
+}
+
+export async function updateOperation(
+  id: number,
+  data: {
+    title?: string;
+    description?: string;
+    workCenterId?: number | null;
+    seqNo?: number;
+  },
+  userId: number,
+): Promise<OperationWithUsers> {
+  return erpDb.operation.update({
+    where: { id },
+    data: {
+      ...(data.title !== undefined ? { title: data.title } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description }
+        : {}),
+      ...(data.workCenterId !== undefined
+        ? { workCenterId: data.workCenterId }
+        : {}),
+      ...(data.seqNo !== undefined ? { seqNo: data.seqNo } : {}),
+      updatedById: userId,
+    },
+    include: { ...includeUsers, ...includeWorkCenter },
+  });
+}
+
+export async function deleteOperation(id: number): Promise<void> {
+  await erpDb.operation.delete({ where: { id } });
+}

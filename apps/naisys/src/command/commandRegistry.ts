@@ -3,7 +3,7 @@
  * Each service exports its command metadata and handler function.
  */
 
-import type { InputModeService } from "../utils/inputMode.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
 import type { CommandDef } from "./commandDefs.js";
 import { helpCmd } from "./commandDefs.js";
 

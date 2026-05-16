@@ -32,14 +32,14 @@ import {
 
 import type { AppOutletContext } from "../../App";
 import { useSession } from "../../contexts/SessionContext";
-import { issueRegistrationLink } from "../../lib/apiAuth";
+import { issueRegistrationLink } from "../../lib/api/apiAuth";
 import {
   clearUserPassword,
   deleteUser,
   getUser,
   rotateUserApiKey,
   updateUser,
-} from "../../lib/apiUsers";
+} from "../../lib/api/apiUsers";
 import { UserPasskeysSection } from "./UserPasskeysSection";
 import { UserPermissionsSection } from "./UserPermissionsSection";
 

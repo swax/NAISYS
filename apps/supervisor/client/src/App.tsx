@@ -17,17 +17,17 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import { FloatingVoiceControl } from "./components/FloatingVoiceControl";
-import { NotFoundPage } from "./components/NotFoundPage";
-import { RootErrorPage } from "./components/RootErrorPage";
-import { RouteErrorPage } from "./components/RouteErrorPage";
+import { NotFoundPage } from "./components/error/NotFoundPage";
+import { RootErrorPage } from "./components/error/RootErrorPage";
+import { RouteErrorPage } from "./components/error/RouteErrorPage";
+import { FloatingVoiceControl } from "./components/feature/FloatingVoiceControl";
 import { StepUpPasswordPromptProvider } from "./components/StepUpPasswordPrompt";
 import { NAV_HEADER_ROW_HEIGHT, ROUTER_BASENAME } from "./constants";
 import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
 import { VoiceSessionProvider } from "./contexts/VoiceSessionContext";
-import { useSocketReconnect } from "./hooks/useSocketReconnect";
+import { useSocketReconnect } from "./hooks/socket/useSocketReconnect";
 import { useChartThemeSync } from "./lib/charts";
 import { queryClient } from "./lib/queryClient";
 import { useBoomGuard } from "./lib/useBoomGuard";
@@ -35,10 +35,10 @@ import { AppHeader } from "./nav/AppHeader";
 import { AppNavbar } from "./nav/AppNavbar";
 import { DisconnectedBanner } from "./nav/DisconnectedBanner";
 import { AdminPage } from "./pages/admin/AdminPage";
-import { AgentConfig } from "./pages/agents/AgentConfig";
 import { AgentDetail } from "./pages/agents/AgentDetail";
 import { AgentIndex } from "./pages/agents/AgentIndex";
 import { AgentsLayout } from "./pages/agents/AgentsLayout";
+import { AgentConfig } from "./pages/agents/config/AgentConfig";
 import { AgentChat } from "./pages/chat/AgentChat";
 import { CostsPage } from "./pages/costs/CostsPage";
 import { HostIndex } from "./pages/hosts/HostIndex";

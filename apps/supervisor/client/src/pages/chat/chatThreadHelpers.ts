@@ -1,4 +1,4 @@
-import type { ThreadRunCommand } from "../../hooks/useThreadRunCommands";
+import type { ThreadRunCommand } from "../../hooks/threadRuns/useThreadRunCommands";
 
 export const firstLine = (s: string) => {
   const idx = s.indexOf("\n");

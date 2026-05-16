@@ -31,7 +31,7 @@ vi.mock("dotenv", () => ({
   },
 }));
 
-vi.mock("../services/restartManager.js", () => ({
+vi.mock("../services/runtime/restartManager.js", () => ({
   runWithRestartWrapper,
   shouldUseRestartWrapper,
 }));

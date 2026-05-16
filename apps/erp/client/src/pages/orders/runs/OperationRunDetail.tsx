@@ -36,11 +36,11 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 
-import { FieldValueRunList } from "../../../components/FieldValueList";
+import { FieldValueRunList } from "../../../components/lists/FieldValueList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
-import { DependencyList } from "../revs/DependencyList";
+import { DependencyList } from "../revs/lists/DependencyList";
 import { CommentList } from "./CommentList";
 import type { LaborActions } from "./LaborTicketList";
 import { LaborTicketList } from "./LaborTicketList";

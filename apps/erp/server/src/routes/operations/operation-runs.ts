@@ -1,0 +1,427 @@
+import type { HateoasAction, HateoasLink } from "@naisys/common";
+import {
+  ErrorResponseSchema,
+  MutateResponseSchema,
+  OperationRunListResponseSchema,
+  OperationRunSchema,
+  OperationRunStatus,
+  UpdateOperationRunSchema,
+} from "@naisys/erp-shared";
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod/v4";
+
+import { conflict, notFound } from "../../error-handler.js";
+import { API_PREFIX, selfLink } from "../../hateoas.js";
+import type { ErpUser } from "../../middleware/auth-middleware.js";
+import { hasPermission, requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  checkOrderRunStarted,
+  checkWorkCenterAccess,
+  childItemLinks,
+  formatAuditFields,
+  formatDate,
+  resolveActions,
+  resolveOpRun,
+  resolveOrderRun,
+  useFullSerializer,
+  wantsFullResponse,
+} from "../../route-helpers.js";
+import {
+  checkStepsComplete,
+  getOpRun,
+  getOpRunFieldRefSummary,
+  getOpRunStepSummary,
+  listOpRuns,
+  type OpRunWithOp,
+  type OpRunWithSummary,
+  updateOpRun,
+  validateStatusFor,
+} from "../../services/operations/operation-run-service.js";
+
+function opRunResource(orderKey: string, runNo: number) {
+  return `orders/${orderKey}/runs/${runNo}/ops`;
+}
+
+async function opRunItemActions(
+  orderKey: string,
+  runNo: number,
+  seqNo: number,
+  opRunId: number,
+  operationId: number,
+  status: string,
+  user: ErpUser | undefined,
+): Promise<HateoasAction[]> {
+  const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
+  const isExecutor = hasPermission(user, "order_executor");
+  const stepsErr =
+    isExecutor && status === OperationRunStatus.in_progress
+      ? await checkStepsComplete(opRunId)
+      : null;
+  const wcErr = user ? await checkWorkCenterAccess(operationId, user) : null;
+
+  return resolveActions(
+    [
+      {
+        rel: "assign",
+        method: "PUT",
+        title: "Assign",
+        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        body: { assignedToId: 0 },
+        permission: "order_manager",
+        statuses: [
+          OperationRunStatus.blocked,
+          OperationRunStatus.pending,
+          OperationRunStatus.in_progress,
+        ],
+      },
+      {
+        rel: "add-comment",
+        path: "/comments",
+        method: "POST",
+        title: "Add Comment",
+        schema: `${API_PREFIX}/schemas/CreateOperationRunComment`,
+        body: { body: "" },
+        permission: "order_executor",
+      },
+      {
+        rel: "start",
+        path: "/start",
+        method: "POST",
+        title: "Start",
+        permission: "order_executor",
+        statuses: [OperationRunStatus.blocked, OperationRunStatus.pending],
+        disabledWhen: (ctx) =>
+          wcErr ??
+          (ctx.status === OperationRunStatus.blocked
+            ? "Operation is blocked by incomplete predecessors"
+            : null),
+      },
+      {
+        rel: "update",
+        method: "PUT",
+        title: "Update",
+        schema: `${API_PREFIX}/schemas/UpdateOperationRun`,
+        body: { assignedToId: 0 },
+        permission: "order_executor",
+        statuses: [OperationRunStatus.pending, OperationRunStatus.in_progress],
+      },
+      {
+        rel: "complete",
+        path: "/complete",
+        method: "POST",
+        title: "Complete",
+        schema: `${API_PREFIX}/schemas/CompleteOperationRun`,
+        body: { note: "" },
+        permission: "order_executor",
+        statuses: [OperationRunStatus.in_progress],
+        disabledWhen: () => wcErr ?? stepsErr,
+      },
+      {
+        rel: "skip",
+        path: "/skip",
+        method: "POST",
+        title: "Skip",
+        permission: "order_manager",
+        statuses: [
+          OperationRunStatus.blocked,
+          OperationRunStatus.pending,
+          OperationRunStatus.in_progress,
+        ],
+        disabledWhen: () => wcErr,
+      },
+      {
+        rel: "fail",
+        path: "/fail",
+        method: "POST",
+        title: "Fail",
+        permission: "order_manager",
+        statuses: [OperationRunStatus.in_progress],
+        disabledWhen: () => wcErr,
+      },
+      {
+        rel: "reopen",
+        path: "/reopen",
+        method: "POST",
+        title: "Reopen",
+        permission: "order_manager",
+        statuses: [
+          OperationRunStatus.completed,
+          OperationRunStatus.skipped,
+          OperationRunStatus.failed,
+        ],
+        disabledWhen: () => wcErr,
+      },
+    ],
+    href,
+    { status, user },
+  );
+}
+
+const RunNoParamsSchema = z.object({
+  orderKey: z.string(),
+  runNo: z.coerce.number().int(),
+});
+
+export const SeqNoParamsSchema = z.object({
+  orderKey: z.string(),
+  runNo: z.coerce.number().int(),
+  seqNo: z.coerce.number().int(),
+});
+
+export async function formatOpRun(
+  orderKey: string,
+  runNo: number,
+  user: ErpUser | undefined,
+  opRun: OpRunWithOp,
+) {
+  const seqNo = opRun.operation.seqNo;
+  const [stepSummaryRows, fieldRefSummary] = await Promise.all([
+    getOpRunStepSummary(opRun.id),
+    getOpRunFieldRefSummary(
+      opRun.operationId,
+      opRun.orderRunId,
+      orderKey,
+      runNo,
+    ),
+  ]);
+  const revNo = opRun.orderRun.orderRev.revNo;
+  return {
+    id: opRun.id,
+    orderRunId: opRun.orderRunId,
+    operationId: opRun.operationId,
+    revNo,
+    orderDescription: opRun.orderRun.orderRev.description,
+    seqNo,
+    title: opRun.operation.title,
+    description: opRun.operation.description,
+    workCenterKey: opRun.operation.workCenter?.key ?? null,
+    status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
+    cost: opRun.cost,
+    note: opRun.statusNote ?? null,
+    completedAt: formatDate(opRun.completedAt),
+    stepSummary: stepSummaryRows.map((sr) => ({
+      seqNo: sr.step.seqNo,
+      title: sr.step.title,
+      completed: sr.completed,
+    })),
+    ...(fieldRefSummary.length > 0
+      ? {
+          fieldRefSummary,
+        }
+      : {}),
+    ...formatAuditFields(opRun),
+    _links: [
+      ...childItemLinks(
+        "/" + opRunResource(orderKey, runNo),
+        seqNo,
+        "Operation Runs",
+        "/orders/" + orderKey + "/runs/" + runNo,
+        "Order Run",
+        "OperationRun",
+        "run",
+      ),
+      {
+        rel: "order-revision",
+        href: `${API_PREFIX}/orders/${orderKey}/revs/${revNo}`,
+        title: "Order Revision",
+      } as HateoasLink,
+      {
+        rel: "steps",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/steps`,
+        title: "Step Runs",
+      } as HateoasLink,
+      {
+        rel: "labor",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/labor`,
+        title: "Labor Tickets",
+      } as HateoasLink,
+      {
+        rel: "comments",
+        href: `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}/comments`,
+        title: "Comments",
+      } as HateoasLink,
+    ],
+    _actions: await opRunItemActions(
+      orderKey,
+      runNo,
+      seqNo,
+      opRun.id,
+      opRun.operationId,
+      opRun.status,
+      user,
+    ),
+  };
+}
+
+export async function formatOpRunTransition(
+  orderKey: string,
+  runNo: number,
+  user: ErpUser | undefined,
+  opRun: OpRunWithOp,
+) {
+  const seqNo = opRun.operation.seqNo;
+  return {
+    id: opRun.id,
+    status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
+    cost: opRun.cost,
+    note: opRun.statusNote ?? null,
+    completedAt: formatDate(opRun.completedAt),
+    ...formatAuditFields(opRun),
+    _actions: await opRunItemActions(
+      orderKey,
+      runNo,
+      seqNo,
+      opRun.id,
+      opRun.operationId,
+      opRun.status,
+      user,
+    ),
+  };
+}
+
+function formatListOpRun(opRun: OpRunWithSummary) {
+  const seqNo = opRun.operation.seqNo;
+  return {
+    id: opRun.id,
+    orderRunId: opRun.orderRunId,
+    operationId: opRun.operationId,
+    revNo: opRun.orderRun.orderRev.revNo,
+    orderDescription: opRun.orderRun.orderRev.description,
+    seqNo,
+    title: opRun.operation.title,
+    description: opRun.operation.description,
+    workCenterKey: opRun.operation.workCenter?.key ?? null,
+    status: opRun.status,
+    assignedTo: opRun.assignedTo?.username ?? null,
+    cost: opRun.cost,
+    note: opRun.statusNote ?? null,
+    completedAt: formatDate(opRun.completedAt),
+    ...formatAuditFields(opRun),
+    stepCount: opRun._count.stepRuns,
+    predecessors: opRun.operation.predecessors.map((d) => ({
+      seqNo: d.predecessor.seqNo,
+      title: d.predecessor.title,
+    })),
+  };
+}
+
+export default function operationRunRoutes(fastify: FastifyInstance) {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  // LIST
+  app.get("/", {
+    schema: {
+      description: "List operation runs for an order run",
+      tags: ["Operation Runs"],
+      params: RunNoParamsSchema,
+      response: {
+        200: OperationRunListResponseSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found`);
+      }
+
+      const items = await listOpRuns(resolved.run.id);
+
+      return {
+        items: items.map((opRun) => formatListOpRun(opRun)),
+        total: items.length,
+        _links: [selfLink(`/${opRunResource(orderKey, runNo)}`)],
+        _linkTemplates: [
+          {
+            rel: "item",
+            hrefTemplate: `${API_PREFIX}/orders/${orderKey}/runs/${runNo}/ops/{seqNo}`,
+          },
+        ],
+      };
+    },
+  });
+
+  // GET by seqNo
+  app.get("/:seqNo", {
+    schema: {
+      description: "Get a single operation run by operation sequence number",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      response: {
+        200: OperationRunSchema,
+        404: ErrorResponseSchema,
+      },
+    },
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) {
+        return notFound(reply, `Operation run not found`);
+      }
+
+      const opRun = await getOpRun(resolved.opRun.id);
+      if (!opRun) {
+        return notFound(reply, `Operation run not found`);
+      }
+
+      return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+    },
+  });
+
+  // UPDATE (pending/in_progress only)
+  app.put("/:seqNo", {
+    schema: {
+      description:
+        "Update an operation run (pending or in_progress status only)",
+      tags: ["Operation Runs"],
+      params: SeqNoParamsSchema,
+      body: UpdateOperationRunSchema,
+      response: {
+        200: MutateResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo, seqNo } = request.params;
+      const userId = request.erpUser!.id;
+
+      const resolved = await resolveOpRun(orderKey, runNo, seqNo);
+      if (!resolved) return notFound(reply, `Operation run not found`);
+
+      const orderErr = checkOrderRunStarted(resolved.run.status);
+      if (orderErr) return conflict(reply, orderErr);
+
+      const statusErr = validateStatusFor("update", resolved.opRun.status, [
+        OperationRunStatus.pending,
+        OperationRunStatus.in_progress,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const opRun = await updateOpRun(resolved.opRun.id, request.body, userId);
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatOpRun(orderKey, runNo, request.erpUser, opRun);
+      }
+      return {
+        _actions: await opRunItemActions(
+          orderKey,
+          runNo,
+          seqNo,
+          opRun.id,
+          opRun.operationId,
+          opRun.status,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+}

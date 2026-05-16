@@ -1,6 +1,6 @@
 import type { GlobalConfig } from "../globalConfig.js";
-import { getPlatformConfig } from "../services/shellPlatform.js";
-import type { InputModeService } from "../utils/inputMode.js";
+import { getPlatformConfig } from "../services/runtime/shellPlatform.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
 import * as utilities from "../utils/utilities.js";
 import type { ShellWrapper } from "./shellWrapper.js";
 

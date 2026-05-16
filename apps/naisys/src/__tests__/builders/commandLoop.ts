@@ -5,11 +5,11 @@ import { createCommandLoop } from "../../command/commandLoop.js";
 import { NextCommandAction } from "../../command/commandRegistry.js";
 import type { DesktopService } from "../../computer-use/desktop.js";
 import type { LLMService } from "../../llm/llmService.js";
-import type { ModelService } from "../../services/modelService.js";
-import type { StartupAttachmentService } from "../../services/startupAttachmentService.js";
+import type { ModelService } from "../../services/agent/modelService.js";
+import type { StartupAttachmentService } from "../../services/agent/startupAttachmentService.js";
 import { createCommandLoopState } from "../../utils/commandLoopState.js";
-import { createInputMode } from "../../utils/inputMode.js";
-import { createPromptNotificationService } from "../../utils/promptNotificationService.js";
+import { createInputMode } from "../../utils/input/inputMode.js";
+import { createPromptNotificationService } from "../../utils/output/promptNotificationService.js";
 import {
   createMockAgentConfig,
   createMockBrowserService,

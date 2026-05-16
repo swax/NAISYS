@@ -15,9 +15,9 @@ import { OrderStatus } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 
+import { OrderForm } from "../../components/forms/OrderForm";
+import { OrderRevisions } from "../../components/lists/OrderRevisions";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
-import { OrderForm } from "../../components/OrderForm";
-import { OrderRevisions } from "../../components/OrderRevisions";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 
 export const OrderDetail: React.FC = () => {

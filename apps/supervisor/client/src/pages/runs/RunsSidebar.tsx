@@ -14,10 +14,10 @@ import { IconFileText, IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
-import { getPlatformBadgeColor } from "../../components/PlatformBadge";
+import { getApiTypeBadgeColor } from "../../components/badges/ApiTypeBadge";
+import { getPlatformBadgeColor } from "../../components/badges/PlatformBadge";
 import { useLlmModels } from "../../hooks/useLlmModels";
-import { startAgent } from "../../lib/apiAgents";
+import { startAgent } from "../../lib/api/apiAgents";
 import type { RunSession } from "../../types/runSession";
 import { RunsCostChart } from "./RunsCostChart";
 

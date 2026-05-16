@@ -3,8 +3,8 @@ import { ADMIN_USERNAME } from "@naisys/common";
 import type { IAgentManager } from "../agent/agentManagerInterface.js";
 import type { ContextManager } from "../llm/contextManager.js";
 import type { LlmRole } from "../llm/llmDtos.js";
-import type { InputModeService } from "../utils/inputMode.js";
-import type { OutputService } from "../utils/output.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
+import type { OutputService } from "../utils/output/output.js";
 import {
   cmdCmd,
   contextCmd,

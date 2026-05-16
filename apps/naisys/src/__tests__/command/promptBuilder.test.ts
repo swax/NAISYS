@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 
 import { noWait } from "../../command/commandRegistry.js";
 import { createPromptBuilder } from "../../command/promptBuilder.js";
-import { getPlatformConfig } from "../../services/shellPlatform.js";
-import { createInputMode } from "../../utils/inputMode.js";
-import { createPromptNotificationService } from "../../utils/promptNotificationService.js";
+import { getPlatformConfig } from "../../services/runtime/shellPlatform.js";
+import { createInputMode } from "../../utils/input/inputMode.js";
+import { createPromptNotificationService } from "../../utils/output/promptNotificationService.js";
 import {
   createMockAgentConfig,
   createMockContextManager,

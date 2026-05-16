@@ -16,19 +16,19 @@ import React, {
   useState,
 } from "react";
 
-import { isRunActive } from "../hooks/runStatus";
-import { useSubscription } from "../hooks/useSubscription";
-import type { VoiceMode } from "../lib/apiClient";
-import { getRunsData } from "../lib/apiRuns";
+import { useSubscription } from "../hooks/socket/useSubscription";
+import { isRunActive } from "../hooks/threadRuns/runStatus";
+import type { VoiceMode } from "../lib/api/apiClient";
+import { getRunsData } from "../lib/api/apiRuns";
 import {
   chatMessagesRoomKey,
   imagesFromChatMessage,
-} from "../lib/voiceChatImages";
+} from "../lib/voice/voiceChatImages";
 import {
   createVoiceSession,
   type VoiceSession,
   type VoiceSessionDisplay,
-} from "../lib/voiceSession";
+} from "../lib/voice/voiceSession";
 
 /**
  * Thin React shell around {@link createVoiceSession}. The session object owns

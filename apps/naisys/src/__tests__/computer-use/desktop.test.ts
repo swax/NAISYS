@@ -2,10 +2,10 @@ import { LlmApiType } from "@naisys/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createDesktopClaimService } from "../../computer-use/desktopClaimService.js";
-import { getConfirmation } from "../../utils/confirmation.js";
+import { getConfirmation } from "../../utils/input/confirmation.js";
 import { buildDesktopService } from "../builders/desktop.js";
 
-vi.mock("../../utils/confirmation.js", () => ({
+vi.mock("../../utils/input/confirmation.js", () => ({
   getConfirmation: vi.fn().mockResolvedValue(true),
 }));
 

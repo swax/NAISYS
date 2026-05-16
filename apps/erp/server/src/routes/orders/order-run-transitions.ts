@@ -1,0 +1,348 @@
+import {
+  CompleteOrderRunSchema,
+  ErrorResponseSchema,
+  OrderRunStatus,
+  OrderRunTransitionSchema,
+} from "@naisys/erp-shared";
+import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
+
+import {
+  badRequest,
+  conflict,
+  notFound,
+  unprocessable,
+} from "../../error-handler.js";
+import { requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  resolveOrderRun,
+  useFullSerializer,
+  wantsFullResponse,
+} from "../../route-helpers.js";
+import {
+  checkOpsComplete,
+  completeOrderRun,
+  getReopenTarget,
+  sumOpRunCosts,
+  transitionStatus,
+  validateStatusFor,
+} from "../../services/orders/order-run-service.js";
+import {
+  formatRun,
+  orderRunItemActions,
+  RunNoParamsSchema,
+} from "./order-runs.js";
+
+export default function orderRunTransitionRoutes(fastify: FastifyInstance) {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  // START (released -> started)
+  app.post("/:runNo/start", {
+    schema: {
+      description: "Start an order run (released -> started)",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      response: {
+        200: OrderRunTransitionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("start", resolved.run.status, [
+        OrderRunStatus.released,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const userId = request.erpUser!.id;
+      const run = await transitionStatus(
+        resolved.run.id,
+        "start",
+        OrderRunStatus.released,
+        OrderRunStatus.started,
+        userId,
+      );
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+
+  // CLOSE (started -> closed)
+  app.post("/:runNo/close", {
+    schema: {
+      description: "Close an order run (started -> closed)",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      response: {
+        200: OrderRunTransitionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("close", resolved.run.status, [
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      // Validate all operation runs are completed or skipped
+      const opsErr = await checkOpsComplete(resolved.run.id);
+      if (opsErr) return unprocessable(reply, opsErr);
+
+      const userId = request.erpUser!.id;
+      const cost = await sumOpRunCosts(resolved.run.id);
+      const run = await transitionStatus(
+        resolved.run.id,
+        "close",
+        OrderRunStatus.started,
+        OrderRunStatus.closed,
+        userId,
+        { cost },
+      );
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+
+  // COMPLETE (started -> closed, creates item instance)
+  app.post("/:runNo/complete", {
+    schema: {
+      description:
+        "Complete an order run — creates an item instance and closes the run. " +
+        "Returns 400 if any required item field is missing, or if any supplied " +
+        "fieldSeqNo doesn't exist on the item.",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      body: CompleteOrderRunSchema,
+      response: {
+        200: OrderRunTransitionSchema,
+        400: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+        422: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_executor"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("complete", resolved.run.status, [
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      // Validate all operation runs are completed or skipped
+      const opsErr = await checkOpsComplete(resolved.run.id);
+      if (opsErr) return unprocessable(reply, opsErr);
+
+      const userId = request.erpUser!.id;
+      const result = await completeOrderRun(
+        resolved.run.id,
+        resolved.order.id,
+        request.body,
+        userId,
+      );
+
+      if (result.error) {
+        if (result.status === 400) {
+          return badRequest(reply, result.error);
+        }
+        return unprocessable(reply, result.error);
+      }
+
+      const run = result.run!;
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+
+  // CANCEL (released/started -> cancelled)
+  app.post("/:runNo/cancel", {
+    schema: {
+      description: "Cancel an order run (released/started -> cancelled)",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      response: {
+        200: OrderRunTransitionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_manager"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("cancel", resolved.run.status, [
+        OrderRunStatus.released,
+        OrderRunStatus.started,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const userId = request.erpUser!.id;
+      const cost = await sumOpRunCosts(resolved.run.id);
+      const run = await transitionStatus(
+        resolved.run.id,
+        "cancel",
+        resolved.run.status as
+          | typeof OrderRunStatus.released
+          | typeof OrderRunStatus.started,
+        OrderRunStatus.cancelled,
+        userId,
+        cost > 0 ? { cost } : undefined,
+      );
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+
+  // REOPEN (closed -> started, cancelled -> released)
+  app.post("/:runNo/reopen", {
+    schema: {
+      description:
+        "Reopen an order run (closed -> started, cancelled -> released)",
+      tags: ["Order Runs"],
+      params: RunNoParamsSchema,
+      response: {
+        200: OrderRunTransitionSchema,
+        404: ErrorResponseSchema,
+        409: ErrorResponseSchema,
+      },
+    },
+    preHandler: requirePermission("order_manager"),
+    handler: async (request, reply) => {
+      const { orderKey, runNo } = request.params;
+
+      const resolved = await resolveOrderRun(orderKey, runNo);
+      if (!resolved) {
+        return notFound(reply, `Order run not found for order '${orderKey}'`);
+      }
+
+      const statusErr = validateStatusFor("reopen", resolved.run.status, [
+        OrderRunStatus.closed,
+        OrderRunStatus.cancelled,
+      ]);
+      if (statusErr) return conflict(reply, statusErr);
+
+      const reopenTo = getReopenTarget(
+        resolved.run.status as
+          | typeof OrderRunStatus.closed
+          | typeof OrderRunStatus.cancelled,
+      );
+
+      const userId = request.erpUser!.id;
+      const run = await transitionStatus(
+        resolved.run.id,
+        "reopen",
+        resolved.run.status as
+          | typeof OrderRunStatus.closed
+          | typeof OrderRunStatus.cancelled,
+        reopenTo,
+        userId,
+      );
+
+      if (wantsFullResponse(request)) {
+        useFullSerializer(reply);
+        return formatRun(orderKey, request.erpUser, run);
+      }
+      const itemKey = run.order?.item?.key ?? null;
+      return {
+        status: run.status,
+        _actions: await orderRunItemActions(
+          orderKey,
+          runNo,
+          run.id,
+          run.status,
+          itemKey,
+          request.erpUser,
+        ),
+      };
+    },
+  });
+}

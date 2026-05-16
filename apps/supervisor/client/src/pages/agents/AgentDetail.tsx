@@ -33,7 +33,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { getPlatformBadgeColor } from "../../components/PlatformBadge";
+import { getPlatformBadgeColor } from "../../components/badges/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
@@ -49,10 +49,10 @@ import {
   startAgent,
   stopAgent,
   unarchiveAgent,
-} from "../../lib/apiAgents";
+} from "../../lib/api/apiAgents";
 import { useBoomGuard } from "../../lib/useBoomGuard";
-import { AgentStartupAttachmentsSummary } from "./AgentStartupAttachmentsSummary";
-import { ConfigSummary } from "./ConfigSummary";
+import { AgentStartupAttachmentsSummary } from "./config/AgentStartupAttachmentsSummary";
+import { ConfigSummary } from "./config/ConfigSummary";
 
 export const AgentDetail: React.FC = () => {
   useBoomGuard("agent");

@@ -18,8 +18,8 @@ import {
   type ImageModelDetail,
   type LlmModelDetail,
   type ModelsResponse,
-} from "../../lib/apiClient";
-import { ModelSidebar } from "../../nav/ModelSidebar";
+} from "../../lib/api/apiClient";
+import { ModelSidebar } from "../../nav/sidebars/ModelSidebar";
 
 export interface ModelsOutletContext {
   llmModels: LlmModelDetail[];

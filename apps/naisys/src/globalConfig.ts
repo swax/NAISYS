@@ -8,7 +8,7 @@ import os from "os";
 import path from "path";
 
 import type { HubClient } from "./hub/hubClient.js";
-import * as pathService from "./services/pathService.js";
+import * as pathService from "./services/runtime/pathService.js";
 
 export function createGlobalConfig(
   hubClient?: HubClient,

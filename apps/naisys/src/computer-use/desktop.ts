@@ -19,11 +19,11 @@ import type {
   DesktopConfig,
   DesktopSubAction,
 } from "../llm/vendors/vendorTypes.js";
-import type { ModelService } from "../services/modelService.js";
+import type { ModelService } from "../services/agent/modelService.js";
 import type { CommandLoopStateService } from "../utils/commandLoopState.js";
-import { getConfirmation } from "../utils/confirmation.js";
-import type { InputModeService } from "../utils/inputMode.js";
-import type { OutputService } from "../utils/output.js";
+import { getConfirmation } from "../utils/input/confirmation.js";
+import type { InputModeService } from "../utils/input/inputMode.js";
+import type { OutputService } from "../utils/output/output.js";
 import type { ComputerService } from "./computerService.js";
 import {
   checkActionBounds,

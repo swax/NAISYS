@@ -9,7 +9,7 @@ import type {
 } from "@naisys/hub-protocol";
 
 import { hubCmd } from "../command/commandDefs.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 import type { HubClientConfig } from "./hubClientConfig.js";
 import type { HubConnectErrorInfo, HubConnection } from "./hubConnection.js";
 import { createHubConnection } from "./hubConnection.js";

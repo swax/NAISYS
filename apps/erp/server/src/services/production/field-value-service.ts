@@ -1,0 +1,391 @@
+import { formatFileSize } from "@naisys/common";
+import {
+  FieldType,
+  type FieldValidation,
+  type FieldValue,
+} from "@naisys/erp-shared";
+
+import erpDb from "../../database/erpDb.js";
+import type { PrismaClient } from "../../generated/prisma/client.js";
+import type { StepRunWithStepAndFields } from "../operations/step-run-service.js";
+
+type PrismaTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
+
+// --- Lookups ---
+
+export async function findStepRunWithField(
+  id: number,
+  opRunId: number,
+  fieldSeqNo: number,
+) {
+  const stepRun = await erpDb.stepRun.findUnique({
+    where: { id },
+    include: {
+      step: {
+        select: {
+          multiSet: true,
+          fieldSet: {
+            select: {
+              fields: {
+                where: { seqNo: fieldSeqNo },
+                select: {
+                  id: true,
+                  fieldSetId: true,
+                  seqNo: true,
+                  label: true,
+                  type: true,
+                  isArray: true,
+                  required: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!stepRun || stepRun.operationRunId !== opRunId) return null;
+  return stepRun;
+}
+
+// --- Serialization ---
+
+/**
+ * Serialize a field value for DB storage.
+ * - Scalar (string): stored as-is
+ * - Array (string[]): stored as JSON array string
+ */
+export function serializeFieldValue(value: FieldValue): string {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value);
+  }
+  return value;
+}
+
+/**
+ * Deserialize a DB-stored value back to the API shape.
+ * - isArray fields: parse JSON array, falling back to comma-split for legacy data
+ * - Scalar fields: return as-is
+ */
+export function deserializeFieldValue(
+  dbValue: string,
+  isArray: boolean,
+): FieldValue {
+  if (!isArray) return dbValue;
+  if (!dbValue) return [];
+
+  // Try JSON array first (new format)
+  if (dbValue.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(dbValue);
+      if (Array.isArray(parsed)) return parsed as string[];
+    } catch {
+      // fall through to legacy
+    }
+  }
+
+  // Legacy: comma-separated string — migrate on read
+  return dbValue.split(",").map((v) => v.trim());
+}
+
+// --- Validation ---
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?$/;
+
+function validateSingleValue(type: string, value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+
+  switch (type) {
+    case FieldType.number:
+      if (isNaN(Number(v))) return "Must be a number";
+      break;
+    case FieldType.date:
+      if (!DATE_RE.test(v) || isNaN(Date.parse(v)))
+        return "Must be a valid date (YYYY-MM-DD)";
+      break;
+    case FieldType.datetime:
+      if (!DATETIME_RE.test(v) || isNaN(Date.parse(v)))
+        return "Must be a valid date/time (YYYY-MM-DDTHH:mm)";
+      break;
+    case FieldType.yesNo:
+      if (v !== "Yes" && v !== "No") return 'Must be "Yes" or "No"';
+      break;
+    case FieldType.checkbox:
+      if (v !== "checked") return "Invalid checkbox value";
+      break;
+  }
+  return null;
+}
+
+/**
+ * Check that the value shape matches the field's isArray flag.
+ * Returns an error string if mismatched, or null if OK.
+ */
+export function checkFieldValueShape(
+  label: string,
+  type: string,
+  isArray: boolean,
+  value: FieldValue,
+): string | null {
+  if (isArray && !Array.isArray(value)) {
+    return `Field "${label}" is an array field (type: ${type}[]) — value must be a JSON array, e.g. ["value1", "value2"]`;
+  }
+  if (!isArray && Array.isArray(value)) {
+    return `Field "${label}" is not an array field — value must be a string, not an array`;
+  }
+  return null;
+}
+
+export interface FieldSetValidationFailure {
+  fieldId: number;
+  label: string;
+  setIndex: number;
+  error: string;
+}
+
+/**
+ * Validate a list of field definitions across one or more set indexes, given a
+ * way to look up the current value for each (fieldId, setIndex) pair. Returns
+ * one entry per invalid cell; callers format as appropriate. Iteration order
+ * is ascending setIndex, then the order of `fieldDefs` as given.
+ */
+export function validateFieldSet(
+  fieldDefs: {
+    id: number;
+    label: string;
+    type: string;
+    isArray: boolean;
+    required: boolean;
+  }[],
+  setIndexes: number[],
+  getValue: (fieldId: number, setIndex: number) => FieldValue,
+): FieldSetValidationFailure[] {
+  const failures: FieldSetValidationFailure[] = [];
+  for (const si of [...setIndexes].sort((a, b) => a - b)) {
+    for (const def of fieldDefs) {
+      const value = getValue(def.id, si);
+      const result = validateFieldValue(
+        def.type,
+        def.isArray,
+        def.required,
+        value,
+      );
+      if (!result.valid) {
+        failures.push({
+          fieldId: def.id,
+          label: def.label,
+          setIndex: si,
+          error: result.error!,
+        });
+      }
+    }
+  }
+  return failures;
+}
+
+export function validateFieldValue(
+  type: string,
+  isArray: boolean,
+  required: boolean,
+  value: FieldValue,
+): FieldValidation {
+  const shapeErr = checkFieldValueShape("field", type, isArray, value);
+  if (shapeErr) return { valid: false, error: shapeErr };
+
+  if (isArray) {
+    const items = value as string[];
+    if (required && items.every((v) => !v.trim())) {
+      return { valid: false, error: "Required" };
+    }
+    for (let i = 0; i < items.length; i++) {
+      const err = validateSingleValue(type, items[i]);
+      if (err) {
+        return { valid: false, error: `Item ${i + 1}: ${err}` };
+      }
+    }
+  } else {
+    const v = value as string;
+    if (required && !v.trim()) {
+      return { valid: false, error: "Required" };
+    }
+    const err = validateSingleValue(type, v);
+    if (err) {
+      return { valid: false, error: err };
+    }
+  }
+  return { valid: true };
+}
+
+function fieldValueKey(fieldId: number, setIndex: number): string {
+  return `${fieldId}_${setIndex}`;
+}
+
+export function validateCompletionFields(
+  existing: StepRunWithStepAndFields,
+): string | null {
+  const existingFieldValues = existing.fieldRecord?.fieldValues ?? [];
+
+  // Build a map of field definitions keyed by id for isArray lookup
+  const fieldDefs = new Map(
+    (existing.step.fieldSet?.fields ?? []).map((f) => [f.id, f]),
+  );
+
+  const storedMap = new Map(
+    existingFieldValues.map((fv) => {
+      const def = fieldDefs.get(fv.fieldId);
+      return [
+        fieldValueKey(fv.fieldId, fv.setIndex),
+        deserializeFieldValue(fv.value, def?.isArray ?? false),
+      ];
+    }),
+  );
+
+  // Determine how many sets exist
+  const allSetIndexes = new Set<number>();
+  for (const fv of existingFieldValues) allSetIndexes.add(fv.setIndex);
+  if (allSetIndexes.size === 0) allSetIndexes.add(0);
+
+  const errors: string[] = [];
+  for (const si of [...allSetIndexes].sort((a, b) => a - b)) {
+    for (const field of existing.step.fieldSet?.fields ?? []) {
+      const key = fieldValueKey(field.id, si);
+      const value = storedMap.get(key) ?? "";
+      const result = validateFieldValue(
+        field.type,
+        field.isArray,
+        field.required,
+        value,
+      );
+      if (!result.valid) {
+        const prefix = existing.step.multiSet ? `Set ${si + 1} / ` : "";
+        errors.push(`${prefix}${field.label}: ${result.error}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    return `Cannot complete step:\n${errors.join("\n")}`;
+  }
+  return null;
+}
+
+// --- Attachment value helpers ---
+
+export function formatAttachmentLabel(
+  filename: string,
+  fileSize: number,
+): string {
+  return `${filename} (${formatFileSize(fileSize)})`;
+}
+
+/**
+ * Query current attachments for a field value and rebuild the stored value
+ * to reflect them. Returns the new API-shape value.
+ */
+export async function rebuildAttachmentFieldValue(
+  fieldRecordId: number,
+  fieldId: number,
+  setIndex: number,
+  isArray: boolean,
+  userId: number,
+): Promise<FieldValue> {
+  const fieldValue = await erpDb.fieldValue.findUnique({
+    where: {
+      fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
+    },
+    include: {
+      fieldAttachments: {
+        include: {
+          attachment: { select: { filename: true, fileSize: true } },
+        },
+      },
+    },
+  });
+
+  const labels = (fieldValue?.fieldAttachments ?? []).map((fa) =>
+    formatAttachmentLabel(fa.attachment.filename, fa.attachment.fileSize),
+  );
+
+  const value: FieldValue =
+    labels.length === 0 ? (isArray ? [] : "") : isArray ? labels : labels[0];
+
+  await upsertFieldValue(fieldRecordId, fieldId, setIndex, value, userId);
+  return value;
+}
+
+/**
+ * Clear an attachment field: delete all FieldAttachment links and set value to empty.
+ */
+export async function clearAttachmentFieldValue(
+  fieldRecordId: number,
+  fieldId: number,
+  setIndex: number,
+  userId: number,
+): Promise<void> {
+  const fieldValue = await erpDb.fieldValue.findUnique({
+    where: {
+      fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
+    },
+    select: { id: true },
+  });
+
+  if (fieldValue) {
+    await erpDb.fieldAttachment.deleteMany({
+      where: { fieldValueId: fieldValue.id },
+    });
+  }
+
+  const empty: FieldValue = "";
+  await upsertFieldValue(fieldRecordId, fieldId, setIndex, empty, userId);
+}
+
+// --- Mutations ---
+
+export async function upsertFieldValue(
+  fieldRecordId: number,
+  fieldId: number,
+  setIndex: number,
+  value: FieldValue,
+  userId: number,
+  tx: PrismaTx | typeof erpDb = erpDb,
+) {
+  const dbValue = serializeFieldValue(value);
+  await tx.fieldValue.upsert({
+    where: {
+      fieldRecordId_fieldId_setIndex: { fieldRecordId, fieldId, setIndex },
+    },
+    create: {
+      fieldRecordId,
+      fieldId,
+      setIndex,
+      value: dbValue,
+      createdById: userId,
+      updatedById: userId,
+    },
+    update: {
+      value: dbValue,
+      updatedById: userId,
+    },
+  });
+}
+
+export async function deleteFieldValueSet(
+  fieldRecordId: number,
+  setIndex: number,
+): Promise<void> {
+  await erpDb.$transaction(async (erpTx) => {
+    // Delete all field values for this set
+    await erpTx.fieldValue.deleteMany({
+      where: { fieldRecordId, setIndex },
+    });
+
+    // Re-index higher sets to fill the gap
+    await erpTx.$executeRawUnsafe(
+      `UPDATE field_values SET set_index = set_index - 1 WHERE field_record_id = ? AND set_index > ?`,
+      fieldRecordId,
+      setIndex,
+    );
+  });
+}

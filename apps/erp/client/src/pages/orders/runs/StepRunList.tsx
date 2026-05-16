@@ -27,7 +27,7 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { FieldValueRunList } from "../../../components/FieldValueList";
+import { FieldValueRunList } from "../../../components/lists/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 
 interface Props {

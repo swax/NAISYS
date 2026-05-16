@@ -11,10 +11,10 @@ import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { AgentCandidatesSection } from "../../components/AgentCandidatesSection";
-import { AgentModelIcon } from "../../components/AgentModelIcon";
-import { RecipientMultiSelect } from "../../components/RecipientMultiSelect";
-import type { ChatConversation } from "../../lib/apiClient";
+import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
+import { AgentCandidatesSection } from "../../components/feature/AgentCandidatesSection";
+import { RecipientMultiSelect } from "../../components/forms/RecipientMultiSelect";
+import type { ChatConversation } from "../../lib/api/apiClient";
 import type { Agent } from "../../types/agent";
 
 interface ChatConversationListProps {

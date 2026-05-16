@@ -18,9 +18,9 @@ import { OrderRunPriority } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 
+import { OrderRunForm } from "../../../components/forms/OrderRunForm";
+import { OperationSummaryTable } from "../../../components/lists/OperationSummaryTable";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
-import { OperationSummaryTable } from "../../../components/OperationSummaryTable";
-import { OrderRunForm } from "../../../components/OrderRunForm";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
 import type { OrderRunOutletContext } from "./OrderRunDetail";
 

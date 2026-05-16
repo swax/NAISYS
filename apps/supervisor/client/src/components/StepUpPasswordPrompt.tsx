@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import React from "react";
 
-import { setStepUpPasswordPrompt, verifyOwnPassword } from "../lib/apiAuth";
+import { setStepUpPasswordPrompt, verifyOwnPassword } from "../lib/api/apiAuth";
 
 type Resolver = (password: string | null) => void;
 

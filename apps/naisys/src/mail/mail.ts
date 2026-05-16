@@ -13,9 +13,9 @@ import type {
 import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
-import type { AttachmentService } from "../services/attachmentService.js";
-import type { RunService } from "../services/runService.js";
-import type { PromptNotificationService } from "../utils/promptNotificationService.js";
+import type { AttachmentService } from "../services/agent/attachmentService.js";
+import type { RunService } from "../services/agent/runService.js";
+import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 import type { MailContent } from "./mailFormat.js";
 import { formatMessageDisplay } from "./mailFormat.js";
 import type { MailQueryService } from "./mailQueryService.js";

@@ -24,7 +24,7 @@ import {
   lookupRegistrationToken,
   passkeyRegister,
   passwordRegister,
-} from "../lib/apiAuth";
+} from "../lib/api/apiAuth";
 
 type Phase = "loading" | "ready" | "registering" | "done" | "error";
 

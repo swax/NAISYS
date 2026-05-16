@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { LlmMessage } from "../../llm/llmDtos.js";
-import { createOutputService } from "../../utils/output.js";
+import { createOutputService } from "../../utils/output/output.js";
 import { createMockLogService } from "../mocks.js";
 
 const mockLogService = createMockLogService();

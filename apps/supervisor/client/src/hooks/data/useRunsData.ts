@@ -1,0 +1,272 @@
+import type {
+  CommandLoopState,
+  CostPushEntry,
+  LogPushSessionUpdate,
+  SessionHeartbeatUpdate,
+  SessionPush,
+} from "@naisys/hub-protocol";
+import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
+
+type CachedRunSession = BaseRunSession & {
+  activeSubagentCount?: number;
+  paused?: boolean;
+  state?: CommandLoopState;
+};
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { RunsDataParams } from "../../lib/api/apiRuns";
+import { getRunsData } from "../../lib/api/apiRuns";
+import type { RunSession } from "../../types/runSession";
+import { useSubscription } from "../socket/useSubscription";
+import { isRunActive } from "../threadRuns/runStatus";
+import { useTick } from "../useTick";
+
+type RunSessionWithFlag = RunSession & { isFirst?: boolean };
+
+const runKey = (run: {
+  userId: number;
+  runId: number;
+  subagentId?: number | null;
+  sessionId: number;
+}) => `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
+
+// Module-level caches (shared across all hook instances and persist across remounts)
+const runsCache = new Map<string, CachedRunSession[]>();
+const updatedSinceCache = new Map<string, string | undefined>();
+const totalCache = new Map<string, number>();
+const pagesLoadedCache = new Map<string, number>();
+
+type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
+type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
+type RunsNewSession = SessionPush["session"] & { type: "new-session" };
+type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
+  type: "heartbeat-update";
+  activeSubagentCount: number;
+};
+type RunsEvent =
+  | RunsLogUpdate
+  | RunsCostUpdate
+  | RunsNewSession
+  | RunsHeartbeatUpdate;
+
+export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
+  // Version counter to trigger re-renders when cache updates
+  const [, setCacheVersion] = useState(0);
+
+  // Force a re-render every second so isOnline recomputes off the threshold
+  // even when no socket events are arriving (e.g. dead host, dropped socket).
+  useTick(1000);
+
+  const mergeRuns = useCallback(
+    (updatedRuns: CachedRunSession[], total?: number) => {
+      if (updatedRuns.length === 0 && total === undefined) return;
+
+      const existingRuns = runsCache.get(agentUsername) || [];
+
+      const mergeMap = new Map<string, CachedRunSession>(
+        existingRuns.map((run) => [runKey(run), run]),
+      );
+
+      const existingCount = mergeMap.size;
+
+      updatedRuns.forEach((run: CachedRunSession) => {
+        mergeMap.set(runKey(run), run);
+      });
+
+      const mergedRuns = Array.from(mergeMap.values());
+      const newCount = mergedRuns.length - existingCount;
+
+      // Mirror the server's run_id desc → subagent_id desc → created_at desc
+      // ordering so parent rows stay grouped with their subagents and rows
+      // don't shift as lastActive updates stream in.
+      mergedRuns.sort((a, b) => {
+        if (a.runId !== b.runId) return b.runId - a.runId;
+        const aSub = a.subagentId ?? 0;
+        const bSub = b.subagentId ?? 0;
+        if (aSub !== bSub) return bSub - aSub;
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
+
+      runsCache.set(agentUsername, mergedRuns);
+
+      if (total !== undefined) {
+        totalCache.set(agentUsername, total);
+      } else if (newCount > 0) {
+        const currentTotal = totalCache.get(agentUsername) || 0;
+        totalCache.set(agentUsername, currentTotal + newCount);
+      }
+
+      updatedSinceCache.set(agentUsername, new Date().toISOString());
+
+      setCacheVersion((v) => v + 1);
+    },
+    [agentUsername],
+  );
+
+  const patchRun = useCallback(
+    (
+      userId: number,
+      runId: number,
+      sessionId: number,
+      subagentId: number | null | undefined,
+      patch: Partial<CachedRunSession>,
+    ) => {
+      const existing = (runsCache.get(agentUsername) || []).find(
+        (r) =>
+          r.userId === userId &&
+          r.runId === runId &&
+          r.sessionId === sessionId &&
+          (r.subagentId ?? 0) === (subagentId ?? 0),
+      );
+      if (!existing) return;
+      mergeRuns([{ ...existing, ...patch }]);
+    },
+    [agentUsername, mergeRuns],
+  );
+
+  const handleRunsEvent = useCallback(
+    (event: RunsEvent) => {
+      const existingRuns = runsCache.get(agentUsername) || [];
+      const key = runKey(event);
+
+      if (event.type === "new-session") {
+        // Heartbeats carry activeSubagentCount; brand-new sessions start at 0.
+        const newRun: CachedRunSession = {
+          userId: event.userId,
+          runId: event.runId,
+          subagentId: event.subagentId,
+          sessionId: event.sessionId,
+          modelName: event.modelName,
+          createdAt: event.createdAt,
+          lastActive: event.lastActive,
+          latestLogId: event.latestLogId,
+          totalLines: event.totalLines,
+          totalCost: event.totalCost,
+          activeSubagentCount: 0,
+        };
+        mergeRuns([newRun]);
+        return;
+      }
+
+      // Find existing run to update
+      const existing = existingRuns.find((r) => runKey(r) === key);
+      if (!existing) return;
+
+      if (event.type === "log-update") {
+        const updated: CachedRunSession = {
+          ...existing,
+          lastActive: event.lastActive,
+          latestLogId: event.latestLogId,
+          totalLines: existing.totalLines + event.totalLinesDelta,
+        };
+        mergeRuns([updated]);
+      } else if (event.type === "cost-update") {
+        const updated: CachedRunSession = {
+          ...existing,
+          totalCost: existing.totalCost + event.costDelta,
+        };
+        mergeRuns([updated]);
+      } else if (event.type === "heartbeat-update") {
+        const updated: CachedRunSession = {
+          ...existing,
+          lastActive: event.lastActive,
+          activeSubagentCount: event.activeSubagentCount,
+          paused: event.paused,
+          state: event.state,
+        };
+        mergeRuns([updated]);
+      }
+    },
+    [agentUsername, mergeRuns],
+  );
+
+  const queryFn = useCallback(async ({ queryKey }: any) => {
+    const [, agentUsername] = queryKey;
+
+    const params: RunsDataParams = {
+      agentUsername,
+      updatedSince: updatedSinceCache.get(agentUsername),
+      page: 1,
+      count: 50,
+    };
+
+    return await getRunsData(params);
+  }, []);
+
+  const query = useQuery({
+    queryKey: ["runs-data", agentUsername],
+    queryFn,
+    enabled: enabled && !!agentUsername,
+    refetchInterval: false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // Merge REST data when it arrives
+  useEffect(() => {
+    if (query.data?.success && query.data.data) {
+      mergeRuns(query.data.data.runs, query.data.data.total);
+    }
+  }, [query.data, mergeRuns]);
+
+  // WebSocket subscription for real-time run updates
+  useSubscription<RunsEvent>(
+    enabled && agentUsername ? `runs:${agentUsername}` : null,
+    handleRunsEvent,
+  );
+
+  // Load more (next page of historical data)
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = (pagesLoadedCache.get(agentUsername) || 1) + 1;
+      const result = await getRunsData({
+        agentUsername,
+        page: nextPage,
+        count: 50,
+      });
+      if (result.success && result.data) {
+        mergeRuns(result.data.runs, result.data.total);
+        pagesLoadedCache.set(agentUsername, nextPage);
+      }
+    } catch (err) {
+      console.error("Error loading more runs:", err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [agentUsername, mergeRuns]);
+
+  // Get current runs from cache, compute isOnline at read time
+  const baseRuns = runsCache.get(agentUsername) || [];
+  const runs: RunSessionWithFlag[] = baseRuns.map((run, index) => ({
+    ...run,
+    isOnline: isRunActive(run.lastActive),
+    isFirst: index === 0,
+  }));
+  const total = totalCache.get(agentUsername) || 0;
+  const hasMore = runs.length < total;
+
+  return {
+    runs,
+    total,
+    isLoading: query.isLoading,
+    error: query.error,
+    isFetchedAfterMount: query.isFetchedAfterMount,
+    loadMore,
+    loadingMore,
+    hasMore,
+    patchRun,
+  };
+};

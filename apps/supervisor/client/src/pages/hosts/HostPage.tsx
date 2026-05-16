@@ -23,13 +23,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { AgentModelIcon } from "../../components/AgentModelIcon";
-import { getApiTypeBadgeColor } from "../../components/ApiTypeBadge";
-import { PlatformBadge } from "../../components/PlatformBadge";
+import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
+import { getApiTypeBadgeColor } from "../../components/badges/ApiTypeBadge";
+import { PlatformBadge } from "../../components/badges/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
+import { useHostRuns } from "../../hooks/data/useHostRuns";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
-import { useHostRuns } from "../../hooks/useHostRuns";
 import { useLlmModels } from "../../hooks/useLlmModels";
 import {
   assignAgentToHost,
@@ -37,7 +37,7 @@ import {
   getHostDetail,
   unassignAgentFromHost,
   updateHostApi,
-} from "../../lib/apiAgents";
+} from "../../lib/api/apiAgents";
 import {
   formatCost,
   formatPrimaryTime,

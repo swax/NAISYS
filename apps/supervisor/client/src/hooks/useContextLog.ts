@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAgentDataContext } from "../contexts/AgentDataContext";
-import type { LogEntry } from "../lib/apiClient";
-import type { ContextLogParams } from "../lib/apiRuns";
-import { getContextLog } from "../lib/apiRuns";
-import { useSubscription } from "./useSubscription";
+import type { LogEntry } from "../lib/api/apiClient";
+import type { ContextLogParams } from "../lib/api/apiRuns";
+import { getContextLog } from "../lib/api/apiRuns";
+import { useSubscription } from "./socket/useSubscription";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const logsCache = new Map<string, LogEntry[]>();

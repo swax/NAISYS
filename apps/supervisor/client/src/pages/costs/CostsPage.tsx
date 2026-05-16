@@ -21,8 +21,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import type { CostsHistogramResponse } from "../../lib/apiClient";
-import { api, apiEndpoints } from "../../lib/apiClient";
+import type { CostsHistogramResponse } from "../../lib/api/apiClient";
+import { api, apiEndpoints } from "../../lib/api/apiClient";
 import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
 import { useBoomGuard } from "../../lib/useBoomGuard";
 
