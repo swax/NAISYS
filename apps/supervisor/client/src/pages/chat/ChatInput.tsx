@@ -15,6 +15,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { HelpTooltip } from "../../components/HelpTooltip";
+import { useInputHistory } from "../../hooks/useInputHistory";
 
 interface ChatInputProps {
   onSend: (message: string, files?: File[]) => Promise<void>;
@@ -22,6 +23,8 @@ interface ChatInputProps {
   focusKey?: string | null;
   recipients?: string[];
   showImpersonationWarning?: boolean;
+  /** Per-context key for up/down recall. Omit to disable history navigation. */
+  historyKey?: string | null;
   /** Rendered to the left of the attach/textarea/send row. */
   leftSection?: React.ReactNode;
   /** Rendered to the right of the send button. */
@@ -34,6 +37,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   focusKey,
   recipients,
   showImpersonationWarning,
+  historyKey,
   leftSection,
   rightSection,
 }) => {
@@ -44,6 +48,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shouldRefocusRef = useRef(false);
+
+  const { pushHistory, handleKeyDown: historyKeyDown } = useInputHistory({
+    storageKey: historyKey ?? null,
+    value: message,
+    onValueChange: setMessage,
+    inputRef,
+  });
 
   // Auto-focus when conversation changes
   useEffect(() => {
@@ -81,6 +92,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       await onSend(trimmed, files.length > 0 ? files : undefined);
       setMessage("");
       setFiles([]);
+      pushHistory(trimmed);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
@@ -88,7 +100,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    historyKeyDown(e);
+    if (e.defaultPrevented) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void handleSend();

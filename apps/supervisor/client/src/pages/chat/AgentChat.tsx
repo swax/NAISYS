@@ -489,6 +489,11 @@ export const AgentChat: React.FC = () => {
                 onSend={handleSendMessage}
                 disabled={!selectedParticipants}
                 focusKey={selectedParticipants}
+                historyKey={
+                  username && selectedParticipants
+                    ? `chat:${username}|${selectedParticipants}`
+                    : null
+                }
                 recipients={otherParticipantNames}
                 showImpersonationWarning={
                   !!agent.shellModel && agent.shellModel !== "none"

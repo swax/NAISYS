@@ -15,6 +15,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { ADMIN_USERNAME } from "@naisys/common";
 import {
   IconHelp,
   IconList,
@@ -44,6 +45,7 @@ import { VoiceMicButton } from "../../components/feature/VoiceMicButton";
 import { SIDEBAR_WIDTH } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useRunsData } from "../../hooks/data/useRunsData";
+import { useInputHistory } from "../../hooks/useInputHistory";
 import { useLlmModels } from "../../hooks/useLlmModels";
 import { stopAgent } from "../../lib/api/apiAgents";
 import { sendRunCommand } from "../../lib/api/apiRuns";
@@ -218,7 +220,12 @@ export const AgentRuns: React.FC = () => {
 
   const handleStop = async (run: RunSession) => {
     if (!username || stopLoading) return;
-    if (!window.confirm("Stop this run?")) return;
+    const prompt =
+      username === ADMIN_USERNAME
+        ? "The admin agent keeps the NAISYS process running when all other agents are stopped. " +
+          "Stopping it may end the process. Are you sure?"
+        : "Stop this run?";
+    if (!window.confirm(prompt)) return;
     setStopLoading(true);
     try {
       const result = await stopAgent(username);
@@ -252,6 +259,14 @@ export const AgentRuns: React.FC = () => {
   const [commandSending, setCommandSending] = useState(false);
   const commandInputRef = useRef<HTMLTextAreaElement>(null);
   const shouldRefocusCommandInputRef = useRef(false);
+
+  const { pushHistory: pushCommandHistory, handleKeyDown: commandHistoryKeyDown } =
+    useInputHistory({
+      storageKey: username ? `run:${username}` : null,
+      value: commandInput,
+      onValueChange: setCommandInput,
+      inputRef: commandInputRef,
+    });
 
   useEffect(() => {
     if (commandSending || !shouldRefocusCommandInputRef.current) return;
@@ -289,6 +304,7 @@ export const AgentRuns: React.FC = () => {
       if (result.success) {
         if (override === undefined) {
           setCommandInput("");
+          pushCommandHistory(command);
         }
       } else {
         notifications.show({
@@ -641,6 +657,8 @@ export const AgentRuns: React.FC = () => {
                     value={commandInput}
                     onChange={(e) => setCommandInput(e.currentTarget.value)}
                     onKeyDown={(e) => {
+                      commandHistoryKeyDown(e);
+                      if (e.defaultPrevented) return;
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         void handleSendCommand(selectedRun);
