@@ -161,9 +161,11 @@ describe("voiceMessages", () => {
       input_token_details: {
         text_tokens: 120,
         audio_tokens: 80,
+        image_tokens: 40,
         cached_tokens_details: {
           text_tokens: 20,
           audio_tokens: 50,
+          image_tokens: 10,
         },
       },
       output_token_details: {
@@ -175,8 +177,10 @@ describe("voiceMessages", () => {
     expect(usage).toEqual({
       inputTextTokens: 100,
       inputAudioTokens: 30,
+      inputImageTokens: 30,
       inputCachedTextTokens: 20,
       inputCachedAudioTokens: 50,
+      inputCachedImageTokens: 10,
       outputTextTokens: 30,
       outputAudioTokens: 70,
     });

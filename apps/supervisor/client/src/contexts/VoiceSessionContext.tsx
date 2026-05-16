@@ -2,6 +2,7 @@ import type {
   CostPushEntry,
   LogPushEntry,
   LogPushSessionUpdate,
+  MailPush,
   SessionHeartbeatUpdate,
   SessionPush,
 } from "@naisys/hub-protocol";
@@ -19,6 +20,10 @@ import { isRunActive } from "../hooks/runStatus";
 import { useSubscription } from "../hooks/useSubscription";
 import type { VoiceMode } from "../lib/apiClient";
 import { getRunsData } from "../lib/apiRuns";
+import {
+  chatMessagesRoomKey,
+  imagesFromChatMessage,
+} from "../lib/voiceChatImages";
 import {
   createVoiceSession,
   type VoiceSession,
@@ -306,6 +311,35 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [session, logTarget]);
 
   useSubscription<LogPushEntry[]>(logRoom, handleLogEntries);
+
+  // Chat-mode only: bridge image attachments on chat messages into the voice
+  // narration. Inbound chat to the target agent textifies its attachments
+  // (filename + size only), so the image bytes never reach bob's run log;
+  // routing the chat-messages broadcast through the same narration path is
+  // the only way the voice agent gets to see them. Synthetic LogPushEntry
+  // items keep this on the existing buffer/cap/dedup machinery — see
+  // voiceChatImages.ts.
+  const chatRoom = useMemo(() => {
+    if (session?.mode !== "chat") return null;
+    return chatMessagesRoomKey([session.fromUsername, session.targetUsername]);
+  }, [session?.mode, session?.fromUsername, session?.targetUsername]);
+
+  type ChatRoomEvent =
+    | ({ type: "new-message"; previousMessageId: number | null } & MailPush)
+    | { type: "read-receipt"; messageIds: number[]; userId: number };
+
+  // Inject image attachments from any participant — both the operator's own
+  // sends (they may immediately ask "what's in that screenshot I just
+  // attached?") and the target agent's replies. The room is participant-
+  // scoped so unrelated traffic doesn't reach this handler.
+  const handleChatEvent = useCallback((event: ChatRoomEvent) => {
+    if (event.type !== "new-message") return;
+    const entries = imagesFromChatMessage(event);
+    if (entries.length === 0) return;
+    sessionRef.current?.injectLogEntries(entries);
+  }, []);
+
+  useSubscription<ChatRoomEvent>(chatRoom, handleChatEvent);
 
   // Tear any active session down if the provider unmounts.
   useEffect(

@@ -125,6 +125,7 @@ export function extractVoiceUsage(usage: unknown): VoiceUsage {
 
   const inputCachedText = Number(ctd.text_tokens ?? 0);
   const inputCachedAudio = Number(ctd.audio_tokens ?? 0);
+  const inputCachedImage = Number(ctd.image_tokens ?? 0);
 
   return {
     inputTextTokens: Math.max(
@@ -135,8 +136,13 @@ export function extractVoiceUsage(usage: unknown): VoiceUsage {
       0,
       Number(itd.audio_tokens ?? 0) - inputCachedAudio,
     ),
+    inputImageTokens: Math.max(
+      0,
+      Number(itd.image_tokens ?? 0) - inputCachedImage,
+    ),
     inputCachedTextTokens: inputCachedText,
     inputCachedAudioTokens: inputCachedAudio,
+    inputCachedImageTokens: inputCachedImage,
     outputTextTokens: Number(otd.text_tokens ?? 0),
     outputAudioTokens: Number(otd.audio_tokens ?? 0),
   };

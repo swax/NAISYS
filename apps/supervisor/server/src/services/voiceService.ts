@@ -117,6 +117,8 @@ function buildVoiceInstructions(
     ``,
     `You are continuously fed entries from your own run log. Use it as context; do NOT narrate it play-by-play. Most log activity passes silently. Speak up only when there's something the operator needs to hear: an answer to what they asked, a result they're waiting on, a blocker, a decision point, or a meaningful state change. Be concise — one or two sentences with the substance, not a recap. Skip routine tool calls, intermediate states, dead ends, false starts, spinners, and token-budget warnings.`,
     ``,
+    `Image attachments in the run log (e.g. desktop screenshots) are delivered to you as image content alongside the text digest. When the operator asks about something visual — "what's on screen?", "what does that error dialog say?" — describe what you see directly rather than waiting for the work loop to read it back.`,
+    ``,
     `Talk about what you have, not what you're waiting on or don't have yet. While a dispatched command or query is in flight, don't narrate the wait ("standing by", "any moment now", "waiting for it to come back"). Acknowledge the dispatch once if needed, then go quiet until results arrive. If the operator asks in the meantime, share what you already have from the log so far, not the absence of the rest.`,
     ``,
     `End your replies when you've said what you need to say. Don't append "what would you like next?", "let me know if...", "just say the word", "anything else?", or similar trailing offers. The session stays open — the operator will speak again when they want to. Silence is fine.`,
@@ -273,7 +275,9 @@ export interface ComputedVoiceCost {
 /**
  * Price one turn's usage. The usage buckets are non-overlapping (cached tokens
  * are reported separately from uncached), matching the costs table's
- * input/output/cache_read columns.
+ * input/output/cache_read columns. Image tokens are priced separately by
+ * computeRealtimeModelCost but folded into the input/cache_read buckets here
+ * because the costs table has no image column.
  */
 export function computeVoiceCost(
   model: string,
@@ -282,9 +286,13 @@ export function computeVoiceCost(
   const cost = computeRealtimeModelCost(model, usage);
   return {
     cost,
-    inputTokens: usage.inputTextTokens + usage.inputAudioTokens,
+    inputTokens:
+      usage.inputTextTokens + usage.inputAudioTokens + usage.inputImageTokens,
     outputTokens: usage.outputTextTokens + usage.outputAudioTokens,
-    cacheReadTokens: usage.inputCachedTextTokens + usage.inputCachedAudioTokens,
+    cacheReadTokens:
+      usage.inputCachedTextTokens +
+      usage.inputCachedAudioTokens +
+      usage.inputCachedImageTokens,
   };
 }
 

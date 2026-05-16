@@ -251,8 +251,10 @@ describe("VoiceSession", () => {
       {
         inputTextTokens: 40,
         inputAudioTokens: 20,
+        inputImageTokens: 0,
         inputCachedTextTokens: 10,
         inputCachedAudioTokens: 5,
+        inputCachedImageTokens: 0,
         outputTextTokens: 7,
         outputAudioTokens: 9,
       },
@@ -322,6 +324,9 @@ describe("VoiceSession", () => {
     expect(pc.dc.sent).toEqual([]);
 
     vi.advanceTimersByTime(1);
+    // Digest dispatch is async (awaits image fetches, which are a no-op when
+    // there are no attachments but still costs a microtask). Drive them.
+    await flushAsyncHandlers();
     expect(pc.dc.sent).toHaveLength(1);
     expect(pc.dc.sent[0]).toMatchObject({
       type: "conversation.item.create",
@@ -375,6 +380,7 @@ describe("VoiceSession", () => {
     expect(pc.dc.sent).toEqual([]);
 
     vi.advanceTimersByTime(1);
+    await flushAsyncHandlers();
     expect(pc.dc.sent).toHaveLength(1);
     expect(JSON.stringify(pc.dc.sent[0])).toContain("still running");
   });

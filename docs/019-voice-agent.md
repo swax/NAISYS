@@ -205,6 +205,39 @@ shows the chat round-trips, which is exactly the latency we want to skip.
   the `VoiceSession` instance, not a `useEffect` keyed on session status, so the
   normal connecting → live transition can't wipe the latch after socket events have
   already populated it.
+- **Images travel with the digest.** When a log entry carries an image attachment
+  (detected by mime type on `attachmentFilename`), `voiceLogBuffer` collects it
+  alongside the coalesced text. At flush, the scheduler fetches each image
+  auth-aware from `/supervisor/api/attachments/:id/:filename`, base64-encodes
+  it, and emits a single `conversation.item.create` with the text digest plus
+  `input_image` items (`image_url` data URLs). Guards: a per-digest cap
+  (`MAX_IMAGES_PER_DIGEST = 4`) with the omitted count surfaced inline in the
+  text; a `MAX_IMAGE_BYTES` skip for oversized files (no down-sampling); and
+  **session-level dedup** by `attachmentId` so a recurring screenshot id isn't
+  re-priced. Fetch failures degrade to text-only — image I/O never blocks
+  narration. Realtime image-token usage flows through the existing cost path
+  unchanged: `inputImageTokens` / `inputCachedImageTokens` are extracted from
+  `response.done` and folded into the costs row's `input_tokens` /
+  `cache_read_tokens` columns (the costs table has no image bucket;
+  `computeRealtimeModelCost` already prices them at the per-model rate).
+- **Two image sources, one pipeline.** The pipeline above expects images on
+  `LogPushEntry.attachmentId`, which today only the **shell-produced image**
+  path populates: `contextManager.appendImage` (driven by `ns-look` /
+  `ns-desktop`) calls `logService.write({filepath})`, the hub uploads, and the
+  resulting log entry carries the id. Inbound chat with image attachments
+  takes a different code path — `formatUnreadChatLine` textifies attachments
+  as ` [filename size]` and `contextManager.append` is called *without*
+  `filepath`, so the image bytes never reach the run log. To close that gap
+  in **chat mode**, the floating control adds a second subscription to the
+  existing `chat-messages:${sortedParticipants}` socket room (the same feed
+  `ChatThread` uses) and, on each `new-message` with image attachments,
+  synthesizes `LogPushEntry`-shaped items via `voiceChatImages` and feeds
+  them through `injectLogEntries`. The same buffer/cap/dedup/fetch path
+  handles them — a screenshot attached to chat and the same id appearing
+  later in bob's shell log produce one fetch, not two. **Console mode**
+  intentionally does *not* subscribe to chat (the operator is on the runs
+  page, not in any particular chat thread); shell-produced images are the
+  only source there.
 
 ## When the voice agent speaks
 
@@ -349,8 +382,3 @@ agent's session**.
   thread. Phase 2: support group chats — subscribe to every participating agent's
   run log so the voice agent can narrate progress across all of them, not just the
   one target. Overlaps with retargeting (above) on the log-multiplexing side.
-- **Images into the voice context.** Phase 1 feeds the voice agent text-only run-log
-  digests. Phase 2: inject image attachments seen in chat / run output as
-  `input_image` items on `gpt-realtime` so the operator can ask "what's in that
-  screenshot?" without dropping out of the call. Per-turn cost and the realtime
-  model's image-token rates need to flow through `computeVoiceCost`.

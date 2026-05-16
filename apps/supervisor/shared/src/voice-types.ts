@@ -106,7 +106,7 @@ export const VoiceToolCallResponseSchema = z.object({
 export type VoiceToolCallResponse = z.infer<typeof VoiceToolCallResponseSchema>;
 
 /** gpt-realtime token usage from a `response.done` event, broken down so the
- *  server can price audio/text/cached separately. Per-field maximums clamp
+ *  server can price audio/text/cached/image separately. Per-field maximums clamp
  *  a malicious or malformed turn — realistic turns are well under the caps. */
 const VOICE_MAX_TOKENS_PER_TURN = 50_000;
 const VOICE_MAX_CACHED_TOKENS_PER_TURN = 200_000;
@@ -121,12 +121,22 @@ export const VoiceUsageSchema = z.object({
     .nonnegative()
     .max(VOICE_MAX_TOKENS_PER_TURN)
     .default(0),
+  inputImageTokens: z
+    .number()
+    .nonnegative()
+    .max(VOICE_MAX_TOKENS_PER_TURN)
+    .default(0),
   inputCachedTextTokens: z
     .number()
     .nonnegative()
     .max(VOICE_MAX_CACHED_TOKENS_PER_TURN)
     .default(0),
   inputCachedAudioTokens: z
+    .number()
+    .nonnegative()
+    .max(VOICE_MAX_CACHED_TOKENS_PER_TURN)
+    .default(0),
+  inputCachedImageTokens: z
     .number()
     .nonnegative()
     .max(VOICE_MAX_CACHED_TOKENS_PER_TURN)

@@ -329,8 +329,10 @@ describe("voiceService", () => {
       computeVoiceCost("gpt-realtime-2", {
         inputTextTokens: 1_000_000,
         inputAudioTokens: 1_000_000,
+        inputImageTokens: 0,
         inputCachedTextTokens: 1_000_000,
         inputCachedAudioTokens: 1_000_000,
+        inputCachedImageTokens: 0,
         outputTextTokens: 1_000_000,
         outputAudioTokens: 1_000_000,
       }),
@@ -339,6 +341,27 @@ describe("voiceService", () => {
       inputTokens: 2_000_000,
       outputTokens: 2_000_000,
       cacheReadTokens: 2_000_000,
+    });
+  });
+
+  test("folds image tokens into input/cache_read columns at the model's image rates", () => {
+    expect(
+      computeVoiceCost("gpt-realtime-2", {
+        inputTextTokens: 0,
+        inputAudioTokens: 0,
+        inputImageTokens: 1_000_000,
+        inputCachedTextTokens: 0,
+        inputCachedAudioTokens: 0,
+        inputCachedImageTokens: 1_000_000,
+        outputTextTokens: 0,
+        outputAudioTokens: 0,
+      }),
+    ).toEqual({
+      // 1M image @ $5 + 1M cached image @ $0.5
+      cost: 5.5,
+      inputTokens: 1_000_000,
+      outputTokens: 0,
+      cacheReadTokens: 1_000_000,
     });
   });
 

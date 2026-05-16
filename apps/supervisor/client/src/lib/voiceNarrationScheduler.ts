@@ -1,7 +1,8 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
 import type { VoiceMode } from "./apiClient";
-import { createVoiceLogBuffer } from "./voiceLogBuffer";
+import { createVoiceLogBuffer, type VoiceLogDigest } from "./voiceLogBuffer";
+import { fetchImageAsDataUrl, type VoiceLogImage } from "./voiceLogImages";
 
 /**
  * Owns the narration timing state machine for a voice session: when the
@@ -208,23 +209,49 @@ export function createNarrationScheduler(
 
   /** Receive a coalesced log digest from the buffer: append it to the
    *  realtime conversation and re-arm narration timing. Returns false when
-   *  the delivery gate is closed so VoiceLogBuffer keeps its entries. */
-  function handleLogDigest(digest: string): boolean {
+   *  the delivery gate is closed so VoiceLogBuffer keeps its entries.
+   *  Images are fetched asynchronously after acceptance; failed fetches
+   *  degrade to text-only without blocking the digest. */
+  function handleLogDigest(digest: VoiceLogDigest): boolean {
     if (cb.isAborted()) return true;
     if (!canDeliverLogs()) return false;
 
-    sendLogDigest(digest);
+    // Mark narration pending now (sync) so the debounce/max-wait timers
+    // started below see the right state — the actual conversation.item.create
+    // is dispatched after image fetches resolve, but for narration timing
+    // this digest counts as in-flight the moment we accept it.
+    narrationPending = true;
+    void sendLogDigest(digest);
     schedulePendingNarrationForLogDigest();
     return true;
   }
 
-  function sendLogDigest(digest: string): void {
+  async function sendLogDigest(digest: VoiceLogDigest): Promise<void> {
     const targetUsername = cb.getTargetUsername();
+
+    const imageDataUrls = await fetchDigestImages(digest.images);
+    if (cb.isAborted()) return;
+
+    const text = digest.imagesOmitted
+      ? `${digest.text}\n[${digest.imagesOmitted} more image attachment${digest.imagesOmitted === 1 ? "" : "s"} omitted from this batch]`
+      : digest.text;
+
+    const content: Record<string, unknown>[] = [
+      {
+        type: "input_text",
+        text: `[run log — ${targetUsername}]\n${text}`,
+      },
+    ];
+    for (const dataUrl of imageDataUrls) {
+      content.push({ type: "input_image", image_url: dataUrl });
+    }
 
     console.debug("[Voice] sending run log digest to realtime", {
       targetUsername,
-      chars: digest.length,
-      lines: digest.split("\n").length,
+      chars: text.length,
+      lines: text.split("\n").length,
+      images: imageDataUrls.length,
+      imagesOmitted: digest.imagesOmitted,
       at: new Date().toISOString(),
     });
 
@@ -233,16 +260,19 @@ export function createNarrationScheduler(
       item: {
         type: "message",
         role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: `[run log — ${targetUsername}]\n${digest}`,
-          },
-        ],
+        content,
       },
     });
+  }
 
-    narrationPending = true;
+  async function fetchDigestImages(
+    images: VoiceLogImage[],
+  ): Promise<string[]> {
+    if (images.length === 0) return [];
+    const settled = await Promise.all(
+      images.map((image) => fetchImageAsDataUrl(image)),
+    );
+    return settled.filter((url): url is string => Boolean(url));
   }
 
   function schedulePendingNarrationForLogDigest(): void {
