@@ -127,10 +127,7 @@ export interface RunsFilter {
   hostName?: string;
 }
 
-function activeSubagentCountFor(session: {
-  user_id: number;
-  run_id: number;
-}) {
+function activeSubagentCountFor(session: { user_id: number; run_id: number }) {
   return getActiveSubagentCount(session.user_id, session.run_id);
 }
 

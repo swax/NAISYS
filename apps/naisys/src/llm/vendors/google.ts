@@ -262,7 +262,9 @@ function formatPartsForGoogle(content: string | ContentBlock[]): Part[] {
         };
       }
       if (block.type === "tool_use") {
-        return { text: `ns-tool desktop-action ${JSON.stringify(block.input)}` };
+        return {
+          text: `ns-tool desktop-action ${JSON.stringify(block.input)}`,
+        };
       }
       if (block.type === "tool_result") {
         return { text: "[Desktop screenshot]" };

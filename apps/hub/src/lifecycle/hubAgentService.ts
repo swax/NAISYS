@@ -25,8 +25,6 @@ import type { NaisysServer } from "../server/naisysServer.js";
 import type { HostRegistrar } from "./hostRegistrar.js";
 import type { HubHeartbeatService } from "./hubHeartbeatService.js";
 
-type AgentResponse = { success: boolean; error?: string };
-
 type StartDecision =
   | { kind: "fail"; error: string }
   | { kind: "go"; bestHostId: number };

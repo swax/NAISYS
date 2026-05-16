@@ -1,7 +1,10 @@
 import type { MailPush } from "@naisys/hub-protocol";
 import { describe, expect, test } from "vitest";
 
-import { chatMessagesRoomKey, imagesFromChatMessage } from "../lib/voice/voiceChatImages";
+import {
+  chatMessagesRoomKey,
+  imagesFromChatMessage,
+} from "../lib/voice/voiceChatImages";
 
 const message = (overrides: Partial<MailPush> = {}): MailPush => ({
   recipientUserIds: [2],

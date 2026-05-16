@@ -152,7 +152,8 @@ function canonicalConfigOrder(
     ordered.supervisorApiHints = config.supervisorApiHints;
 
   // Advanced
-  if (config.autoCompact !== undefined) ordered.autoCompact = config.autoCompact;
+  if (config.autoCompact !== undefined)
+    ordered.autoCompact = config.autoCompact;
   if (config.continuity !== undefined) ordered.continuity = config.continuity;
   if (config.commandProtection !== undefined)
     ordered.commandProtection = config.commandProtection;
@@ -220,8 +221,7 @@ export async function updateAgentConfigById(
   // the old user so old threads stay reachable and don't fork on the next reply.
   const oldUsername = currentUser?.username;
   const newUsername = config.username;
-  const renaming =
-    setUsername && !!oldUsername && oldUsername !== newUsername;
+  const renaming = setUsername && !!oldUsername && oldUsername !== newUsername;
 
   await hubDb.$transaction(async (hubTx) => {
     if (renaming) {

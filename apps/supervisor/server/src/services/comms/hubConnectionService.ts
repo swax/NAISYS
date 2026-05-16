@@ -259,9 +259,11 @@ export function initHubConnection(hubUrl: string) {
     >();
     for (const update of parsed.data.updates) {
       const key = `${update.userId}-${update.runId}`;
-      const entry =
-        countByRunKey.get(key) ??
-        { userId: update.userId, runId: update.runId, count: 0 };
+      const entry = countByRunKey.get(key) ?? {
+        userId: update.userId,
+        runId: update.runId,
+        count: 0,
+      };
       if (update.subagentId != null && update.subagentId !== 0) {
         entry.count += 1;
       }

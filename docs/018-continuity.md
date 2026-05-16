@@ -121,20 +121,20 @@ No backfill needed — null means "no compact yet," which is the correct state f
 
 ## Files of interest
 
-| Area                                              | File                                                                                                |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Hub: cursor mirror                                | `apps/hub/src/handlers/hubLogService.ts`                                                            |
-| Hub: bundle assembly                              | `apps/hub/src/handlers/hubAgentService.ts`                                                          |
-| Wire format: `RestoreData`, `ResumeEntry`         | `packages/hub-protocol/src/schemas/agents.ts`                                                       |
-| Host: bundle preload, silent replay, echo scan    | `apps/naisys/src/features/session.ts`                                                               |
-| Host: `skipLog` on append/appendImage/appendAudio | `apps/naisys/src/llm/contextManager.ts`                                                             |
-| Host: replay trigger + resume notice              | `apps/naisys/src/command/commandLoop.ts`                                                            |
-| Host: shared hub-attachment client                | `apps/naisys/src/services/hubAttachmentService.ts`                                                  |
-| Concurrency helper                                | `packages/common/src/mapWithConcurrency.ts`                                                         |
+| Area                                              | File                                                                                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Hub: cursor mirror                                | `apps/hub/src/handlers/hubLogService.ts`                                                             |
+| Hub: bundle assembly                              | `apps/hub/src/handlers/hubAgentService.ts`                                                           |
+| Wire format: `RestoreData`, `ResumeEntry`         | `packages/hub-protocol/src/schemas/agents.ts`                                                        |
+| Host: bundle preload, silent replay, echo scan    | `apps/naisys/src/features/session.ts`                                                                |
+| Host: `skipLog` on append/appendImage/appendAudio | `apps/naisys/src/llm/contextManager.ts`                                                              |
+| Host: replay trigger + resume notice              | `apps/naisys/src/command/commandLoop.ts`                                                             |
+| Host: shared hub-attachment client                | `apps/naisys/src/services/hubAttachmentService.ts`                                                   |
+| Concurrency helper                                | `packages/common/src/mapWithConcurrency.ts`                                                          |
 | Schema + migration                                | `packages/hub-database/prisma/schema.prisma`, `…/migrations/20260511000000_add_user_compact_log_id/` |
-| `ns-session clear` (hidden in non-debug help)     | `apps/naisys/src/features/session.ts`, `apps/naisys/src/command/commandDefs.ts`                     |
-| Supervisor: fresh → non-fresh boundary write      | `apps/supervisor/server/src/services/agentConfigService.ts`                                         |
-| Continuity JSON parser (shared)                   | `packages/common/src/agentConfigFile.ts`                                                            |
+| `ns-session clear` (hidden in non-debug help)     | `apps/naisys/src/features/session.ts`, `apps/naisys/src/command/commandDefs.ts`                      |
+| Supervisor: fresh → non-fresh boundary write      | `apps/supervisor/server/src/services/agentConfigService.ts`                                          |
+| Continuity JSON parser (shared)                   | `packages/common/src/agentConfigFile.ts`                                                             |
 
 ## Crossing out of `fresh`
 
@@ -147,4 +147,3 @@ Brand-new users with no prior `context_log` entries skip the write. Ping-pong to
 ## Bounding `continuity=full` tail growth
 
 When `compact_log_id` is null, the bundle ships every parent-agent entry the user has — so a `continuity=full` agent that never compacts would grow this bundle without bound. In practice the agent's own context-pressure compact is the natural ceiling: as the tail approaches the model's context window the agent triggers `ns-session compact` itself, the cursor advances, and the next run's bundle drops back to a tight `{ summary, ... }` shape. `autoCompact` shortens that ceiling further. The "switching out of fresh" hook above also covers the long-running fresh agent that flips into full.
-

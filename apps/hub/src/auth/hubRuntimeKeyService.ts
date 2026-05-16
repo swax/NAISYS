@@ -34,4 +34,6 @@ export function createHubRuntimeKeyService(
   return { issueRuntimeApiKey, revokeRuntimeApiKey };
 }
 
-export type HubRuntimeKeyService = ReturnType<typeof createHubRuntimeKeyService>;
+export type HubRuntimeKeyService = ReturnType<
+  typeof createHubRuntimeKeyService
+>;

@@ -34,9 +34,7 @@ export interface CodexUsage {
   secondaryWindow?: CodexUsageWindow;
 }
 
-function normalizeUsageWindow(
-  value: unknown,
-): CodexUsageWindow | undefined {
+function normalizeUsageWindow(value: unknown): CodexUsageWindow | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
   }

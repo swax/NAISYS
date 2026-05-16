@@ -114,8 +114,7 @@ export const CostsPage: React.FC = () => {
     [metric, formatCost, formatTokens],
   );
   const formatTick = useCallback(
-    (n: number) =>
-      metric === "cost" ? formatCost(n) : formatTokensShort(n),
+    (n: number) => (metric === "cost" ? formatCost(n) : formatTokensShort(n)),
     [metric, formatCost, formatTokensShort],
   );
   const formatRate = useCallback(
@@ -226,7 +225,8 @@ export const CostsPage: React.FC = () => {
       const breakdown = breakdownFor(bucket);
       for (const name of seriesNames) {
         const v = breakdown[name] ?? 0;
-        row[name] = metric === "cost" ? Math.round(v * 100) / 100 : Math.round(v);
+        row[name] =
+          metric === "cost" ? Math.round(v * 100) / 100 : Math.round(v);
       }
       return row;
     });
@@ -312,9 +312,7 @@ export const CostsPage: React.FC = () => {
       labels: pieEntries.map((e) => e.label),
       datasets: [
         {
-          data: pieEntries.map((e) =>
-            metric === "cost" ? e.cost : e.tokens,
-          ),
+          data: pieEntries.map((e) => (metric === "cost" ? e.cost : e.tokens)),
           backgroundColor: pieEntries.map((_, i) =>
             resolveColor(AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length]),
           ),
@@ -346,8 +344,7 @@ export const CostsPage: React.FC = () => {
           callbacks: {
             label: (ctx) => {
               const name = seriesNames[ctx.datasetIndex];
-              const other =
-                secondaryByName.get(name)?.[ctx.dataIndex] ?? 0;
+              const other = secondaryByName.get(name)?.[ctx.dataIndex] ?? 0;
               const primary = Number(ctx.parsed.y);
               const cost = metric === "cost" ? primary : other;
               const tokens = metric === "cost" ? other : primary;

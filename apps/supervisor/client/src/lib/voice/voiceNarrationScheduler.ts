@@ -265,9 +265,7 @@ export function createNarrationScheduler(
     });
   }
 
-  async function fetchDigestImages(
-    images: VoiceLogImage[],
-  ): Promise<string[]> {
+  async function fetchDigestImages(images: VoiceLogImage[]): Promise<string[]> {
     if (images.length === 0) return [];
     const settled = await Promise.all(
       images.map((image) => fetchImageAsDataUrl(image)),

@@ -68,7 +68,7 @@ shellModel: claude4sonnet
 # Requires `npx playwright install chromium` on the host
 #browserEnabled: true
 
-# Allow the agent to end its own session. Once ended, it can only be restarted explicitly or via chat/mail 
+# Allow the agent to end its own session. Once ended, it can only be restarted explicitly or via chat/mail
 # if wakeOnMessage is enabled. Turn off for agents you've instructed to wake periodically. The auto-compact
 # advanced setting can be used to minimize idling costs.
 #completeSessionEnabled: true

@@ -5,7 +5,10 @@ import React from "react";
 
 const API_TYPE_META: Record<string, { label: string; color: string }> = {
   [LlmApiType.OpenAI]: { label: "OpenAI", color: "green" },
-  [LlmApiType.OpenAICompatible]: { label: "OpenAI Compatible", color: "violet" },
+  [LlmApiType.OpenAICompatible]: {
+    label: "OpenAI Compatible",
+    color: "violet",
+  },
   [LlmApiType.OpenAIOAuth]: { label: "OpenAI OAuth", color: "lime" },
   [LlmApiType.Anthropic]: { label: "Anthropic", color: "orange" },
   [LlmApiType.Google]: { label: "Google", color: "blue" },

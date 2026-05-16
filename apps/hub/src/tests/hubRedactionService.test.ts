@@ -25,7 +25,9 @@ function createServerHarness() {
   return { server, emit };
 }
 
-function createHubDb(initialRows: { key: string; value: string; sensitive: boolean }[]) {
+function createHubDb(
+  initialRows: { key: string; value: string; sensitive: boolean }[],
+) {
   let rows = [...initialRows];
   const hubDb = {
     variables: {
@@ -106,9 +108,7 @@ describe("hubRedactionService", () => {
       createLogger(),
     );
 
-    expect(svc.redact("token=abc1234567")).toBe(
-      "token=[REDACTED:LONG_KEY]",
-    );
+    expect(svc.redact("token=abc1234567")).toBe("token=[REDACTED:LONG_KEY]");
   });
 
   test("registers and revokes runtime API keys per user", async () => {
@@ -125,9 +125,7 @@ describe("hubRedactionService", () => {
     );
 
     svc.revokeRuntimeApiKey(7);
-    expect(svc.redact("auth=deadbeefcafebabe")).toBe(
-      "auth=deadbeefcafebabe",
-    );
+    expect(svc.redact("auth=deadbeefcafebabe")).toBe("auth=deadbeefcafebabe");
   });
 
   test("accumulates plaintexts per user so old keys stay redactable mid-rotation", async () => {

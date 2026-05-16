@@ -5,8 +5,6 @@ import { useMemo, useState } from "react";
 
 import { InlineWordDiff } from "./InlineWordDiff.js";
 
-
-
 export type DiffViewMode = "split" | "unified";
 
 export interface TextDiffViewerProps {
@@ -141,7 +139,13 @@ const SplitView: React.FC<{
             <th colSpan={2} style={headerStyle}>
               {oldLabel}
             </th>
-            <th colSpan={2} style={{ ...headerStyle, borderLeft: "1px solid var(--diff-border)" }}>
+            <th
+              colSpan={2}
+              style={{
+                ...headerStyle,
+                borderLeft: "1px solid var(--diff-border)",
+              }}
+            >
               {newLabel}
             </th>
           </tr>
@@ -231,7 +235,11 @@ const UnifiedView: React.FC<{ rows: SplitRow[] }> = ({ rows: splitRows }) => {
         oldNo: oldLine,
         newNo: newLine,
       });
-    } else if (r.type === "modified" && r.left !== undefined && r.right !== undefined) {
+    } else if (
+      r.type === "modified" &&
+      r.left !== undefined &&
+      r.right !== undefined
+    ) {
       oldLine++;
       rows.push({
         type: "removed",
@@ -346,11 +354,7 @@ export const TextDiffViewer: React.FC<TextDiffViewerProps> = ({
           No differences.
         </Text>
       ) : mode === "split" ? (
-        <SplitView
-          rows={splitRows}
-          oldLabel={oldLabel}
-          newLabel={newLabel}
-        />
+        <SplitView rows={splitRows} oldLabel={oldLabel} newLabel={newLabel} />
       ) : (
         <UnifiedView rows={splitRows} />
       )}

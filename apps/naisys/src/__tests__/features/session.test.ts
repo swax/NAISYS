@@ -1,7 +1,4 @@
-import {
-  LlmApiType,
-  type LlmModel,
-} from "@naisys/common";
+import { LlmApiType, type LlmModel } from "@naisys/common";
 import type { RestoreData } from "@naisys/hub-protocol";
 import { describe, expect, test, vi } from "vitest";
 
@@ -135,35 +132,40 @@ describe("session restore replay", () => {
   test("replays media entries with existing attachment ids so future full restores retain media", async () => {
     const imageBytes = Buffer.from("image-bytes");
     const audioBytes = Buffer.from("audio-bytes");
-    const { contextManager, hubAttachmentClient, pushEntry, sessionService, upload } =
-      buildRestoreHarness(
-        {
-          entries: [
-            {
-              source: "console",
-              message: "[Image: screen.png]",
-              attachment: {
-                publicId: "img-public",
-                filename: "screen.png",
-              },
+    const {
+      contextManager,
+      hubAttachmentClient,
+      pushEntry,
+      sessionService,
+      upload,
+    } = buildRestoreHarness(
+      {
+        entries: [
+          {
+            source: "console",
+            message: "[Image: screen.png]",
+            attachment: {
+              publicId: "img-public",
+              filename: "screen.png",
             },
-            {
-              source: "console",
-              message: "[Audio: voice.mp3]",
-              attachment: {
-                publicId: "audio-public",
-                filename: "voice.mp3",
-              },
-            },
-          ],
-        },
-        {
-          buffers: {
-            "img-public": imageBytes,
-            "audio-public": audioBytes,
           },
+          {
+            source: "console",
+            message: "[Audio: voice.mp3]",
+            attachment: {
+              publicId: "audio-public",
+              filename: "voice.mp3",
+            },
+          },
+        ],
+      },
+      {
+        buffers: {
+          "img-public": imageBytes,
+          "audio-public": audioBytes,
         },
-      );
+      },
+    );
 
     expect(sessionService.hasPendingRestoreEntries()).toBe(true);
     await expect(sessionService.replayRestoreEntries()).resolves.toEqual({

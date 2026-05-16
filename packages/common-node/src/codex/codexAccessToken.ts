@@ -163,9 +163,7 @@ export function createCodexAccessTokenCache(
   let resetGeneration = 0;
   let cached: CodexAccessTokenResult | undefined;
   let cachedFailure: { error: Error; until: number } | undefined;
-  let inFlight:
-    | Promise<CodexAccessTokenResult | undefined>
-    | undefined;
+  let inFlight: Promise<CodexAccessTokenResult | undefined> | undefined;
 
   async function refresh(): Promise<CodexAccessTokenResult | undefined> {
     const myGen = resetGeneration;
@@ -189,9 +187,7 @@ export function createCodexAccessTokenCache(
     }
   }
 
-  async function getAccessToken(): Promise<
-    CodexAccessTokenResult | undefined
-  > {
+  async function getAccessToken(): Promise<CodexAccessTokenResult | undefined> {
     if (cached && cached.expiresAt > now() + skewMs) {
       return cached;
     }
@@ -291,10 +287,7 @@ export function createCodexAccessTokenProvider(
     resolveFresh: async (signal) => {
       const persisted = trimNonEmpty(await options.getRefreshToken());
 
-      if (
-        expectedPersistedRefresh &&
-        persisted !== expectedPersistedRefresh
-      ) {
+      if (expectedPersistedRefresh && persisted !== expectedPersistedRefresh) {
         // External writer changed the persisted token — either replaced
         // it (re-auth) or removed it (operator cleared the variable).
         // Our in-memory rotation belongs to a dead lineage either way.

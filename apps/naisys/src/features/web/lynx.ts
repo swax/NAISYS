@@ -218,50 +218,59 @@ export function createLynxService(
         ? ["lynx", "-dump", ...modeParams, url]
         : ["-dump", ...modeParams, url];
 
-      execFile(cmd, cmdArgs, { timeout: timeoutMs }, (error, stdout, stderr) => {
-        let output = "";
+      execFile(
+        cmd,
+        cmdArgs,
+        { timeout: timeoutMs },
+        (error, stdout, stderr) => {
+          let output = "";
 
-        if (stdout) {
-          output += stdout;
-        }
+          if (stdout) {
+            output += stdout;
+          }
 
-        // I've only seen either/or, but just in case
-        if (stdout && stderr) {
-          output += "\nError:\n";
-        }
+          // I've only seen either/or, but just in case
+          if (stdout && stderr) {
+            output += "\nError:\n";
+          }
 
-        if (stderr) {
-          output += stderr;
-        }
+          if (stderr) {
+            output += stderr;
+          }
 
-        // On Linux/macOS, ENOENT here means `lynx` itself isn't on PATH.
-        // On Windows, ENOENT means `wsl` isn't available; lynx-inside-WSL
-        // missing instead surfaces from wsl's stderr (handled below).
-        if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
-          reject(
-            isWindows
-              ? "WSL is not available. ns-lynx on Windows requires WSL with lynx installed inside it (`wsl apt install lynx`)."
-              : "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
-          );
-          return;
-        }
+          // On Linux/macOS, ENOENT here means `lynx` itself isn't on PATH.
+          // On Windows, ENOENT means `wsl` isn't available; lynx-inside-WSL
+          // missing instead surfaces from wsl's stderr (handled below).
+          if ((error as NodeJS.ErrnoException | null)?.code === "ENOENT") {
+            reject(
+              isWindows
+                ? "WSL is not available. ns-lynx on Windows requires WSL with lynx installed inside it (`wsl apt install lynx`)."
+                : "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
+            );
+            return;
+          }
 
-        // Windows path: wsl ran but couldn't find lynx inside the distro.
-        if (/lynx.*(?:not found|No such file or directory|command not found)/i.test(output)) {
-          reject(
-            "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
-          );
-          return;
-        }
+          // Windows path: wsl ran but couldn't find lynx inside the distro.
+          if (
+            /lynx.*(?:not found|No such file or directory|command not found)/i.test(
+              output,
+            )
+          ) {
+            reject(
+              "Lynx is not installed. Install with `apt install lynx` (or equivalent for your distro).",
+            );
+            return;
+          }
 
-        if (output.includes("Exiting via interrupt")) {
-          reject("Timed out loading URL: May be inaccessible");
-        } else if (error && !output) {
-          reject(`Failed to load URL: ${error.message}`);
-        } else {
-          resolve(output);
-        }
-      });
+          if (output.includes("Exiting via interrupt")) {
+            reject("Timed out loading URL: May be inaccessible");
+          } else if (error && !output) {
+            reject(`Failed to load URL: ${error.message}`);
+          } else {
+            resolve(output);
+          }
+        },
+      );
     });
   }
 

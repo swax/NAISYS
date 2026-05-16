@@ -15,9 +15,9 @@ const {
   mainLoaded: vi.fn(() => {
     calls.push("main");
   }),
-  runWithRestartWrapper: vi.fn(async () => {
+  runWithRestartWrapper: vi.fn(() => {
     calls.push("wrapper");
-    return 0;
+    return Promise.resolve(0);
   }),
   shouldUseRestartWrapper: vi.fn(() => {
     calls.push("guard");
@@ -54,9 +54,9 @@ describe("naisys entrypoint", () => {
       return false;
     });
     runWithRestartWrapper.mockReset();
-    runWithRestartWrapper.mockImplementation(async () => {
+    runWithRestartWrapper.mockImplementation(() => {
       calls.push("wrapper");
-      return 0;
+      return Promise.resolve(0);
     });
   });
 
@@ -74,9 +74,9 @@ describe("naisys entrypoint", () => {
       calls.push("guard");
       return true;
     });
-    runWithRestartWrapper.mockImplementation(async () => {
+    runWithRestartWrapper.mockImplementation(() => {
       calls.push("wrapper");
-      return 75;
+      return Promise.resolve(75);
     });
     vi.spyOn(process, "exit").mockImplementation((code) => {
       calls.push(`exit:${code}`);

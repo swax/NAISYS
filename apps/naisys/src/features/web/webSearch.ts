@@ -8,7 +8,11 @@
 import * as https from "https";
 
 import type { AgentConfig } from "../../agent/agentConfig.js";
-import { browserCmd, lynxCmd, webSearchCmd } from "../../command/commandDefs.js";
+import {
+  browserCmd,
+  lynxCmd,
+  webSearchCmd,
+} from "../../command/commandDefs.js";
 import type { RegistrableCommand } from "../../command/commandRegistry.js";
 import type { GlobalConfig } from "../../globalConfig.js";
 import type { CostTracker } from "../../llm/costTracker.js";

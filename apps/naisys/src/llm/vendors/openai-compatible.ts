@@ -34,12 +34,8 @@ export async function sendWithOpenAiCompatible(
   apiKey?: string,
   abortSignal?: AbortSignal,
 ): Promise<QueryResult> {
-  const {
-    modelService,
-    costTracker,
-    tools,
-    useToolsForLlmConsoleResponses,
-  } = deps;
+  const { modelService, costTracker, tools, useToolsForLlmConsoleResponses } =
+    deps;
   const model = modelService.getLlmModel(modelKey);
 
   // API key can be blank like in cases of local LLMs

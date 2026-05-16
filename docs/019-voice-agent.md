@@ -143,11 +143,11 @@ the supervisor's `VoiceToolBridge` for execution. **Chat-mode sessions only see 
 and `/voice/tool` rejects them server-side as defence in depth. **Console mode** sees all
 three.
 
-| Tool | Mechanism | bob's LLM sees output? | Use |
-| --- | --- | --- | --- |
-| **1. talk to agent** | Supervisor `sendChatMessage(fromId, [toId], msg)` — the existing chat API | Yes (normal inbound chat) | Delegate work / converse with bob's LLM. e.g. "go find why the build is slow" |
-| **2. run debug command** | `AGENT_RUN_COMMAND` with a bare command → runs as a `debugCommand` in bob's debug mode | **No** — output goes to the run log only, not bob's context | Voice agent runs diagnostics without disturbing bob's context. e.g. `git log --oneline -20` |
-| **3. run `!` command** | `AGENT_RUN_COMMAND` with `!<command>` → `ns-cmd` (alias `!`, `isDebug`) runs it and bridges input + output into bob's context | **Yes** | Hand bob a result to work with. e.g. `!npm test` |
+| Tool                     | Mechanism                                                                                                                     | bob's LLM sees output?                                      | Use                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| **1. talk to agent**     | Supervisor `sendChatMessage(fromId, [toId], msg)` — the existing chat API                                                     | Yes (normal inbound chat)                                   | Delegate work / converse with bob's LLM. e.g. "go find why the build is slow"               |
+| **2. run debug command** | `AGENT_RUN_COMMAND` with a bare command → runs as a `debugCommand` in bob's debug mode                                        | **No** — output goes to the run log only, not bob's context | Voice agent runs diagnostics without disturbing bob's context. e.g. `git log --oneline -20` |
+| **3. run `!` command**   | `AGENT_RUN_COMMAND` with `!<command>` → `ns-cmd` (alias `!`, `isDebug`) runs it and bridges input + output into bob's context | **Yes**                                                     | Hand bob a result to work with. e.g. `!npm test`                                            |
 
 Notes:
 
@@ -226,7 +226,7 @@ shows the chat round-trips, which is exactly the latency we want to skip.
   `ns-desktop`) calls `logService.write({filepath})`, the hub uploads, and the
   resulting log entry carries the id. Inbound chat with image attachments
   takes a different code path — `formatUnreadChatLine` textifies attachments
-  as ` [filename size]` and `contextManager.append` is called *without*
+  as ` [filename size]` and `contextManager.append` is called _without_
   `filepath`, so the image bytes never reach the run log. To close that gap
   in **chat mode**, the floating control adds a second subscription to the
   existing `chat-messages:${sortedParticipants}` socket room (the same feed
@@ -235,7 +235,7 @@ shows the chat round-trips, which is exactly the latency we want to skip.
   them through `injectLogEntries`. The same buffer/cap/dedup/fetch path
   handles them — a screenshot attached to chat and the same id appearing
   later in bob's shell log produce one fetch, not two. **Console mode**
-  intentionally does *not* subscribe to chat (the operator is on the runs
+  intentionally does _not_ subscribe to chat (the operator is on the runs
   page, not in any particular chat thread); shell-produced images are the
   only source there.
 

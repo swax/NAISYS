@@ -1,4 +1,12 @@
-import { Badge, Button, Card, Group, Stack, Text, Tooltip } from "@mantine/core";
+import {
+  Badge,
+  Button,
+  Card,
+  Group,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import {
   builtInRealtimeModels,
   hasAction,

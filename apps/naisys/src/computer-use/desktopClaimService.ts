@@ -34,7 +34,11 @@ export function createDesktopClaimService() {
     /** Succeeds when free, held by this agent, or held by a stale agent. */
     tryClaim(agentUsername: string): ClaimAttempt {
       const now = new Date();
-      if (claim && claim.agentUsername !== agentUsername && !isStale(claim, now)) {
+      if (
+        claim &&
+        claim.agentUsername !== agentUsername &&
+        !isStale(claim, now)
+      ) {
         return {
           ok: false,
           holderUsername: claim.agentUsername,

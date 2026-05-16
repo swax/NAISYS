@@ -49,11 +49,16 @@ import {
   sendRotateAccessKey,
   sendVariablesChanged,
 } from "../../services/comms/hubConnectionService.js";
+import {
+  getLogFilePath,
+  tailLogFile,
+} from "../../services/observability/logFileService.js";
 import { saveVariable } from "../../services/variableService.js";
-import { getLogFilePath, tailLogFile } from "../../services/observability/logFileService.js";
 import { getPackageVersion } from "../../version.js";
 
-function targetVersionActions(targetVersion: string | undefined): HateoasAction[] {
+function targetVersionActions(
+  targetVersion: string | undefined,
+): HateoasAction[] {
   const actions: HateoasAction[] = [
     {
       rel: "check-updates",

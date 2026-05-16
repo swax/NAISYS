@@ -3,7 +3,10 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { authCache, requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  authCache,
+  requirePermission,
+} from "../../middleware/auth-middleware.js";
 import { isSupervisorAuth } from "../../middleware/supervisorAuth.js";
 import { mutationResult } from "../../route-helpers.js";
 import {

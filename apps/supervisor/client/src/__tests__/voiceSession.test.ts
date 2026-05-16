@@ -346,8 +346,10 @@ describe("VoiceSession", () => {
 
   test("keeps log delivery closed while response.done awaits cost recording", async () => {
     vi.useFakeTimers();
-    let resolveCost: (result: { success: true; overBudget: false }) => void =
-      () => undefined;
+    let resolveCost: (result: {
+      success: true;
+      overBudget: false;
+    }) => void = () => undefined;
     mocks.recordVoiceCost.mockReturnValue(
       new Promise((resolve) => {
         resolveCost = resolve;

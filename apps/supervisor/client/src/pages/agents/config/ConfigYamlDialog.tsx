@@ -9,7 +9,10 @@ import {
 } from "@mantine/core";
 import React, { useEffect, useState } from "react";
 
-import { exportAgentConfig, importAgentConfig } from "../../../lib/api/apiAgents";
+import {
+  exportAgentConfig,
+  importAgentConfig,
+} from "../../../lib/api/apiAgents";
 
 interface ConfigYamlDialogProps {
   agentUsername: string;

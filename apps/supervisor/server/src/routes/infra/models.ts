@@ -183,8 +183,7 @@ export default function modelsRoutes(
               )
             : [];
           const slashIdx = m.id.indexOf("/");
-          const provider =
-            slashIdx > 0 ? m.id.slice(0, slashIdx) : "unknown";
+          const provider = slashIdx > 0 ? m.id.slice(0, slashIdx) : "unknown";
           return [
             {
               id: m.id,

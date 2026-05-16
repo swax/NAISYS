@@ -34,12 +34,10 @@ describe("macosDesktop keyboard input", () => {
   test("checks cliclick and System Events dependencies", () => {
     checkDependencies();
 
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      1,
-      "cliclick",
-      ["p:."],
-      { stdio: "pipe", timeout: 3000 },
-    );
+    expect(execFileSync).toHaveBeenNthCalledWith(1, "cliclick", ["p:."], {
+      stdio: "pipe",
+      timeout: 3000,
+    });
     expect(execFileSync).toHaveBeenNthCalledWith(
       2,
       "osascript",
@@ -67,16 +65,11 @@ describe("macosDesktop keyboard input", () => {
   test("pastes typed text through pbcopy and System Events", () => {
     typeText("hello\nthere");
 
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      1,
-      "pbcopy",
-      [],
-      {
-        input: "hello\nthere",
-        stdio: ["pipe", "pipe", "pipe"],
-        timeout: 5000,
-      },
-    );
+    expect(execFileSync).toHaveBeenNthCalledWith(1, "pbcopy", [], {
+      input: "hello\nthere",
+      stdio: ["pipe", "pipe", "pipe"],
+      timeout: 5000,
+    });
     expect(execFileSync).toHaveBeenNthCalledWith(
       2,
       "osascript",
@@ -92,18 +85,14 @@ describe("macosDesktop keyboard input", () => {
     pressKey("Down Down Right");
 
     expect(execFileSync).toHaveBeenCalledTimes(5);
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      2,
-      "cliclick",
-      ["w:50"],
-      { stdio: "pipe", timeout: 10000 },
-    );
-    expect(execFileSync).toHaveBeenNthCalledWith(
-      4,
-      "cliclick",
-      ["w:50"],
-      { stdio: "pipe", timeout: 10000 },
-    );
+    expect(execFileSync).toHaveBeenNthCalledWith(2, "cliclick", ["w:50"], {
+      stdio: "pipe",
+      timeout: 10000,
+    });
+    expect(execFileSync).toHaveBeenNthCalledWith(4, "cliclick", ["w:50"], {
+      stdio: "pipe",
+      timeout: 10000,
+    });
 
     const keyScripts = execFileSync.mock.calls
       .filter(([command]) => command === "osascript")

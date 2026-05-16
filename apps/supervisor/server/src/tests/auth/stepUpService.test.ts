@@ -145,11 +145,9 @@ describe("requireStepUp", () => {
 
     for (let i = 0; i < 10; i += 1) {
       await expect(
-        requireStepUp(
-          makeRequest({ ip: "203.0.113.10" }),
-          makeReply(),
-          { stepUpPassword: `wrong-${i}` },
-        ),
+        requireStepUp(makeRequest({ ip: "203.0.113.10" }), makeReply(), {
+          stepUpPassword: `wrong-${i}`,
+        }),
       ).resolves.toEqual({
         ok: false,
         status: 401,

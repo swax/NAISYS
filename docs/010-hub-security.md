@@ -152,15 +152,15 @@ The access key only needs to be copied once per client machine. If it's rotated,
 
 ## Files
 
-| File                                                          | Role                                                      |
-| ------------------------------------------------------------- | --------------------------------------------------------- |
-| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk  |
-| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor  |
-| `apps/hub/src/handlers/hubRuntimeKeyService.ts`               | Mints / revokes per-agent runtime API keys (hashed)       |
+| File                                                          | Role                                                       |
+| ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk   |
+| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor   |
+| `apps/hub/src/handlers/hubRuntimeKeyService.ts`               | Mints / revokes per-agent runtime API keys (hashed)        |
 | `apps/hub/src/handlers/hubRedactionService.ts`                | Scrubs sensitive variables and runtime keys from logs/mail |
-| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key   |
-| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()` |
-| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured        |
-| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`         |
-| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`     |
-| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                               |
+| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key    |
+| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()`  |
+| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured         |
+| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`          |
+| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`      |
+| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                                |

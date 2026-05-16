@@ -81,9 +81,8 @@ export function createDesktopService(
 
   // Sub-actions that don't touch the global mouse/keyboard/scroll. (`focus`
   // is per-agent state, not a DesktopSubAction, so it's absent here.)
-  const READ_ONLY_SUB_ACTIONS: ReadonlySet<DesktopSubAction["action"]> = new Set(
-    ["screenshot", "wait"],
-  );
+  const READ_ONLY_SUB_ACTIONS: ReadonlySet<DesktopSubAction["action"]> =
+    new Set(["screenshot", "wait"]);
 
   function inputIsModifying(input: DesktopActionInput): boolean {
     return input.actions.some((a) => !READ_ONLY_SUB_ACTIONS.has(a.action));
@@ -99,7 +98,10 @@ export function createDesktopService(
   }
 
   function formatRelativeTime(date: Date): string {
-    const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+    const seconds = Math.max(
+      0,
+      Math.round((Date.now() - date.getTime()) / 1000),
+    );
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.round(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
@@ -741,8 +743,8 @@ export function createDesktopService(
 
     // On conflict, skip confirmation/execution and let the model see the
     // collision via per-action errors so it can wait, ask, or pivot.
-    const needsClaim = actionsWithViewport.some((a) =>
-      !a.validationError && inputIsModifying(a.input),
+    const needsClaim = actionsWithViewport.some(
+      (a) => !a.validationError && inputIsModifying(a.input),
     );
     // Tracked so an operator rejection can release a claim acquired here
     // without disturbing one we merely refreshed.

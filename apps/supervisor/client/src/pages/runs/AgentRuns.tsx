@@ -338,7 +338,7 @@ export const AgentRuns: React.FC = () => {
   // console mode dispatches commands through the host's shell wrapper, which
   // every running agent has even when its own LLM loop is idle.
   const voiceDisabledReason = !voice.available
-    ? voice.reason ?? "Voice is unavailable."
+    ? (voice.reason ?? "Voice is unavailable.")
     : !permissions.includes("agent_communication")
       ? "You need the agent_communication permission to start a voice session."
       : undefined;

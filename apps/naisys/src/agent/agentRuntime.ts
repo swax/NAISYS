@@ -120,7 +120,10 @@ export async function createAgentRuntime(
     subagentContext,
     preallocated,
   );
-  const attachmentService = createAttachmentService(hubClient, naisysApiService);
+  const attachmentService = createAttachmentService(
+    hubClient,
+    naisysApiService,
+  );
   const logService = createLogService(
     hubLogBuffer,
     runService,

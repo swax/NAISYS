@@ -50,9 +50,7 @@ export const RestoreDataSchema = z.object({
   summary: z.string().optional(),
   entries: z.array(ResumeEntrySchema).optional(),
   stale: z.boolean().optional(),
-  cursor: z
-    .object({ runId: z.number(), sessionId: z.number() })
-    .optional(),
+  cursor: z.object({ runId: z.number(), sessionId: z.number() }).optional(),
 });
 export type RestoreData = z.infer<typeof RestoreDataSchema>;
 

@@ -92,10 +92,10 @@ SERVER_PORT=${SERVER_PORT}
       process.platform === "win32"
         ? `Write-Output "${responseStart}"; curl.exe -s -H "Authorization: Bearer $env:NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me; Write-Output "${responseEnd}"`
         : `printf '%s\\n' "${responseStart}"; curl -s -H "Authorization: Bearer $NAISYS_API_KEY" http://localhost:${SERVER_PORT}/erp/api/auth/me; printf '\\n%s\\n' "${responseEnd}"`;
-    const output = await naisys.runCommand(
-      curlCommand,
-      { waitFor: responseEnd, timeoutMs: 30000 },
-    );
+    const output = await naisys.runCommand(curlCommand, {
+      waitFor: responseEnd,
+      timeoutMs: 30000,
+    });
 
     const responseMatch = output.match(
       new RegExp(`${responseStart}\\s*([\\s\\S]*?)\\s*${responseEnd}`),

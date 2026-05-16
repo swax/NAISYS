@@ -1,7 +1,10 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { createVoiceLogBuffer, type VoiceLogDigest } from "../lib/voice/voiceLogBuffer";
+import {
+  createVoiceLogBuffer,
+  type VoiceLogDigest,
+} from "../lib/voice/voiceLogBuffer";
 
 const entry = (
   id: number,

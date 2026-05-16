@@ -378,7 +378,6 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
             }
           />
 
-
           <Title order={5} mt="xs">
             Hosts
           </Title>

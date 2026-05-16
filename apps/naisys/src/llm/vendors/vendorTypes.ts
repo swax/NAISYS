@@ -118,7 +118,5 @@ export interface VendorDeps {
    * hub; standalone rotates locally. Pass `true` to bypass local caches
    * after an observed auth failure.
    */
-  getCodexAccessToken: (
-    forceRefresh?: boolean,
-  ) => Promise<string | undefined>;
+  getCodexAccessToken: (forceRefresh?: boolean) => Promise<string | undefined>;
 }

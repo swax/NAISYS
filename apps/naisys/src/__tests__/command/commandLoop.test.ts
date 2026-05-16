@@ -1,9 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import {
-  NextCommandAction,
-  timedWait,
-} from "../../command/commandRegistry.js";
+import { NextCommandAction, timedWait } from "../../command/commandRegistry.js";
 import { buildCommandLoop } from "../builders/commandLoop.js";
 
 describe("commandLoop wait behavior", () => {
@@ -80,24 +77,22 @@ describe("commandLoop wait behavior", () => {
   });
 
   test("pause overrides ordinary command waits instead of treating timeout as blank input", async () => {
-    const processCommand = vi.fn(
-      async (_prompt: string, commands: string[]) => {
-        if (commands[0] === "ns-desktop wait 1") {
-          return {
-            nextCommandAction: NextCommandAction.Continue,
-            wait: timedWait(1),
-          };
-        }
-        if (commands[0] === "exit") {
-          return {
-            nextCommandAction: NextCommandAction.ExitApplication,
-          };
-        }
-        return {
+    const processCommand = vi.fn((_prompt: string, commands: string[]) => {
+      if (commands[0] === "ns-desktop wait 1") {
+        return Promise.resolve({
           nextCommandAction: NextCommandAction.Continue,
-        };
-      },
-    );
+          wait: timedWait(1),
+        });
+      }
+      if (commands[0] === "exit") {
+        return Promise.resolve({
+          nextCommandAction: NextCommandAction.ExitApplication,
+        });
+      }
+      return Promise.resolve({
+        nextCommandAction: NextCommandAction.Continue,
+      });
+    });
     const { commandLoop, mocks } = buildCommandLoop({
       commandHandler: {
         processCommand,
@@ -111,10 +106,10 @@ describe("commandLoop wait behavior", () => {
     });
     let inputCount = 0;
     vi.mocked(mocks.promptBuilder.getInput).mockImplementation(
-      async (_prompt, wait) => {
+      (_prompt, wait) => {
         inputCount++;
-        if (inputCount === 1) return "";
-        return wait.kind === "indefinite" ? "exit" : "";
+        if (inputCount === 1) return Promise.resolve("");
+        return Promise.resolve(wait.kind === "indefinite" ? "exit" : "");
       },
     );
 

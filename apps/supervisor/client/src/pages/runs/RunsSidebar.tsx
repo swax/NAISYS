@@ -179,11 +179,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
           <NavLink
             label={
               <Group gap="xs" wrap="nowrap">
-                {startingRun ? (
-                  <Loader size="xs" />
-                ) : (
-                  <IconPlus size={14} />
-                )}
+                {startingRun ? <Loader size="xs" /> : <IconPlus size={14} />}
                 <Text size="sm" fw={500} c={startingRun ? "dimmed" : undefined}>
                   {startingRun ? "Starting new run…" : "Start new run"}
                 </Text>

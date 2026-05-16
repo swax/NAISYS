@@ -540,8 +540,9 @@ export function createHubCostService(
     if (!token) {
       // Codex is no longer configured (refresh token removed) — nothing left
       // to enforce, so release anything still held by codex usage.
-      await resumeCodexSuspended("OpenAI Codex is no longer configured", () =>
-        true,
+      await resumeCodexSuspended(
+        "OpenAI Codex is no longer configured",
+        () => true,
       );
       return;
     }

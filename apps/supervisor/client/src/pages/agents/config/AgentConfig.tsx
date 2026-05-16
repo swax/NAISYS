@@ -25,7 +25,11 @@ import {
   unassignAgentFromHost,
   updateAgentConfig,
 } from "../../../lib/api/apiAgents";
-import { api, apiEndpoints, type ModelsResponse } from "../../../lib/api/apiClient";
+import {
+  api,
+  apiEndpoints,
+  type ModelsResponse,
+} from "../../../lib/api/apiClient";
 import { AgentConfigForm } from "./AgentConfigForm";
 import { AgentStartupAttachments } from "./AgentStartupAttachments";
 import { ConfigYamlDialog } from "./ConfigYamlDialog";

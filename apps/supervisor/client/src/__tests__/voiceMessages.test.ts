@@ -53,7 +53,10 @@ describe("voiceMessages", () => {
 
   test("console mode keeps console and startPrompt entries but still drops system", () => {
     expect(
-      shouldNarrateLogEntry(logEntry(1, "hello", { type: "system" }), "console"),
+      shouldNarrateLogEntry(
+        logEntry(1, "hello", { type: "system" }),
+        "console",
+      ),
     ).toBe(false);
     expect(shouldNarrateLogEntry(logEntry(2, "console noise"), "console")).toBe(
       true,

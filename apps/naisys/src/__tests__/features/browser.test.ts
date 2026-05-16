@@ -428,16 +428,20 @@ describe("ns-browser popup handling", () => {
       waitForLoadState: vi.fn(() => Promise.resolve()),
       close: popupClose,
     };
-    await popupListener!(popup);
+    popupListener!(popup);
 
-    expect(popupClose).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(popupClose).toHaveBeenCalled();
+    });
     const appendCall = (contextManager.append as any).mock.calls.find(
       (c: unknown[]) =>
         typeof c[0] === "string" && c[0].includes("popup opened"),
     );
     expect(appendCall).toBeDefined();
     expect(appendCall[0]).toContain("https://example.com/new-tab");
-    expect(appendCall[0]).toContain("ns-browser open https://example.com/new-tab");
+    expect(appendCall[0]).toContain(
+      "ns-browser open https://example.com/new-tab",
+    );
   });
 });
 

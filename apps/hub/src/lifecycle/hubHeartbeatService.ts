@@ -137,7 +137,12 @@ export function createHubHeartbeatService(
         const userIds = parsed.runtimeApiKeys.map((k) => k.userId);
         const users = await hubDb.users.findMany({
           where: { id: { in: userIds } },
-          select: { id: true, api_key_hash: true, enabled: true, archived: true },
+          select: {
+            id: true,
+            api_key_hash: true,
+            enabled: true,
+            archived: true,
+          },
         });
         const userMap = new Map(users.map((u) => [u.id, u]));
 

@@ -51,9 +51,7 @@ describe("bucketRunCommandsByMessage", () => {
       ],
     );
 
-    expect(buckets.afterMessage.get(1)?.map((c) => c.logId)).toEqual([
-      11, 12,
-    ]);
+    expect(buckets.afterMessage.get(1)?.map((c) => c.logId)).toEqual([11, 12]);
     expect(buckets.beforeMessage.size).toBe(0);
     expect(buckets.phantomsBeforeMessage.size).toBe(0);
     expect(buckets.trailing.size).toBe(0);
@@ -69,7 +67,10 @@ describe("bucketRunCommandsByMessage", () => {
     );
 
     expect(
-      buckets.phantomsBeforeMessage.get(2)?.get("ada")?.map((c) => c.logId),
+      buckets.phantomsBeforeMessage
+        .get(2)
+        ?.get("ada")
+        ?.map((c) => c.logId),
     ).toEqual([11]);
     expect(buckets.beforeMessage.size).toBe(0);
     expect(buckets.afterMessage.size).toBe(0);

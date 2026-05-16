@@ -467,10 +467,7 @@ describe("OpenAI Codex access-token provider", () => {
       );
     const saveRefreshToken = vi
       .fn<
-        (
-          newToken: string,
-          priorToken: string | undefined,
-        ) => Promise<boolean>
+        (newToken: string, priorToken: string | undefined) => Promise<boolean>
       >()
       .mockResolvedValueOnce(false) // first attempt: CAS fails
       .mockResolvedValueOnce(true);
@@ -600,10 +597,7 @@ describe("OpenAI Codex access-token provider", () => {
       );
     const saveRefreshToken = vi
       .fn<
-        (
-          newToken: string,
-          priorToken: string | undefined,
-        ) => Promise<boolean>
+        (newToken: string, priorToken: string | undefined) => Promise<boolean>
       >()
       .mockRejectedValueOnce(new Error("db down"))
       .mockResolvedValueOnce(true);
@@ -684,9 +678,7 @@ describe("OpenAI Codex access-token provider", () => {
 
   test("resolves expiry from access token JWT payloads", () => {
     const exp = 1_700_000_000;
-    expect(resolveCodexAccessTokenExpiry(makeJwt({ exp }))).toBe(
-      exp * 1000,
-    );
+    expect(resolveCodexAccessTokenExpiry(makeJwt({ exp }))).toBe(exp * 1000);
   });
 });
 

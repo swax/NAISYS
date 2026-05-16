@@ -23,7 +23,10 @@ import {
   selfLink,
 } from "../../hateoas.js";
 import type { ErpUser } from "../../middleware/auth-middleware.js";
-import { hasPermission, requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  hasPermission,
+  requirePermission,
+} from "../../middleware/auth-middleware.js";
 import {
   formatAuditFields,
   mutationResult,

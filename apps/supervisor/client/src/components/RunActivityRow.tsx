@@ -27,9 +27,7 @@ export const RunActivityRow: React.FC<RunActivityRowProps> = ({
           ? entry.runIds.filter((id) => !loadedRunIds.has(id))
           : [];
         const showLoadButton =
-          entry.type === "start" &&
-          onLoadCommands &&
-          unloadedRunIds.length > 0;
+          entry.type === "start" && onLoadCommands && unloadedRunIds.length > 0;
 
         return (
           <Box

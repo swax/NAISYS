@@ -17,7 +17,10 @@ import { conflict, notFound } from "../../error-handler.js";
 import type { OperationModel } from "../../generated/prisma/models/Operation.js";
 import { API_PREFIX, selfLink } from "../../hateoas.js";
 import type { ErpUser } from "../../middleware/auth-middleware.js";
-import { hasPermission, requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  hasPermission,
+  requirePermission,
+} from "../../middleware/auth-middleware.js";
 import {
   calcNextSeqNo,
   childItemLinks,

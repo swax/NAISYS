@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { URL_SAFE_KEY_MESSAGE, URL_SAFE_KEY_REGEX } from "../auth/urlSafeKey.js";
+import {
+  URL_SAFE_KEY_MESSAGE,
+  URL_SAFE_KEY_REGEX,
+} from "../auth/urlSafeKey.js";
 import { TARGET_MEGAPIXELS } from "../config/constants.js";
 
 export const commandProtectionValues = [

@@ -8,7 +8,12 @@ import type { ContentBlock, LlmMessage } from "../../../llm/llmDtos.js";
 // emits, not on text/image block conversion.
 const formatContentBlocks = (content: string | ContentBlock[], role: string) =>
   typeof content === "string"
-    ? [{ type: role === "assistant" ? "output_text" : "input_text", text: content }]
+    ? [
+        {
+          type: role === "assistant" ? "output_text" : "input_text",
+          text: content,
+        },
+      ]
     : [];
 const formatSingleBlock = () => null;
 
@@ -68,7 +73,9 @@ describe("openai formatInputWithComputerUse", () => {
             type: "tool_use",
             id: "call-bad",
             name: "computer",
-            input: { actions: [{ action: "left_click", coordinate: [10, 20] }] },
+            input: {
+              actions: [{ action: "left_click", coordinate: [10, 20] }],
+            },
           },
         ],
       },
@@ -94,7 +101,9 @@ describe("openai formatInputWithComputerUse", () => {
     ) as Item[];
 
     expect(items.find((i) => i.type === "computer_call")).toBeUndefined();
-    expect(items.find((i) => i.type === "computer_call_output")).toBeUndefined();
+    expect(
+      items.find((i) => i.type === "computer_call_output"),
+    ).toBeUndefined();
     const userMsg = items.find((i) => i.role === "user") as Item;
     expect(userMsg).toBeDefined();
     const content = userMsg.content as Array<{ type: string; text: string }>;
@@ -122,9 +131,7 @@ describe("openai formatInputWithComputerUse", () => {
       },
       {
         role: "user",
-        content: [
-          { type: "text", text: "(scrubbed from context)" },
-        ],
+        content: [{ type: "text", text: "(scrubbed from context)" }],
       },
     ];
 

@@ -7,12 +7,11 @@ import type {
 } from "./apiClient";
 import { api, apiEndpoints } from "./apiClient";
 
-export const startCodexOAuth =
-  async (): Promise<CodexOAuthStartResponse> =>
-    await api.post<Record<string, never>, CodexOAuthStartResponse>(
-      apiEndpoints.codexOAuthStart,
-      {},
-    );
+export const startCodexOAuth = async (): Promise<CodexOAuthStartResponse> =>
+  await api.post<Record<string, never>, CodexOAuthStartResponse>(
+    apiEndpoints.codexOAuthStart,
+    {},
+  );
 
 export const pollCodexOAuth = async (
   flowId: string,

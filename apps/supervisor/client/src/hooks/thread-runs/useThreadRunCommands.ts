@@ -196,9 +196,7 @@ export function useThreadRunCommands(
     for (const r of runs) {
       if (!r.isOnline || !r.username) continue;
       if (!targetByUser.get(r.username)?.has(r.runId)) continue;
-      keys.push(
-        `${r.username}|${r.runId}|${r.subagentId ?? 0}|${r.sessionId}`,
-      );
+      keys.push(`${r.username}|${r.runId}|${r.subagentId ?? 0}|${r.sessionId}`);
     }
     return keys.sort().join(",");
   }, [runs, targetByUser]);

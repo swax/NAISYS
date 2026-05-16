@@ -282,12 +282,12 @@ export const sessionCmd: CommandDef = {
     },
     complete: {
       usage: "complete",
-      description:
-        "Complete the session after reporting your results",
+      description: "Complete the session after reporting your results",
     },
     clear: {
       usage: "clear",
-      description: "Starts a new session with no context history (visible in debug only).",
+      description:
+        "Starts a new session with no context history (visible in debug only).",
     },
   },
 };

@@ -1,8 +1,4 @@
-import {
-  sleep,
-  type StartHub,
-  type SupervisorPlugin,
-} from "@naisys/common";
+import { sleep, type StartHub, type SupervisorPlugin } from "@naisys/common";
 import {
   createDualLogger,
   ensureDotEnv,

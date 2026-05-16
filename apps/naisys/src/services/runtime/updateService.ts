@@ -132,8 +132,7 @@ export function createUpdateService(
     if (isRestartWrapperActive()) {
       return {
         exitCode: RESTART_EXIT_CODE,
-        description:
-          "Exiting after graceful shutdown — wrapper will restart",
+        description: "Exiting after graceful shutdown — wrapper will restart",
       };
     }
 

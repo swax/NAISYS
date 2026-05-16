@@ -80,7 +80,9 @@ export const useChatConversations = (
       );
       const conv: ChatConversation = {
         participants: event.participants,
-        participantNames: otherIds.map((id) => userLookup.get(id) ?? String(id)),
+        participantNames: otherIds.map(
+          (id) => userLookup.get(id) ?? String(id),
+        ),
         participantTitles: otherIds.map((id) => titleLookup.get(id) ?? ""),
         lastMessage: event.body,
         lastMessageAt: event.createdAt,

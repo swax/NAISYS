@@ -1,12 +1,4 @@
-import {
-  Alert,
-  Button,
-  Code,
-  Group,
-  Modal,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Alert, Button, Code, Group, Modal, Stack, Text } from "@mantine/core";
 import {
   IconCircleCheck,
   IconExternalLink,
@@ -84,12 +76,15 @@ const formatUsageWindow = (
   return parts.length ? `${label}: ${parts.join(", ")}` : undefined;
 };
 
-export const CodexOAuthSetupDialog: React.FC<
-  CodexOAuthSetupDialogProps
-> = ({ opened, onClose, onComplete }) => {
+export const CodexOAuthSetupDialog: React.FC<CodexOAuthSetupDialogProps> = ({
+  opened,
+  onClose,
+  onComplete,
+}) => {
   const [flow, setFlow] = useState<CodexOAuthStartResponse | null>(null);
-  const [pollResult, setPollResult] =
-    useState<CodexOAuthPollResponse | null>(null);
+  const [pollResult, setPollResult] = useState<CodexOAuthPollResponse | null>(
+    null,
+  );
   const [usageResult, setUsageResult] =
     useState<CodexOAuthUsageResponse | null>(null);
   const [starting, setStarting] = useState(false);
@@ -180,18 +175,18 @@ export const CodexOAuthSetupDialog: React.FC<
 
   useEffect(() => {
     if (!opened || !flow || pollResult?.status !== "pending") return;
-    const interval = window.setInterval(() => {
-      void handlePoll();
-    }, Math.max(flow.intervalMs, 2_000));
+    const interval = window.setInterval(
+      () => {
+        void handlePoll();
+      },
+      Math.max(flow.intervalMs, 2_000),
+    );
     return () => window.clearInterval(interval);
   }, [flow, handlePoll, opened, pollResult?.status]);
 
   const isComplete = pollResult?.status === "complete";
   const isExpired = pollResult?.status === "expired";
-  const primaryUsage = formatUsageWindow(
-    "Primary",
-    usageResult?.primaryWindow,
-  );
+  const primaryUsage = formatUsageWindow("Primary", usageResult?.primaryWindow);
   const secondaryUsage = formatUsageWindow(
     "Secondary",
     usageResult?.secondaryWindow,
@@ -241,7 +236,8 @@ export const CodexOAuthSetupDialog: React.FC<
               {primaryUsage && <Text size="xs">{primaryUsage}</Text>}
               {secondaryUsage && <Text size="xs">{secondaryUsage}</Text>}
               <Text size="xs" c="dimmed">
-                Checked at {new Date(usageResult.checkedAt).toLocaleTimeString()}
+                Checked at{" "}
+                {new Date(usageResult.checkedAt).toLocaleTimeString()}
               </Text>
             </Stack>
           </Alert>

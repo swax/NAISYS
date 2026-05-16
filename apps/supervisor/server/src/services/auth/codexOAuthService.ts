@@ -246,9 +246,7 @@ export async function pollCodexOAuthFlow(params: {
   };
 }
 
-export async function checkCodexOAuthUsage(params: {
-  fetchFn?: FetchLike;
-}) {
+export async function checkCodexOAuthUsage(params: { fetchFn?: FetchLike }) {
   // Route through the hub so rotation stays single-flight.
   const tokenResult = await sendCodexAccessTokenGet();
   if (!tokenResult.success || !tokenResult.accessToken) {

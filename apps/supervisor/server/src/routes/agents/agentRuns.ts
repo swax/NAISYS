@@ -36,7 +36,11 @@ import type {
 
 import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { notFound } from "../../errorHelpers.js";
-import { API_PREFIX, idCursorLinks, timestampCursorLinks } from "../../hateoas.js";
+import {
+  API_PREFIX,
+  idCursorLinks,
+  timestampCursorLinks,
+} from "../../hateoas.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
 import {
   isHubConnected,

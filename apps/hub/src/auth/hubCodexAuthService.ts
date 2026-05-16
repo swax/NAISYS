@@ -4,10 +4,7 @@ import {
   type DualLogger,
 } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
-import {
-  CodexAccessTokenRequestSchema,
-  HubEvents,
-} from "@naisys/hub-protocol";
+import { CodexAccessTokenRequestSchema, HubEvents } from "@naisys/hub-protocol";
 
 import type { HubRedactionService } from "../observability/hubRedactionService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
@@ -92,8 +89,7 @@ export function createHubCodexAuthService(
           expiresAt: result.expiresAt,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         logService.error(
           `[Hub:OAuth] Access-token mint failed for host ${hostId}: ${message}`,
         );
@@ -115,6 +111,4 @@ export function createHubCodexAuthService(
   return { getAccessToken: provider.getAccessToken };
 }
 
-export type HubCodexAuthService = ReturnType<
-  typeof createHubCodexAuthService
->;
+export type HubCodexAuthService = ReturnType<typeof createHubCodexAuthService>;

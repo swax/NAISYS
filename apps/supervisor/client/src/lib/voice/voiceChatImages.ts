@@ -30,9 +30,7 @@ export function chatMessagesRoomKey(participants: string[]): string {
  *  Source is `null` (no real log source) so the chat-mode narration filter
  *  passes it through — the filter only blocks `console` and `startPrompt`.
  *  Negative `id`s mark these as synthetic; nothing downstream keys on `id`. */
-export function imagesFromChatMessage(
-  msg: MailPush,
-): LogPushEntryWithUrl[] {
+export function imagesFromChatMessage(msg: MailPush): LogPushEntryWithUrl[] {
   if (msg.kind !== "chat") return [];
   if (!msg.attachments?.length) return [];
 

@@ -55,11 +55,7 @@ const PropertyChanges: React.FC<{ changes: PropertyChange[] }> = ({
               {c.from == null ? (
                 "—"
               ) : bothPresent ? (
-                <InlineWordDiff
-                  oldText={fromStr}
-                  newText={toStr}
-                  side="old"
-                />
+                <InlineWordDiff oldText={fromStr} newText={toStr} side="old" />
               ) : (
                 fromStr
               )}
@@ -68,11 +64,7 @@ const PropertyChanges: React.FC<{ changes: PropertyChange[] }> = ({
               {c.to == null ? (
                 "—"
               ) : bothPresent ? (
-                <InlineWordDiff
-                  oldText={fromStr}
-                  newText={toStr}
-                  side="new"
-                />
+                <InlineWordDiff oldText={fromStr} newText={toStr} side="new" />
               ) : (
                 toStr
               )}

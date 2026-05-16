@@ -9,11 +9,11 @@ that has no single primary export (a bag of types/schemas) is kebab-case.
 
 ### Files
 
-| Style | When | Example |
-|-------|------|---------|
-| **camelCase** | File exports a function, namespace, or value | `agentService.ts` exports `agentService`, `routeHelpers.ts` exports helper fns |
-| **PascalCase** | File exports a React component or class | `AgentDetail.tsx` exports `<AgentDetail>` |
-| **kebab-case** | Type-only file with multiple exports; suffix with `-types` | `agent-types.ts`, `cost-types.ts` |
+| Style          | When                                                       | Example                                                                        |
+| -------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **camelCase**  | File exports a function, namespace, or value               | `agentService.ts` exports `agentService`, `routeHelpers.ts` exports helper fns |
+| **PascalCase** | File exports a React component or class                    | `AgentDetail.tsx` exports `<AgentDetail>`                                      |
+| **kebab-case** | Type-only file with multiple exports; suffix with `-types` | `agent-types.ts`, `cost-types.ts`                                              |
 
 ### Folders
 
@@ -53,13 +53,13 @@ kebab-case; the multi-word concept reads more clearly hyphenated than as
 
 As of 2026-05-15:
 
-| Project | Files | Violators | Notes |
-|---------|-------|-----------|-------|
-| `apps/supervisor` | 205 | 0 | Cleaned up alongside this doc |
-| `apps/hub` | 23 | 0 | |
-| `packages/*` | 78 | 0 | |
-| `apps/naisys` | 97 | 6 | Vendor adapter files (acceptable exception) |
-| `apps/erp` | 166 | 58 | Originally written in kebab-case; opportunistic cleanup only |
+| Project           | Files | Violators | Notes                                                        |
+| ----------------- | ----- | --------- | ------------------------------------------------------------ |
+| `apps/supervisor` | 205   | 0         | Cleaned up alongside this doc                                |
+| `apps/hub`        | 23    | 0         |                                                              |
+| `packages/*`      | 78    | 0         |                                                              |
+| `apps/naisys`     | 97    | 6         | Vendor adapter files (acceptable exception)                  |
+| `apps/erp`        | 166   | 58        | Originally written in kebab-case; opportunistic cleanup only |
 
 ERP is not being converted en masse — the cost outweighs the benefit. When an
 ERP file is touched for unrelated reasons, rename it then.

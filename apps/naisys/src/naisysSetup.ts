@@ -152,8 +152,8 @@ const preferredCodexModel = availableModels.find(
 function hasConfiguredCredentials(model: (typeof availableModels)[number]) {
   return Boolean(
     process.env[model.apiKeyVar] ||
-      (model.apiType === LlmApiType.OpenAIOAuth &&
-        process.env[CODEX_REFRESH_TOKEN_VAR]),
+    (model.apiType === LlmApiType.OpenAIOAuth &&
+      process.env[CODEX_REFRESH_TOKEN_VAR]),
   );
 }
 

@@ -215,17 +215,13 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
         },
         onCostRecorded: (cost: number) => {
           if (sessionRef.current !== instance) return;
-          setSession((s) =>
-            s ? { ...s, totalCost: s.totalCost + cost } : s,
-          );
+          setSession((s) => (s ? { ...s, totalCost: s.totalCost + cost } : s));
         },
         onError: (reason: string) => {
           if (sessionRef.current !== instance) return;
           sessionRef.current = null;
           setLogTarget(null);
-          setSession((s) =>
-            s ? { ...s, status: "error", error: reason } : s,
-          );
+          setSession((s) => (s ? { ...s, status: "error", error: reason } : s));
         },
       });
       sessionRef.current = instance;

@@ -17,7 +17,10 @@ import { z } from "zod/v4";
 import { conflict, notFound } from "../../error-handler.js";
 import { API_PREFIX, paginationLinks } from "../../hateoas.js";
 import type { ErpUser } from "../../middleware/auth-middleware.js";
-import { hasPermission, requirePermission } from "../../middleware/auth-middleware.js";
+import {
+  hasPermission,
+  requirePermission,
+} from "../../middleware/auth-middleware.js";
 import {
   childItemLinks,
   formatAuditFields,

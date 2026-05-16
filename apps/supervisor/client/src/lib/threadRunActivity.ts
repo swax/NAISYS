@@ -43,8 +43,7 @@ export function buildThreadRunActivity(
   if (messages.length === 0 || runs.length === 0) return EMPTY;
 
   const sortedMsgs = [...messages].sort(
-    (a, b) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
   const oldestMsgTime = new Date(sortedMsgs[0].createdAt).getTime();
 

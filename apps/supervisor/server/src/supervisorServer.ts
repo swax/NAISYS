@@ -69,8 +69,8 @@ import {
   cleanupHubConnection,
   initHubConnection,
 } from "./services/comms/hubConnectionService.js";
-import { getVariableCachedValue } from "./services/variableService.js";
 import { startAttachmentGc } from "./services/observability/attachmentGcService.js";
+import { getVariableCachedValue } from "./services/variableService.js";
 import { getVoiceAvailability } from "./services/voice/voiceService.js";
 
 const __filename = fileURLToPath(import.meta.url);

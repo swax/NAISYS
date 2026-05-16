@@ -69,9 +69,9 @@ export async function runAttachmentGc(): Promise<{
   return { rowsDeleted: purged.length, filesDeleted };
 }
 
-export function startAttachmentGc(
-  intervalMs: number = DEFAULT_INTERVAL_MS,
-): { stop: () => void } {
+export function startAttachmentGc(intervalMs: number = DEFAULT_INTERVAL_MS): {
+  stop: () => void;
+} {
   const tick = () => {
     runAttachmentGc()
       .then(({ rowsDeleted, filesDeleted }) => {

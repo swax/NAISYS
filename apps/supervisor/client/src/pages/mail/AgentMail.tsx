@@ -366,131 +366,134 @@ export const AgentMail: React.FC = () => {
           overflow: "hidden",
         }}
       >
-      {/* Desktop conversation sidebar */}
-      <CollapsibleSidebar>{conversationList}</CollapsibleSidebar>
+        {/* Desktop conversation sidebar */}
+        <CollapsibleSidebar>{conversationList}</CollapsibleSidebar>
 
-      {/* Mobile drawer for conversations */}
-      <Drawer
-        opened={drawerOpened}
-        onClose={closeDrawer}
-        title="Mail"
-        size={SIDEBAR_WIDTH}
-      >
-        {conversationList}
-      </Drawer>
+        {/* Mobile drawer for conversations */}
+        <Drawer
+          opened={drawerOpened}
+          onClose={closeDrawer}
+          title="Mail"
+          size={SIDEBAR_WIDTH}
+        >
+          {conversationList}
+        </Drawer>
 
-      {/* Mail thread + reply */}
-      <Box
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-        }}
-      >
-        {mailError && (
-          <Alert color="red" title="Error" m="xs">
-            {String(mailError)}
-          </Alert>
-        )}
+        {/* Mail thread + reply */}
+        <Box
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
+          {mailError && (
+            <Alert color="red" title="Error" m="xs">
+              {String(mailError)}
+            </Alert>
+          )}
 
-        {!selectedKey ? (
-          <Box
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <ActionIcon
-              hiddenFrom="sm"
-              variant="subtle"
-              color="gray"
-              onClick={openDrawer}
-              mb="xs"
+          {!selectedKey ? (
+            <Box
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <IconMail size="1.2rem" />
-            </ActionIcon>
-            <Text c="dimmed">
-              {allMail.length === 0
-                ? `No mail messages for ${agentName}`
-                : "Select a conversation"}
-            </Text>
-          </Box>
-        ) : (
-          <>
-            {/* Conversation header */}
-            <Group
-              gap="xs"
-              p="xs"
-              px="md"
-              style={{ borderBottom: "1px solid var(--mantine-color-dark-4)" }}
-            >
-              {/* Mobile conversation toggle */}
-              <UnstyledButton
+              <ActionIcon
                 hiddenFrom="sm"
+                variant="subtle"
+                color="gray"
                 onClick={openDrawer}
+                mb="xs"
+              >
+                <IconMail size="1.2rem" />
+              </ActionIcon>
+              <Text c="dimmed">
+                {allMail.length === 0
+                  ? `No mail messages for ${agentName}`
+                  : "Select a conversation"}
+              </Text>
+            </Box>
+          ) : (
+            <>
+              {/* Conversation header */}
+              <Group
+                gap="xs"
+                p="xs"
+                px="md"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  flexShrink: 0,
+                  borderBottom: "1px solid var(--mantine-color-dark-4)",
                 }}
               >
-                <ActionIcon variant="subtle" color="gray" component="span">
-                  <IconMail size="1.2rem" />
-                </ActionIcon>
-              </UnstyledButton>
-              <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-                {groupBySubject && selectedConversation?.normalizedSubject && (
-                  <Text size="sm" fw={600} truncate>
-                    {selectedConversation.normalizedSubject}
-                  </Text>
-                )}
-                <ParticipantInfo
-                  names={otherParticipantNames}
-                  agents={agents}
-                  onSwitch={handleSwitchPerspective}
-                />
-              </Stack>
-              {canSend && (
-                <Button
-                  variant="light"
-                  size="compact-xs"
-                  leftSection={<IconCornerUpLeft size={14} />}
-                  onClick={handleReply}
+                {/* Mobile conversation toggle */}
+                <UnstyledButton
+                  hiddenFrom="sm"
+                  onClick={openDrawer}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexShrink: 0,
+                  }}
                 >
-                  Reply
-                </Button>
-              )}
-            </Group>
+                  <ActionIcon variant="subtle" color="gray" component="span">
+                    <IconMail size="1.2rem" />
+                  </ActionIcon>
+                </UnstyledButton>
+                <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                  {groupBySubject &&
+                    selectedConversation?.normalizedSubject && (
+                      <Text size="sm" fw={600} truncate>
+                        {selectedConversation.normalizedSubject}
+                      </Text>
+                    )}
+                  <ParticipantInfo
+                    names={otherParticipantNames}
+                    agents={agents}
+                    onSwitch={handleSwitchPerspective}
+                  />
+                </Stack>
+                {canSend && (
+                  <Button
+                    variant="light"
+                    size="compact-xs"
+                    leftSection={<IconCornerUpLeft size={14} />}
+                    onClick={handleReply}
+                  >
+                    Reply
+                  </Button>
+                )}
+              </Group>
 
-            <MailThread
-              messages={threadMessages}
-              currentAgentName={agentName}
-              lastReadMailId={lastReadMailId}
-              showSubject={!groupBySubject}
-              participants={selectedConversation?.participantNames ?? []}
-            />
-          </>
-        )}
-      </Box>
+              <MailThread
+                messages={threadMessages}
+                currentAgentName={agentName}
+                lastReadMailId={lastReadMailId}
+                showSubject={!groupBySubject}
+                participants={selectedConversation?.participantNames ?? []}
+              />
+            </>
+          )}
+        </Box>
 
-      <NewMessageModal
-        opened={newMessageModalOpened}
-        onClose={() => {
-          setNewMessageModalOpened(false);
-          setReplyData(null);
-        }}
-        agents={agents}
-        currentAgentId={agentId}
-        onSend={handleSendMessage}
-        initialRecipientId={replyData?.recipientId}
-        initialSubject={replyData?.subject}
-        initialBody={replyData?.body}
-      />
+        <NewMessageModal
+          opened={newMessageModalOpened}
+          onClose={() => {
+            setNewMessageModalOpened(false);
+            setReplyData(null);
+          }}
+          agents={agents}
+          currentAgentId={agentId}
+          onSend={handleSendMessage}
+          initialRecipientId={replyData?.recipientId}
+          initialSubject={replyData?.subject}
+          initialBody={replyData?.body}
+        />
       </Box>
     </>
   );

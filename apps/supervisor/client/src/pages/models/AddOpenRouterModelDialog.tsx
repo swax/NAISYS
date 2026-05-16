@@ -50,8 +50,7 @@ export const AddOpenRouterModelDialog: React.FC<
   const [saveError, setSaveError] = useState<string | null>(null);
   const [freeOnly, setFreeOnly] = useState(false);
 
-  const isFree = (m: CatalogModel) =>
-    m.inputCost === 0 && m.outputCost === 0;
+  const isFree = (m: CatalogModel) => m.inputCost === 0 && m.outputCost === 0;
 
   useEffect(() => {
     if (!opened || models) return;

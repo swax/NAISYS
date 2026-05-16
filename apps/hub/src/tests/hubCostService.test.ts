@@ -15,8 +15,9 @@ import { createHubCostService } from "../observability/hubCostService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
 vi.mock("@naisys/common-node", async () => {
-  const actual =
-    await vi.importActual<typeof CommonNode>("@naisys/common-node");
+  const actual = await vi.importActual<typeof CommonNode>(
+    "@naisys/common-node",
+  );
   return {
     ...actual,
     fetchCodexUsage: vi.fn(),

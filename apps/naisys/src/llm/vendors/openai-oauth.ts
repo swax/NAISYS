@@ -50,9 +50,7 @@ export function createCodexAccessTokenGetter(
   if (!standaloneProvider) {
     standaloneProvider = createCodexAccessTokenProvider({
       getRefreshToken: () =>
-        globalConfigService.globalConfig().variableMap[
-          CODEX_REFRESH_TOKEN_VAR
-        ],
+        globalConfigService.globalConfig().variableMap[CODEX_REFRESH_TOKEN_VAR],
       saveRefreshToken: (refreshToken) => {
         globalConfigService.setVariableValue(
           CODEX_REFRESH_TOKEN_VAR,

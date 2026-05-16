@@ -64,9 +64,7 @@ export const CodexOAuthPollRequestSchema = z.object({
   flowId: z.string(),
 });
 
-export type CodexOAuthPollRequest = z.infer<
-  typeof CodexOAuthPollRequestSchema
->;
+export type CodexOAuthPollRequest = z.infer<typeof CodexOAuthPollRequestSchema>;
 
 export const CodexOAuthPollResponseSchema = z.object({
   success: z.literal(true),
@@ -86,9 +84,7 @@ export const CodexUsageWindowSchema = z.object({
   resetAfterSeconds: z.number().optional(),
 });
 
-export type CodexUsageWindow = z.infer<
-  typeof CodexUsageWindowSchema
->;
+export type CodexUsageWindow = z.infer<typeof CodexUsageWindowSchema>;
 
 export const CodexOAuthUsageResponseSchema = z.object({
   success: z.literal(true),

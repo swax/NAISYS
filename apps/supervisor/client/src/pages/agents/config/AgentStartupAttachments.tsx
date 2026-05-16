@@ -373,9 +373,7 @@ export const AgentStartupAttachments: React.FC<
                       color="red"
                       onClick={() => void handleDelete(item.path)}
                       loading={deletingPath === item.path}
-                      disabled={
-                        deletingPath !== null || renamingPath !== null
-                      }
+                      disabled={deletingPath !== null || renamingPath !== null}
                       aria-label="Delete startup attachment"
                     >
                       <IconTrash size={16} />

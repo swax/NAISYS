@@ -1,6 +1,10 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
-import type { VoiceMode, VoiceToolCallRequest, VoiceUsage } from "../api/apiClient";
+import type {
+  VoiceMode,
+  VoiceToolCallRequest,
+  VoiceUsage,
+} from "../api/apiClient";
 
 /** Per-entry cap on injected run-log text — keeps a single huge command's
  *  output from blowing up realtime token cost. */

@@ -37,10 +37,7 @@ export interface VoiceRealtimeTransport {
   /** Run mic capture → offer/answer → setRemoteDescription. Returns once
    *  the SDP exchange completes; the channel may still be "connecting"
    *  briefly after. The session isn't "live" until `onChannelOpen` fires. */
-  connect(opts: {
-    clientSecret: string;
-    signal: AbortSignal;
-  }): Promise<void>;
+  connect(opts: { clientSecret: string; signal: AbortSignal }): Promise<void>;
   sendEvent(event: Record<string, unknown>): void;
   isChannelOpen(): boolean;
   /** Suppress / restore outbound mic audio. Implemented as `track.enabled`,

@@ -22,7 +22,11 @@ import { Link, useBlocker, useNavigate, useParams } from "react-router-dom";
 
 import { ImageModelForm } from "../../components/forms/ImageModelForm";
 import { LlmModelForm } from "../../components/forms/LlmModelForm";
-import { deleteModel, saveImageModel, saveLlmModel } from "../../lib/api/apiModels";
+import {
+  deleteModel,
+  saveImageModel,
+  saveLlmModel,
+} from "../../lib/api/apiModels";
 import { useModelsContext } from "./ModelsLayout";
 
 type ModelType = "llm" | "image";
@@ -112,12 +116,12 @@ export const ModelPage: React.FC = () => {
           <Text size="sm">
             Realtime models are built in and not editable. Pricing is per
             modality (text / audio / image, separately for input and output),
-            and includes a cached-input rate. The voice agent uses one of
-            these for its browser-held gpt-realtime session.
+            and includes a cached-input rate. The voice agent uses one of these
+            for its browser-held gpt-realtime session.
           </Text>
           <Text size="sm" mt="xs">
-            The voice agent uses{" "}
-            <strong>{DEFAULT_REALTIME_MODEL_ID}</strong> by default
+            The voice agent uses <strong>{DEFAULT_REALTIME_MODEL_ID}</strong> by
+            default
             {isDefault ? " (this model)" : ""}. Override by setting the{" "}
             <Code>VOICE_AGENT_MODEL</Code>{" "}
             <Anchor component={Link} to="/variables">
@@ -332,9 +336,9 @@ export const ModelPage: React.FC = () => {
         <Alert color="blue" icon={<IconInfoCircle size={16} />}>
           The <strong>none</strong> model allows agents to exist in the system
           without being backed by an LLM &mdash; they may be driven by a human,
-          an external API, or anything else. To other agents they look the
-          same: they can send and receive messages and participate in the
-          system normally.
+          an external API, or anything else. To other agents they look the same:
+          they can send and receive messages and participate in the system
+          normally.
         </Alert>
       )}
 

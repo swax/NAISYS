@@ -1,7 +1,11 @@
 import type { LogPushEntry } from "@naisys/hub-protocol";
 
 import type { VoiceMode } from "../api/apiClient";
-import { executeVoiceTool, mintVoiceToken, recordVoiceCost } from "../api/apiVoice";
+import {
+  executeVoiceTool,
+  mintVoiceToken,
+  recordVoiceCost,
+} from "../api/apiVoice";
 import { buildToolCall, extractVoiceUsage } from "./voiceMessages";
 import { createNarrationScheduler } from "./voiceNarrationScheduler";
 import { createVoiceRealtimeTransport } from "./voiceRealtimeTransport";
@@ -198,9 +202,7 @@ export function createVoiceSession(
     }
   }
 
-  async function handleResponseDone(
-    event: Record<string, any>,
-  ): Promise<void> {
+  async function handleResponseDone(event: Record<string, any>): Promise<void> {
     const response = event.response ?? {};
     const fromUsernameLive = resolved?.fromUsername ?? params.fromUsername;
 
@@ -251,7 +253,9 @@ export function createVoiceSession(
     if (isAborted()) return;
     if (response.status !== "completed") return;
 
-    const outputs: any[] = Array.isArray(response.output) ? response.output : [];
+    const outputs: any[] = Array.isArray(response.output)
+      ? response.output
+      : [];
     const calls = outputs.filter((o) => o?.type === "function_call");
     if (calls.length === 0) return;
 

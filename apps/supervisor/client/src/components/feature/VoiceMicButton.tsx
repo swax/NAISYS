@@ -74,17 +74,17 @@ export const VoiceMicButton: React.FC<VoiceMicButtonProps> = ({
     session?.targetUsername === targetUsername &&
     session?.mode === mode;
 
-  const tooltipLabel: React.ReactNode = disabledReason
-    ? disabledReason
-    : isActiveHere
-      ? `Hang up voice session with ${targetUsername}`
-      : (
-          <StartCallTooltipBody
-            mode={mode}
-            fromUsername={fromUsername}
-            targetUsername={targetUsername}
-          />
-        );
+  const tooltipLabel: React.ReactNode = disabledReason ? (
+    disabledReason
+  ) : isActiveHere ? (
+    `Hang up voice session with ${targetUsername}`
+  ) : (
+    <StartCallTooltipBody
+      mode={mode}
+      fromUsername={fromUsername}
+      targetUsername={targetUsername}
+    />
+  );
 
   // span wrap so the tooltip still hovers when the button is disabled
   // (a disabled <button> swallows pointer events).

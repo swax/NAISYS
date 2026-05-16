@@ -2,7 +2,10 @@ import type { ThreadRunCommand } from "../hooks/thread-runs/useThreadRunCommands
 
 // Polyfill for Array.prototype.findLast (ES2023). The codebase targets ES2022,
 // so the built-in isn't visible to TypeScript.
-function findLast<T>(arr: T[], predicate: (value: T) => boolean): T | undefined {
+function findLast<T>(
+  arr: T[],
+  predicate: (value: T) => boolean,
+): T | undefined {
   for (let i = arr.length - 1; i >= 0; i--) {
     if (predicate(arr[i])) return arr[i];
   }
@@ -66,8 +69,7 @@ export function bucketRunCommandsByMessage(
   if (commands.length === 0) return EMPTY;
 
   const sortedMsgs = [...messages].sort(
-    (a, b) =>
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 
   const oldestVisibleMs =
