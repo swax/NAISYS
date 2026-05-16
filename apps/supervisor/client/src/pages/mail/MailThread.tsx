@@ -21,7 +21,7 @@ import {
 import React, { useMemo, useRef } from "react";
 
 import { RunActivityRow } from "../../components/RunActivityRow";
-import { useMessageThreadRuns } from "../../hooks/threadRuns/useMessageThreadRuns";
+import { useMessageThreadRuns } from "../../hooks/thread-runs/useMessageThreadRuns";
 import type { MailMessage } from "../../lib/api/apiClient";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 

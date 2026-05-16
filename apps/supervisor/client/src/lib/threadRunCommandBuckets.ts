@@ -1,4 +1,4 @@
-import type { ThreadRunCommand } from "../hooks/threadRuns/useThreadRunCommands";
+import type { ThreadRunCommand } from "../hooks/thread-runs/useThreadRunCommands";
 
 // Polyfill for Array.prototype.findLast (ES2023). The codebase targets ES2022,
 // so the built-in isn't visible to TypeScript.

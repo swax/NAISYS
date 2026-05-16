@@ -1,4 +1,4 @@
-import type { ThreadRun } from "../hooks/threadRuns/useMessageThreadRuns";
+import type { ThreadRun } from "../hooks/thread-runs/useMessageThreadRuns";
 
 export type RunEventType = "start" | "stop";
 

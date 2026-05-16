@@ -28,10 +28,10 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { badRequest } from "../../error-helpers.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { badRequest } from "../../errorHelpers.js";
 import { API_PREFIX } from "../../hateoas.js";
-import { permGate } from "../../route-helpers.js";
+import { permGate } from "../../routeHelpers.js";
 import { sendModelsChanged } from "../../services/comms/hubConnectionService.js";
 import {
   deleteImageModel,
@@ -39,7 +39,7 @@ import {
   getAllModelsFromDb,
   saveImageModel,
   saveLlmModel,
-} from "../../services/infra/modelService.js";
+} from "../../services/modelService.js";
 
 function modelActions(hasManagePermission: boolean): HateoasAction[] {
   const gate = permGate(hasManagePermission, "manage_models");

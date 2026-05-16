@@ -19,7 +19,7 @@ import type { RunsDataParams } from "../../lib/api/apiRuns";
 import { getRunsData } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { useSubscription } from "../socket/useSubscription";
-import { isRunActive } from "../threadRuns/runStatus";
+import { isRunActive } from "../thread-runs/runStatus";
 import { useTick } from "../useTick";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };

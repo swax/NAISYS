@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { ThreadRunCommand } from "../hooks/threadRuns/useThreadRunCommands";
+import type { ThreadRunCommand } from "../hooks/thread-runs/useThreadRunCommands";
 import { bucketRunCommandsByMessage } from "../lib/threadRunCommandBuckets";
 
 const msg = (id: number, fromUsername: string, createdAt: string) => ({

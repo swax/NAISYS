@@ -6,7 +6,7 @@ import { Server as SocketIOServer } from "socket.io";
 import {
   resolveUserFromApiKey,
   resolveUserFromToken,
-} from "../../auth-middleware.js";
+} from "../../authMiddleware.js";
 import { isHubConnected } from "./hubConnectionService.js";
 
 let io: SocketIOServer | null = null;

@@ -10,7 +10,7 @@ import {
 import { randomUUID } from "crypto";
 
 import { sendCodexAccessTokenGet } from "../comms/hubConnectionService.js";
-import { saveVariable } from "../infra/variableService.js";
+import { saveVariable } from "../variableService.js";
 
 const OPENAI_AUTH_BASE_URL = "https://auth.openai.com";
 const CODEX_DEVICE_CALLBACK_URL = `${OPENAI_AUTH_BASE_URL}/deviceauth/callback`;

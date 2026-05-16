@@ -29,7 +29,7 @@ vi.mock("../../logger.js", () => ({
   }),
 }));
 
-vi.mock("../../services/infra/variableService.js", () => ({
+vi.mock("../../services/variableService.js", () => ({
   getVariableCachedValue: mocks.getVariableCachedValue,
 }));
 

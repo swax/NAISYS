@@ -7,8 +7,8 @@ import type { MailMessage } from "../../lib/api/apiClient";
 import type { MailDataParams } from "../../lib/api/apiMail";
 import { getMailData } from "../../lib/api/apiMail";
 import { useSubscription } from "../socket/useSubscription";
-import type { MessageRoomEvent } from "../threadRuns/messageCacheUtils";
-import { mergeIntoCache } from "../threadRuns/messageCacheUtils";
+import type { MessageRoomEvent } from "../thread-runs/messageCacheUtils";
+import { mergeIntoCache } from "../thread-runs/messageCacheUtils";
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const mailCache = new Map<string, MailMessage[]>();

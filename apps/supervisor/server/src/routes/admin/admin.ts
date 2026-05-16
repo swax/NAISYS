@@ -35,7 +35,7 @@ import {
 import archiver from "archiver";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { getNaisysDatabasePath, hubDb } from "../../database/hubDb.js";
 import { API_PREFIX, paginationLinks } from "../../hateoas.js";
 import {
@@ -49,7 +49,7 @@ import {
   sendRotateAccessKey,
   sendVariablesChanged,
 } from "../../services/comms/hubConnectionService.js";
-import { saveVariable } from "../../services/infra/variableService.js";
+import { saveVariable } from "../../services/variableService.js";
 import { getLogFilePath, tailLogFile } from "../../services/observability/logFileService.js";
 import { getPackageVersion } from "../../version.js";
 

@@ -18,8 +18,8 @@ import {
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import { z } from "zod";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { badRequest, notFound } from "../../error-helpers.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { badRequest, notFound } from "../../errorHelpers.js";
 import { API_PREFIX } from "../../hateoas.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
 import {

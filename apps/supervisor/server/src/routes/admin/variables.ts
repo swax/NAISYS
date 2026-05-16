@@ -25,9 +25,9 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { API_PREFIX } from "../../hateoas.js";
-import { permGate } from "../../route-helpers.js";
+import { permGate } from "../../routeHelpers.js";
 import {
   checkCodexOAuthUsage,
   pollCodexOAuthFlow,
@@ -38,7 +38,7 @@ import {
   deleteVariable,
   getVariables,
   saveVariable,
-} from "../../services/infra/variableService.js";
+} from "../../services/variableService.js";
 
 function variableActions(hasManagePermission: boolean): HateoasAction[] {
   const gate = permGate(hasManagePermission, "manage_variables");

@@ -21,8 +21,8 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { badRequest, notFound } from "../../error-helpers.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { badRequest, notFound } from "../../errorHelpers.js";
 import { API_PREFIX, timestampCursorLinks } from "../../hateoas.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
 import {

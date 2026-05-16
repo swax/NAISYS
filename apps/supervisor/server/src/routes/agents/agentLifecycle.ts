@@ -23,9 +23,9 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { requirePermission } from "../../auth-middleware.js";
+import { requirePermission } from "../../authMiddleware.js";
 import { hubDb } from "../../database/hubDb.js";
-import { badRequest, notFound } from "../../error-helpers.js";
+import { badRequest, notFound } from "../../errorHelpers.js";
 import { isAgentActive } from "../../services/agents/agentHostStatusService.js";
 import {
   archiveAgent,

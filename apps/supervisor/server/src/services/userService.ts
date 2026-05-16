@@ -3,7 +3,7 @@ import { generatePersistentUserApiKey } from "@naisys/common-node";
 import type { Permission } from "@naisys/supervisor-database";
 import { randomUUID } from "crypto";
 
-import supervisorDb from "../../database/supervisorDb.js";
+import supervisorDb from "../database/supervisorDb.js";
 
 export { hashToken } from "@naisys/common-node";
 export type { User as SupervisorUserRow } from "@naisys/supervisor-database";

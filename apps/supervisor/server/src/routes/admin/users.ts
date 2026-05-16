@@ -33,14 +33,14 @@ import type {
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { authCache, requirePermission } from "../../auth-middleware.js";
+import { authCache, requirePermission } from "../../authMiddleware.js";
 import {
   conflict,
   forbidden,
   notFound,
   sendForbidden,
   sendUnauthorized,
-} from "../../error-helpers.js";
+} from "../../errorHelpers.js";
 import {
   API_PREFIX,
   collectionLink,
@@ -48,7 +48,7 @@ import {
   schemaLink,
   selfLink,
 } from "../../hateoas.js";
-import { permGate } from "../../route-helpers.js";
+import { permGate } from "../../routeHelpers.js";
 import {
   getHubAgentById,
   getHubAgentByUuid,
@@ -56,7 +56,7 @@ import {
 import { issueRegistrationLink } from "../../services/auth/passkeyService.js";
 import { userHasEnabledPassword } from "../../services/auth/passwordLoginConfig.js";
 import { requireStepUp } from "../../services/auth/stepUpService.js";
-import * as userService from "../../services/infra/userService.js";
+import * as userService from "../../services/userService.js";
 
 function userItemLinks(
   username: string,

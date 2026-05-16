@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getHostRuns } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
-import { isRunActive } from "../threadRuns/runStatus";
+import { isRunActive } from "../thread-runs/runStatus";
 import { useTick } from "../useTick";
 
 const PAGE_SIZE = 15;

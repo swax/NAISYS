@@ -7,8 +7,8 @@ import type { ChatMessagesParams } from "../../lib/api/apiChat";
 import { getChatMessages } from "../../lib/api/apiChat";
 import type { ChatMessage } from "../../lib/api/apiClient";
 import { useSubscription } from "../socket/useSubscription";
-import type { MessageRoomEvent } from "../threadRuns/messageCacheUtils";
-import { mergeIntoCache } from "../threadRuns/messageCacheUtils";
+import type { MessageRoomEvent } from "../thread-runs/messageCacheUtils";
+import { mergeIntoCache } from "../thread-runs/messageCacheUtils";
 
 // Module-level caches (persist across remounts)
 const messagesCache = new Map<string, ChatMessage[]>();

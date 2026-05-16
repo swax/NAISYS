@@ -29,9 +29,9 @@ declare module "fastify" {
   }
 }
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { hubDb } from "../../database/hubDb.js";
-import { notFound } from "../../error-helpers.js";
+import { notFound } from "../../errorHelpers.js";
 import { getLogger } from "../../logger.js";
 import {
   checkVoiceBudget,

@@ -9,11 +9,11 @@ import type { Permission } from "@naisys/supervisor-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import { sendForbidden, sendUnauthorized } from "./error-helpers.js";
+import { sendForbidden, sendUnauthorized } from "./errorHelpers.js";
 import {
   getUserPermissions,
   upsertUserForAgent,
-} from "./services/infra/userService.js";
+} from "./services/userService.js";
 
 export interface SupervisorUser {
   id: number;

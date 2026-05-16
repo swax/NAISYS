@@ -34,8 +34,8 @@ import type {
   FastifyReply,
 } from "fastify";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { notFound } from "../../error-helpers.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { notFound } from "../../errorHelpers.js";
 import { API_PREFIX, idCursorLinks, timestampCursorLinks } from "../../hateoas.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
 import {

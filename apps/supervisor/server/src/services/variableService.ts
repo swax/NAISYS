@@ -1,4 +1,4 @@
-import { hubDb } from "../../database/hubDb.js";
+import { hubDb } from "../database/hubDb.js";
 
 // Reserved at the agent shell — set by the runtime, not editable as a variable.
 const RESERVED_VARIABLE_KEYS = new Set([

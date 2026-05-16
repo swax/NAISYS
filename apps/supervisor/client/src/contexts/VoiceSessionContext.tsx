@@ -17,7 +17,7 @@ import React, {
 } from "react";
 
 import { useSubscription } from "../hooks/socket/useSubscription";
-import { isRunActive } from "../hooks/threadRuns/runStatus";
+import { isRunActive } from "../hooks/thread-runs/runStatus";
 import type { VoiceMode } from "../lib/api/apiClient";
 import { getRunsData } from "../lib/api/apiRuns";
 import {

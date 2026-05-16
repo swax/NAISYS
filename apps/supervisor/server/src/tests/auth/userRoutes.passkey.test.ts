@@ -47,7 +47,7 @@ vi.mock("@naisys/supervisor-database", () => ({
   userHasPassword: mocks.userHasPassword,
 }));
 
-vi.mock("../../auth-middleware.js", () => ({
+vi.mock("../../authMiddleware.js", () => ({
   authCache: {
     clear: mocks.authCacheClear,
   },
@@ -88,7 +88,7 @@ vi.mock("../../services/auth/stepUpService.js", () => ({
   requireStepUp: mocks.requireStepUp,
 }));
 
-vi.mock("../../services/infra/userService.js", () => ({
+vi.mock("../../services/userService.js", () => ({
   createPasskeyUser: mocks.createPasskeyUser,
   createUserForAgent: mocks.createUserForAgent,
   deleteUser: mocks.deleteUser,

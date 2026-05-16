@@ -1,5 +1,5 @@
 import "dotenv/config";
-import "./schema-registry.js";
+import "./schemaRegistry.js";
 
 import {
   askQuestion,
@@ -54,7 +54,7 @@ import {
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { registerApiReference } from "./api-reference.js";
+import { registerApiReference } from "./apiReference.js";
 import { initHubDb } from "./database/hubDb.js";
 import { initSupervisorDb } from "./database/supervisorDb.js";
 import { initLogger } from "./logger.js";
@@ -69,7 +69,7 @@ import {
   cleanupHubConnection,
   initHubConnection,
 } from "./services/comms/hubConnectionService.js";
-import { getVariableCachedValue } from "./services/infra/variableService.js";
+import { getVariableCachedValue } from "./services/variableService.js";
 import { startAttachmentGc } from "./services/observability/attachmentGcService.js";
 import { getVoiceAvailability } from "./services/voice/voiceService.js";
 

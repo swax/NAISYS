@@ -1,7 +1,7 @@
 import scalarReference from "@scalar/fastify-api-reference";
 import type { FastifyInstance } from "fastify";
 
-import { registerAuthMiddleware } from "./auth-middleware.js";
+import { registerAuthMiddleware } from "./authMiddleware.js";
 
 /**
  * Registers Scalar API reference and the filtered OpenAPI spec endpoint

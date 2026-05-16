@@ -21,7 +21,7 @@ import {
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import type { FastifyRequest } from "fastify";
 
-import { getUserById } from "../infra/userService.js";
+import { getUserById } from "../userService.js";
 
 const RP_NAME = "NAISYS Supervisor";
 const REGISTRATION_PATH = "/supervisor/register";

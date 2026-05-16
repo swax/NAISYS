@@ -1,7 +1,7 @@
 import { HateoasLinkSchema, HateoasLinkTemplateSchema } from "@naisys/common";
 import { z } from "zod";
 
-import { HostEnvironmentSchema } from "../agents/agents-types.js";
+import { HostEnvironmentSchema } from "../agents/agent-types.js";
 import { timestampPagingQuery } from "../pagination-types.js";
 import { LogEntrySchema, LogSourceSchema } from "./log-types.js";
 

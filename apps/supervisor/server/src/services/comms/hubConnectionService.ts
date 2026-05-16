@@ -24,8 +24,8 @@ import {
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
-import type { SupervisorUser } from "../../auth-middleware.js";
-import { hasPermission } from "../../auth-middleware.js";
+import type { SupervisorUser } from "../../authMiddleware.js";
+import { hasPermission } from "../../authMiddleware.js";
 import { attachmentUrl } from "../../hateoas.js";
 import { getLogger } from "../../logger.js";
 import { getPackageVersion } from "../../version.js";

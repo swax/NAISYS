@@ -45,7 +45,7 @@ vi.mock("@naisys/supervisor-database", () => ({
   verifyUserPassword: mocks.verifyUserPassword,
 }));
 
-vi.mock("../../auth-middleware.js", () => ({
+vi.mock("../../authMiddleware.js", () => ({
   authCache: {
     invalidate: mocks.authCacheInvalidate,
   },
@@ -71,7 +71,7 @@ vi.mock("../../services/auth/stepUpService.js", () => ({
   requireStepUp: mocks.requireStepUp,
 }));
 
-vi.mock("../../services/infra/userService.js", () => ({
+vi.mock("../../services/userService.js", () => ({
   getUserById: mocks.getUserById,
   getUserByUsername: mocks.getUserByUsername,
   getUserPermissions: mocks.getUserPermissions,

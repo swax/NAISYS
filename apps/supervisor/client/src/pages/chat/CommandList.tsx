@@ -9,7 +9,7 @@ import {
 import { IconChevronDown } from "@tabler/icons-react";
 import React from "react";
 
-import type { ThreadRunCommand } from "../../hooks/threadRuns/useThreadRunCommands";
+import type { ThreadRunCommand } from "../../hooks/thread-runs/useThreadRunCommands";
 import { parseCommandIcon } from "../../lib/commandIcons";
 import { firstLine, tooltipText } from "./chatThreadHelpers";
 

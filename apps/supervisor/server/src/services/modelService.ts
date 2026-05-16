@@ -8,7 +8,7 @@ import {
   type ModelDbRow,
 } from "@naisys/common";
 
-import { hubDb } from "../../database/hubDb.js";
+import { hubDb } from "../database/hubDb.js";
 
 export async function getAllModelsFromDb(): Promise<ModelDbRow[]> {
   return hubDb.models.findMany();

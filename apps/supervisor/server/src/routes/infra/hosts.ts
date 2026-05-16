@@ -26,12 +26,12 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import type { SupervisorUser } from "../../auth-middleware.js";
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
+import type { SupervisorUser } from "../../authMiddleware.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { hubDb } from "../../database/hubDb.js";
-import { badRequest, conflict, notFound } from "../../error-helpers.js";
+import { badRequest, conflict, notFound } from "../../errorHelpers.js";
 import { API_PREFIX, selfLink, timestampCursorLinks } from "../../hateoas.js";
-import { permGate, resolveActions } from "../../route-helpers.js";
+import { permGate, resolveActions } from "../../routeHelpers.js";
 import {
   emitHostsListChanged,
   getHostVersion,
@@ -49,7 +49,7 @@ import {
   getHosts,
   unassignAgentFromHost,
   updateHost,
-} from "../../services/infra/hostService.js";
+} from "../../services/hostService.js";
 import { getRunsData } from "../../services/observability/runsService.js";
 
 type HostCtx = {

@@ -6,7 +6,7 @@ import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { getChatConversations } from "../../lib/api/apiChat";
 import type { ChatConversation } from "../../lib/api/apiClient";
 import { useSubscription } from "../socket/useSubscription";
-import type { MessageRoomEvent } from "../threadRuns/messageCacheUtils";
+import type { MessageRoomEvent } from "../thread-runs/messageCacheUtils";
 
 // Module-level cache (shared across hook instances, persists across remounts)
 const conversationsCache = new Map<string, ChatConversation[]>();

@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   validateVoiceSession: vi.fn(),
 }));
 
-vi.mock("../../auth-middleware.js", () => ({
+vi.mock("../../authMiddleware.js", () => ({
   hasPermission: (user: any, permission: string) =>
     Boolean(
       user?.permissions?.includes(permission) ||

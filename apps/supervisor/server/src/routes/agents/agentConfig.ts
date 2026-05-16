@@ -25,8 +25,8 @@ import {
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 import yaml from "js-yaml";
 
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { badRequest, notFound } from "../../error-helpers.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { badRequest, notFound } from "../../errorHelpers.js";
 import { API_PREFIX } from "../../hateoas.js";
 import {
   getAgentAssignedHosts,
@@ -35,7 +35,7 @@ import {
   updateAgentConfigById,
 } from "../../services/agents/agentConfigService.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
-import { getAllModelsFromDb } from "../../services/infra/modelService.js";
+import { getAllModelsFromDb } from "../../services/modelService.js";
 
 /** Validate model keys in config against known models. Returns error message or null. */
 async function validateModelKeys(

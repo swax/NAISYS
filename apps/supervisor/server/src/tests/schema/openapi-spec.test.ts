@@ -5,7 +5,7 @@
  * passed where Zod schemas are expected (which causes "Cannot read properties of
  * undefined (reading 'parent')" at runtime).
  */
-import "../../schema-registry.js";
+import "../../schemaRegistry.js";
 
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";

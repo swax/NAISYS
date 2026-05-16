@@ -2,8 +2,8 @@ import { assertUrlSafeKey } from "@naisys/common";
 import type { HostEnvironment } from "@naisys/supervisor-shared";
 import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
 
-import { hubDb } from "../../database/hubDb.js";
-import { resolveAgentId } from "../agents/agentService.js";
+import { hubDb } from "../database/hubDb.js";
+import { resolveAgentId } from "./agents/agentService.js";
 
 export async function getHosts() {
   const hosts = await hubDb.hosts.findMany({

@@ -38,8 +38,8 @@ import type {
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod/v4";
 
-import { authCache } from "../../auth-middleware.js";
-import { badRequest, notFound, unauthorized } from "../../error-helpers.js";
+import { authCache } from "../../authMiddleware.js";
+import { badRequest, notFound, unauthorized } from "../../errorHelpers.js";
 import {
   consumeTokenAndStoreVerifiedCredential,
   generatePasskeyAuthenticationOptions,
@@ -64,7 +64,7 @@ import {
   getUserById,
   getUserByUsername,
   getUserPermissions,
-} from "../../services/infra/userService.js";
+} from "../../services/userService.js";
 
 // Challenge cookies: a single shared name per flow means a second tab
 // running the same flow will overwrite the first tab's challenge — at worst

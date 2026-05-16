@@ -1,7 +1,7 @@
 import type { SupervisorPlugin } from "@naisys/common";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import { registerAuthMiddleware } from "../auth-middleware.js";
+import { registerAuthMiddleware } from "../authMiddleware.js";
 import adminRoutes from "./admin/admin.js";
 import authRoutes from "./admin/auth.js";
 import userRoutes from "./admin/users.js";

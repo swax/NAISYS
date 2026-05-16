@@ -6,8 +6,8 @@ import {
 } from "@naisys/common";
 import type { Permission } from "@naisys/supervisor-database";
 
-import type { SupervisorUser } from "./auth-middleware.js";
-import { hasPermission } from "./auth-middleware.js";
+import type { SupervisorUser } from "./authMiddleware.js";
+import { hasPermission } from "./authMiddleware.js";
 
 export { permGate };
 

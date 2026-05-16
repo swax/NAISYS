@@ -19,16 +19,16 @@ import {
 } from "@naisys/supervisor-shared";
 import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
-import type { SupervisorUser } from "../../auth-middleware.js";
-import { hasPermission, requirePermission } from "../../auth-middleware.js";
-import { badRequest, notFound } from "../../error-helpers.js";
+import type { SupervisorUser } from "../../authMiddleware.js";
+import { hasPermission, requirePermission } from "../../authMiddleware.js";
+import { badRequest, notFound } from "../../errorHelpers.js";
 import {
   API_PREFIX,
   collectionLink,
   schemaLink,
   selfLink,
 } from "../../hateoas.js";
-import { resolveActions } from "../../route-helpers.js";
+import { resolveActions } from "../../routeHelpers.js";
 import { createAgentConfig } from "../../services/agents/agentConfigService.js";
 import {
   getAgentStatus,

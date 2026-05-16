@@ -1,7 +1,7 @@
 import { Box, Paper, Text } from "@mantine/core";
 import React from "react";
 
-import type { ThreadRunCommand } from "../../hooks/threadRuns/useThreadRunCommands";
+import type { ThreadRunCommand } from "../../hooks/thread-runs/useThreadRunCommands";
 import { ActiveSubagentBadge } from "./ActiveSubagentBadge";
 import { otherStyle, ownStyle } from "./chatThreadHelpers";
 import { CommandList } from "./CommandList";

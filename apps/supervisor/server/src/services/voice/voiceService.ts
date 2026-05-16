@@ -13,7 +13,7 @@ import { voiceToolsForMode } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../../database/hubDb.js";
 import { getLogger } from "../../logger.js";
-import { getVariableCachedValue } from "../infra/variableService.js";
+import { getVariableCachedValue } from "../variableService.js";
 
 /**
  * Voice agent backend — mints ephemeral gpt-realtime session tokens and prices
