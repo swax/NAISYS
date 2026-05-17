@@ -169,7 +169,8 @@ ${platformConfig.displayName} Commands:
   Read files with Get-Content. Write files with Set-Content -Path "file" -Value "content"`
       : `
   vi and nano are not supported
-  Read files with cat. Write files with \`cat > filename << 'EOF'\``
+  Read files with cat. Write files with \`cat > filename << 'EOF'\`
+  A heredoc (\`<<EOF\`) claims stdin, so piping into a command that also uses one silently discards the piped data. Route one of the inputs through a tempfile instead.`
   }
   Do not input notes after the prompt. Only valid commands.
 NAISYS Commands: ${naisysChainNote}${mailStr}${chatStr}${subagentStr}${lynxStr}${browserStr}${webSearchStr}${genImgStr}${lookStr}${listenStr}${workspaceStr}${ptyStr}
