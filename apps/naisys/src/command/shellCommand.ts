@@ -1,7 +1,6 @@
-import type { GlobalConfig } from "../globalConfig.js";
 import { getPlatformConfig } from "../services/runtime/shellPlatform.js";
 import type { InputModeService } from "../utils/input/inputMode.js";
-import * as utilities from "../utils/utilities.js";
+import type { PagedOutputBuffer } from "./pagedOutputBuffer.js";
 import type { ShellWrapper } from "./shellWrapper.js";
 
 export interface ShellCommandResult {
@@ -10,9 +9,9 @@ export interface ShellCommandResult {
 }
 
 export function createShellCommand(
-  { globalConfig }: GlobalConfig,
   shellWrapper: ShellWrapper,
   inputMode: InputModeService,
+  pagedOutputBuffer: PagedOutputBuffer,
 ) {
   const platformConfig = getPlatformConfig();
   const isShellSuspended = () => shellWrapper.isShellSuspended();
@@ -24,6 +23,7 @@ export function createShellCommand(
   async function handleCommand(input: string): Promise<ShellCommandResult> {
     const cmdParams = input.split(" ");
     let response: string;
+    let label: string;
 
     if (!isShellSuspended()) {
       if (["nano", "vi", "vim"].includes(cmdParams[0])) {
@@ -47,36 +47,24 @@ export function createShellCommand(
         }
       }
 
+      label = input.trim();
       response = await shellWrapper.executeCommand(input);
     }
     // Else shell is suspended, continue
     else {
+      // Secure continuations carry a secret (password / API key) — label by
+      // the running command so neither the source line nor the ns-more
+      // prefix exposes it. Non-secure continuations use the typed input.
+      label = isSecureContinuation()
+        ? getCurrentCommandName()
+        : input.trim();
       response = await shellWrapper.continueCommand({
         kind: "input",
         text: input,
       });
     }
 
-    let outputLimitExceeded = false;
-    const tokenCount = utilities.getTokenCount(response);
-
-    // Prevent too much output from blowing up the context
-    const tokenMax = globalConfig().shellCommand.outputTokenMax;
-
-    if (tokenCount > tokenMax) {
-      outputLimitExceeded = true;
-
-      const trimLength = (response.length * tokenMax) / tokenCount;
-
-      response =
-        response.slice(0, trimLength / 2) +
-        "\n\n...\n\n" +
-        response.slice(-trimLength / 2);
-    }
-
-    if (outputLimitExceeded) {
-      response += `\nThe shell command generated too much output (${tokenCount} tokens). Only ${tokenMax} tokens worth are shown above.`;
-    }
+    response = pagedOutputBuffer.setContent(label, response);
 
     if (
       response.endsWith(": command not found") ||

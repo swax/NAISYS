@@ -30,6 +30,13 @@ export const commentCmd: CommandDef = {
     "Any non-command output like thinking out loud, prefix with `ns-comment`",
 };
 
+export const moreCmd: CommandDef = {
+  name: "ns-more",
+  usage: "[<id> [--page=<N>]]",
+  description:
+    "Page through buffered over-budget output. The id (e.g. `curl-1`) is shown in each paged response's footer; run with no args for usage.",
+};
+
 export const lookCmd: CommandDef = {
   name: "ns-look",
   usage: "[--describe] <filepath>",
@@ -177,11 +184,8 @@ export const browserCmd: CommandDef = {
     },
     text: {
       usage: "text",
-      description: "Dump the current page's accessibility tree (paginated)",
-    },
-    more: {
-      usage: "more",
-      description: "Show the next page of paginated content from `text`",
+      description:
+        "Dump the current page's accessibility tree. If it exceeds the page budget, use `ns-more` for subsequent pages.",
     },
   },
 };
@@ -209,13 +213,9 @@ export const lynxCmd: CommandDef = {
         "Open the given link number. Link numbers work across all previous outputs",
     },
     links: {
-      usage: "links <url> <page>",
+      usage: "links <url>",
       description:
-        "List only the links for the given URL. Use the page number to get more links",
-    },
-    more: {
-      usage: "more",
-      description: "Show the next page of content from the last URL opened",
+        "List only the links for the given URL. Use `ns-more` for additional pages if the link list is long.",
     },
   },
 };

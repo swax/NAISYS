@@ -16,13 +16,13 @@ import stringArgv from "string-argv";
 import type { AgentConfig } from "../../agent/agentConfig.js";
 import { browserCmd } from "../../command/commandDefs.js";
 import type { RegistrableCommand } from "../../command/commandRegistry.js";
+import type { PagedOutputBuffer } from "../../command/pagedOutputBuffer.js";
 import { toPlaywrightKeyCombo } from "../../computer-use/keyCombo.js";
 import type { GlobalConfig } from "../../globalConfig.js";
 import type { ContextManager } from "../../llm/contextManager.js";
 import { ContentSource } from "../../llm/llmDtos.js";
 import type { ModelService } from "../../services/agent/modelService.js";
 import type { OutputService } from "../../utils/output/output.js";
-import { createPaginationState } from "./webPagination.js";
 
 const CLEANUP_TIMEOUT_MS = 3000;
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
@@ -35,8 +35,8 @@ export function createBrowserService(
   contextManager: ContextManager,
   output: OutputService,
   modelService: ModelService,
+  pagedOutputBuffer: PagedOutputBuffer,
 ) {
-  const pagination = createPaginationState();
   let chromium: BrowserType | null = null;
   let browser: Browser | null = null;
   let page: Page | null = null;
@@ -81,11 +81,11 @@ export function createBrowserService(
       lines.push(fmt("click"));
       lines.push(fmt("fill"));
       lines.push(fmt("text"));
-      lines.push(fmt("more"));
       lines.push("");
       lines.push(
         "Selector syntax: 'text=Foo', '#id', '.cls', 'role=button[name=Sign in]'",
       );
+      lines.push("Use `ns-more` for subsequent pages when `text` output is paginated.");
     }
 
     lines.push("");
@@ -234,9 +234,6 @@ export function createBrowserService(
     if (!p.url() || p.url() === "about:blank") {
       return "No page loaded. Use 'ns-browser open <url>' first.";
     }
-    // Visual output supersedes any prior text-mode pagination so a stale
-    // `more` can't return chunks from a snapshot the page no longer reflects.
-    pagination.clear();
     const shot = await captureScreenshot();
     const blockReason = contextManager.appendImage(
       shot.base64,
@@ -259,16 +256,7 @@ export function createBrowserService(
     ]);
     const fullContent = `URL: ${url}\nTitle: ${title}\n\n${snapshot}`;
 
-    const tokenMax = globalConfig().webTokenMax;
-    const view = pagination.setContent(url, fullContent, tokenMax);
-    let content = view.content;
-    if (view.totalPages > 1) {
-      content += `\n\n--- More content available. Use 'ns-browser more' to view page 2 of ${view.totalPages} ---`;
-      output.comment(
-        `Page is ${view.totalPages} pages. Showing page 1. Use 'ns-browser more' for next page.`,
-      );
-    }
-    return content;
+    return pagedOutputBuffer.setContent(`ns-browser ${url}`, fullContent);
   }
 
   async function dumpCurrentPage(): Promise<string> {
@@ -282,7 +270,6 @@ export function createBrowserService(
       throw `Unknown mode '${arg}'. Use 'visual' or 'text'.`;
     }
     mode = next;
-    pagination.clear();
     return `Mode set to ${mode}.`;
   }
 
@@ -369,9 +356,6 @@ export function createBrowserService(
         throw `Failed to click (${x}, ${y}): ${msg}`;
       }
       await waitForSettle(p);
-      // The visual click likely changed the DOM — invalidate any prior text
-      // pagination so a later `more` can't return stale snapshot chunks.
-      pagination.clear();
       return `Clicked (${button}) at (${x}, ${y})`;
     }
 
@@ -421,9 +405,6 @@ export function createBrowserService(
       throw `Failed to scroll: ${msg}`;
     }
     await waitForSettle(p);
-    // Scrolling reveals different content; any prior text pagination is now
-    // disconnected from what the agent can see.
-    pagination.clear();
     return `Scrolled ${direction} ${pixels}px`;
   }
 
@@ -437,9 +418,6 @@ export function createBrowserService(
       throw `Failed to type: ${msg}`;
     }
     await waitForSettle(p);
-    // Typing can trigger JS handlers that change the DOM — clear text-mode
-    // pagination so a stale `more` can't return chunks from a pre-type snapshot.
-    pagination.clear();
     return `Typed: ${text}`;
   }
 
@@ -459,8 +437,6 @@ export function createBrowserService(
       throw `Failed to press ${combo}: ${msg}`;
     }
     await waitForSettle(p);
-    // A key press (especially Enter) can submit forms or navigate.
-    pagination.clear();
     return `Pressed: ${combo}`;
   }
 
@@ -479,7 +455,6 @@ export function createBrowserService(
       throw `Failed to fill ${selector}: ${msg}`;
     }
     await waitForSettle(p);
-    pagination.clear();
     return `Filled: ${selector} = ${text}`;
   }
 
@@ -487,27 +462,11 @@ export function createBrowserService(
     return dumpText();
   }
 
-  function handleMore(): string {
-    if (!pagination.hasContent()) {
-      return "No paginated content available. Use 'ns-browser text' (or 'open' in text mode) first.";
-    }
-    if (pagination.isAtLastPage()) {
-      return `Already at the last page (${pagination.getTotalPages()}) of content for ${pagination.getLastUrl()}.`;
-    }
-    const view = pagination.next()!;
-    let content = view.content;
-    if (view.pageNum < view.totalPages) {
-      content += `\n\n--- More content available. Use 'ns-browser more' to view page ${view.pageNum + 1} of ${view.totalPages} ---`;
-    }
-    return `URL: ${view.url} (Page ${view.pageNum} of ${view.totalPages})\n\n${content}`;
-  }
-
   async function handleClose(): Promise<string> {
     if (page && !page.isClosed()) {
       await page.close();
     }
     page = null;
-    pagination.clear();
     return "Page closed.";
   }
 
@@ -548,15 +507,9 @@ export function createBrowserService(
         return handleFill(argv[1], argv.slice(2).join(" "));
       case "text":
         return handleText();
-      case "more":
-        return handleMore();
       default:
         return `Unknown ${browserCmd.name} subcommand '${argv[0]}'. See valid commands below:\n${formatHelp()}`;
     }
-  }
-
-  function clear(): void {
-    pagination.clear();
   }
 
   async function cleanup(): Promise<void> {
@@ -586,7 +539,6 @@ export function createBrowserService(
 
   return {
     ...registrableCommand,
-    clear,
     cleanup,
   };
 }

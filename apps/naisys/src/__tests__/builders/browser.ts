@@ -1,5 +1,9 @@
 import { type Mock, vi } from "vitest";
 
+import {
+  createPagedOutputBuffer,
+  type PagedOutputBuffer,
+} from "../../command/pagedOutputBuffer.js";
 import type { BrowserService } from "../../features/web/browser.js";
 import { createBrowserService } from "../../features/web/browser.js";
 import {
@@ -78,23 +82,24 @@ export function mockLaunch(
 export type BuildBrowserServiceOverrides = {
   browserEnabled?: boolean;
   supportsVision?: boolean;
-  webTokenMax?: number;
+  outputTokenMax?: number;
   contextManager?: ReturnType<typeof createMockContextManager>;
 };
 
-export function buildBrowserService(
-  overrides: BuildBrowserServiceOverrides = {},
-): BrowserService {
+function makeMocks(overrides: BuildBrowserServiceOverrides) {
   const browserEnabled = overrides.browserEnabled ?? true;
   const supportsVision = overrides.supportsVision ?? true;
 
   const baseGlobal = createMockGlobalConfig();
   const globalConfig =
-    overrides.webTokenMax !== undefined
+    overrides.outputTokenMax !== undefined
       ? ({
           globalConfig: () => ({
             ...baseGlobal.globalConfig(),
-            webTokenMax: overrides.webTokenMax,
+            shellCommand: {
+              ...baseGlobal.globalConfig().shellCommand,
+              outputTokenMax: overrides.outputTokenMax,
+            },
           }),
         } as any)
       : baseGlobal;
@@ -106,13 +111,38 @@ export function buildBrowserService(
     getLlmModel: vi.fn(() => ({ supportsVision })),
   } as any;
 
+  return { globalConfig, agentConfig, modelService };
+}
+
+export function buildBrowserService(
+  overrides: BuildBrowserServiceOverrides = {},
+): BrowserService {
+  const { globalConfig, agentConfig, modelService } = makeMocks(overrides);
   return createBrowserService(
     globalConfig,
     agentConfig,
     overrides.contextManager ?? createMockContextManager(),
     createMockOutputService(),
     modelService,
+    createPagedOutputBuffer(globalConfig),
   );
+}
+
+/** Variant that also returns the buffer for tests asserting on paging state. */
+export function buildBrowserAndBuffer(
+  overrides: BuildBrowserServiceOverrides = {},
+): { service: BrowserService; buf: PagedOutputBuffer } {
+  const { globalConfig, agentConfig, modelService } = makeMocks(overrides);
+  const buf = createPagedOutputBuffer(globalConfig);
+  const service = createBrowserService(
+    globalConfig,
+    agentConfig,
+    overrides.contextManager ?? createMockContextManager(),
+    createMockOutputService(),
+    modelService,
+    buf,
+  );
+  return { service, buf };
 }
 
 export async function openPaginatedTextPage(

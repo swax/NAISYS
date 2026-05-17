@@ -9,6 +9,7 @@ import { createCommandLoop } from "../command/commandLoop.js";
 import { createCommandProtection } from "../command/commandProtection.js";
 import { createCommandRegistry } from "../command/commandRegistry.js";
 import { createDebugCommands } from "../command/debugCommand.js";
+import { createPagedOutputBuffer } from "../command/pagedOutputBuffer.js";
 import { createPromptBuilder } from "../command/promptBuilder.js";
 import { createShellCommand } from "../command/shellCommand.js";
 import { createShellWrapper } from "../command/shellWrapper.js";
@@ -272,13 +273,18 @@ export async function createAgentRuntime(
     runService,
     costTracker,
   );
-  const lynxService = createLynxService(globalConfig, output);
+  // Per-agent paged-output buffer shared across shell, lynx, and browser so
+  // `ns-more` always pages the most recent over-budget output for THIS agent.
+  const pagedOutputBuffer = createPagedOutputBuffer(globalConfig);
+
+  const lynxService = createLynxService(globalConfig, output, pagedOutputBuffer);
   const browserService = createBrowserService(
     globalConfig,
     agentConfig,
     contextManager,
     output,
     modelService,
+    pagedOutputBuffer,
   );
   const webSearchService = createWebSearchService(
     globalConfig,
@@ -302,9 +308,9 @@ export async function createAgentRuntime(
     localUserId,
   );
   const shellCommand = createShellCommand(
-    globalConfig,
     shellWrapper,
     inputMode,
+    pagedOutputBuffer,
   );
   const ptyService = createPtyService(shellWrapper);
   const sessionService = createSessionService(
@@ -346,6 +352,7 @@ export async function createAgentRuntime(
 
   const commandRegistry = createCommandRegistry(inputMode, [
     commentCommand,
+    pagedOutputBuffer.moreCommand,
     ...shellWrapper.commands,
     lynxService,
     browserService,
@@ -387,7 +394,6 @@ export async function createAgentRuntime(
     promptBuilder,
     shellCommand,
     lynxService,
-    browserService,
     contextManager,
     workspaces,
     llmService,
@@ -406,6 +412,7 @@ export async function createAgentRuntime(
     desktopService,
     commandLoopState,
     startupAttachmentService,
+    pagedOutputBuffer,
   );
 
   const abortController = new AbortController();

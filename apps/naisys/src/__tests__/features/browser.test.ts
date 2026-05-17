@@ -12,6 +12,7 @@ import {
 } from "vitest";
 
 import {
+  buildBrowserAndBuffer,
   buildBrowserService,
   makeMockPage,
   mockLaunch,
@@ -95,10 +96,10 @@ describe("ns-browser help and gating", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
-  test("more without prior open returns helpful message", async () => {
+  test("ns-browser no longer owns a `more` subcommand (use ns-more instead)", async () => {
     const svc = buildBrowserService();
     const result = await svc.handleCommand("more");
-    expect(result).toContain("No paginated content available");
+    expect(result).toContain("Unknown ns-browser subcommand 'more'");
   });
 });
 
@@ -260,48 +261,23 @@ describe("ns-browser visual mode (default)", () => {
     expect(launchMock).not.toHaveBeenCalled();
   });
 
-  test("visual open clears stale text-mode pagination", async () => {
+  test("buffered text snapshot persists across visual actions (no implicit clear)", async () => {
+    // ns-more on a pre-action label returns the pre-action snapshot — by design.
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
     mockLaunch(launchMock, page);
-    const svc = buildBrowserService({ webTokenMax: 1 });
+    const { service: svc, buf } = buildBrowserAndBuffer({ outputTokenMax: 1 });
 
     const textOpen = await openPaginatedTextPage(svc);
-    expect(textOpen).toContain("ns-browser more");
+    expect(textOpen).toContain("ns-more");
+    expect(buf.size()).toBe(1);
 
     await svc.handleCommand("mode visual");
     await svc.handleCommand("open https://example.com");
-    const more = await svc.handleCommand("more");
-    expect(more).toContain("No paginated content available");
-  });
-
-  test("visual click clears stale text-mode pagination", async () => {
-    const { page } = makeMockPage({
-      ariaSnapshot: "- heading: lots and lots of content here",
-    });
-    mockLaunch(launchMock, page);
-    const svc = buildBrowserService({ webTokenMax: 1 });
-
-    await openPaginatedTextPage(svc);
-    await svc.handleCommand("mode visual");
     await svc.handleCommand("click 100 200");
-    const more = await svc.handleCommand("more");
-    expect(more).toContain("No paginated content available");
-  });
-
-  test("visual scroll clears stale text-mode pagination", async () => {
-    const { page } = makeMockPage({
-      ariaSnapshot: "- heading: lots and lots of content here",
-    });
-    mockLaunch(launchMock, page);
-    const svc = buildBrowserService({ webTokenMax: 1 });
-
-    await openPaginatedTextPage(svc);
-    await svc.handleCommand("mode visual");
     await svc.handleCommand("scroll down 300");
-    const more = await svc.handleCommand("more");
-    expect(more).toContain("No paginated content available");
+    expect(buf.size()).toBe(1);
   });
 
   test("fill is rejected in visual mode", async () => {
@@ -353,19 +329,21 @@ describe("ns-browser text mode", () => {
     expect(result).not.toContain("- heading: Old");
   });
 
-  test("fill clears pagination so stale `more` returns empty", async () => {
+  test("fill returns confirmation and leaves the prior buffer in place", async () => {
     const { page } = makeMockPage({
       ariaSnapshot: "- heading: lots and lots of content here",
     });
     mockLaunch(launchMock, page);
-    const svc = buildBrowserService({ webTokenMax: 1 });
+    const { service: svc, buf } = buildBrowserAndBuffer({ outputTokenMax: 1 });
 
     const opened = await openPaginatedTextPage(svc);
-    expect(opened).toContain("ns-browser more");
+    expect(opened).toContain("ns-more");
+    expect(buf.size()).toBe(1);
+
     const filled = await svc.handleCommand("fill #email alice@example.com");
     expect(filled).toContain("Filled: #email = alice@example.com");
-    const more = await svc.handleCommand("more");
-    expect(more).toContain("No paginated content available");
+    // Pre-fill snapshot is still addressable; the agent re-runs `text` for a fresh one.
+    expect(buf.size()).toBe(1);
   });
 
   test("scroll is rejected in text mode", async () => {
@@ -378,16 +356,19 @@ describe("ns-browser text mode", () => {
 });
 
 describe("ns-browser lifecycle", () => {
-  test("close cleans up the page and clears pagination", async () => {
-    const { page } = makeMockPage();
+  test("close cleans up the page (buffer is left intact)", async () => {
+    const { page } = makeMockPage({
+      ariaSnapshot: "- heading: lots and lots of content here",
+    });
     mockLaunch(launchMock, page);
-    const svc = buildBrowserService();
-    await svc.handleCommand("open https://example.com");
+    const { service: svc, buf } = buildBrowserAndBuffer({ outputTokenMax: 1 });
+    await openPaginatedTextPage(svc);
+    expect(buf.size()).toBe(1);
     const result = await svc.handleCommand("close");
     expect(page.close).toHaveBeenCalled();
     expect(result).toBe("Page closed.");
-    const next = await svc.handleCommand("more");
-    expect(next).toContain("No paginated content available");
+    // Buffer persists — close doesn't invalidate prior snapshots.
+    expect(buf.size()).toBe(1);
   });
 
   test("cleanup() closes the browser", async () => {

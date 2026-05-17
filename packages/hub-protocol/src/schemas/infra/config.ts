@@ -13,7 +13,6 @@ export const ConfigResponseSchema = z.object({
       }),
       retrySecondsBase: z.number(),
       retrySecondsMax: z.number(),
-      webTokenMax: z.number(),
       compactSessionEnabled: z.boolean(),
       preemptiveCompactEnabled: z.boolean(),
       variableMap: z.record(z.string(), z.string()),

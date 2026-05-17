@@ -70,6 +70,34 @@ function buildEdits(
   );
 }
 
+function fieldValueEquals(
+  a: FieldValue | undefined,
+  b: FieldValue | undefined,
+) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function mergeEditsPreservingDirty(
+  previousFieldValues: FieldValueEntry[],
+  nextFieldValues: FieldValueEntry[],
+  currentEdits: Record<string, FieldValue>,
+): Record<string, FieldValue> {
+  const previousEdits = buildEdits(previousFieldValues);
+  const nextEdits = buildEdits(nextFieldValues);
+
+  return Object.fromEntries(
+    Object.entries(nextEdits).map(([key, nextValue]) => {
+      const currentValue = currentEdits[key];
+      const previousValue = previousEdits[key];
+      const hasDirtyEdit =
+        currentValue !== undefined &&
+        !fieldValueEquals(currentValue, previousValue);
+
+      return [key, hasDirtyEdit ? currentValue : nextValue];
+    }),
+  );
+}
+
 /** Get a string value from FieldValue (for scalar fields) */
 function asString(v: FieldValue): string {
   return typeof v === "string" ? v : v.join(", ");
@@ -140,9 +168,16 @@ export const FieldValueRunList: React.FC<FieldValueRunListProps> = ({
   const prevPropRef = useRef(fieldValuesProp);
   useEffect(() => {
     if (fieldValuesProp !== prevPropRef.current) {
+      const previousFieldValues = prevPropRef.current;
       prevPropRef.current = fieldValuesProp;
       setFieldValues(fieldValuesProp);
-      setEdits(buildEdits(fieldValuesProp));
+      setEdits((currentEdits) =>
+        mergeEditsPreservingDirty(
+          previousFieldValues,
+          fieldValuesProp,
+          currentEdits,
+        ),
+      );
     }
   }, [fieldValuesProp]);
 

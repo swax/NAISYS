@@ -164,7 +164,6 @@ export function createMockBrowserService() {
   const browserService: BrowserService = {
     command: browserCmd,
     handleCommand: vi.fn(() => Promise.resolve("")),
-    clear: vi.fn(),
     cleanup: vi.fn(() => Promise.resolve()),
   };
 
@@ -306,11 +305,10 @@ export function createMockGlobalConfig(): GlobalConfig {
     globalConfig: () => ({
       hostname: "test",
       shellCommand: {
-        outputTokenMax: 7500,
+        outputTokenMax: 2000,
         timeoutSeconds: 10,
         maxTimeoutSeconds: 300,
       },
-      webTokenMax: 5000,
       retrySecondsBase: 5,
       retrySecondsMax: 1800,
       compactSessionEnabled: false,

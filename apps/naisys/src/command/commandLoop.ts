@@ -3,10 +3,10 @@ import chalk from "chalk";
 import * as readline from "readline";
 
 import type { AgentConfig } from "../agent/agentConfig.js";
+import type { PagedOutputBuffer } from "../command/pagedOutputBuffer.js";
 import type { DesktopService } from "../computer-use/desktop.js";
 import type { SessionService } from "../features/shell/session.js";
 import type { WorkspacesFeature } from "../features/shell/workspaces.js";
-import type { BrowserService } from "../features/web/browser.js";
 import type { LynxService } from "../features/web/lynx.js";
 import type { GlobalConfig } from "../globalConfig.js";
 import type { HubClient } from "../hub/hubClient.js";
@@ -52,7 +52,6 @@ export function createCommandLoop(
   promptBuilder: PromptBuilder,
   shellCommand: ShellCommand,
   lynxService: LynxService,
-  browserService: BrowserService,
   contextManager: ContextManager,
   workspaces: WorkspacesFeature,
   llmService: LLMService,
@@ -71,6 +70,7 @@ export function createCommandLoop(
   desktopService: DesktopService,
   commandLoopState: CommandLoopStateService,
   startupAttachmentService: StartupAttachmentService,
+  pagedOutputBuffer: PagedOutputBuffer,
 ) {
   let preemptiveCompactTimeout: NodeJS.Timeout | undefined;
   /** Tracks the current timed wait so preemptive compact can calculate remaining time */
@@ -130,7 +130,7 @@ export function createCommandLoop(
         commandLoopState.setState("Executing");
         clearTimeout(preemptiveCompactTimeout);
         lynxService.clear();
-        browserService.clear();
+        pagedOutputBuffer.clear();
         contextManager.clear();
         await runService.incrementSession();
         nextCommandAction = NextCommandAction.Continue;

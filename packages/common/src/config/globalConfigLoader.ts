@@ -8,7 +8,6 @@ export interface ClientConfig {
   };
   retrySecondsBase: number;
   retrySecondsMax: number;
-  webTokenMax: number;
   compactSessionEnabled: boolean;
   preemptiveCompactEnabled: boolean;
   googleSearchEngineId?: string;
@@ -46,14 +45,13 @@ export function buildClientConfig(
   shellExportKeys?: Set<string>,
 ): ClientConfig {
   const shellCommand = {
-    outputTokenMax: 7500,
+    outputTokenMax: 2000,
     timeoutSeconds: 10,
     maxTimeoutSeconds: 60 * 5,
   };
 
   const retrySecondsBase = 5;
   const retrySecondsMax = 30 * 60;
-  const webTokenMax = 5000;
   const compactSessionEnabled = true;
   const preemptiveCompactEnabled = true;
 
@@ -92,7 +90,6 @@ export function buildClientConfig(
     shellCommand,
     retrySecondsBase,
     retrySecondsMax,
-    webTokenMax,
     compactSessionEnabled,
     preemptiveCompactEnabled,
     variableMap,

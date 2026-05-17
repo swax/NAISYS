@@ -8,22 +8,17 @@ import stringArgv from "string-argv";
 
 import { lynxCmd } from "../../command/commandDefs.js";
 import type { RegistrableCommand } from "../../command/commandRegistry.js";
+import type { PagedOutputBuffer } from "../../command/pagedOutputBuffer.js";
 import type { GlobalConfig } from "../../globalConfig.js";
 import type { OutputService } from "../../utils/output/output.js";
 import * as utilities from "../../utils/utilities.js";
-import {
-  breakContentIntoPages,
-  createPaginationState,
-} from "./webPagination.js";
 
 export function createLynxService(
   { globalConfig }: GlobalConfig,
   output: OutputService,
+  pagedOutputBuffer: PagedOutputBuffer,
 ) {
   let debugMode = false;
-
-  // Single pagination state since we only navigate one page at a time
-  const pagination = createPaginationState();
 
   /** Links numbers are unique in the context so that `ns-lynx follow <linknum>` can be called on all previous output */
   const _globalLinkMap = new Map<number, string>();
@@ -42,11 +37,10 @@ export function createLynxService(
     switch (argv[0]) {
       case "help": {
         const subs = lynxCmd.subcommands!;
-        return `${lynxCmd.name} <command> (results will be paginated to ${globalConfig().webTokenMax} tokens per page)
+        return `${lynxCmd.name} <command> (long output is paginated to ${globalConfig().shellCommand.outputTokenMax} tokens; use \`ns-more\` for subsequent pages)
   ${subs.open.usage}: ${subs.open.description}
   ${subs.follow.usage}: ${subs.follow.description}
   ${subs.links.usage}: ${subs.links.description}
-  ${subs.more.usage}: ${subs.more.description}
 
 *${lynxCmd.name} does not support input. Use ${lynxCmd.name} or curl to call APIs directly*`;
       }
@@ -66,12 +60,7 @@ export function createLynxService(
       }
       case "links": {
         const url = argv[1];
-        const isNumber = !isNaN(parseInt(argv[2]));
-        const pageNumber = isNumber ? parseInt(argv[2]) : 1;
-        return await loadUrlLinks(url, pageNumber);
-      }
-      case "more": {
-        return showMoreContent();
+        return await loadUrlLinks(url);
       }
       // Secret command to toggle debug mode
       case "debug":
@@ -85,65 +74,34 @@ export function createLynxService(
     }
   }
 
-  /** Returns a paginated list of global links for the given URL */
-  async function loadUrlLinks(url: string, linkPageNumber: number) {
-    let content = await runLynx(url);
-    let links = "";
-
-    // Reverse find 'References: ' and cut everything after it from the content
-    const refPos = content.lastIndexOf("References\n");
-    if (refPos > 0) {
-      links = content.slice(refPos);
-      content = "";
-    } else {
+  /** Returns the globalized link list for the given URL. Pushes overflow into the shared buffer for `ns-more`. */
+  async function loadUrlLinks(url: string) {
+    let rawDump = await runLynx(url);
+    const refPos = rawDump.lastIndexOf("References\n");
+    if (refPos < 0) {
       return "No Links Found";
     }
+    const links = rawDump.slice(refPos);
+    rawDump = "";
 
-    // Iterate links and de-duplicate
-    const linkLines = links.split("\n");
+    // Dedup URLs in original order
+    let dedupedUrls = "";
     const linkSet = new Set<string>();
-    for (const linkLine of linkLines) {
+    for (const linkLine of links.split("\n")) {
       const dotPos = linkLine.indexOf(".");
-      if (dotPos < 0) {
-        continue;
-      }
-
-      const url = linkLine.substring(dotPos + 1).trim();
-
-      if (!linkSet.has(url)) {
-        linkSet.add(url);
-        content += url + "\n";
-      }
+      if (dotPos < 0) continue;
+      const u = linkLine.substring(dotPos + 1).trim();
+      if (linkSet.has(u)) continue;
+      linkSet.add(u);
+      dedupedUrls += u + "\n";
     }
 
-    // Get the token size of the output
-    const linksTokenSize = utilities.getTokenCount(content);
+    // Globalize once over the full list so link numbers stay stable across pages.
+    const globalized = globalizeLinkList(dedupedUrls);
 
-    outputInDebugMode(`Links Token size: ${linksTokenSize}`);
+    outputInDebugMode(`Links Token size: ${utilities.getTokenCount(globalized)}`);
 
-    // Paginate if over the token max
-    if (linksTokenSize > globalConfig().webTokenMax) {
-      const pages = breakContentIntoPages(content, globalConfig().webTokenMax);
-
-      // Clamp page number
-      const pageIndex = Math.max(
-        0,
-        Math.min(linkPageNumber - 1, pages.length - 1),
-      );
-      content = globalizeLinkList(pages[pageIndex]);
-
-      if (pages.length > 1) {
-        content += `\n--- Page ${pageIndex + 1} of ${pages.length}. Use 'ns-lynx links <url> <page>' for other pages ---`;
-      }
-    } else {
-      output.comment(
-        `No need to reduce, link Content is already under ${globalConfig().webTokenMax} tokens.`,
-      );
-
-      content = globalizeLinkList(content);
-    }
-
-    return content;
+    return pagedOutputBuffer.setContent(`ns-lynx links ${url}`, globalized);
   }
 
   async function loadUrlContent(
@@ -171,37 +129,18 @@ export function createLynxService(
         `Links Token size: ${linksTokenSize}`,
     );
 
-    if (contentTokenSize > globalConfig().webTokenMax) {
-      const view = pagination.setContent(
-        url,
-        content,
-        globalConfig().webTokenMax,
-      );
-      content = view.content;
-      if (view.totalPages > 1) {
-        content += `\n\n--- More content available. Use 'ns-lynx more' to view page 2 of ${view.totalPages} ---`;
-      }
+    // Globalize before splitting so `[N]` references stay stable across pages.
+    let globalized = storeMapSetLinks(content, links);
 
-      output.comment(
-        `Content is ${contentTokenSize} tokens. Showing page 1 of ${view.totalPages}. Use 'ns-lynx more' for next page.`,
-      );
-    } else {
-      output.comment(
-        `Content is already under ${globalConfig().webTokenMax} tokens.`,
-      );
-    }
-
-    // Prefix content with url if following as otherwise the url is never shown
     if (showUrl) {
-      content = `URL: ${url}\n\n` + content;
+      globalized = `URL: ${url}\n\n` + globalized;
     }
-
     if (showFollowHint) {
-      content +=
+      globalized +=
         "\n\nLinks are in brackets. Use `ns-lynx follow <link number>` to follow a link.";
     }
 
-    return storeMapSetLinks(content, links);
+    return pagedOutputBuffer.setContent(`ns-lynx ${url}`, globalized);
   }
 
   async function runLynx(url: string) {
@@ -313,7 +252,6 @@ export function createLynxService(
     _globalLinkMap.clear();
     _globalUrlMap.clear();
     _nextGlobalLinkNum = 1;
-    pagination.clear();
   }
 
   function registerUrl(url: string) {
@@ -349,25 +287,6 @@ export function createLynxService(
     }
 
     return globalLinks;
-  }
-
-  function showMoreContent(): string {
-    if (!pagination.hasContent()) {
-      return "No paginated content available. Open a URL first with 'ns-lynx open <url>'.";
-    }
-
-    if (pagination.isAtLastPage()) {
-      return `Already at the last page (${pagination.getTotalPages()}) of content for ${pagination.getLastUrl()}.`;
-    }
-
-    const view = pagination.next()!;
-    let pageContent = view.content;
-    if (view.pageNum < view.totalPages) {
-      pageContent += `\n\n--- More content available. Use 'ns-lynx more' to view page ${view.pageNum + 1} of ${view.totalPages} ---`;
-    }
-
-    const result = `URL: ${view.url} (Page ${view.pageNum} of ${view.totalPages})\n\n${pageContent}`;
-    return storeMapSetLinks(result, "");
   }
 
   const registrableCommand: RegistrableCommand = {

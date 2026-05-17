@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import type { CommandHandler } from "../../command/commandHandler.js";
 import { createCommandLoop } from "../../command/commandLoop.js";
 import { NextCommandAction } from "../../command/commandRegistry.js";
+import { createPagedOutputBuffer } from "../../command/pagedOutputBuffer.js";
 import type { DesktopService } from "../../computer-use/desktop.js";
 import type { LLMService } from "../../llm/llmService.js";
 import type { ModelService } from "../../services/agent/modelService.js";
@@ -12,7 +13,6 @@ import { createInputMode } from "../../utils/input/inputMode.js";
 import { createPromptNotificationService } from "../../utils/output/promptNotificationService.js";
 import {
   createMockAgentConfig,
-  createMockBrowserService,
   createMockChatService,
   createMockContextManager,
   createMockGlobalConfig,
@@ -102,7 +102,6 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
     promptBuilder,
     createMockShellCommand(),
     createMockLynxService(),
-    createMockBrowserService(),
     createMockContextManager(),
     createMockWorkspacesFeature(),
     llmService,
@@ -124,6 +123,7 @@ export function buildCommandLoop(overrides: BuildCommandLoopOverrides = {}) {
       stage: vi.fn(),
       getSummary: vi.fn(() => undefined),
     } as unknown as StartupAttachmentService,
+    createPagedOutputBuffer(createMockGlobalConfig()),
   );
 
   return { commandLoop, mocks };
