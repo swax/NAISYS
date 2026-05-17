@@ -33,6 +33,11 @@ import { getTokenCount } from "../../utils/utilities.js";
  *  long-running agent's image-heavy log doesn't open dozens of sockets. */
 const RESUME_DOWNLOAD_CONCURRENCY = 4;
 
+/** Optimal point to compact context. Waiting longer wastes money on bloated
+ *  reads; compacting sooner wastes money generating summaries too often.
+ *  Model min cacheable size agnostic. */
+export const PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS = 2400;
+
 export function createSessionService(
   { globalConfig }: GlobalConfig,
   { agentConfig }: AgentConfig,
@@ -440,13 +445,24 @@ export function createSessionService(
       return `Report results to your lead, admin, or someone else via chat or mail before calling complete.`;
     }
 
-    // Capture a fresh seed before exit so the next run can resume.
+    // Capture a fresh seed before exit so the next run can resume. Skip
+    // the LLM call when context is small — next session's RestoreData
+    // replays the raw entries fine at this size. Symmetric to the
+    // retro-compact skip in commandLoop.runSessionStartup.
     if (agentConfig().continuity === "summary") {
-      output.commentAndLog("Saving session summary before completing...");
-      try {
-        await produceRestoreSummary();
-      } catch (e) {
-        output.errorAndLog(`Failed to produce restore summary: ${e}`);
+      if (
+        contextManager.getTokenCount() < PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS
+      ) {
+        output.commentAndLog(
+          "Context below compact threshold, skipping summary.",
+        );
+      } else {
+        output.commentAndLog("Saving session summary before completing...");
+        try {
+          await produceRestoreSummary();
+        } catch (e) {
+          output.errorAndLog(`Failed to produce restore summary: ${e}`);
+        }
       }
     }
 

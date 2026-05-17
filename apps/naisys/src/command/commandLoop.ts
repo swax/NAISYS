@@ -5,7 +5,10 @@ import * as readline from "readline";
 import type { AgentConfig } from "../agent/agentConfig.js";
 import type { PagedOutputBuffer } from "../command/pagedOutputBuffer.js";
 import type { DesktopService } from "../computer-use/desktop.js";
-import type { SessionService } from "../features/shell/session.js";
+import {
+  PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS,
+  type SessionService,
+} from "../features/shell/session.js";
 import type { WorkspacesFeature } from "../features/shell/workspaces.js";
 import type { LynxService } from "../features/web/lynx.js";
 import type { GlobalConfig } from "../globalConfig.js";
@@ -152,11 +155,6 @@ export function createCommandLoop(
     }
   }
 
-  /**
-   * Optimal point to compact context. Waiting longer wastes money on bloated reads;
-   * compacting sooner wastes money generating summaries too often. Model min cacheable size agnostic.
-   */
-  const PREEMPTIVE_COMPACTION_THRESHOLD_TOKENS = 2400;
   const CACHE_EXPIRY_MARGIN_SECONDS = 30;
 
   function schedulePreemptiveCompact() {
