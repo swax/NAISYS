@@ -26,7 +26,13 @@ export interface PlatformConfig {
   scriptExtension: string;
   /** Script shebang/header */
   scriptHeader: string;
-  /** Set error handling (exit on first error) */
+  /** Error-handling preamble for wrapped multi-line scripts.
+   *  On bash, a plain `set -e` would kill the parent shell because the
+   *  wrapper sources the script — so we pair `set -e` with an ERR trap
+   *  that prints what failed and `return`s from the sourced script,
+   *  plus a RETURN trap that restores the parent shell's error state.
+   *  On Windows, the wrapper's try/finally already isolates
+   *  `$ErrorActionPreference = 'Stop'`. */
   scriptSetError: string;
   /** Path environment separator */
   pathSeparator: string;
@@ -110,7 +116,27 @@ function getLinuxConfig(): PlatformConfig {
     cdCommand: (path: string) => `cd "${path}"`,
     scriptExtension: ".sh",
     scriptHeader: "#!/bin/bash",
-    scriptSetError: "set -e",
+    scriptSetError: `__naisys_prev_errexit=0
+case $- in *e*) __naisys_prev_errexit=1 ;; esac
+__naisys_prev_err_trap=$(trap -p ERR)
+__naisys_prev_return_trap=$(trap -p RETURN)
+trap '__naisys_rc=$?
+trap - ERR
+trap - RETURN
+if [ -n "$__naisys_prev_err_trap" ]; then eval "$__naisys_prev_err_trap"; fi
+if [ -n "$__naisys_prev_return_trap" ]; then eval "$__naisys_prev_return_trap"; fi
+if [ "$__naisys_prev_errexit" = "1" ]; then set -e; else set +e; fi
+unset __naisys_prev_errexit __naisys_prev_err_trap __naisys_prev_return_trap __naisys_rc' RETURN
+trap '__naisys_rc=$?
+set +e
+echo "[NAISYS: script halted at exit $__naisys_rc on: $BASH_COMMAND]" >&2
+trap - ERR
+trap - RETURN
+if [ -n "$__naisys_prev_err_trap" ]; then eval "$__naisys_prev_err_trap"; fi
+if [ -n "$__naisys_prev_return_trap" ]; then eval "$__naisys_prev_return_trap"; fi
+if [ "$__naisys_prev_errexit" = "1" ]; then set -e; else set +e; fi
+eval "unset __naisys_prev_errexit __naisys_prev_err_trap __naisys_prev_return_trap __naisys_rc; return $__naisys_rc 2>/dev/null || exit $__naisys_rc"' ERR
+set -e`,
     pathSeparator: ":",
     sourceScript: (scriptPath: string) => `source "${scriptPath}"`,
     exportEnvCommand: (key: string, value: string) =>
