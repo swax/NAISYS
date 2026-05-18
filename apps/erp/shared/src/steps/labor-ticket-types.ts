@@ -16,6 +16,7 @@ export const LaborTicketSchema = z.object({
   clockIn: z.iso.datetime(),
   clockOut: z.iso.datetime().nullable(),
   cost: z.number().nullable(),
+  tokens: z.number().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
   updatedAt: z.iso.datetime(),

@@ -147,6 +147,7 @@ function formatLaborTicket(
     clockIn: ticket.clockIn.toISOString(),
     clockOut: formatDate(ticket.clockOut),
     cost: ticket.cost,
+    tokens: ticket.tokens,
     ...formatAuditFields(ticket),
     _links: [
       selfLink(`/${laborResource(orderKey, runNo, seqNo)}/${ticket.id}`),

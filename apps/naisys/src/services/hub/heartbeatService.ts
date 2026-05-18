@@ -56,6 +56,7 @@ export function createHeartbeatService(
         sessionId: a.getSessionId(),
         paused: a.isPaused(),
         state: a.getState(),
+        tokenCount: a.getTokenCount(),
       });
 
       if (subagentId === undefined && !seenKeyUserIds.has(userId)) {

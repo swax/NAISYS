@@ -307,6 +307,7 @@ model OperationRun {
   status       OperationRunStatus @default(pending)
   assignedToId Int?               @map("assigned_to_id")
   cost           Float?
+  tokens         Int?
   statusNote     String?          @map("status_note")
   completedAt    DateTime?        @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
@@ -518,6 +519,7 @@ model LaborTicket {
   clockIn        DateTime  @map("clock_in")
   clockOut       DateTime? @map("clock_out")
   cost           Float?
+  tokens         Int?
   createdAt      DateTime  @default(now()) @map("created_at")
   createdById    Int       @map("created_by")
   updatedAt      DateTime  @updatedAt @map("updated_at")

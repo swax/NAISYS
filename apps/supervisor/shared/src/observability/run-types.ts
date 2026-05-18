@@ -17,6 +17,7 @@ export const RunSessionSchema = z.object({
   modelName: z.string(),
   latestLogId: z.number(),
   totalLines: z.number(),
+  totalTokens: z.number(),
   totalCost: z.number(),
   activeSubagentCount: z.number().int().nonnegative(),
   hostName: z.string().nullable().optional(),

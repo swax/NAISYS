@@ -19,6 +19,7 @@ export * from "./models/modelTypes.js";
 export * from "./models/realtimeModels.js";
 export * from "./utils/errorHandler.js";
 export * from "./utils/formatFileSize.js";
+export * from "./utils/formatTokens.js";
 export * from "./utils/formatVersion.js";
 export * from "./utils/mapWithConcurrency.js";
 export * from "./utils/mimeTypes.js";

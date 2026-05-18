@@ -117,6 +117,7 @@ describe("hubHeartbeatService", () => {
               lastActive: "2026-05-09T12:00:00.000Z",
               paused: true,
               state: "Waiting",
+              totalTokens: undefined,
             },
           ],
         },

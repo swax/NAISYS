@@ -14,6 +14,7 @@ export const SessionPushSchema = z.object({
     lastActive: z.string(),
     latestLogId: z.number(),
     totalLines: z.number(),
+    totalTokens: z.number(),
     totalCost: z.number(),
   }),
 });
@@ -68,6 +69,8 @@ export const SessionHeartbeatUpdateSchema = z.object({
   lastActive: z.string(),
   paused: z.boolean().optional(),
   state: CommandLoopStateSchema.optional(),
+  /** Omitted before the first LLM call (and from older NAISYS hosts). */
+  totalTokens: z.number().int().nonnegative().optional(),
 });
 export type SessionHeartbeatUpdate = z.infer<
   typeof SessionHeartbeatUpdateSchema

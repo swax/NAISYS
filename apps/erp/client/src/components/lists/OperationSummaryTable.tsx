@@ -1,4 +1,5 @@
 import { Badge, Card, Group, Loader, Stack, Table, Text } from "@mantine/core";
+import { formatTokens } from "@naisys/common";
 import type { OperationPredecessor } from "@naisys/erp-shared";
 import { Link } from "react-router";
 
@@ -10,6 +11,7 @@ export interface OperationSummaryItem {
   title: string;
   stepCount?: number;
   cost?: number | null;
+  tokens?: number | null;
   predecessors?: OperationPredecessor[];
 }
 
@@ -45,6 +47,7 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                 <Table.Th>Prerequisites</Table.Th>
                 <Table.Th>Steps</Table.Th>
                 <Table.Th>Cost</Table.Th>
+                <Table.Th>Tokens</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -87,6 +90,11 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                     <Table.Td style={{ padding: 0 }}>
                       <Link to={opLink} style={cellLinkStyle}>
                         {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
+                      </Link>
+                    </Table.Td>
+                    <Table.Td style={{ padding: 0 }}>
+                      <Link to={opLink} style={cellLinkStyle}>
+                        {op.tokens ? formatTokens(op.tokens) : "\u2014"}
                       </Link>
                     </Table.Td>
                   </Table.Tr>

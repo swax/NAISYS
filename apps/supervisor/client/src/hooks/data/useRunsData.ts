@@ -144,6 +144,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
           lastActive: event.lastActive,
           latestLogId: event.latestLogId,
           totalLines: event.totalLines,
+          totalTokens: event.totalTokens,
           totalCost: event.totalCost,
           activeSubagentCount: 0,
         };
@@ -176,6 +177,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
           activeSubagentCount: event.activeSubagentCount,
           paused: event.paused,
           state: event.state,
+          totalTokens: event.totalTokens ?? existing.totalTokens,
         };
         mergeRuns([updated]);
       }

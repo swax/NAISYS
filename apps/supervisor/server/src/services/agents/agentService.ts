@@ -70,6 +70,7 @@ export async function getAgents(
           : undefined,
       config,
       shellModel: config?.shellModel,
+      tokenMax: config?.tokenMax,
     };
   });
 

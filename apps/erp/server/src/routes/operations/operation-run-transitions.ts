@@ -29,7 +29,7 @@ import {
   clockIn,
   clockOutAllForOpRun,
   isUserClockedIn,
-  sumLaborTicketCosts,
+  sumLaborTicketMetrics,
 } from "../../services/production/labor-ticket-service.js";
 import { formatOpRunTransition, SeqNoParamsSchema } from "./operation-runs.js";
 
@@ -160,7 +160,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       if (stepsErr) return unprocessable(reply, stepsErr);
 
       await clockOutAllForOpRun(resolved.opRun.id, userId);
-      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const { cost, tokens } = await sumLaborTicketMetrics(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "complete",
@@ -170,6 +170,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         {
           completedAt: new Date(),
           cost,
+          tokens,
           statusNote: note ?? null,
         },
       );
@@ -237,7 +238,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         await clockOutAllForOpRun(resolved.opRun.id, userId);
       }
 
-      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const { cost, tokens } = await sumLaborTicketMetrics(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "skip",
@@ -247,7 +248,11 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           | typeof OperationRunStatus.in_progress,
         OperationRunStatus.skipped,
         userId,
-        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
+        {
+          ...(cost > 0 ? { cost } : undefined),
+          ...(tokens > 0 ? { tokens } : undefined),
+          statusNote: note ?? null,
+        },
       );
       await unblockSuccessors(
         resolved.run.id,
@@ -304,14 +309,18 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       if (statusErr) return conflict(reply, statusErr);
 
       await clockOutAllForOpRun(resolved.opRun.id, userId);
-      const cost = await sumLaborTicketCosts(resolved.opRun.id);
+      const { cost, tokens } = await sumLaborTicketMetrics(resolved.opRun.id);
       const opRun = await transitionStatus(
         resolved.opRun.id,
         "fail",
         OperationRunStatus.in_progress,
         OperationRunStatus.failed,
         userId,
-        { ...(cost > 0 ? { cost } : undefined), statusNote: note ?? null },
+        {
+          ...(cost > 0 ? { cost } : undefined),
+          ...(tokens > 0 ? { tokens } : undefined),
+          statusNote: note ?? null,
+        },
       );
       const full = await formatOpRunTransition(
         orderKey,

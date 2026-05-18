@@ -41,6 +41,8 @@ export interface IAgentManager {
     isPaused: () => boolean;
     setPaused: (paused: boolean) => boolean;
     getState: () => CommandLoopState;
+    /** Current context size consumed in tokens. */
+    getTokenCount: () => number;
     naisysApiService: NaisysApiService;
   }>;
   getBufferLines: (agentUserId: number) => string[];

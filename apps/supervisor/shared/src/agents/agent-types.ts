@@ -29,6 +29,8 @@ export const AgentSchema = z.object({
   archived: z.boolean().optional(),
   budgetLeft: z.number().nullable().optional(),
   shellModel: z.string().optional(),
+  /** Agent's configured compaction ceiling, for context-fullness math. */
+  tokenMax: z.number().int().positive().optional(),
   status: z
     .enum(["active", "available", "disabled", "offline", "paused", "suspended"])
     .optional(),

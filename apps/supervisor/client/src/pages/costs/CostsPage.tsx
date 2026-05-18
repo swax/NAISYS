@@ -10,6 +10,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
+import { formatTokens, formatTokensLong } from "@naisys/common";
 import type {
   Chart,
   ChartData,
@@ -95,27 +96,18 @@ export const CostsPage: React.FC = () => {
   const [metric, setMetric] = useState<"cost" | "tokens">("cost");
 
   const formatCost = useCallback((n: number) => `$${n.toFixed(2)}`, []);
-  const formatTokens = useCallback(
-    (n: number) => `${Math.round(n).toLocaleString()} tokens`,
-    [],
-  );
-  const formatTokensShort = useCallback((n: number) => {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-    return `${Math.round(n)}`;
-  }, []);
 
   const formatValue = useCallback(
-    (n: number) => (metric === "cost" ? formatCost(n) : formatTokens(n)),
-    [metric, formatCost, formatTokens],
+    (n: number) => (metric === "cost" ? formatCost(n) : formatTokensLong(n)),
+    [metric, formatCost],
   );
   const formatOther = useCallback(
-    (n: number) => (metric === "cost" ? formatTokens(n) : formatCost(n)),
-    [metric, formatCost, formatTokens],
+    (n: number) => (metric === "cost" ? formatTokensLong(n) : formatCost(n)),
+    [metric, formatCost],
   );
   const formatTick = useCallback(
-    (n: number) => (metric === "cost" ? formatCost(n) : formatTokensShort(n)),
-    [metric, formatCost, formatTokensShort],
+    (n: number) => (metric === "cost" ? formatCost(n) : formatTokens(n)),
+    [metric, formatCost],
   );
   const formatRate = useCallback(
     (cost: number, tokens: number) =>
@@ -478,7 +470,7 @@ export const CostsPage: React.FC = () => {
               {TIME_RANGES.find((r) => r.value === rangeHours)?.label})
             </Text>
             <Text size="sm" fw={500}>
-              {formatTokensShort(totals.tokens)}
+              {formatTokens(totals.tokens)}
             </Text>
           </div>
         </Group>

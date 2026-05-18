@@ -1,4 +1,7 @@
-import { getLatestRunInfoByUuid, sumCostsByUuid } from "@naisys/hub-database";
+import {
+  getLatestRunInfoByUuid,
+  sumAgentMetricsByUuid,
+} from "@naisys/hub-database";
 
 import erpDb from "../../database/erpDb.js";
 import type { LaborTicketModel } from "../../generated/prisma/models/LaborTicket.js";
@@ -21,24 +24,31 @@ export type LaborTicketWithUser = LaborTicketModel & {
 // --- Helpers ---
 
 /**
- * Compute the cost for a labor ticket at clock-out time.
+ * Compute cost + tokens for a labor ticket at clock-out time.
  * Agents: sum of hub cost entries for the user within the clock-in/out window.
- * Non-agents: 0.
+ * Non-agents: zeros.
  */
-async function computeCost(
+async function computeAgentMetrics(
   userId: number,
   clockIn: Date,
   clockOut: Date,
-): Promise<number> {
+): Promise<{ cost: number; tokens: number }> {
   const user = await erpDb.user.findUnique({
     where: { id: userId },
     select: { isAgent: true, uuid: true },
   });
 
-  if (!user?.isAgent) return 0;
+  if (!user?.isAgent) return { cost: 0, tokens: 0 };
 
-  const cost = await sumCostsByUuid(user.uuid, clockIn, clockOut);
-  return Math.round(cost * 100) / 100;
+  const { cost, tokens } = await sumAgentMetricsByUuid(
+    user.uuid,
+    clockIn,
+    clockOut,
+  );
+  return {
+    cost: Math.round(cost * 100) / 100,
+    tokens: Math.round(tokens),
+  };
 }
 
 /**
@@ -104,10 +114,14 @@ export async function clockIn(
     });
 
     for (const ticket of openTickets) {
-      const cost = await computeCost(userId, ticket.clockIn, now);
+      const { cost, tokens } = await computeAgentMetrics(
+        userId,
+        ticket.clockIn,
+        now,
+      );
       await tx.laborTicket.update({
         where: { id: ticket.id },
-        data: { clockOut: now, cost, updatedById: actorId },
+        data: { clockOut: now, cost, tokens, updatedById: actorId },
       });
     }
 
@@ -164,10 +178,14 @@ export async function clockOut(
 
     const updated: LaborTicketWithUser[] = [];
     for (const ticket of openTickets) {
-      const cost = await computeCost(ticket.userId, ticket.clockIn, now);
+      const { cost, tokens } = await computeAgentMetrics(
+        ticket.userId,
+        ticket.clockIn,
+        now,
+      );
       const result = await tx.laborTicket.update({
         where: { id: ticket.id },
-        data: { clockOut: now, cost, updatedById: actorId },
+        data: { clockOut: now, cost, tokens, updatedById: actorId },
         include: includeLaborTicket,
       });
       updated.push(result);
@@ -184,14 +202,17 @@ export async function clockOutAllForOpRun(
   await clockOut(operationRunId, {}, actorId);
 }
 
-export async function sumLaborTicketCosts(
+export async function sumLaborTicketMetrics(
   operationRunId: number,
-): Promise<number> {
+): Promise<{ cost: number; tokens: number }> {
   const result = await erpDb.laborTicket.aggregate({
     where: { operationRunId },
-    _sum: { cost: true },
+    _sum: { cost: true, tokens: true },
   });
-  return Math.round((result._sum.cost ?? 0) * 100) / 100;
+  return {
+    cost: Math.round((result._sum.cost ?? 0) * 100) / 100,
+    tokens: result._sum.tokens ?? 0,
+  };
 }
 
 export async function deleteLaborTicket(

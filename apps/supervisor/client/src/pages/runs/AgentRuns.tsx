@@ -365,6 +365,7 @@ export const AgentRuns: React.FC = () => {
       totalRuns={totalRuns}
       runsLoading={runsLoading}
       agentName={agent.name}
+      agentTokenMax={agent.tokenMax}
       activeRunId={activeRunId}
       activeSessionId={activeSessionId}
       activeSubagentId={activeSubagentId}

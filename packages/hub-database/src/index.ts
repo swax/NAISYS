@@ -13,6 +13,7 @@ export {
   getHubAgentById,
   getHubVariable,
   getLatestRunInfoByUuid,
+  sumAgentMetricsByUuid,
   sumCostsByUuid,
 } from "./hubSessionService.js";
 // Re-export Hub Costs Service

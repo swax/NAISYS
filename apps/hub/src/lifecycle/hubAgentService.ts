@@ -358,6 +358,7 @@ export function createHubAgentService(
                 lastActive: now,
                 latestLogId: 0,
                 totalLines: 0,
+                totalTokens: 0,
                 totalCost: 0,
               },
             });

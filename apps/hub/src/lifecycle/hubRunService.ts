@@ -28,6 +28,7 @@ export function createHubRunService(
         ...session,
         latestLogId: 0,
         totalLines: 0,
+        totalTokens: 0,
         totalCost: 0,
       },
     });

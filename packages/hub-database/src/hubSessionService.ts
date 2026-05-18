@@ -105,6 +105,46 @@ export async function sumCostsByUuid(
 }
 
 /**
+ * Aggregate cost (dollars) and token throughput for a hub user within a time
+ * range. This is used for labor allocation: when one agent session works
+ * multiple operations, a final context-size snapshot cannot be split across
+ * operations, so tokens follow the same clock-window model as cost. Labor
+ * tickets report input + output because those are the expensive tokens ops
+ * should minimize; cached token buckets are much cheaper and stay as cache
+ * accounting detail rather than part of the labor token total.
+ */
+export async function sumAgentMetricsByUuid(
+  uuid: string,
+  from: Date,
+  to: Date,
+): Promise<{ cost: number; tokens: number }> {
+  if (!prisma) return { cost: 0, tokens: 0 };
+
+  const user = await prisma.users.findFirst({
+    where: { uuid },
+    select: { id: true },
+  });
+  if (!user) return { cost: 0, tokens: 0 };
+
+  const result = await prisma.costs.aggregate({
+    _sum: {
+      cost: true,
+      input_tokens: true,
+      output_tokens: true,
+    },
+    where: {
+      user_id: user.id,
+      created_at: { gte: from, lte: to },
+    },
+  });
+
+  return {
+    cost: result._sum.cost ?? 0,
+    tokens: (result._sum.input_tokens ?? 0) + (result._sum.output_tokens ?? 0),
+  };
+}
+
+/**
  * Read a variable value from the hub database.
  */
 export async function getHubVariable(key: string): Promise<string | null> {

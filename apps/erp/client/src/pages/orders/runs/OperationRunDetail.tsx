@@ -19,7 +19,7 @@ import {
   Title,
   Tooltip,
 } from "@mantine/core";
-import { formatDisabledReason, hasAction } from "@naisys/common";
+import { formatDisabledReason, formatTokens, hasAction } from "@naisys/common";
 import { ActionButton, CompactMarkdown } from "@naisys/common-browser";
 import type {
   FieldRefValueSummary,
@@ -463,6 +463,7 @@ export const OperationRunDetail: React.FC = () => {
                     {label} by {opRun.updatedBy} on{" "}
                     {new Date(opRun.updatedAt).toLocaleString()}
                     {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
+                    {opRun.tokens ? ` (${formatTokens(opRun.tokens)})` : ""}
                   </Text>
                   {(() => {
                     const reason = formatDisabledReason(

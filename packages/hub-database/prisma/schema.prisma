@@ -262,6 +262,7 @@ model run_session {
   model_name    String
   latest_log_id Int           @default(0)
   total_lines   Int           @default(0)
+  total_tokens  Int           @default(0)
   total_cost    Float         @default(0)
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt

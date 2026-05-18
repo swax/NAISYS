@@ -8,7 +8,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { hasAction, hasActionTemplate } from "@naisys/common";
+import { formatTokens, hasAction, hasActionTemplate } from "@naisys/common";
 import type { LaborTicketListResponse } from "@naisys/erp-shared";
 import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
@@ -113,6 +113,7 @@ export const LaborTicketList: React.FC<Props> = ({
                   <Table.Th>Clock Out</Table.Th>
                   <Table.Th>Duration</Table.Th>
                   <Table.Th>Cost</Table.Th>
+                  <Table.Th>Tokens</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Thead>
@@ -149,6 +150,9 @@ export const LaborTicketList: React.FC<Props> = ({
                     </Table.Td>
                     <Table.Td>
                       {ticket.cost != null ? `$${ticket.cost.toFixed(2)}` : "—"}
+                    </Table.Td>
+                    <Table.Td>
+                      {ticket.tokens != null ? formatTokens(ticket.tokens) : "—"}
                     </Table.Td>
                     <Table.Td>
                       {hasActionTemplate(

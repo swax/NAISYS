@@ -27,6 +27,10 @@ export const HeartbeatSessionSchema = z.object({
   paused: z.boolean().optional(),
   /** What the command loop is currently blocking on. */
   state: CommandLoopStateSchema.optional(),
+  /** Current context size consumed, based on the latest vendor input-token
+   *  anchor plus local estimates for context added after that call. Optional
+   *  for back-compat with older NAISYS hosts that don't report it. */
+  tokenCount: z.number().int().nonnegative().optional(),
 });
 export type HeartbeatSession = z.infer<typeof HeartbeatSessionSchema>;
 

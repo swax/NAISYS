@@ -44,6 +44,7 @@ export function createHubHeartbeatService(
     lastActive: string;
     paused?: boolean;
     state?: CommandLoopState;
+    tokenCount?: number;
   }
   const hostActiveSessions = new Map<number, Map<string, ActiveSessionInfo>>();
   const sessionKey = (userId: number, subagentId: number | null | undefined) =>
@@ -93,6 +94,7 @@ export function createHubHeartbeatService(
         lastActive: now,
         paused: session.paused,
         state: session.state,
+        tokenCount: session.tokenCount,
       });
     }
     hostActiveSessions.set(hostId, sessionMap);
@@ -112,21 +114,29 @@ export function createHubHeartbeatService(
         });
       }
 
-      // Bump run_session.last_active for each active session so the run-online
-      // badge stays lit even during quiet periods with no log writes. The
-      // aggregate SESSION_HEARTBEAT broadcast runs on its own interval below.
+      // Per-session updates (not a batched OR-updateMany) so each row gets
+      // its own total_tokens. The lastActive bump keeps the online badge
+      // lit between log writes; the SESSION_HEARTBEAT broadcast that
+      // mirrors it runs on its own interval below.
       if (parsed.activeSessions.length > 0) {
-        await hubDb.run_session.updateMany({
-          where: {
-            OR: parsed.activeSessions.map((session) => ({
-              user_id: session.userId,
-              run_id: session.runId,
-              subagent_id: session.subagentId ?? 0,
-              session_id: session.sessionId,
-            })),
-          },
-          data: { last_active: now },
-        });
+        await Promise.all(
+          parsed.activeSessions.map((session) =>
+            hubDb.run_session.updateMany({
+              where: {
+                user_id: session.userId,
+                run_id: session.runId,
+                subagent_id: session.subagentId ?? 0,
+                session_id: session.sessionId,
+              },
+              data: {
+                last_active: now,
+                ...(session.tokenCount !== undefined && {
+                  total_tokens: session.tokenCount,
+                }),
+              },
+            }),
+          ),
+        );
       }
 
       // Self-heal: register each plaintext with the redactor (idempotent),
@@ -235,6 +245,7 @@ export function createHubHeartbeatService(
           lastActive: info.lastActive,
           paused: info.paused,
           state: info.state,
+          totalTokens: info.tokenCount,
         });
       }
     }

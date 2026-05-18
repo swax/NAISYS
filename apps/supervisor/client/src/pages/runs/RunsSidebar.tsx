@@ -8,8 +8,10 @@ import {
   ScrollArea,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { formatTokens } from "@naisys/common";
 import { IconFileText, IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -26,6 +28,7 @@ interface RunsSidebarProps {
   totalRuns: number;
   runsLoading: boolean;
   agentName: string;
+  agentTokenMax: number | undefined;
   activeRunId: number | undefined;
   activeSessionId: number | undefined;
   activeSubagentId: number | null;
@@ -117,6 +120,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
   totalRuns,
   runsLoading,
   agentName,
+  agentTokenMax,
   activeRunId,
   activeSessionId,
   activeSubagentId,
@@ -318,6 +322,40 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                     <Text size="xs" fw={500} c="green">
                       {formatCost(run.totalCost)}
                     </Text>
+                    {run.totalTokens > 0 &&
+                      (() => {
+                        const modelMax = llmModels.find(
+                          (m) => m.key === run.modelName,
+                        )?.maxTokens;
+                        const tooltipParts = [
+                          `${run.totalTokens.toLocaleString()} tokens`,
+                        ];
+                        if (agentTokenMax) {
+                          const pct = Math.round(
+                            (run.totalTokens / agentTokenMax) * 100,
+                          );
+                          tooltipParts.push(
+                            `${pct}% of agent max (${agentTokenMax.toLocaleString()})`,
+                          );
+                        }
+                        if (modelMax) {
+                          tooltipParts.push(
+                            `model max ${modelMax.toLocaleString()}`,
+                          );
+                        }
+                        return (
+                          <Tooltip
+                            label={tooltipParts.join("\n")}
+                            multiline
+                            withArrow
+                            style={{ whiteSpace: "pre-line" }}
+                          >
+                            <Text size="xs" c="dimmed">
+                              {formatTokens(run.totalTokens)}
+                            </Text>
+                          </Tooltip>
+                        );
+                      })()}
                     <Group gap={4}>
                       {run.isOnline && (
                         <Badge size="xs" variant="dot" color="green">

@@ -430,6 +430,7 @@ export async function createAgentRuntime(
     isPaused: commandLoop.isPaused,
     setPaused: commandLoop.setPaused,
     getState: commandLoopState.getState,
+    getTokenCount: contextManager.getTokenCount,
     output,
     subagentService,
     naisysApiService,

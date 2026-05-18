@@ -16,8 +16,10 @@ function statusColor(status: Agent["status"] | undefined): string {
   switch (status) {
     case "active":
       return "var(--mantine-color-green-6)";
-    case "available":
+    case "paused":
       return "var(--mantine-color-yellow-6)";
+    case "available":
+      return "var(--mantine-color-blue-6)";
     case "suspended":
       return "var(--mantine-color-red-6)";
     default:

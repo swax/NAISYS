@@ -38,6 +38,9 @@ export function createContextManager(
   let lastKnownTokenCount = 0;
   // Message index at the time lastKnownTokenCount was set
   let lastKnownMessageIndex = 0;
+  // Workspace token count included in lastKnownTokenCount. Workspace contents
+  // are dynamic and are not stored in messages, so track their delta separately.
+  let lastKnownWorkspaceTokenCount = 0;
   // Timestamp of the last LLM query (for cache TTL tracking)
   let lastQueryTime = 0;
 
@@ -339,6 +342,7 @@ export function createContextManager(
     messages = [];
     lastKnownTokenCount = 0;
     lastKnownMessageIndex = 0;
+    lastKnownWorkspaceTokenCount = 0;
     lastQueryTime = 0;
   }
 
@@ -352,13 +356,19 @@ export function createContextManager(
     }
     lastKnownTokenCount = messagesTokenCount;
     lastKnownMessageIndex = messages.length;
+    lastKnownWorkspaceTokenCount = getWorkspaceTokenCount();
     lastQueryTime = Date.now();
   }
 
-  function estimateBlockTokens(block: TextBlock | ImageBlock) {
-    return block.type === "image"
-      ? IMAGE_TOKEN_ESTIMATE
-      : utilities.getTokenCount(block.text);
+  function estimateMediaOrTextBlockTokens(block: TextBlock | ImageBlock) {
+    if (block.type === "image") return IMAGE_TOKEN_ESTIMATE;
+    return utilities.getTokenCount(block.text);
+  }
+
+  function estimateToolUseTokens(block: ToolUseBlock) {
+    return utilities.getTokenCount(
+      [block.name, block.id, JSON.stringify(block.input)].join(" "),
+    );
   }
 
   function estimateMessagesTokenCount(messages: LlmMessage[]) {
@@ -369,10 +379,12 @@ export function createContextManager(
       let tokens = 0;
       for (const block of message.content) {
         if (block.type === "text" || block.type === "image") {
-          tokens += estimateBlockTokens(block);
+          tokens += estimateMediaOrTextBlockTokens(block);
+        } else if (block.type === "tool_use") {
+          tokens += estimateToolUseTokens(block);
         } else if (block.type === "tool_result") {
           for (const inner of block.resultContent) {
-            tokens += estimateBlockTokens(inner);
+            tokens += estimateMediaOrTextBlockTokens(inner);
           }
         }
       }
@@ -383,9 +395,12 @@ export function createContextManager(
   function getTokenCount() {
     if (lastKnownTokenCount > 0) {
       // Use actual count from last API call + estimate only for messages added since
-      return (
+      return Math.max(
+        0,
         lastKnownTokenCount +
-        estimateMessagesTokenCount(messages.slice(lastKnownMessageIndex))
+          estimateMessagesTokenCount(messages.slice(lastKnownMessageIndex)) +
+          getWorkspaceTokenCount() -
+          lastKnownWorkspaceTokenCount,
       );
     }
 
@@ -473,6 +488,10 @@ export function createContextManager(
     } else {
       return "";
     }
+  }
+
+  function getWorkspaceTokenCount() {
+    return utilities.getTokenCount(getWorkspaceContent());
   }
 
   return {
