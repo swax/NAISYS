@@ -115,9 +115,8 @@ function pickActiveRun(runs: TrackedRun[]): TrackedRun | undefined {
     .find((r) => isRunActive(r.lastActive));
 }
 
-// The `runs:${target}` room emits four event types — we drive logTarget off
-// the two session-lifecycle ones and ignore the rest. Match useRunsData's
-// shape so future additions to the room are TS-forced into an explicit case.
+// All four event types from `runs:${target}`. Mirroring useRunsData's
+// shape TS-forces any new event into an explicit case here.
 type RunsRoomEvent =
   | (SessionPush["session"] & { type: "new-session" })
   | (SessionHeartbeatUpdate & {
@@ -262,18 +261,11 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   // and lastActive bumps that change which run is most-recently-active.
   const handleRunsEvent = useCallback(
     (event: RunsRoomEvent) => {
-      // log-update and cost-update arrive on this room too but don't bear
-      // on which run we should latch to.
-      if (event.type !== "new-session" && event.type !== "heartbeat-update") {
-        return;
-      }
-      // Upsert on both branches: heartbeat-update carries the same id +
-      // lastActive fields TrackedRun needs, so it can stand in for a missed
-      // new-session (socket reconnect, subscription timing race, brief
-      // server/browser gap). Without that recovery, the no-poll design
-      // would strand voice on a stale logTarget for the rest of the
-      // session — heartbeats fire every few seconds, so latching off them
-      // closes the gap fast.
+      // cost-update has no lastActive — nothing for pickActiveRun to use.
+      if (event.type === "cost-update") return;
+      // The other three upsert into runsRef so any one recovers a missed
+      // new-session (socket reconnect, subscription timing race) and keeps
+      // voice off a stale logTarget.
       const tracked: TrackedRun = {
         runId: event.runId,
         sessionId: event.sessionId,

@@ -2,7 +2,7 @@ import type { LogPushEntry } from "@naisys/hub-protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { getAgentRunLogEntries } from "../../lib/api/apiRuns";
-import { getSocket } from "../socket/useSocket";
+import { useRoomSubscriptions } from "../socket/useSubscription";
 import type { ThreadRun } from "./useMessageThreadRuns";
 
 export interface ThreadRunCommand {
@@ -191,74 +191,48 @@ export function useThreadRunCommands(
 
   // Live commands. The `logs:...` room key is per-session/subagent, so a run
   // with multiple sessions or subagents needs one subscription per row.
-  const onlineSubKey = useMemo(() => {
-    const keys: string[] = [];
-    for (const r of runs) {
-      if (!r.isOnline || !r.username) continue;
-      if (!targetByUser.get(r.username)?.has(r.runId)) continue;
-      keys.push(`${r.username}|${r.runId}|${r.subagentId ?? 0}|${r.sessionId}`);
-    }
-    return keys.sort().join(",");
-  }, [runs, targetByUser]);
+  const subscriptionEntries = useMemo(() => {
+    const out: Array<{
+      room: string;
+      onMessage: (entries: LogPushEntry[]) => void;
+    }> = [];
+    for (const run of runs) {
+      if (!run.isOnline || !run.username) continue;
+      if (!targetByUser.get(run.username)?.has(run.runId)) continue;
+      const username = run.username;
+      const runId = run.runId;
+      const subagentId = run.subagentId ?? null;
+      const sessionId = run.sessionId;
+      out.push({
+        room: subscriptionRoom(username, runId, subagentId, sessionId),
+        onMessage: (entries) => {
+          const newEntries = entries
+            .filter((e) => e.source === "endPrompt" || e.source === "llm")
+            .map<ThreadRunCommand>((e) => ({
+              logId: e.id,
+              username,
+              runId,
+              subagentId,
+              sessionId,
+              message: e.message,
+              createdAt: e.createdAt,
+            }));
+          if (newEntries.length === 0) return;
 
-  useEffect(() => {
-    const onlineRows = runs.filter((r) => {
-      if (!r.isOnline || !r.username) return false;
-      return targetByUser.get(r.username)?.has(r.runId) ?? false;
-    });
-    if (onlineRows.length === 0) return;
-
-    const socket = getSocket();
-    const cleanups: Array<() => void> = [];
-
-    for (const run of onlineRows) {
-      const username = run.username as string;
-      const room = subscriptionRoom(
-        username,
-        run.runId,
-        run.subagentId,
-        run.sessionId,
-      );
-
-      const subscribe = () => socket.emit("subscribe", { room });
-      subscribe();
-
-      const handler = (entries: LogPushEntry[]) => {
-        const newEntries = entries
-          .filter((e) => e.source === "endPrompt" || e.source === "llm")
-          .map<ThreadRunCommand>((e) => ({
-            logId: e.id,
-            username,
-            runId: run.runId,
-            subagentId: run.subagentId ?? null,
-            sessionId: run.sessionId,
-            message: e.message,
-            createdAt: e.createdAt,
-          }));
-        if (newEntries.length === 0) return;
-
-        setByUser((prev) => {
-          const next = new Map(prev);
-          const merged = new Map(next.get(username) ?? []);
-          for (const e of newEntries) merged.set(e.logId, e);
-          next.set(username, merged);
-          return next;
-        });
-      };
-
-      socket.on(room, handler);
-      socket.on("connect", subscribe);
-      cleanups.push(() => {
-        socket.off(room, handler);
-        socket.off("connect", subscribe);
-        socket.emit("unsubscribe", { room });
+          setByUser((prev) => {
+            const next = new Map(prev);
+            const merged = new Map(next.get(username) ?? []);
+            for (const e of newEntries) merged.set(e.logId, e);
+            next.set(username, merged);
+            return next;
+          });
+        },
       });
     }
+    return out;
+  }, [runs, targetByUser]);
 
-    return () => {
-      for (const c of cleanups) c();
-    };
-  }, [onlineSubKey]);
+  useRoomSubscriptions<LogPushEntry[]>(subscriptionEntries);
 
   const entries = useMemo(() => {
     const flat: ThreadRunCommand[] = [];

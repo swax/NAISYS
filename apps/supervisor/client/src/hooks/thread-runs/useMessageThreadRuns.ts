@@ -8,7 +8,10 @@ import type { RunSession } from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getMessageThreadRuns } from "../../lib/api/apiRuns";
-import { getSocket } from "../socket/useSocket";
+import {
+  useRoomSubscriptions,
+  useSubscription,
+} from "../socket/useSubscription";
 import { useTick } from "../useTick";
 import { isRunActive } from "./runStatus";
 
@@ -116,97 +119,72 @@ export const useMessageThreadRuns = (
   // its count from the parent: useThreadRunCommands subscribes to a log room
   // per (runId, subagentId, sessionId), so without them the subagent's
   // command stream stays dark.
-  useEffect(() => {
+  const handleRunsEvent = useCallback((event: RunsEvent) => {
+    if (
+      event.type !== "log-update" &&
+      event.type !== "heartbeat-update" &&
+      event.type !== "new-session"
+    ) {
+      return;
+    }
+    const key = runKey(event);
+    const map = runMapRef.current;
+    if (map.has(key)) {
+      setRunMap((prev) => {
+        const existing = prev.get(key);
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.set(key, {
+          ...existing,
+          lastActive: event.lastActive,
+          ...(event.type === "heartbeat-update"
+            ? {
+                activeSubagentCount: event.activeSubagentCount,
+                paused: event.paused,
+                state: event.state,
+              }
+            : {}),
+        });
+        return next;
+      });
+      return;
+    }
+    for (const run of map.values()) {
+      if (run.userId === event.userId && run.runId === event.runId) {
+        setRefetchTick((t) => t + 1);
+        return;
+      }
+    }
+  }, []);
+
+  const runsSubscriptionEntries = useMemo(() => {
     const usernames = participantsKey
       ? participantsKey.split(",").filter(Boolean)
       : [];
-    if (usernames.length === 0) return;
+    return usernames.map((username) => ({
+      room: `runs:${username}`,
+      onMessage: handleRunsEvent,
+    }));
+  }, [participantsKey, handleRunsEvent]);
 
-    const socket = getSocket();
-    const cleanups: Array<() => void> = [];
-
-    for (const username of usernames) {
-      const room = `runs:${username}`;
-      const subscribe = () => socket.emit("subscribe", { room });
-      subscribe();
-
-      const handler = (event: RunsEvent) => {
-        if (
-          event.type !== "log-update" &&
-          event.type !== "heartbeat-update" &&
-          event.type !== "new-session"
-        ) {
-          return;
-        }
-        const key = runKey(event);
-        const map = runMapRef.current;
-        if (map.has(key)) {
-          setRunMap((prev) => {
-            const existing = prev.get(key);
-            if (!existing) return prev;
-            const next = new Map(prev);
-            next.set(key, {
-              ...existing,
-              lastActive: event.lastActive,
-              ...(event.type === "heartbeat-update"
-                ? {
-                    activeSubagentCount: event.activeSubagentCount,
-                    paused: event.paused,
-                    state: event.state,
-                  }
-                : {}),
-            });
-            return next;
-          });
-          return;
-        }
-        for (const run of map.values()) {
-          if (run.userId === event.userId && run.runId === event.runId) {
-            setRefetchTick((t) => t + 1);
-            return;
-          }
-        }
-      };
-
-      socket.on(room, handler);
-      socket.on("connect", subscribe);
-      cleanups.push(() => {
-        socket.off(room, handler);
-        socket.off("connect", subscribe);
-        socket.emit("unsubscribe", { room });
-      });
-    }
-
-    return () => {
-      for (const cleanup of cleanups) cleanup();
-    };
-  }, [participantsKey]);
+  useRoomSubscriptions<RunsEvent>(runsSubscriptionEntries);
 
   // new-message and read-receipt both can extend the participating-run set
   // (a fresh sender or reader's run_id), so refetch on any message event.
   // Chat broadcasts per-thread (`chat-messages:{participants}`); mail
   // broadcasts per-user inbox (`mail:{username}`) — same trigger semantics.
-  useEffect(() => {
-    if (!participantsKey || !currentAgentUsername) return;
-    const room =
-      kind === "chat"
-        ? `chat-messages:${participantsKey}`
-        : `mail:${currentAgentUsername}`;
-    const socket = getSocket();
-
-    const subscribe = () => socket.emit("subscribe", { room });
-    subscribe();
-
-    const handler = () => setRefetchTick((t) => t + 1);
-    socket.on(room, handler);
-    socket.on("connect", subscribe);
-
-    return () => {
-      socket.off(room, handler);
-      socket.off("connect", subscribe);
-      socket.emit("unsubscribe", { room });
-    };
+  const messageRoom = useMemo(() => {
+    if (!participantsKey || !currentAgentUsername) return null;
+    return kind === "chat"
+      ? `chat-messages:${participantsKey}`
+      : `mail:${currentAgentUsername}`;
   }, [kind, participantsKey, currentAgentUsername]);
+
+  const handleMessageEvent = useCallback(() => {
+    setRefetchTick((t) => t + 1);
+  }, []);
+
+  useSubscription<unknown>(messageRoom, handleMessageEvent);
 
   // Recomputes each tick. Returning a string makes the dep value-stable, so
   // the runs memo (and downstream consumers) only invalidate when an actual
