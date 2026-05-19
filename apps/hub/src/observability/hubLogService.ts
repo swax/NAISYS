@@ -8,7 +8,7 @@ import {
   LogWriteRequestSchema,
 } from "@naisys/hub-protocol";
 
-import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 import type { HubRedactionService } from "./hubRedactionService.js";
 
@@ -17,7 +17,7 @@ export function createHubLogService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   redactionService: HubRedactionService,
 ) {
   // Track last pushed log ID per session for gap detection
@@ -27,11 +27,22 @@ export function createHubLogService(
     try {
       const parsed = LogWriteRequestSchema.parse(data);
 
+      // A host could otherwise forge log lines (or compact summaries) for
+      // any user in the cluster.
+      const authorizedEntries = parsed.entries.filter((e) => {
+        if (ownershipService.hostOwnsUser(hostId, e.userId)) return true;
+        logService.log(
+          `[Hub:Logs] Dropped log entry from host ${hostId} for user ${e.userId}: host is not the authorized owner`,
+        );
+        return false;
+      });
+      if (authorizedEntries.length === 0) return;
+
       // Collect push entries and session deltas
       const pushEntries: LogPushEntry[] = [];
       const sessionUpdates = new Map<string, LogPushSessionUpdate>();
 
-      for (const entry of parsed.entries) {
+      for (const entry of authorizedEntries) {
         const now = new Date().toISOString();
         const message = redactionService.redact(entry.message);
         const lineCount = message.split("\n").length;
@@ -93,8 +104,8 @@ export function createHubLogService(
           });
         }
 
-        // Push notification ID update via heartbeat
-        heartbeatService.updateAgentNotification(
+        // Push notification ID update via ownership service
+        ownershipService.updateAgentNotification(
           entry.userId,
           "latestLogId",
           log.id,
@@ -165,7 +176,7 @@ export function createHubLogService(
       });
 
       // Trigger throttled push after all entries processed
-      heartbeatService.throttledPushAgentsStatus();
+      ownershipService.throttledPushAgentsStatus();
     } catch (error) {
       logService.error(
         `[Hub:Logs] Error processing log_write from host ${hostId}: ${error}`,

@@ -1,5 +1,6 @@
 import type { AgentConfigFile } from "@naisys/common";
 import {
+  ADMIN_USERNAME,
   AgentConfigFileSchema,
   assertUrlSafeKey,
   buildDefaultAgentConfig,
@@ -184,6 +185,16 @@ export async function updateAgentConfigById(
     where: { id },
     select: { config: true, username: true },
   });
+
+  // Hub behaviors anchor on the admin user being addressable by username
+  // (ACL exemption, scheduler delivery). Block renames.
+  if (
+    setUsername &&
+    currentUser?.username === ADMIN_USERNAME &&
+    config.username !== ADMIN_USERNAME
+  ) {
+    throw new Error(`Cannot rename the admin user`);
+  }
 
   if (setUsername) {
     // Normal edit: push config.username to the DB column

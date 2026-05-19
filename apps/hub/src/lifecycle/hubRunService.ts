@@ -7,12 +7,14 @@ import {
 } from "@naisys/hub-protocol";
 
 import type { NaisysServer } from "../server/naisysServer.js";
+import type { HubOwnershipService } from "./hubOwnershipService.js";
 
 /** Handles session_create and session_increment requests from NAISYS instances */
 export function createHubRunService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
+  ownershipService: HubOwnershipService,
 ) {
   function pushSessionToSupervisors(session: {
     userId: number;
@@ -39,6 +41,16 @@ export function createHubRunService(
     async (hostId, data, ack) => {
       try {
         const parsed = SessionCreateRequestSchema.parse(data);
+
+        // Without this guard, a host could forge run_session rows for
+        // arbitrary users and poison the ACL preload that reads them at boot.
+        if (!ownershipService.hostOwnsUser(hostId, parsed.userId)) {
+          logService.log(
+            `[Hub:Runs] Rejected session_create from host ${hostId} for user ${parsed.userId}: host is not the authorized owner`,
+          );
+          ack({ success: false, error: "Not authorized" });
+          return;
+        }
 
         // Subagent path: inherit the parent's runId rather than allocating a new one.
         let runId: number;
@@ -116,6 +128,15 @@ export function createHubRunService(
     async (hostId, data, ack) => {
       try {
         const parsed = SessionIncrementRequestSchema.parse(data);
+
+        if (!ownershipService.hostOwnsUser(hostId, parsed.userId)) {
+          logService.log(
+            `[Hub:Runs] Rejected session_increment from host ${hostId} for user ${parsed.userId}: host is not the authorized owner`,
+          );
+          ack({ success: false, error: "Not authorized" });
+          return;
+        }
+
         const subagentId = parsed.subagentId ?? 0;
 
         // Get the max session_id for this user + run + subagent

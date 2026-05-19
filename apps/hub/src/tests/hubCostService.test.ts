@@ -11,6 +11,7 @@ import type {
   HubActiveSession,
   HubHeartbeatService,
 } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import { createHubCostService } from "../observability/hubCostService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
@@ -111,17 +112,23 @@ function createLogger() {
   };
 }
 
-function createHeartbeatService(
+function createOwnershipService(
   activeUserIds: number[],
   hostIdsByUser = new Map<number, number[]>([[1, [101]]]),
-  activeSessions: HubActiveSession[] = [],
 ) {
   return {
-    getActiveUserIds: vi.fn(() => activeUserIds),
-    getActiveSessions: vi.fn(() => activeSessions),
+    adminUserId: 0,
+    getActiveUserIds: vi.fn(() => new Set(activeUserIds)),
     findHostsForAgent: vi.fn(
       (userId: number) => hostIdsByUser.get(userId) ?? [],
     ),
+    hostOwnsUser: vi.fn(() => true),
+  } as unknown as HubOwnershipService;
+}
+
+function createHeartbeatService(activeSessions: HubActiveSession[] = []) {
+  return {
+    getActiveSessions: vi.fn(() => activeSessions),
   } as unknown as HubHeartbeatService;
 }
 
@@ -192,12 +199,14 @@ describe("hubCostService", () => {
     const { server, emitCostWrite } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
+    const ownershipService = createOwnershipService([]);
     const heartbeatService = createHeartbeatService([]);
     const configService = createConfigService({});
     const service = createHubCostService(
       server,
       { hubDb } as HubDatabaseService,
       logger,
+      ownershipService,
       heartbeatService,
       configService,
       createCodexAuthService(),
@@ -282,12 +291,14 @@ describe("hubCostService", () => {
     const { server, emitCostWrite } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
+    const ownershipService = createOwnershipService([]);
     const heartbeatService = createHeartbeatService([]);
     const configService = createConfigService({});
     const service = createHubCostService(
       server,
       { hubDb } as HubDatabaseService,
       logger,
+      ownershipService,
       heartbeatService,
       configService,
       createCodexAuthService(),
@@ -336,7 +347,8 @@ describe("hubCostService", () => {
     const { server, emitCostWrite } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
-    const heartbeatService = createHeartbeatService([1]);
+    const ownershipService = createOwnershipService([1]);
+    const heartbeatService = createHeartbeatService([]);
     const configService = createConfigService({});
     vi.mocked(hubDb.users.findMany as any).mockResolvedValue([
       userRow(1, { spendLimitDollars: 1 }),
@@ -349,6 +361,7 @@ describe("hubCostService", () => {
       server,
       { hubDb } as HubDatabaseService,
       logger,
+      ownershipService,
       heartbeatService,
       configService,
       createCodexAuthService(),
@@ -428,18 +441,18 @@ describe("hubCostService", () => {
     const { server } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
-    const heartbeatService = createHeartbeatService(
+    const ownershipService = createOwnershipService(
       [],
       new Map([
         [1, [101]],
         [2, [202]],
       ]),
-      [
-        { userId: 1, runId: 7, subagentId: null, sessionId: 1 },
-        { userId: 1, runId: 7, subagentId: -1, sessionId: 1 },
-        { userId: 2, runId: 8, subagentId: null, sessionId: 1 },
-      ],
     );
+    const heartbeatService = createHeartbeatService([
+      { userId: 1, runId: 7, subagentId: null, sessionId: 1 },
+      { userId: 1, runId: 7, subagentId: -1, sessionId: 1 },
+      { userId: 2, runId: 8, subagentId: null, sessionId: 1 },
+    ]);
     const configService = createConfigService({
       codexUsageLimitPercent: 80,
       codexUsageCheckMinutes: CODEX_TEST_CHECK_MINUTES,
@@ -470,6 +483,7 @@ describe("hubCostService", () => {
       server,
       { hubDb } as HubDatabaseService,
       logger,
+      ownershipService,
       heartbeatService,
       configService,
       codexAuthService,
@@ -546,11 +560,13 @@ describe("hubCostService", () => {
     const { server } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
-    const heartbeatService = createHeartbeatService(
+    const ownershipService = createOwnershipService(
       [1],
       new Map([[1, [101]]]),
-      [{ userId: 1, runId: 7, subagentId: null, sessionId: 1 }],
     );
+    const heartbeatService = createHeartbeatService([
+      { userId: 1, runId: 7, subagentId: null, sessionId: 1 },
+    ]);
     const configService = createConfigService({
       codexUsageLimitPercent: 80,
       codexUsageCheckMinutes: CODEX_TEST_CHECK_MINUTES,
@@ -583,6 +599,7 @@ describe("hubCostService", () => {
       server,
       { hubDb } as HubDatabaseService,
       logger,
+      ownershipService,
       heartbeatService,
       configService,
       createCodexAuthService("access-token"),

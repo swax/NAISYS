@@ -13,7 +13,7 @@ import {
 
 import type { HubConfigService } from "../config/hubConfigService.js";
 import type { HubAgentService } from "../lifecycle/hubAgentService.js";
-import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { HubCostService } from "../observability/hubCostService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 import type { HubSendMailService } from "./hubSendMailService.js";
@@ -25,7 +25,7 @@ export function createHubMailService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   sendMailService: HubSendMailService,
   agentService: HubAgentService,
   costService: HubCostService,
@@ -37,7 +37,7 @@ export function createHubMailService(
       const config = configService.getConfig();
       if (!config.success || !config.config?.autoStartAgentsOnMessage) return;
 
-      const activeUserIds = heartbeatService.getActiveUserIds();
+      const activeUserIds = ownershipService.getActiveUserIds();
 
       // Find distinct users with unread mail (exclude 'from' type - senders pre-mark as read).
       // Scheduled chats (source="schedule:*") have their own start path in
@@ -65,7 +65,7 @@ export function createHubMailService(
       await costService.checkSpendLimits(inactiveUserIds);
 
       for (const userId of inactiveUserIds) {
-        if (heartbeatService.getActiveUserIds().has(userId)) continue;
+        if (ownershipService.getActiveUserIds().has(userId)) continue;
         if (costService.isUserSpendSuspended(userId)) continue;
         void agentService.tryStartAgent(userId, "wake-on-message");
       }
@@ -223,6 +223,15 @@ export function createHubMailService(
     try {
       const parsed = MailPeekRequestSchema.parse(data);
 
+      // Host could otherwise fetch any message by ID.
+      if (!ownershipService.hostOwnsUser(hostId, parsed.userId)) {
+        logService.log(
+          `[Hub:Mail] Rejected mail_peek from host ${hostId} for user ${parsed.userId}: host is not the authorized owner`,
+        );
+        ack({ success: false, error: "Not authorized" });
+        return;
+      }
+
       const message = await hubDb.mail_messages.findUnique({
         where: { id: parsed.messageId },
         include: {
@@ -241,6 +250,21 @@ export function createHubMailService(
       });
 
       if (!message) {
+        ack({
+          success: false,
+          error: `Message ${parsed.messageId} not found`,
+        });
+        return;
+      }
+
+      // Same "not found" response as a missing message so IDs can't be probed.
+      const isParticipant =
+        message.from_user_id === parsed.userId ||
+        message.recipients.some((r) => r.user_id === parsed.userId);
+      if (!isParticipant) {
+        logService.log(
+          `[Hub:Mail] Rejected mail_peek from host ${hostId} for user ${parsed.userId}: user is not a participant in message ${parsed.messageId}`,
+        );
         ack({
           success: false,
           error: `Message ${parsed.messageId} not found`,

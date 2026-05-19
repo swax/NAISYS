@@ -6,7 +6,7 @@ import {
   type MessageKind,
 } from "@naisys/hub-protocol";
 
-import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { HubRedactionService } from "../observability/hubRedactionService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
@@ -14,7 +14,7 @@ import type { NaisysServer } from "../server/naisysServer.js";
 export function createHubSendMailService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   redactionService: HubRedactionService,
 ) {
   /** Send a mail message directly by user IDs */
@@ -122,17 +122,17 @@ export function createHubSendMailService(
     const heartbeatField =
       params.kind === "chat" ? "latestChatId" : "latestMailId";
     for (const userId of params.recipientUserIds) {
-      heartbeatService.updateAgentNotification(
+      ownershipService.updateAgentNotification(
         userId,
         heartbeatField,
         message.id,
       );
     }
-    heartbeatService.throttledPushAgentsStatus();
+    ownershipService.throttledPushAgentsStatus();
 
     const targetHostIds = new Set<number>();
     for (const userId of params.recipientUserIds) {
-      for (const hId of heartbeatService.findHostsForAgent(userId)) {
+      for (const hId of ownershipService.findHostsForAgent(userId)) {
         targetHostIds.add(hId);
       }
     }

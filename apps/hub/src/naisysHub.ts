@@ -3,6 +3,7 @@ import type {
   StartHub,
   SupervisorPlugin,
 } from "@naisys/common";
+import { ADMIN_USERNAME } from "@naisys/common";
 import {
   createDualLogger,
   cwdWithTilde,
@@ -32,6 +33,7 @@ import { createHubAgentService } from "./lifecycle/hubAgentService.js";
 import { createHubAgentStartService } from "./lifecycle/hubAgentStartService.js";
 import { createHubHeartbeatService } from "./lifecycle/hubHeartbeatService.js";
 import { createHubHostService } from "./lifecycle/hubHostService.js";
+import { createHubOwnershipService } from "./lifecycle/hubOwnershipService.js";
 import { createHubRunService } from "./lifecycle/hubRunService.js";
 import { createHubScheduleService } from "./lifecycle/hubScheduleService.js";
 import { createHubAttachmentService } from "./mail/hubAttachmentService.js";
@@ -78,6 +80,19 @@ export const startHub: StartHub = async (
 
     // Seed database with agent configs from yaml files (one-time, skips if non-empty)
     await seedAgentConfigs(hubDatabaseService, logService, agentPath);
+
+    // Resolved once for the ACL exemption (see hubOwnershipService). Fail
+    // fast at boot rather than on the first request that hits admin.
+    const adminUser = await hubDatabaseService.hubDb.users.findUnique({
+      where: { username: ADMIN_USERNAME },
+      select: { id: true },
+    });
+    if (!adminUser) {
+      throw new Error(
+        `[Hub] Admin user "${ADMIN_USERNAME}" not found in database — cannot start`,
+      );
+    }
+    const adminUserId = adminUser.id;
 
     // Create host registrar for tracking NAISYS instance connections
     const hostRegistrar = await createHostRegistrar(hubDatabaseService);
@@ -146,16 +161,29 @@ export const startHub: StartHub = async (
     // Register hub host service for broadcasting connected host list
     createHubHostService(naisysServer, hostRegistrar, logService);
 
-    // Register hub run service for session_create/session_increment requests
-    createHubRunService(naisysServer, hubDatabaseService, logService);
+    // ACL + AGENTS_STATUS broadcast. Downstream services gate on hostOwnsUser.
+    const ownershipService = createHubOwnershipService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      adminUserId,
+    );
 
-    // Register hub heartbeat service for NAISYS instance heartbeat tracking
     const heartbeatService = createHubHeartbeatService(
       naisysServer,
       hubDatabaseService,
       logService,
       redactionService,
       runtimeKeyService,
+      ownershipService,
+    );
+
+    // Register hub run service for session_create/session_increment requests
+    createHubRunService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      ownershipService,
     );
 
     // Register hub log service for log_write events from NAISYS instances
@@ -163,7 +191,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
-      heartbeatService,
+      ownershipService,
       redactionService,
     );
 
@@ -172,6 +200,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
+      ownershipService,
       heartbeatService,
       configService,
       codexAuthService,
@@ -181,7 +210,7 @@ export const startHub: StartHub = async (
     const sendMailService = createHubSendMailService(
       naisysServer,
       hubDatabaseService,
-      heartbeatService,
+      ownershipService,
       redactionService,
     );
 
@@ -191,7 +220,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
-      heartbeatService,
+      ownershipService,
       runtimeKeyService,
     );
 
@@ -200,7 +229,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
-      heartbeatService,
+      ownershipService,
       sendMailService,
       hostRegistrar,
       runtimeKeyService,
@@ -213,7 +242,7 @@ export const startHub: StartHub = async (
       naisysServer,
       hubDatabaseService,
       logService,
-      heartbeatService,
+      ownershipService,
       sendMailService,
       agentService,
       costService,
@@ -228,7 +257,7 @@ export const startHub: StartHub = async (
       logService,
       sendMailService,
       agentService,
-      heartbeatService,
+      ownershipService,
       costService,
       configService,
       redactionService,
@@ -280,6 +309,7 @@ export const startHub: StartHub = async (
     async function runShutdown(): Promise<void> {
       try {
         cleanupSupervisor?.();
+        ownershipService.cleanup();
         heartbeatService.cleanup();
         costService.cleanup();
         mailService.cleanup();

@@ -1,7 +1,6 @@
 import { type DualLogger, hashToken } from "@naisys/common-node";
 import { type HubDatabaseService } from "@naisys/hub-database";
 import type {
-  AgentsStatus,
   CommandLoopState,
   SessionHeartbeatUpdate,
 } from "@naisys/hub-protocol";
@@ -14,8 +13,9 @@ import {
 import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
 import type { HubRedactionService } from "../observability/hubRedactionService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
+import type { HubOwnershipService } from "./hubOwnershipService.js";
 
-/** Per-session identity for an active agent session (parent or subagent). */
+/** Per-session identity (parent or subagent). */
 export interface HubActiveSession {
   userId: number;
   runId: number;
@@ -23,19 +23,23 @@ export interface HubActiveSession {
   sessionId: number;
 }
 
-/** Tracks NAISYS instance heartbeats and pushes aggregate active user status to all instances */
+/**
+ * Verifies runtime-key claims (adding verified ones to the ACL in
+ * hubOwnershipService), filters session state by ACL membership, persists
+ * session liveness, and broadcasts SESSION_HEARTBEAT.
+ */
 export function createHubHeartbeatService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
   redactionService: HubRedactionService,
   runtimeKeyService: HubRuntimeKeyService,
+  ownershipService: HubOwnershipService,
 ) {
-  // Active agent user ids per host. Subagents ride under the parent's userId.
-  const hostActiveAgents = new Map<number, number[]>();
+  const { adminUserId } = ownershipService;
 
-  // Active sessions per host, keyed by `${userId}:${subagentId ?? 0}` so a
-  // parent and its subagents are tracked independently.
+  // Keyed by `${userId}:${subagentId ?? 0}` so a parent and its subagents are
+  // tracked independently.
   interface ActiveSessionInfo {
     userId: number;
     subagentId: number | null;
@@ -50,77 +54,132 @@ export function createHubHeartbeatService(
   const sessionKey = (userId: number, subagentId: number | null | undefined) =>
     `${userId}:${subagentId ?? 0}`;
 
-  // Track per-agent notification IDs (latestLogId, latestMailId)
-  const agentNotifications = new Map<
-    number,
-    { latestLogId: number; latestMailId: number; latestChatId: number }
-  >();
-
-  /** Update a single notification field for an agent */
-  function updateAgentNotification(
-    userId: number,
-    field: "latestLogId" | "latestMailId" | "latestChatId",
-    value: number,
-  ) {
-    let entry = agentNotifications.get(userId);
-    if (!entry) {
-      entry = { latestLogId: 0, latestMailId: 0, latestChatId: 0 };
-      agentNotifications.set(userId, entry);
-    }
-    entry[field] = value;
-  }
-
-  // Handle heartbeat from NAISYS instances
   naisysServer.registerEvent(HubEvents.HEARTBEAT, async (hostId, data) => {
     const parsed = HeartbeatSchema.parse(data);
-
-    // Dedup: a parent and its subagents share a userId.
-    const activeUserIds = [
-      ...new Set(parsed.activeSessions.map((s) => s.userId)),
-    ];
-
-    // Memory before DB: supervisor online badges read this map live, so a
-    // slow SQLite write shouldn't make heartbeats look stale.
-    hostActiveAgents.set(hostId, activeUserIds);
     const now = new Date().toISOString();
-    const sessionMap = new Map<string, ActiveSessionInfo>();
-    for (const session of parsed.activeSessions) {
-      const subagentId = session.subagentId ?? 0;
-      sessionMap.set(sessionKey(session.userId, subagentId), {
-        userId: session.userId,
-        subagentId: subagentId === 0 ? null : subagentId,
-        runId: session.runId,
-        sessionId: session.sessionId,
-        lastActive: now,
-        paused: session.paused,
-        state: session.state,
-        tokenCount: session.tokenCount,
-      });
-    }
-    hostActiveSessions.set(hostId, sessionMap);
 
     try {
-      // Update host last_active
+      // Authorize each runtime-key claim: (a) host already in the ACL, or
+      // (b) the key matches the DB hash (hub minted it earlier — the
+      // restart-recovery path). Unauthorized claims are dropped *before* the
+      // redactor sees the plaintext so a hostile host can't poison redaction.
+      if (parsed.runtimeApiKeys?.length) {
+        const userIds = parsed.runtimeApiKeys.map((k) => k.userId);
+        const users = await hubDb.users.findMany({
+          where: { id: { in: userIds } },
+          select: {
+            id: true,
+            api_key_hash: true,
+            enabled: true,
+            archived: true,
+          },
+        });
+        const userMap = new Map(users.map((u) => [u.id, u]));
+
+        for (const claim of parsed.runtimeApiKeys) {
+          if (claim.userId === adminUserId) continue;
+
+          const user = userMap.get(claim.userId);
+          if (!user || !user.enabled || user.archived) continue;
+
+          const alreadyOwned = ownershipService.hostOwnsUser(
+            hostId,
+            claim.userId,
+          );
+          const keyMatches = !!(
+            claim.runtimeApiKey &&
+            user.api_key_hash &&
+            hashToken(claim.runtimeApiKey) === user.api_key_hash
+          );
+
+          if (!alreadyOwned && !keyMatches) {
+            logService.log(
+              `[Hub:Heartbeat] Rejected runtime key claim from host ${hostId} for user ${claim.userId}: host is not the authorized owner`,
+            );
+            continue;
+          }
+
+          if (claim.runtimeApiKey) {
+            redactionService.registerRuntimeApiKey(
+              claim.userId,
+              claim.runtimeApiKey,
+            );
+          }
+
+          // Hub-restart recovery path: re-seed the ACL from a verified key.
+          if (keyMatches && !alreadyOwned) {
+            ownershipService.addStartedAgent(hostId, claim.userId);
+          }
+
+          if (keyMatches) continue;
+
+          try {
+            const runtimeApiKey = await runtimeKeyService.issueRuntimeApiKey(
+              claim.userId,
+            );
+            naisysServer.sendMessage(hostId, HubEvents.RUNTIME_KEY_REISSUE, {
+              userId: claim.userId,
+              runtimeApiKey,
+            });
+          } catch (err) {
+            logService.error(
+              `[Hub:Heartbeat] Failed to reissue runtime key for user ${claim.userId}: ${err}`,
+            );
+          }
+        }
+      }
+
+      // Sync the host's ACL with what it claims to be running: adds admin
+      // (which has no AGENT_START path), drops users it stopped running
+      // (top-level agents that exited naturally — no AGENT_STOP for those).
+      const claimedUserIds = new Set(
+        parsed.activeSessions.map((s) => s.userId),
+      );
+      ownershipService.reconcileHeartbeatPresence(hostId, claimedUserIds);
+
+      // Drop sessions for users the host doesn't own — otherwise a host
+      // would write its own ACL via heartbeat claims.
+      const allowedSessions = parsed.activeSessions.filter((s) =>
+        ownershipService.hostOwnsUser(hostId, s.userId),
+      );
+      const allowedUserIds = [
+        ...new Set(allowedSessions.map((s) => s.userId)),
+      ];
+
+      const sessionMap = new Map<string, ActiveSessionInfo>();
+      for (const session of allowedSessions) {
+        const subagentId = session.subagentId ?? 0;
+        sessionMap.set(sessionKey(session.userId, subagentId), {
+          userId: session.userId,
+          subagentId: subagentId === 0 ? null : subagentId,
+          runId: session.runId,
+          sessionId: session.sessionId,
+          lastActive: now,
+          paused: session.paused,
+          state: session.state,
+          tokenCount: session.tokenCount,
+        });
+      }
+      hostActiveSessions.set(hostId, sessionMap);
+
       await hubDb.hosts.updateMany({
         where: { id: hostId },
         data: { last_active: now },
       });
 
-      // Update user_notifications.last_active for each active user
-      if (activeUserIds.length > 0) {
+      if (allowedUserIds.length > 0) {
         await hubDb.user_notifications.updateMany({
-          where: { user_id: { in: activeUserIds } },
+          where: { user_id: { in: allowedUserIds } },
           data: { last_active: now, latest_host_id: hostId },
         });
       }
 
       // Per-session updates (not a batched OR-updateMany) so each row gets
-      // its own total_tokens. The lastActive bump keeps the online badge
-      // lit between log writes; the SESSION_HEARTBEAT broadcast that
-      // mirrors it runs on its own interval below.
-      if (parsed.activeSessions.length > 0) {
+      // its own total_tokens. lastActive bumps keep the online badge lit
+      // between log writes.
+      if (allowedSessions.length > 0) {
         await Promise.all(
-          parsed.activeSessions.map((session) =>
+          allowedSessions.map((session) =>
             hubDb.run_session.updateMany({
               where: {
                 user_id: session.userId,
@@ -138,58 +197,6 @@ export function createHubHeartbeatService(
           ),
         );
       }
-
-      // Self-heal: register each plaintext with the redactor (idempotent),
-      // then mint + push a fresh key if the hash is missing or mismatched.
-      // Old plaintexts accumulate per user so leaks during the rotate
-      // transition window still get scrubbed; AGENT_STOP clears the set.
-      if (parsed.runtimeApiKeys?.length) {
-        const userIds = parsed.runtimeApiKeys.map((k) => k.userId);
-        const users = await hubDb.users.findMany({
-          where: { id: { in: userIds } },
-          select: {
-            id: true,
-            api_key_hash: true,
-            enabled: true,
-            archived: true,
-          },
-        });
-        const userMap = new Map(users.map((u) => [u.id, u]));
-
-        for (const claim of parsed.runtimeApiKeys) {
-          if (claim.runtimeApiKey) {
-            redactionService.registerRuntimeApiKey(
-              claim.userId,
-              claim.runtimeApiKey,
-            );
-          }
-
-          const user = userMap.get(claim.userId);
-          if (!user || !user.enabled || user.archived) continue;
-
-          if (
-            claim.runtimeApiKey &&
-            user.api_key_hash &&
-            hashToken(claim.runtimeApiKey) === user.api_key_hash
-          ) {
-            continue; // hub already knows this key — nothing to do
-          }
-
-          try {
-            const runtimeApiKey = await runtimeKeyService.issueRuntimeApiKey(
-              claim.userId,
-            );
-            naisysServer.sendMessage(hostId, HubEvents.RUNTIME_KEY_REISSUE, {
-              userId: claim.userId,
-              runtimeApiKey,
-            });
-          } catch (err) {
-            logService.error(
-              `[Hub:Heartbeat] Failed to reissue runtime key for user ${claim.userId}: ${err}`,
-            );
-          }
-        }
-      }
     } catch (error) {
       logService.error(
         `[Hub:Heartbeat] Error updating heartbeat for host ${hostId}: ${error}`,
@@ -197,42 +204,12 @@ export function createHubHeartbeatService(
     }
   });
 
-  // Runtime keys aren't touched on disconnect — the DB hash stays valid;
-  // if the agent reconnects, heartbeat re-registers the plaintext.
+  // The ACL is durable across disconnect (hubOwnershipService); only the
+  // session-liveness mirror is cleared here.
   naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
-    hostActiveAgents.delete(hostId);
     hostActiveSessions.delete(hostId);
-    throttledPushAgentsStatus();
   });
 
-  /** Push aggregate agent status to all connected NAISYS instances */
-  let lastPushedJson = "";
-
-  function pushAgentsStatus() {
-    const payload: AgentsStatus = {
-      hostActiveAgents: Object.fromEntries(hostActiveAgents),
-      agentNotifications: Object.fromEntries(agentNotifications),
-    };
-
-    const json = JSON.stringify(payload);
-    if (json === lastPushedJson) return;
-    lastPushedJson = json;
-
-    naisysServer.broadcastToAll(HubEvents.AGENTS_STATUS, payload);
-  }
-
-  /** Throttled push for agent start/stop changes — at most once per 500ms */
-  let throttleTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function throttledPushAgentsStatus() {
-    if (throttleTimer) return;
-    pushAgentsStatus();
-    throttleTimer = setTimeout(() => {
-      throttleTimer = null;
-    }, 500);
-  }
-
-  /** Push aggregate session lastActive bumps to supervisors */
   function pushSessionHeartbeat() {
     const updates: SessionHeartbeatUpdate[] = [];
     for (const sessions of hostActiveSessions.values()) {
@@ -256,73 +233,17 @@ export function createHubHeartbeatService(
     });
   }
 
-  // Periodically push aggregate active user status to all NAISYS instances,
-  // plus aggregate session heartbeats to supervisors.
-  const pushInterval = setInterval(() => {
-    pushAgentsStatus();
-    pushSessionHeartbeat();
-  }, HUB_HEARTBEAT_INTERVAL_MS);
-
-  function getHostActiveAgentCount(hostId: number): number {
-    return hostActiveAgents.get(hostId)?.length ?? 0;
-  }
-
-  /** Find which hosts a given agent is currently running on */
-  function findHostsForAgent(userId: number): number[] {
-    const hostIds: number[] = [];
-    for (const [hostId, userIds] of hostActiveAgents) {
-      if (userIds.includes(userId)) {
-        hostIds.push(hostId);
-      }
-    }
-    return hostIds;
-  }
-
-  /** Add a userId to a host's active list after a successful start */
-  function addStartedAgent(hostId: number, userId: number) {
-    const userIds = hostActiveAgents.get(hostId);
-    if (userIds) {
-      if (!userIds.includes(userId)) {
-        userIds.push(userId);
-      }
-    } else {
-      hostActiveAgents.set(hostId, [userId]);
-    }
-    throttledPushAgentsStatus();
-  }
-
-  /** Remove a userId from a host's active list after a successful stop */
-  function removeStoppedAgent(hostId: number, userId: number) {
-    const userIds = hostActiveAgents.get(hostId);
-    if (userIds) {
-      const index = userIds.indexOf(userId);
-      if (index !== -1) {
-        userIds.splice(index, 1);
-      }
-    }
-    throttledPushAgentsStatus();
-  }
+  const pushInterval = setInterval(
+    pushSessionHeartbeat,
+    HUB_HEARTBEAT_INTERVAL_MS,
+  );
 
   function cleanup() {
     clearInterval(pushInterval);
   }
 
-  /** Get all active user IDs across all connected hosts */
-  function getActiveUserIds(): Set<number> {
-    const allActiveUserIds = new Set<number>();
-    for (const userIds of hostActiveAgents.values()) {
-      for (const id of userIds) {
-        allActiveUserIds.add(id);
-      }
-    }
-    return allActiveUserIds;
-  }
-
-  /**
-   * All currently-active sessions across hosts (parent + subagents), for
-   * callers that need the per-session identity — e.g. looking up each
-   * session's model in run_session, where historical rows are never deleted.
-   */
+  /** Active sessions across hosts. Callers use the identity to look up the
+   *  session's model in run_session, where historical rows aren't deleted. */
   function getActiveSessions(): HubActiveSession[] {
     const sessions: HubActiveSession[] = [];
     for (const sessionMap of hostActiveSessions.values()) {
@@ -340,14 +261,7 @@ export function createHubHeartbeatService(
 
   return {
     cleanup,
-    getActiveUserIds,
     getActiveSessions,
-    getHostActiveAgentCount,
-    findHostsForAgent,
-    addStartedAgent,
-    removeStoppedAgent,
-    updateAgentNotification,
-    throttledPushAgentsStatus,
   };
 }
 

@@ -24,6 +24,7 @@ import {
 import type { HubCodexAuthService } from "../auth/hubCodexAuthService.js";
 import type { HubConfigService } from "../config/hubConfigService.js";
 import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
 const SPEND_LIMIT_CHECK_INTERVAL_MS = 10_000;
@@ -39,6 +40,7 @@ export function createHubCostService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
+  ownershipService: HubOwnershipService,
   heartbeatService: HubHeartbeatService,
   configService: HubConfigService,
   codexAuthService: HubCodexAuthService,
@@ -57,12 +59,25 @@ export function createHubCostService(
       try {
         const parsed = CostWriteRequestSchema.parse(data);
 
+        // A host could otherwise forge cost rows against any user's budget.
+        const authorizedEntries = parsed.entries.filter((e) => {
+          if (ownershipService.hostOwnsUser(hostId, e.userId)) return true;
+          logService.log(
+            `[Hub:Costs] Dropped cost entry from host ${hostId} for user ${e.userId}: host is not the authorized owner`,
+          );
+          return false;
+        });
+        if (authorizedEntries.length === 0) {
+          ack({ budgets: [] });
+          return;
+        }
+
         // Roll up cost deltas by user/run/session for supervisor push,
         // and per-user totals for budget_left decrement
         const costPushMap = new Map<string, CostPushEntry>();
         const userCostTotals = new Map<number, number>();
 
-        for (const entry of parsed.entries) {
+        for (const entry of authorizedEntries) {
           const subagentId = entry.subagentId ?? 0;
           const wireSubagentId = dbSubagentIdToWire(subagentId);
 
@@ -186,7 +201,7 @@ export function createHubCostService(
   );
 
   async function checkSpendLimits(candidateUserIds?: Iterable<number>) {
-    const activeUserIds = heartbeatService.getActiveUserIds();
+    const activeUserIds = ownershipService.getActiveUserIds();
     const usersToCheck = new Set(activeUserIds);
     for (const userId of suspendedByGlobal.keys()) usersToCheck.add(userId);
     for (const userId of suspendedByAgent.keys()) usersToCheck.add(userId);
@@ -264,7 +279,7 @@ export function createHubCostService(
   }
 
   function sendCostControl(userId: number, enabled: boolean, reason: string) {
-    const hostIds = heartbeatService.findHostsForAgent(userId);
+    const hostIds = ownershipService.findHostsForAgent(userId);
 
     for (const hostId of hostIds) {
       naisysServer.sendMessage(hostId, HubEvents.COST_CONTROL, {

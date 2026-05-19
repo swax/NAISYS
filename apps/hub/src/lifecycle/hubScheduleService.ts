@@ -16,7 +16,7 @@ import type { HubCostService } from "../observability/hubCostService.js";
 import type { HubRedactionService } from "../observability/hubRedactionService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 import type { HubAgentService } from "./hubAgentService.js";
-import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubOwnershipService } from "./hubOwnershipService.js";
 
 const TICK_INTERVAL_MS = 30_000;
 /** Slightly wider than the tick so a slow tick (GC, event-loop block)
@@ -41,7 +41,7 @@ export function createHubScheduleService(
   logService: DualLogger,
   sendMailService: HubSendMailService,
   agentService: HubAgentService,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   costService: HubCostService,
   configService: HubConfigService,
   redactionService: HubRedactionService,
@@ -172,7 +172,7 @@ export function createHubScheduleService(
     }
 
     const alreadyRunning =
-      heartbeatService.findHostsForAgent(agentUserId).length > 0;
+      ownershipService.findHostsForAgent(agentUserId).length > 0;
     if (alreadyRunning) {
       return { delivered: true, reason: `${chatStatus}; agent running` };
     }
@@ -421,7 +421,7 @@ export function createHubScheduleService(
         }
       }
 
-      const activeUserIds = heartbeatService.getActiveUserIds();
+      const activeUserIds = ownershipService.getActiveUserIds();
       const candidates = [...seen.entries()].filter(
         ([userId]) => !activeUserIds.has(userId),
       );

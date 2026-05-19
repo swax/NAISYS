@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HubConfigService } from "../config/hubConfigService.js";
 import type { HubAgentService } from "../lifecycle/hubAgentService.js";
-import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import { createHubScheduleService } from "../lifecycle/hubScheduleService.js";
 import type { HubSendMailService } from "../mail/hubSendMailService.js";
 import type { HubCostService } from "../observability/hubCostService.js";
@@ -213,12 +213,12 @@ function buildHarness(opts?: {
     tryStartAgent: vi.fn(() => Promise.resolve(true)),
   } as unknown as HubAgentService;
 
-  const heartbeatService = {
+  const ownershipService = {
     findHostsForAgent: vi.fn((userId: number) =>
       runningAgents.has(userId) ? [1] : [],
     ),
     getActiveUserIds: vi.fn(() => runningAgents),
-  } as unknown as HubHeartbeatService;
+  } as unknown as HubOwnershipService;
 
   const costService = {
     checkSpendLimits: vi.fn(() => Promise.resolve()),
@@ -242,7 +242,7 @@ function buildHarness(opts?: {
     logger,
     sendMailService,
     agentService,
-    heartbeatService,
+    ownershipService,
     costService,
     configService,
     redactionService,
@@ -255,7 +255,7 @@ function buildHarness(opts?: {
     hubDb,
     sendMailService,
     agentService,
-    heartbeatService,
+    ownershipService,
     costService,
     chats,
     users,

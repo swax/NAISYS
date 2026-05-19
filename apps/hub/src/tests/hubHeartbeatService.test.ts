@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
 import { createHubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { HubRedactionService } from "../observability/hubRedactionService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
@@ -40,6 +41,61 @@ function createLogger() {
   } as unknown as DualLogger;
 }
 
+function createOwnershipService(adminUserId = 999) {
+  const owned = new Map<number, Set<number>>();
+  return {
+    adminUserId,
+    hostOwnsUser: vi.fn((hostId: number, userId: number) =>
+      userId === adminUserId || (owned.get(hostId)?.has(userId) ?? false),
+    ),
+    addStartedAgent: vi.fn((hostId: number, userId: number) => {
+      let set = owned.get(hostId);
+      if (!set) {
+        set = new Set();
+        owned.set(hostId, set);
+      }
+      set.add(userId);
+    }),
+    removeStoppedAgent: vi.fn((hostId: number, userId: number) => {
+      owned.get(hostId)?.delete(userId);
+    }),
+    reconcileHeartbeatPresence: vi.fn(
+      (hostId: number, claimedUserIds: Set<number>) => {
+        if (claimedUserIds.has(adminUserId)) {
+          let set = owned.get(hostId);
+          if (!set) {
+            set = new Set();
+            owned.set(hostId, set);
+          }
+          set.add(adminUserId);
+        }
+        const current = owned.get(hostId);
+        if (current) {
+          for (const userId of [...current]) {
+            if (!claimedUserIds.has(userId)) current.delete(userId);
+          }
+        }
+      },
+    ),
+    findHostsForAgent: vi.fn((userId: number) => {
+      const hostIds: number[] = [];
+      for (const [hostId, set] of owned) if (set.has(userId)) hostIds.push(hostId);
+      return hostIds;
+    }),
+    getHostActiveAgentCount: vi.fn(
+      (hostId: number) => owned.get(hostId)?.size ?? 0,
+    ),
+    getActiveUserIds: vi.fn(() => {
+      const all = new Set<number>();
+      for (const set of owned.values()) for (const id of set) all.add(id);
+      return all;
+    }),
+    updateAgentNotification: vi.fn(),
+    throttledPushAgentsStatus: vi.fn(),
+    cleanup: vi.fn(),
+  } as unknown as HubOwnershipService;
+}
+
 describe("hubHeartbeatService", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -73,12 +129,14 @@ describe("hubHeartbeatService", () => {
       issueRuntimeApiKey: vi.fn(),
     } as unknown as HubRuntimeKeyService;
 
+    const ownershipService = createOwnershipService();
     const service = createHubHeartbeatService(
       server,
       { hubDb } as HubDatabaseService,
       createLogger(),
       redactionService,
       runtimeKeyService,
+      ownershipService,
     );
 
     try {
@@ -86,6 +144,9 @@ describe("hubHeartbeatService", () => {
       if (!heartbeatHandler) {
         throw new Error("HEARTBEAT handler was not registered");
       }
+
+      // The handler filters claims by ACL membership; seed authority first.
+      ownershipService.addStartedAgent(42, 1);
 
       const handlerPromise = Promise.resolve(
         heartbeatHandler(42, {

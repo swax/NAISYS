@@ -15,7 +15,7 @@ import {
 
 import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
-import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubOwnershipService } from "./hubOwnershipService.js";
 
 type CompactCursor = {
   logId: number;
@@ -50,12 +50,12 @@ export function createHubAgentStartService(
   naisysServer: NaisysServer,
   { hubDb }: HubDbContext,
   logService: DualLogger,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   runtimeKeyService: HubRuntimeKeyService,
 ) {
   const { issueRuntimeApiKey } = runtimeKeyService;
 
-  // heartbeatService only reflects "running" after the host ack lands, so
+  // ownershipService only reflects "running" after the host ack lands, so
   // concurrent callers could all pass decideStartAgent and dispatch duplicate
   // starts in that gap.
   const startingUsers = new Set<number>();
@@ -211,7 +211,7 @@ export function createHubAgentStartService(
     }
 
     if (naisysServer.getConnectionByHostId(bestHostId)) {
-      heartbeatService.addStartedAgent(bestHostId, startUserId);
+      ownershipService.addStartedAgent(bestHostId, startUserId);
       naisysServer.broadcastToSupervisors(HubEvents.SESSION_PUSH, {
         session: {
           userId: startUserId,

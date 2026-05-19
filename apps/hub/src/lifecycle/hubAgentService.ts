@@ -15,7 +15,7 @@ import type { HubSendMailService } from "../mail/hubSendMailService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 import type { HostRegistrar } from "./hostRegistrar.js";
 import type { HubAgentStartService } from "./hubAgentStartService.js";
-import type { HubHeartbeatService } from "./hubHeartbeatService.js";
+import type { HubOwnershipService } from "./hubOwnershipService.js";
 
 type StartDecision =
   | { kind: "fail"; error: string }
@@ -26,7 +26,7 @@ export function createHubAgentService(
   naisysServer: NaisysServer,
   { hubDb }: HubDatabaseService,
   logService: DualLogger,
-  heartbeatService: HubHeartbeatService,
+  ownershipService: HubOwnershipService,
   sendMailService: HubSendMailService,
   hostRegistrar: HostRegistrar,
   runtimeKeyService: HubRuntimeKeyService,
@@ -73,10 +73,10 @@ export function createHubAgentService(
 
     // Pick the host with the fewest active agents.
     let bestHostId = connectedEligible[0];
-    let bestCount = heartbeatService.getHostActiveAgentCount(bestHostId);
+    let bestCount = ownershipService.getHostActiveAgentCount(bestHostId);
 
     for (const hid of connectedEligible.slice(1)) {
-      const count = heartbeatService.getHostActiveAgentCount(hid);
+      const count = ownershipService.getHostActiveAgentCount(hid);
       if (count < bestCount) {
         bestHostId = hid;
         bestCount = count;
@@ -99,7 +99,7 @@ export function createHubAgentService(
     if (!(await isAgentEnabled(userId))) {
       return { kind: "fail", error: `Agent ${userId} is disabled` };
     }
-    if (heartbeatService.findHostsForAgent(userId).length > 0) {
+    if (ownershipService.findHostsForAgent(userId).length > 0) {
       return { kind: "fail", error: `Agent ${userId} is already running` };
     }
 
@@ -210,7 +210,7 @@ export function createHubAgentService(
     try {
       const parsed = AgentStopRequestSchema.parse(data);
       // Find which hosts the agent is currently running on.
-      const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+      const targetHostIds = ownershipService.findHostsForAgent(parsed.userId);
 
       if (targetHostIds.length === 0) {
         ack({
@@ -235,7 +235,7 @@ export function createHubAgentService(
           },
           (response) => {
             if (response.success) {
-              heartbeatService.removeStoppedAgent(targetHostId, parsed.userId);
+              ownershipService.removeStoppedAgent(targetHostId, parsed.userId);
               revokeRuntimeApiKey(parsed.userId).catch((err) => {
                 logService.error(
                   `[Hub:Agents] Failed to revoke runtime key for user ${parsed.userId} on stop: ${err}`,
@@ -275,7 +275,7 @@ export function createHubAgentService(
     naisysServer.registerEvent(event, (hostId, data, ack) => {
       try {
         const parsed = AgentRunPauseRequestSchema.parse(data);
-        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+        const targetHostIds = ownershipService.findHostsForAgent(parsed.userId);
 
         if (targetHostIds.length === 0) {
           ack({
@@ -335,7 +335,7 @@ export function createHubAgentService(
     (hostId, data, ack) => {
       try {
         const parsed = AgentRunCommandRequestSchema.parse(data);
-        const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+        const targetHostIds = ownershipService.findHostsForAgent(parsed.userId);
 
         if (targetHostIds.length === 0) {
           ack({
@@ -392,7 +392,7 @@ export function createHubAgentService(
     try {
       const parsed = AgentPeekRequestSchema.parse(data);
       // Find which host the agent is running on.
-      const targetHostIds = heartbeatService.findHostsForAgent(parsed.userId);
+      const targetHostIds = ownershipService.findHostsForAgent(parsed.userId);
 
       if (targetHostIds.length === 0) {
         ack({

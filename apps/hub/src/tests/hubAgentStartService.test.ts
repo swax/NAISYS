@@ -9,7 +9,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { HubRuntimeKeyService } from "../auth/hubRuntimeKeyService.js";
 import { createHubAgentStartService } from "../lifecycle/hubAgentStartService.js";
-import type { HubHeartbeatService } from "../lifecycle/hubHeartbeatService.js";
+import type { HubOwnershipService } from "../lifecycle/hubOwnershipService.js";
 import type { NaisysServer } from "../server/naisysServer.js";
 
 const START_USER_ID = 42;
@@ -150,9 +150,9 @@ function buildHarness(opts?: {
     },
   } as unknown as PrismaClient;
 
-  const heartbeatService = {
+  const ownershipService = {
     addStartedAgent: vi.fn(),
-  } as unknown as HubHeartbeatService;
+  } as unknown as HubOwnershipService;
   const runtimeKeyService = {
     issueRuntimeApiKey: vi.fn(() => Promise.resolve("runtime-key")),
   } as unknown as HubRuntimeKeyService;
@@ -161,7 +161,7 @@ function buildHarness(opts?: {
     server,
     { hubDb } as HubDatabaseService,
     createLogger(),
-    heartbeatService,
+    ownershipService,
     runtimeKeyService,
   );
 
@@ -176,7 +176,7 @@ function buildHarness(opts?: {
     runSessionDeleteMany,
     runSessionCreate,
     runSessionUpdateMany,
-    heartbeatService,
+    ownershipService,
     runtimeKeyService,
   };
 }
@@ -292,7 +292,7 @@ describe("hubAgentStartService", () => {
       },
       data: { model_name: "gpt-5" },
     });
-    expect(h.heartbeatService.addStartedAgent).toHaveBeenCalledWith(
+    expect(h.ownershipService.addStartedAgent).toHaveBeenCalledWith(
       BEST_HOST_ID,
       START_USER_ID,
     );
