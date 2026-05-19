@@ -5,6 +5,8 @@
  * Scope:
  *  - Node.js processes (vitest workers, spawned hub/naisys/erp child
  *    processes, the Playwright-managed erp server) via c8 + V8 coverage.
+ *  - Workspace Vitest coverage maps for packages whose tests execute source
+ *    through Vite's module runner instead of c8-visible built files.
  *  - Supervisor + erp client React code running in Chromium during
  *    Playwright UI tests, via vite-plugin-istanbul. Tests dump
  *    `window.__coverage__` to `coverage/client-raw/` and we merge those
@@ -29,6 +31,18 @@ const repoRoot = resolve(import.meta.dirname, "..");
 const rawDir = resolve(repoRoot, "coverage", "raw");
 const clientRawDir = resolve(repoRoot, "coverage", "client-raw");
 const reportDir = resolve(repoRoot, "coverage", "merged");
+const workspaceIstanbulCoverageFiles = [
+  resolve(
+    repoRoot,
+    "packages",
+    "common-node",
+    "coverage",
+    "coverage-final.json",
+  ),
+];
+const workspaceIstanbulCoverageDirs = [
+  resolve(repoRoot, "packages", "common-node", "coverage"),
+];
 const normalizedRepoRoot = repoRoot.replaceAll("\\", "/");
 
 function toRepoRelativePath(filePath) {
@@ -45,9 +59,84 @@ function workspaceForCoveragePath(filePath) {
   return idx < 0 ? undefined : rel.slice(0, idx);
 }
 
+function fileCoverageData(fileCoverage) {
+  return fileCoverage.data ?? fileCoverage.toJSON();
+}
+
+function coveredLinesForFileCoverage(fileCoverage) {
+  const data = fileCoverageData(fileCoverage);
+  const lines = new Set();
+  for (const [id, location] of Object.entries(data.statementMap ?? {})) {
+    if ((data.s?.[id] ?? 0) <= 0) continue;
+    const start = location.start?.line;
+    const end = location.end?.line ?? start;
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    for (let line = start; line <= end; line++) {
+      lines.add(line);
+    }
+  }
+  return lines;
+}
+
+function locationTouchesCoveredLine(location, coveredLines) {
+  const start = location.start?.line;
+  const end = location.end?.line ?? start;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+  for (let line = start; line <= end; line++) {
+    if (coveredLines.has(line)) return true;
+  }
+  return false;
+}
+
+function supplementCoverageMapWithCoveredLines(baseMap, coverageFinalPath) {
+  if (!existsSync(coverageFinalPath)) return 0;
+
+  const supplementMap = libCoverage.createCoverageMap(
+    JSON.parse(readFileSync(coverageFinalPath, "utf-8")),
+  );
+  const baseFilesByNormalizedPath = new Map(
+    baseMap.files().map((file) => [file.replaceAll("\\", "/"), file]),
+  );
+
+  let supplementedStatements = 0;
+  for (const supplementFile of supplementMap.files()) {
+    const baseFile = baseFilesByNormalizedPath.get(
+      supplementFile.replaceAll("\\", "/"),
+    );
+    if (!baseFile) continue;
+
+    const coveredLines = coveredLinesForFileCoverage(
+      supplementMap.fileCoverageFor(supplementFile),
+    );
+    if (coveredLines.size === 0) continue;
+
+    const baseCoverage = baseMap.fileCoverageFor(baseFile);
+    const baseData = fileCoverageData(baseCoverage);
+    for (const [id, location] of Object.entries(baseData.statementMap ?? {})) {
+      if ((baseData.s?.[id] ?? 0) > 0) continue;
+      if (!locationTouchesCoveredLine(location, coveredLines)) continue;
+      baseData.s[id] = 1;
+      supplementedStatements++;
+    }
+  }
+
+  return supplementedStatements;
+}
+
+function summaryFromCoverageMap(map) {
+  const summary = { total: map.getCoverageSummary().toJSON() };
+  for (const file of map.files()) {
+    summary[file] = map.fileCoverageFor(file).toSummary().toJSON();
+  }
+  return summary;
+}
+
 rmSync(rawDir, { recursive: true, force: true });
 rmSync(clientRawDir, { recursive: true, force: true });
 rmSync(reportDir, { recursive: true, force: true });
+for (const dir of workspaceIstanbulCoverageDirs) {
+  rmSync(dir, { recursive: true, force: true });
+}
 mkdirSync(rawDir, { recursive: true });
 
 const env = {
@@ -101,6 +190,7 @@ const reportCode = run("npx", [
   "--src=apps",
   "--src=packages",
   "--reporter=html",
+  "--reporter=json",
   "--reporter=json-summary",
   "--reports-dir=" + reportDir,
   "--temp-directory=" + rawDir,
@@ -123,7 +213,37 @@ const reportCode = run("npx", [
 const coverageRunSucceeded = failures.length === 0 && reportCode === 0;
 const summaryPath = resolve(reportDir, "coverage-summary.json");
 if (coverageRunSucceeded && existsSync(summaryPath)) {
-  const summary = JSON.parse(readFileSync(summaryPath, "utf-8"));
+  let summary = JSON.parse(readFileSync(summaryPath, "utf-8"));
+  const coverageFinalPath = resolve(reportDir, "coverage-final.json");
+  if (existsSync(coverageFinalPath)) {
+    try {
+      const map = libCoverage.createCoverageMap(
+        JSON.parse(readFileSync(coverageFinalPath, "utf-8")),
+      );
+      let supplementedStatements = 0;
+      for (const file of workspaceIstanbulCoverageFiles) {
+        supplementedStatements += supplementCoverageMapWithCoveredLines(
+          map,
+          file,
+        );
+      }
+      if (supplementedStatements > 0) {
+        summary = summaryFromCoverageMap(map);
+        writeFileSync(
+          coverageFinalPath,
+          JSON.stringify(map.toJSON(), null, 2),
+        );
+        writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
+        console.log(
+          `Merged ${supplementedStatements} Vitest-covered statements into c8 summary.`,
+        );
+      }
+    } catch (err) {
+      console.warn(
+        `Skipping workspace Vitest coverage merge: ${err.message}`,
+      );
+    }
+  }
   const totals = new Map();
 
   for (const [path, data] of Object.entries(summary)) {
@@ -184,7 +304,8 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
     }
     console.log(
       "\nScope: Node.js processes via c8, plus the supervisor client React\n" +
-        "       code via vite-plugin-istanbul (Playwright dumps window.__coverage__).\n" +
+        "       code via vite-plugin-istanbul (Playwright dumps window.__coverage__),\n" +
+        "       plus selected workspace Vitest coverage maps.\n" +
         "       For the client, only files actually loaded during a Playwright\n" +
         "       test contribute to the denominator. Other workspaces use --all,\n" +
         "       so unloaded files count as 0%.",
@@ -209,8 +330,9 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       "regenerated on every coverage run; commit it to log progress.",
       "",
       "Scope: Node.js processes via c8 (vitest, hub/naisys/erp child processes,",
-      "Playwright-managed erp server) plus the supervisor + erp client React",
-      "code via vite-plugin-istanbul. Unloaded files count as 0% for everything",
+      "Playwright-managed erp server), selected workspace Vitest coverage maps,",
+      "plus the supervisor + erp client React code via vite-plugin-istanbul.",
+      "Unloaded files count as 0% for everything",
       "except `apps/supervisor/client` and `apps/erp/client`, where only",
       "modules loaded during a Playwright test contribute to the denominator.",
       "",
