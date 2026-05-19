@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import { type HateoasAction, mergeByKey, sortBy } from "@naisys/common";
 import type {
   Agent as BaseAgent,
   AgentStatusEvent,
@@ -48,13 +48,11 @@ export const useAgentData = () => {
         mergedAgents = updatedAgents;
       } else {
         // Incremental update — merge with existing cache
-        const mergeMap = new Map<number, BaseAgent>(
-          agentCache.map((agent: Agent) => [agent.id, agent]),
+        mergedAgents = mergeByKey(
+          agentCache,
+          updatedAgents,
+          (agent) => agent.id,
         );
-        updatedAgents.forEach((agent: BaseAgent) => {
-          mergeMap.set(agent.id, agent);
-        });
-        mergedAgents = Array.from(mergeMap.values());
       }
 
       const agentsWithStatus: Agent[] = mergedAgents.map((agent) => ({
@@ -63,9 +61,7 @@ export const useAgentData = () => {
       }));
 
       // Sort by name
-      const sortedAgents = agentsWithStatus.sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
+      const sortedAgents = sortBy(agentsWithStatus, (agent) => agent.name);
 
       // Update caches
       agentCache = sortedAgents;

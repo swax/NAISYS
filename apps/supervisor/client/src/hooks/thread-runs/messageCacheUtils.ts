@@ -1,4 +1,4 @@
-import { keyBy } from "@naisys/common";
+import { mergeByKey, sortBy, sortByDesc } from "@naisys/common";
 import type { MailPush } from "@naisys/hub-protocol";
 
 /** Discriminated union for events pushed to mail/chat browser rooms */
@@ -31,21 +31,11 @@ export function mergeIntoCache<K, T extends MergeCacheItem>(
   if (newItems.length === 0 && total === undefined) return false;
 
   const existing = itemCache.get(key) || [];
-  const mergeMap = keyBy(existing, (m) => m.id);
-
-  const existingCount = mergeMap.size;
-  for (const item of newItems) {
-    mergeMap.set(item.id, item);
-  }
-
-  const merged = Array.from(mergeMap.values());
-  const newCount = merged.length - existingCount;
-
-  merged.sort((a, b) => {
-    const diff =
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    return newestFirst ? -diff : diff;
-  });
+  const mergedById = mergeByKey(existing, newItems, (m) => m.id);
+  const newCount = mergedById.length - existing.length;
+  const merged = newestFirst
+    ? sortByDesc(mergedById, (m) => new Date(m.createdAt))
+    : sortBy(mergedById, (m) => new Date(m.createdAt));
 
   itemCache.set(key, merged);
 

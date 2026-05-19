@@ -1,4 +1,9 @@
-import { addToSetMap, pushToArrayMap } from "@naisys/common";
+import {
+  addToSetMap,
+  pushToArrayMap,
+  sortBy,
+  sortByDesc,
+} from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -75,10 +80,9 @@ export function useThreadRunCommands(
     }
 
     for (const username of participants) {
-      const list = runsByUser.get(username) ?? [];
-      list.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      const list = sortByDesc(
+        runsByUser.get(username) ?? [],
+        (run) => new Date(run.createdAt),
       );
       const set = new Set<number>();
       // Distinct runIds, skipping subagent rows that share the parent's runId.
@@ -236,12 +240,7 @@ export function useThreadRunCommands(
     for (const userMap of byUser.values()) {
       for (const cmd of userMap.values()) flat.push(cmd);
     }
-    flat.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
-        a.logId - b.logId,
-    );
-    return flat;
+    return sortBy(flat, (cmd) => [new Date(cmd.createdAt), cmd.logId]);
   }, [byUser]);
 
   return { entries, loadedRunIds };

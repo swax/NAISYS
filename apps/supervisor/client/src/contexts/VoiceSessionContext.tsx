@@ -1,3 +1,4 @@
+import { maxBy } from "@naisys/common";
 import type {
   CostPushEntry,
   LogPushEntry,
@@ -107,12 +108,10 @@ const trackedKey = (r: TrackedRun) =>
  *  is online — the caller leaves the previous target in place (resilient
  *  against brief gaps during compaction / subagent handoff). */
 function pickActiveRun(runs: TrackedRun[]): TrackedRun | undefined {
-  return [...runs]
-    .sort(
-      (a, b) =>
-        new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
-    )
-    .find((r) => isRunActive(r.lastActive));
+  return maxBy(
+    runs.filter((r) => isRunActive(r.lastActive)),
+    (r) => new Date(r.lastActive),
+  );
 }
 
 // All four event types from `runs:${target}`. Mirroring useRunsData's

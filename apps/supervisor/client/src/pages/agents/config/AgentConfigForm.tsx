@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import type { AgentConfigFile, ScheduleEntry } from "@naisys/common";
-import { AgentConfigFileSchema } from "@naisys/common";
+import { AgentConfigFileSchema, toRecord } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import {
   IconCheck,
@@ -146,13 +146,11 @@ interface FormValues {
 }
 
 /** Extract .describe() text from schema shape, keyed by field name. */
-const fieldDescriptions: Record<string, string | undefined> =
-  Object.fromEntries(
-    Object.entries(AgentConfigFileSchema.shape).map(([key, zodType]) => [
-      key,
-      (zodType as { description?: string }).description,
-    ]),
-  );
+const fieldDescriptions: Record<string, string | undefined> = toRecord(
+  Object.entries(AgentConfigFileSchema.shape),
+  ([key]) => key,
+  ([, zodType]) => (zodType as { description?: string }).description,
+);
 
 function desc(field: string): string | undefined {
   return fieldDescriptions[field];

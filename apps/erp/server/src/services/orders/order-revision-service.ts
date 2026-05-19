@@ -1,4 +1,4 @@
-import { isDefined } from "@naisys/common";
+import { mapDefined } from "@naisys/common";
 import {
   type RevisionStatus,
   RevisionStatus as RevisionStatusValues,
@@ -283,7 +283,7 @@ export async function deleteRevision(id: number): Promise<void> {
         where: { operationId: { in: opIds } },
         select: { id: true, fieldSetId: true },
       });
-      const fieldSetIds = steps.map((s) => s.fieldSetId).filter(isDefined);
+      const fieldSetIds = mapDefined(steps, (s) => s.fieldSetId);
 
       // Steps reference field_sets via FK, so delete steps first
       await erpTx.step.deleteMany({

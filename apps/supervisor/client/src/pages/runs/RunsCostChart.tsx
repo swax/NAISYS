@@ -1,3 +1,4 @@
+import { pushToArrayMap, sortBy } from "@naisys/common";
 import type { ChartData, ChartOptions } from "chart.js";
 import React, { useMemo } from "react";
 import { Line } from "react-chartjs-2";
@@ -29,14 +30,12 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
     const parentsByRun = new Map<string, RunSession[]>();
     for (const p of parents) {
       const key = `${p.userId}-${p.runId}`;
-      const list = parentsByRun.get(key);
-      if (list) list.push(p);
-      else parentsByRun.set(key, [p]);
+      pushToArrayMap(parentsByRun, key, p);
     }
-    for (const list of parentsByRun.values()) {
-      list.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    for (const [key, list] of parentsByRun) {
+      parentsByRun.set(
+        key,
+        sortBy(list, (run) => new Date(run.createdAt)),
       );
     }
 
@@ -63,10 +62,7 @@ export const RunsCostChart: React.FC<RunsCostChartProps> = ({
       return extra ? { ...p, totalCost: p.totalCost + extra } : p;
     });
 
-    return rolledUp.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+    return sortBy(rolledUp, (run) => new Date(run.createdAt));
   }, [runs]);
 
   const data = useMemo<ChartData<"line">>(() => {

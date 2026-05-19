@@ -13,8 +13,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { DateInput, DateTimePicker } from "@mantine/dates";
-import { isImageFilename } from "@naisys/common";
-import { hasActionTemplate } from "@naisys/common";
+import { hasActionTemplate, isImageFilename, toRecord } from "@naisys/common";
 import type {
   FieldAttachment,
   FieldValue,
@@ -65,8 +64,10 @@ function editKey(fieldId: number, setIndex: number): string {
 function buildEdits(
   fieldValues: FieldValueEntry[],
 ): Record<string, FieldValue> {
-  return Object.fromEntries(
-    fieldValues.map((fv) => [editKey(fv.fieldId, fv.setIndex), fv.value]),
+  return toRecord(
+    fieldValues,
+    (fv) => editKey(fv.fieldId, fv.setIndex),
+    (fv) => fv.value,
   );
 }
 
@@ -85,16 +86,18 @@ function mergeEditsPreservingDirty(
   const previousEdits = buildEdits(previousFieldValues);
   const nextEdits = buildEdits(nextFieldValues);
 
-  return Object.fromEntries(
-    Object.entries(nextEdits).map(([key, nextValue]) => {
+  return toRecord(
+    Object.entries(nextEdits),
+    ([key]) => key,
+    ([key, nextValue]) => {
       const currentValue = currentEdits[key];
       const previousValue = previousEdits[key];
       const hasDirtyEdit =
         currentValue !== undefined &&
         !fieldValueEquals(currentValue, previousValue);
 
-      return [key, hasDirtyEdit ? currentValue : nextValue];
-    }),
+      return hasDirtyEdit ? currentValue : nextValue;
+    },
   );
 }
 

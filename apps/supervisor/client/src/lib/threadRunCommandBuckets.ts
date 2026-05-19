@@ -1,4 +1,4 @@
-import { getOrInsert, pushToArrayMap } from "@naisys/common";
+import { getOrInsert, pushToArrayMap, sortBy } from "@naisys/common";
 
 import type { ThreadRunCommand } from "../hooks/thread-runs/useThreadRunCommands";
 
@@ -70,9 +70,7 @@ export function bucketRunCommandsByMessage(
 ): BucketedRunCommands {
   if (commands.length === 0) return EMPTY;
 
-  const sortedMsgs = [...messages].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
+  const sortedMsgs = sortBy(messages, (msg) => new Date(msg.createdAt));
 
   const oldestVisibleMs =
     hasOlderMessages && sortedMsgs.length > 0
@@ -127,19 +125,31 @@ export function bucketRunCommandsByMessage(
     pushToArrayMap(perUser, cmd.username, cmd);
   }
 
-  for (const list of beforeMessage.values()) {
-    list.sort((a, b) => a.logId - b.logId);
+  for (const [key, list] of beforeMessage) {
+    beforeMessage.set(
+      key,
+      sortBy(list, (cmd) => cmd.logId),
+    );
   }
-  for (const list of afterMessage.values()) {
-    list.sort((a, b) => a.logId - b.logId);
+  for (const [key, list] of afterMessage) {
+    afterMessage.set(
+      key,
+      sortBy(list, (cmd) => cmd.logId),
+    );
   }
   for (const perUser of phantomsBeforeMessage.values()) {
-    for (const list of perUser.values()) {
-      list.sort((a, b) => a.logId - b.logId);
+    for (const [key, list] of perUser) {
+      perUser.set(
+        key,
+        sortBy(list, (cmd) => cmd.logId),
+      );
     }
   }
-  for (const list of trailing.values()) {
-    list.sort((a, b) => a.logId - b.logId);
+  for (const [key, list] of trailing) {
+    trailing.set(
+      key,
+      sortBy(list, (cmd) => cmd.logId),
+    );
   }
 
   return { beforeMessage, afterMessage, phantomsBeforeMessage, trailing };

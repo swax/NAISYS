@@ -1,4 +1,4 @@
-import { isDefined, keyBy } from "@naisys/common";
+import { keyBy, mapDefined } from "@naisys/common";
 import {
   OperationRunStatus as OperationRunStatusValues,
   type OrderRunPriority,
@@ -257,9 +257,7 @@ export async function deleteOrderRun(id: number): Promise<void> {
         where: { operationRunId: { in: opRunIds } },
         select: { fieldRecordId: true },
       });
-      const fieldRecordIds = stepRuns
-        .map((s) => s.fieldRecordId)
-        .filter(isDefined);
+      const fieldRecordIds = mapDefined(stepRuns, (s) => s.fieldRecordId);
 
       if (fieldRecordIds.length > 0) {
         await tx.fieldValue.deleteMany({

@@ -1,3 +1,4 @@
+import { maxBy, minBy } from "@naisys/common";
 import type {
   AgentRunCommandRequestBody,
   AgentRunCommandResult,
@@ -265,12 +266,9 @@ function registerContextLogRoute(
         data = obfuscateLogs(data);
       }
 
-      const maxLogId = data?.logs.length
-        ? Math.max(...data.logs.map((l) => l.id))
-        : (logsAfter ?? 0);
-      const minLogId = data?.logs.length
-        ? Math.min(...data.logs.map((l) => l.id))
-        : undefined;
+      const maxLogId =
+        maxBy(data?.logs ?? [], (log) => log.id)?.id ?? logsAfter ?? 0;
+      const minLogId = minBy(data?.logs ?? [], (log) => log.id)?.id;
 
       const baseHref = withSubagent
         ? `/agents/${username}/runs/${runId}/subagents/${subagentId}/sessions/${sessionId}/logs`

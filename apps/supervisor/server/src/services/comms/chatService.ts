@@ -1,4 +1,4 @@
-import { keyBy } from "@naisys/common";
+import { keyBy, sortByDesc } from "@naisys/common";
 import type { ChatConversation, ChatMessage } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../../database/hubDb.js";
@@ -113,14 +113,14 @@ export async function getConversations(
   }
 
   // Sort by latest message time (newest first)
-  conversations.sort(
-    (a, b) =>
-      new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
+  const sortedConversations = sortByDesc(
+    conversations,
+    (c) => new Date(c.lastMessageAt),
   );
 
-  const total = conversations.length;
+  const total = sortedConversations.length;
   const start = (page - 1) * count;
-  const paginated = conversations.slice(start, start + count);
+  const paginated = sortedConversations.slice(start, start + count);
 
   return { conversations: paginated, total };
 }

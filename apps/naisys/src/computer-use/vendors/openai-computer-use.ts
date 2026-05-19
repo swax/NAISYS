@@ -5,7 +5,7 @@
  * responses, and context formatting for computer_call / computer_call_output items.
  */
 
-import { isDefined } from "@naisys/common";
+import { mapDefined } from "@naisys/common";
 import type { ResponseOutputItem } from "openai/resources/responses/responses";
 
 import type { ContentBlock, LlmMessage } from "../../llm/llmDtos.js";
@@ -286,9 +286,9 @@ export function formatInputWithComputerUse<Part>(
       if (textBlocks.length > 0) {
         items.push({
           role: "assistant",
-          content: textBlocks
-            .map((b) => formatSingleBlock(b, "assistant"))
-            .filter(isDefined),
+          content: mapDefined(textBlocks, (b) =>
+            formatSingleBlock(b, "assistant"),
+          ),
         });
       }
 
@@ -350,9 +350,7 @@ export function formatInputWithComputerUse<Part>(
     // Regular ContentBlock[] message (no tool blocks)
     items.push({
       role: msg.role === "assistant" ? "assistant" : "user",
-      content: content
-        .map((b) => formatSingleBlock(b, msg.role))
-        .filter(isDefined),
+      content: mapDefined(content, (b) => formatSingleBlock(b, msg.role)),
     });
   }
 

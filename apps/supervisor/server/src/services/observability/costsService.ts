@@ -1,4 +1,4 @@
-import { getOrInsert, keyBy, unique } from "@naisys/common";
+import { getOrInsert, keyBy, sortByDesc, unique } from "@naisys/common";
 import type {
   CostBucket,
   CostByAgent,
@@ -180,8 +180,8 @@ export async function getCostsByAgent(
 
   const userMap = keyBy(users, (u) => u.id);
 
-  return Array.from(byUserId.entries())
-    .map(([userId, totals]) => {
+  return sortByDesc(
+    Array.from(byUserId.entries()).map(([userId, totals]) => {
       const user = userMap.get(userId);
       return {
         username: user?.username ?? `user-${userId}`,
@@ -189,8 +189,9 @@ export async function getCostsByAgent(
         cost: Math.round(totals.cost * 100) / 100,
         tokens: totals.tokens,
       };
-    })
-    .sort((a, b) => b.cost - a.cost);
+    }),
+    (row) => row.cost,
+  );
 }
 
 export async function getCostsByModel(
@@ -226,11 +227,12 @@ export async function getCostsByModel(
     entry.tokens += (c.input_tokens ?? 0) + (c.output_tokens ?? 0);
   }
 
-  return Array.from(byModel.entries())
-    .map(([model, totals]) => ({
+  return sortByDesc(
+    Array.from(byModel.entries()).map(([model, totals]) => ({
       model,
       cost: Math.round(totals.cost * 100) / 100,
       tokens: totals.tokens,
-    }))
-    .sort((a, b) => b.cost - a.cost);
+    })),
+    (row) => row.cost,
+  );
 }

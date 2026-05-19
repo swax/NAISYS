@@ -13,7 +13,7 @@ import { useDisclosure } from "@mantine/hooks";
 import {
   formatFileSize,
   hasAction,
-  isDefined,
+  mapDefined,
   MAX_ATTACHMENT_SIZE,
   unique,
 } from "@naisys/common";
@@ -279,11 +279,10 @@ export const AgentChat: React.FC = () => {
       }
 
       // Extract recipient IDs from participant usernames (exclude current agent)
-      const toIds = selectedParticipants
-        .split(",")
-        .filter((name) => name !== username)
-        .map((name) => agents.find((a) => a.name === name)?.id)
-        .filter(isDefined);
+      const toIds = mapDefined(
+        selectedParticipants.split(",").filter((name) => name !== username),
+        (name) => agents.find((a) => a.name === name)?.id,
+      );
 
       const result = await sendChatMessage(
         username ?? "",

@@ -1,3 +1,4 @@
+import { mergeByKey } from "@naisys/common";
 import type {
   CommandLoopState,
   CostPushEntry,
@@ -64,18 +65,8 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
 
       const existingRuns = runsCache.get(agentUsername) || [];
 
-      const mergeMap = new Map<string, CachedRunSession>(
-        existingRuns.map((run) => [runKey(run), run]),
-      );
-
-      const existingCount = mergeMap.size;
-
-      updatedRuns.forEach((run: CachedRunSession) => {
-        mergeMap.set(runKey(run), run);
-      });
-
-      const mergedRuns = Array.from(mergeMap.values());
-      const newCount = mergedRuns.length - existingCount;
+      const mergedRuns = mergeByKey(existingRuns, updatedRuns, runKey);
+      const newCount = mergedRuns.length - existingRuns.length;
 
       // Mirror the server's run_id desc → subagent_id desc → created_at desc
       // ordering so parent rows stay grouped with their subagents and rows

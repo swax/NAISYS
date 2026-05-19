@@ -1,3 +1,5 @@
+import { maxBy, sortBy, sortByDesc } from "@naisys/common";
+
 import type { MailMessage } from "../../lib/api/apiClient";
 
 /** Strip leading RE: prefixes and trim; fallback to "(No Subject)" */
@@ -68,13 +70,10 @@ export function groupIntoConversations(
 
   for (const [key, messages] of groups) {
     // Sort messages newest-first for metadata extraction
-    const sorted = [...messages].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+    const sorted = sortByDesc(messages, (msg) => new Date(msg.createdAt));
 
     const latest = sorted[0];
-    const maxMailId = Math.max(...sorted.map((m) => m.id));
+    const maxMailId = maxBy(sorted, (msg) => msg.id)?.id ?? 0;
     const normalizedSubject = normalizeSubject(latest.subject);
 
     // Collect unique participant names and titles across all messages in conversation
@@ -121,12 +120,12 @@ export function groupIntoConversations(
   }
 
   // Sort by most recent message
-  conversations.sort(
-    (a, b) =>
-      new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime(),
+  const sortedConversations = sortByDesc(
+    conversations,
+    (conv) => new Date(conv.lastMessageAt),
   );
 
-  return conversations;
+  return sortedConversations;
 }
 
 /**
@@ -137,10 +136,8 @@ export function getConversationMessages(
   key: string,
   groupBySubject: boolean,
 ): MailMessage[] {
-  return mail
-    .filter((msg) => conversationKey(msg, groupBySubject) === key)
-    .sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
+  return sortBy(
+    mail.filter((msg) => conversationKey(msg, groupBySubject) === key),
+    (msg) => new Date(msg.createdAt),
+  );
 }

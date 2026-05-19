@@ -1,4 +1,9 @@
-import { type HateoasAction, keyBy, unique } from "@naisys/common";
+import {
+  type HateoasAction,
+  mergeByKey,
+  sortByDesc,
+  unique,
+} from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -33,21 +38,17 @@ export const useChatConversations = (
       if (updated.length === 0 && total === undefined) return;
 
       const existing = conversationsCache.get(agentUsername) || [];
-      const mergeMap = keyBy(existing, (c) => c.participants);
-
-      const existingCount = mergeMap.size;
-      for (const conv of updated) {
-        mergeMap.set(conv.participants, conv);
-      }
-
-      const merged = Array.from(mergeMap.values());
-      const newCount = merged.length - existingCount;
+      const mergedByParticipants = mergeByKey(
+        existing,
+        updated,
+        (c) => c.participants,
+      );
+      const newCount = mergedByParticipants.length - existing.length;
 
       // Sort by latest message time (newest first)
-      merged.sort(
-        (a, b) =>
-          new Date(b.lastMessageAt).getTime() -
-          new Date(a.lastMessageAt).getTime(),
+      const merged = sortByDesc(
+        mergedByParticipants,
+        (c) => new Date(c.lastMessageAt),
       );
 
       conversationsCache.set(agentUsername, merged);

@@ -8,10 +8,17 @@ import {
   groupBy,
   isDefined,
   keyBy,
+  mapDefined,
+  maxBy,
+  mergeByKey,
+  minBy,
   pushToArrayMap,
   replaceSetContents,
   setEquals,
+  sortBy,
+  sortByDesc,
   sumBy,
+  toRecord,
   unique,
   uniqueBy,
 } from "../src/utils/collections.js";
@@ -167,6 +174,39 @@ describe("keyBy", () => {
   });
 });
 
+describe("mergeByKey", () => {
+  test("merges by key with incoming values winning", () => {
+    const existing = [
+      { id: 1, name: "old" },
+      { id: 2, name: "keep" },
+    ];
+    const incoming = [
+      { id: 1, name: "new" },
+      { id: 3, name: "add" },
+    ];
+    expect(mergeByKey(existing, incoming, (x) => x.id)).toEqual([
+      { id: 1, name: "new" },
+      { id: 2, name: "keep" },
+      { id: 3, name: "add" },
+    ]);
+  });
+
+  test("preserves existing key order and appends new keys", () => {
+    const result = mergeByKey(
+      [
+        { id: "b", value: 1 },
+        { id: "a", value: 2 },
+      ],
+      [
+        { id: "a", value: 3 },
+        { id: "c", value: 4 },
+      ],
+      (x) => x.id,
+    );
+    expect(result.map((x) => x.id)).toEqual(["b", "a", "c"]);
+  });
+});
+
 describe("groupBy", () => {
   test("groups items, preserving input order within groups", () => {
     const items = [
@@ -229,6 +269,18 @@ describe("isDefined", () => {
   });
 });
 
+describe("mapDefined", () => {
+  test("maps values and drops nullish results only", () => {
+    const result = mapDefined([1, 2, 3, 4], (n) => {
+      if (n === 1) return null;
+      if (n === 2) return undefined;
+      if (n === 3) return 0;
+      return n * 10;
+    });
+    expect(result).toEqual([0, 40]);
+  });
+});
+
 describe("sumBy", () => {
   test("sums projected values", () => {
     expect(sumBy([{ n: 1 }, { n: 2 }, { n: 3 }], (x) => x.n)).toBe(6);
@@ -249,5 +301,124 @@ describe("countBy", () => {
 
   test("empty input returns empty map", () => {
     expect(countBy<string, string>([], (x) => x).size).toBe(0);
+  });
+});
+
+describe("sortBy", () => {
+  test("returns a sorted copy without mutating input", () => {
+    const input = [{ n: 3 }, { n: 1 }, { n: 2 }];
+    const result = sortBy(input, (x) => x.n);
+    expect(result.map((x) => x.n)).toEqual([1, 2, 3]);
+    expect(input.map((x) => x.n)).toEqual([3, 1, 2]);
+  });
+
+  test("sorts dates and places nullish keys last", () => {
+    const result = sortBy(
+      [{ at: "2024-01-03" }, { at: undefined }, { at: "2024-01-01" }],
+      (x) => (x.at ? new Date(x.at) : undefined),
+    );
+    expect(result.map((x) => x.at)).toEqual([
+      "2024-01-01",
+      "2024-01-03",
+      undefined,
+    ]);
+  });
+
+  test("multi-key: later keys break earlier ties", () => {
+    const items = [
+      { group: "b", order: 2 },
+      { group: "a", order: 2 },
+      { group: "a", order: 1 },
+      { group: "b", order: 1 },
+    ];
+    const result = sortBy(items, (x) => [x.group, x.order]);
+    expect(result).toEqual([
+      { group: "a", order: 1 },
+      { group: "a", order: 2 },
+      { group: "b", order: 1 },
+      { group: "b", order: 2 },
+    ]);
+  });
+});
+
+describe("sortByDesc", () => {
+  test("returns a descending sorted copy", () => {
+    expect(sortByDesc([{ n: 1 }, { n: 3 }, { n: 2 }], (x) => x.n)).toEqual([
+      { n: 3 },
+      { n: 2 },
+      { n: 1 },
+    ]);
+  });
+
+  test("places nullish keys last", () => {
+    const result = sortByDesc(
+      [{ n: 1 }, { n: undefined }, { n: 3 }],
+      (x) => x.n,
+    );
+    expect(result.map((x) => x.n)).toEqual([3, 1, undefined]);
+  });
+
+  test("multi-key: later keys break earlier ties", () => {
+    const items = [
+      { group: "a", order: 1 },
+      { group: "b", order: 2 },
+      { group: "b", order: 1 },
+      { group: "a", order: 2 },
+    ];
+    const result = sortByDesc(items, (x) => [x.group, x.order]);
+    expect(result).toEqual([
+      { group: "b", order: 2 },
+      { group: "b", order: 1 },
+      { group: "a", order: 2 },
+      { group: "a", order: 1 },
+    ]);
+  });
+});
+
+describe("minBy and maxBy", () => {
+  test("return the first min and max items by projected key", () => {
+    const items = [
+      { id: "a", score: 2 },
+      { id: "b", score: 1 },
+      { id: "c", score: 3 },
+    ];
+    expect(minBy(items, (x) => x.score)?.id).toBe("b");
+    expect(maxBy(items, (x) => x.score)?.id).toBe("c");
+  });
+
+  test("return undefined for empty input", () => {
+    expect(minBy<{ score: number }>([], (x) => x.score)).toBeUndefined();
+    expect(maxBy<{ score: number }>([], (x) => x.score)).toBeUndefined();
+  });
+
+  test("prefer defined keys over nullish keys", () => {
+    const items = [{ score: undefined }, { score: 2 }, { score: 1 }];
+    expect(minBy(items, (x) => x.score)?.score).toBe(1);
+    expect(maxBy(items, (x) => x.score)?.score).toBe(2);
+  });
+});
+
+describe("toRecord", () => {
+  test("converts map entries to a plain object", () => {
+    expect(
+      toRecord(
+        new Map<string, number>([
+          ["a", 1],
+          ["b", 2],
+        ]),
+      ),
+    ).toEqual({ a: 1, b: 2 });
+  });
+
+  test("builds a record from projected items", () => {
+    const result = toRecord(
+      [
+        { key: "a", value: 1 },
+        { key: "b", value: 2 },
+      ],
+      (x) => x.key,
+      (x) => x.value,
+    );
+    expect(result).toEqual({ a: 1, b: 2 });
   });
 });

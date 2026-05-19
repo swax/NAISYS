@@ -10,7 +10,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import { formatFileSize, isImageFilename } from "@naisys/common";
+import { formatFileSize, isImageFilename, sortByDesc } from "@naisys/common";
 import { CompactMarkdown } from "@naisys/common-browser";
 import {
   IconArchive,
@@ -81,9 +81,7 @@ export const MailThread: React.FC<MailThreadProps> = ({
   };
 
   // Display newest first
-  const sortedMessages = [...messages].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  const sortedMessages = sortByDesc(messages, (msg) => new Date(msg.createdAt));
 
   // Track date dividers
   let lastDate = "";

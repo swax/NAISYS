@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import { type HateoasAction, sortBy } from "@naisys/common";
 import type {
   Host as BaseHost,
   HostStatusEvent,
@@ -41,9 +41,7 @@ export const useHostData = () => {
       );
 
       // Sort by name
-      const sortedHosts = hostsWithOnline.sort((a, b) =>
-        a.name.localeCompare(b.name),
-      );
+      const sortedHosts = sortBy(hostsWithOnline, (host) => host.name);
 
       hostCache = sortedHosts;
       listActionsCache = query.data._actions;

@@ -1,4 +1,4 @@
-import { addToSetMap } from "@naisys/common";
+import { addToSetMap, maxBy, sortBy } from "@naisys/common";
 
 import type { ThreadRun } from "../hooks/thread-runs/useMessageThreadRuns";
 
@@ -44,9 +44,7 @@ export function buildThreadRunActivity(
 ): ThreadRunActivity {
   if (messages.length === 0 || runs.length === 0) return EMPTY;
 
-  const sortedMsgs = [...messages].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
+  const sortedMsgs = sortBy(messages, (msg) => new Date(msg.createdAt));
   const oldestMsgTime = new Date(sortedMsgs[0].createdAt).getTime();
 
   const events: RunEvent[] = [];
@@ -81,9 +79,7 @@ export function buildThreadRunActivity(
 
   if (events.length === 0) return EMPTY;
 
-  events.sort(
-    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
-  );
+  const sortedEvents = sortBy(events, (event) => new Date(event.time));
 
   const beforeMessage = new Map<number, RunActivity>();
   let trailing: RunActivity | null = null;
@@ -93,18 +89,18 @@ export function buildThreadRunActivity(
     const msgMs = new Date(msg.createdAt).getTime();
     const cluster: RunEvent[] = [];
     while (
-      eventIdx < events.length &&
-      new Date(events[eventIdx].time).getTime() <= msgMs
+      eventIdx < sortedEvents.length &&
+      new Date(sortedEvents[eventIdx].time).getTime() <= msgMs
     ) {
-      cluster.push(events[eventIdx]);
+      cluster.push(sortedEvents[eventIdx]);
       eventIdx++;
     }
     const activity = collapseCluster(cluster);
     if (activity) beforeMessage.set(msg.id, activity);
   }
 
-  if (eventIdx < events.length) {
-    trailing = collapseCluster(events.slice(eventIdx));
+  if (eventIdx < sortedEvents.length) {
+    trailing = collapseCluster(sortedEvents.slice(eventIdx));
   }
 
   return { beforeMessage, trailing };
@@ -120,7 +116,6 @@ function collapseCluster(cluster: RunEvent[]): RunActivity | null {
     { username: string; type: RunEventType; time: string }
   >();
   const runIdsByUser = new Map<string, Set<number>>();
-  let latestTime = cluster[0].time;
   for (const event of cluster) {
     perUser.set(event.username, {
       username: event.username,
@@ -128,10 +123,9 @@ function collapseCluster(cluster: RunEvent[]): RunActivity | null {
       time: event.time,
     });
     addToSetMap(runIdsByUser, event.username, event.runId);
-    if (new Date(event.time).getTime() > new Date(latestTime).getTime()) {
-      latestTime = event.time;
-    }
   }
+  const latestTime =
+    maxBy(cluster, (event) => new Date(event.time))?.time ?? cluster[0].time;
 
   const entries: RunActivityEntry[] = Array.from(perUser.values())
     .sort((a, b) => a.username.localeCompare(b.username))

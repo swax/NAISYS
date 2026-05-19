@@ -11,7 +11,12 @@ import {
   Text,
   Tooltip as MantineTooltip,
 } from "@mantine/core";
-import { countBy, LlmApiType, pushToArrayMap } from "@naisys/common";
+import {
+  countBy,
+  LlmApiType,
+  pushToArrayMap,
+  sortByDesc,
+} from "@naisys/common";
 import { IconExclamationCircle } from "@tabler/icons-react";
 import type { ChartData, ChartOptions } from "chart.js";
 import React, { useEffect, useMemo, useState } from "react";
@@ -74,10 +79,10 @@ export const AddOpenRouterModelDialog: React.FC<
   const options = useMemo(() => {
     if (!models) return [];
     // Newest first — most users want to find a recently-released model.
-    return [...models]
-      .filter((m) => (freeOnly ? isFree(m) : true))
-      .sort((a, b) => (b.created ?? 0) - (a.created ?? 0))
-      .map((m) => ({ value: m.id, label: `${m.name} (${m.id})` }));
+    return sortByDesc(
+      models.filter((m) => (freeOnly ? isFree(m) : true)),
+      (m) => m.created,
+    ).map((m) => ({ value: m.id, label: `${m.name} (${m.id})` }));
   }, [models, freeOnly]);
 
   const formatCreated = (unixSeconds: number | undefined): string => {
@@ -101,9 +106,9 @@ export const AddOpenRouterModelDialog: React.FC<
     // Free models cluster at the epsilon clamp and crowd the chart — exclude them.
     const paid = models.filter((m) => !isFree(m));
     const counts = countBy(paid, (m) => m.provider);
-    const ranked = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([provider]) => provider);
+    const ranked = sortByDesc(counts.entries(), ([, count]) => count).map(
+      ([provider]) => provider,
+    );
     const named = new Set(ranked.slice(0, MAX_NAMED_PROVIDERS));
     const buckets = new Map<string, CatalogModel[]>();
     for (const m of paid) {
