@@ -1,3 +1,4 @@
+import { addToSetMap } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import { HubEvents } from "@naisys/hub-protocol";
@@ -79,12 +80,7 @@ export async function createHubRedactionService(
 
   function registerRuntimeApiKey(userId: number, plaintext: string): void {
     if (!plaintext || plaintext.length < MIN_SECRET_LENGTH) return;
-    let set = runtimeApiKeys.get(userId);
-    if (!set) {
-      set = new Set();
-      runtimeApiKeys.set(userId, set);
-    }
-    set.add(plaintext);
+    addToSetMap(runtimeApiKeys, userId, plaintext);
   }
 
   function revokeRuntimeApiKey(userId: number): void {

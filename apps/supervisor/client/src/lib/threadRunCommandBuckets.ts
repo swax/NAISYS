@@ -1,3 +1,5 @@
+import { getOrInsert, pushToArrayMap } from "@naisys/common";
+
 import type { ThreadRunCommand } from "../hooks/thread-runs/useThreadRunCommands";
 
 // Polyfill for Array.prototype.findLast (ES2023). The codebase targets ES2022,
@@ -94,9 +96,7 @@ export function bucketRunCommandsByMessage(
     );
 
     if (nextMsg && nextMsg.fromUsername === cmd.username) {
-      const list = beforeMessage.get(nextMsg.id) ?? [];
-      list.push(cmd);
-      beforeMessage.set(nextMsg.id, list);
+      pushToArrayMap(beforeMessage, nextMsg.id, cmd);
       continue;
     }
 
@@ -110,27 +110,21 @@ export function bucketRunCommandsByMessage(
     );
 
     if (prevMsg && prevMsg.fromUsername === cmd.username) {
-      const list = afterMessage.get(prevMsg.id) ?? [];
-      list.push(cmd);
-      afterMessage.set(prevMsg.id, list);
+      pushToArrayMap(afterMessage, prevMsg.id, cmd);
       continue;
     }
 
     if (!nextMsg) {
-      const list = trailing.get(cmd.username) ?? [];
-      list.push(cmd);
-      trailing.set(cmd.username, list);
+      pushToArrayMap(trailing, cmd.username, cmd);
       continue;
     }
 
-    let perUser = phantomsBeforeMessage.get(nextMsg.id);
-    if (!perUser) {
-      perUser = new Map();
-      phantomsBeforeMessage.set(nextMsg.id, perUser);
-    }
-    const list = perUser.get(cmd.username) ?? [];
-    list.push(cmd);
-    perUser.set(cmd.username, list);
+    const perUser = getOrInsert(
+      phantomsBeforeMessage,
+      nextMsg.id,
+      () => new Map(),
+    );
+    pushToArrayMap(perUser, cmd.username, cmd);
   }
 
   for (const list of beforeMessage.values()) {

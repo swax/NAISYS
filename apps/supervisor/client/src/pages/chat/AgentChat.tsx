@@ -10,7 +10,13 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { formatFileSize, hasAction, MAX_ATTACHMENT_SIZE } from "@naisys/common";
+import {
+  formatFileSize,
+  hasAction,
+  isDefined,
+  MAX_ATTACHMENT_SIZE,
+  unique,
+} from "@naisys/common";
 import { IconMessageCircle } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo } from "react";
@@ -50,9 +56,9 @@ export const AgentChat: React.FC = () => {
   // Derive selectedParticipants from URL param by adding current agent back
   const selectedParticipants = useMemo(() => {
     if (!participantsParam || !username) return null;
-    const names = new Set(participantsParam.split(",").filter(Boolean));
-    names.add(username);
-    return [...names].sort().join(",");
+    return unique([...participantsParam.split(",").filter(Boolean), username])
+      .sort()
+      .join(",");
   }, [participantsParam, username]);
 
   // Accept full participant keys in direct links/back history, but keep the
@@ -60,9 +66,7 @@ export const AgentChat: React.FC = () => {
   useEffect(() => {
     if (!participantsParam || !username) return;
 
-    const canonicalOthers = [
-      ...new Set(participantsParam.split(",").filter(Boolean)),
-    ]
+    const canonicalOthers = unique(participantsParam.split(",").filter(Boolean))
       .filter((name) => name !== username)
       .sort()
       .join(",");
@@ -279,7 +283,7 @@ export const AgentChat: React.FC = () => {
         .split(",")
         .filter((name) => name !== username)
         .map((name) => agents.find((a) => a.name === name)?.id)
-        .filter((id): id is number => id !== undefined);
+        .filter(isDefined);
 
       const result = await sendChatMessage(
         username ?? "",

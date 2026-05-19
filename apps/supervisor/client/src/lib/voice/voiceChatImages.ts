@@ -1,4 +1,4 @@
-import { isImageFilename } from "@naisys/common";
+import { isImageFilename, unique } from "@naisys/common";
 import type { LogPushEntry, MailPush } from "@naisys/hub-protocol";
 
 import type { LogPushEntryWithUrl } from "./voiceLogImages";
@@ -22,8 +22,8 @@ import type { LogPushEntryWithUrl } from "./voiceLogImages";
  *  The room key the supervisor broadcasts on is built from the canonical
  *  participant list, so we must sort to match. */
 export function chatMessagesRoomKey(participants: string[]): string {
-  const unique = Array.from(new Set(participants.filter(Boolean))).sort();
-  return `chat-messages:${unique.join(",")}`;
+  const names = unique(participants.filter(Boolean)).sort();
+  return `chat-messages:${names.join(",")}`;
 }
 
 /** Build one synthetic log entry per image attachment on a chat message.

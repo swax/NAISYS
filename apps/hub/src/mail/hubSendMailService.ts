@@ -1,3 +1,4 @@
+import { unique } from "@naisys/common";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { MailReceivedPush } from "@naisys/hub-protocol";
 import {
@@ -36,9 +37,7 @@ export function createHubSendMailService(
     const body = redactionService.redact(params.body);
 
     // Build participants string from usernames (sorted alphabetically)
-    const allUserIds = [
-      ...new Set([params.fromUserId, ...params.recipientUserIds]),
-    ];
+    const allUserIds = unique([params.fromUserId, ...params.recipientUserIds]);
     const users = await hubDb.users.findMany({
       where: { id: { in: allUserIds } },
       select: { username: true },

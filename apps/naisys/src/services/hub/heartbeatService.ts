@@ -1,3 +1,4 @@
+import { unique } from "@naisys/common";
 import type {
   HeartbeatRuntimeKey,
   HeartbeatSession,
@@ -74,7 +75,7 @@ export function createHeartbeatService(
         runtimeApiKeys: runtimeApiKeys.length > 0 ? runtimeApiKeys : undefined,
       });
     } else {
-      const uniqueUserIds = [...new Set(activeSessions.map((s) => s.userId))];
+      const uniqueUserIds = unique(activeSessions.map((s) => s.userId));
       userService.setActiveUsers({ "": uniqueUserIds });
     }
   }

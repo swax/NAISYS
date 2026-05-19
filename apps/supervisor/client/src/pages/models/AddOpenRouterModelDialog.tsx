@@ -11,7 +11,7 @@ import {
   Text,
   Tooltip as MantineTooltip,
 } from "@mantine/core";
-import { LlmApiType } from "@naisys/common";
+import { countBy, LlmApiType, pushToArrayMap } from "@naisys/common";
 import { IconExclamationCircle } from "@tabler/icons-react";
 import type { ChartData, ChartOptions } from "chart.js";
 import React, { useEffect, useMemo, useState } from "react";
@@ -100,10 +100,7 @@ export const AddOpenRouterModelDialog: React.FC<
     if (!models) return [];
     // Free models cluster at the epsilon clamp and crowd the chart — exclude them.
     const paid = models.filter((m) => !isFree(m));
-    const counts = new Map<string, number>();
-    for (const m of paid) {
-      counts.set(m.provider, (counts.get(m.provider) ?? 0) + 1);
-    }
+    const counts = countBy(paid, (m) => m.provider);
     const ranked = [...counts.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([provider]) => provider);
@@ -111,9 +108,7 @@ export const AddOpenRouterModelDialog: React.FC<
     const buckets = new Map<string, CatalogModel[]>();
     for (const m of paid) {
       const key = named.has(m.provider) ? m.provider : "other";
-      const list = buckets.get(key) ?? [];
-      list.push(m);
-      buckets.set(key, list);
+      pushToArrayMap(buckets, key, m);
     }
     // Preserve ranked order; "other" goes last.
     const order = [

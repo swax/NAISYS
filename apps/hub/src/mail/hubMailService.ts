@@ -1,3 +1,4 @@
+import { unique } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import {
@@ -125,7 +126,7 @@ export function createHubMailService(
       let ownershipCondition;
       if (parsed.withUserIds?.length) {
         // Messages between exactly this group of participants
-        const allUserIds = [...new Set([parsed.userId, ...parsed.withUserIds])];
+        const allUserIds = unique([parsed.userId, ...parsed.withUserIds]);
         const users = await hubDb.users.findMany({
           where: { id: { in: allUserIds } },
           select: { username: true },
@@ -328,9 +329,7 @@ export function createHubMailService(
 
           // participants is like the room id, we broadcast to all rooms the read message ids
           // It's ok if the specific message id is not in the room, the client will ignore it
-          const participants = [
-            ...new Set(messages.map((m) => m.participants)),
-          ];
+          const participants = unique(messages.map((m) => m.participants));
 
           const payload = {
             messageIds: parsed.messageIds,

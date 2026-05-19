@@ -4,6 +4,7 @@ import {
   LlmApiType,
   type ModelDbRow,
   parseSpendLimitsFromConfigJson,
+  unique,
 } from "@naisys/common";
 import {
   type CodexUsage,
@@ -485,7 +486,7 @@ export function createHubCostService(
     if (sessions.length === 0) return new Set();
 
     // Narrow the distinct model keys to the OpenAI Codex OAuth ones.
-    const modelKeys = [...new Set(sessions.map((s) => s.model_name))];
+    const modelKeys = unique(sessions.map((s) => s.model_name));
     const modelRows = (await hubDb.models.findMany({
       where: { key: { in: modelKeys } },
     })) as ModelDbRow[];

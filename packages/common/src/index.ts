@@ -18,6 +18,7 @@ export * from "./models/builtInModels.js";
 export * from "./models/costUtils.js";
 export * from "./models/modelTypes.js";
 export * from "./models/realtimeModels.js";
+export * from "./utils/collections.js";
 export * from "./utils/errorHandler.js";
 export * from "./utils/formatFileSize.js";
 export * from "./utils/formatTokens.js";

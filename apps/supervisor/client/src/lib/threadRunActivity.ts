@@ -1,3 +1,5 @@
+import { addToSetMap } from "@naisys/common";
+
 import type { ThreadRun } from "../hooks/thread-runs/useMessageThreadRuns";
 
 export type RunEventType = "start" | "stop";
@@ -125,9 +127,7 @@ function collapseCluster(cluster: RunEvent[]): RunActivity | null {
       type: event.type,
       time: event.time,
     });
-    const ids = runIdsByUser.get(event.username) ?? new Set();
-    ids.add(event.runId);
-    runIdsByUser.set(event.username, ids);
+    addToSetMap(runIdsByUser, event.username, event.runId);
     if (new Date(event.time).getTime() > new Date(latestTime).getTime()) {
       latestTime = event.time;
     }

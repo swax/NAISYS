@@ -32,6 +32,7 @@ const rawDir = resolve(repoRoot, "coverage", "raw");
 const clientRawDir = resolve(repoRoot, "coverage", "client-raw");
 const reportDir = resolve(repoRoot, "coverage", "merged");
 const workspaceIstanbulCoverageFiles = [
+  resolve(repoRoot, "packages", "common", "coverage", "coverage-final.json"),
   resolve(
     repoRoot,
     "packages",
@@ -41,6 +42,7 @@ const workspaceIstanbulCoverageFiles = [
   ),
 ];
 const workspaceIstanbulCoverageDirs = [
+  resolve(repoRoot, "packages", "common", "coverage"),
   resolve(repoRoot, "packages", "common-node", "coverage"),
 ];
 const normalizedRepoRoot = repoRoot.replaceAll("\\", "/");

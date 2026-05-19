@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import { type HateoasAction, keyBy, unique } from "@naisys/common";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -33,7 +33,7 @@ export const useChatConversations = (
       if (updated.length === 0 && total === undefined) return;
 
       const existing = conversationsCache.get(agentUsername) || [];
-      const mergeMap = new Map(existing.map((c) => [c.participants, c]));
+      const mergeMap = keyBy(existing, (c) => c.participants);
 
       const existingCount = mergeMap.size;
       for (const conv of updated) {
@@ -70,9 +70,7 @@ export const useChatConversations = (
     (event: MessageRoomEvent) => {
       if (event.type !== "new-message") return;
 
-      const allIds = [
-        ...new Set([...event.recipientUserIds, event.fromUserId]),
-      ];
+      const allIds = unique([...event.recipientUserIds, event.fromUserId]);
       // Match server: exclude the current user from participantNames so a 1:1
       // conversation has length 1 (used by the sidebar title and candidate filter).
       const otherIds = allIds.filter(

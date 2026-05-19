@@ -1,3 +1,4 @@
+import { keyBy, unique } from "@naisys/common";
 import type {
   DependencyDiff,
   FieldDiff,
@@ -65,9 +66,9 @@ function diffFields(
   fromFields: FieldTree[],
   toFields: FieldTree[],
 ): FieldDiff[] {
-  const fromMap = new Map(fromFields.map((f) => [f.seqNo, f]));
-  const toMap = new Map(toFields.map((f) => [f.seqNo, f]));
-  const allSeqNos = new Set([...fromMap.keys(), ...toMap.keys()]);
+  const fromMap = keyBy(fromFields, (f) => f.seqNo);
+  const toMap = keyBy(toFields, (f) => f.seqNo);
+  const allSeqNos = unique([...fromMap.keys(), ...toMap.keys()]);
   const result: FieldDiff[] = [];
 
   for (const seqNo of [...allSeqNos].sort((a, b) => a - b)) {
@@ -98,9 +99,9 @@ function diffFields(
 }
 
 function diffSteps(fromSteps: StepTree[], toSteps: StepTree[]): StepDiff[] {
-  const fromMap = new Map(fromSteps.map((s) => [s.seqNo, s]));
-  const toMap = new Map(toSteps.map((s) => [s.seqNo, s]));
-  const allSeqNos = new Set([...fromMap.keys(), ...toMap.keys()]);
+  const fromMap = keyBy(fromSteps, (s) => s.seqNo);
+  const toMap = keyBy(toSteps, (s) => s.seqNo);
+  const allSeqNos = unique([...fromMap.keys(), ...toMap.keys()]);
   const result: StepDiff[] = [];
 
   for (const seqNo of [...allSeqNos].sort((a, b) => a - b)) {
@@ -176,9 +177,9 @@ function diffDeps(fromDeps: DepTree[], toDeps: DepTree[]): DependencyDiff[] {
 }
 
 function diffOperations(fromOps: OpTree[], toOps: OpTree[]): OperationDiff[] {
-  const fromMap = new Map(fromOps.map((op) => [op.seqNo, op]));
-  const toMap = new Map(toOps.map((op) => [op.seqNo, op]));
-  const allSeqNos = new Set([...fromMap.keys(), ...toMap.keys()]);
+  const fromMap = keyBy(fromOps, (op) => op.seqNo);
+  const toMap = keyBy(toOps, (op) => op.seqNo);
+  const allSeqNos = unique([...fromMap.keys(), ...toMap.keys()]);
   const result: OperationDiff[] = [];
 
   for (const seqNo of [...allSeqNos].sort((a, b) => a - b)) {

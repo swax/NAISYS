@@ -1,3 +1,5 @@
+import { keyBy } from "@naisys/common";
+
 import type { Agent } from "../types/agent";
 
 /**
@@ -19,7 +21,7 @@ export function buildAgentCandidates({
 }): Agent[] {
   if (!currentAgentName) return [];
 
-  const byName = new Map(agents.map((a) => [a.name, a]));
+  const byName = keyBy(agents, (a) => a.name);
 
   const computeLevel = (agent: Agent): number => {
     let level = 0;

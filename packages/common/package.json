@@ -13,6 +13,7 @@
   "scripts": {
     "clean": "npx rimraf dist",
     "build": "tsc",
+    "test": "vitest run",
     "npm:publish:dryrun": "npm publish --dry-run",
     "npm:publish": "npm publish --access public"
   },
@@ -23,7 +24,9 @@
   },
   "devDependencies": {
     "@types/semver": "^7.7.1",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.1.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   },
   "exports": {
     ".": {

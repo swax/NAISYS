@@ -1,3 +1,4 @@
+import { keyBy, unique } from "@naisys/common";
 import { type DualLogger, hashToken } from "@naisys/common-node";
 import { type HubDatabaseService } from "@naisys/hub-database";
 import type {
@@ -74,7 +75,7 @@ export function createHubHeartbeatService(
             archived: true,
           },
         });
-        const userMap = new Map(users.map((u) => [u.id, u]));
+        const userMap = keyBy(users, (u) => u.id);
 
         for (const claim of parsed.runtimeApiKeys) {
           if (claim.userId === adminUserId) continue;
@@ -142,9 +143,7 @@ export function createHubHeartbeatService(
       const allowedSessions = parsed.activeSessions.filter((s) =>
         ownershipService.hostOwnsUser(hostId, s.userId),
       );
-      const allowedUserIds = [
-        ...new Set(allowedSessions.map((s) => s.userId)),
-      ];
+      const allowedUserIds = unique(allowedSessions.map((s) => s.userId));
 
       const sessionMap = new Map<string, ActiveSessionInfo>();
       for (const session of allowedSessions) {

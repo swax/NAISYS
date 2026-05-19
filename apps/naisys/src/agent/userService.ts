@@ -1,5 +1,5 @@
 import type { UserEntry } from "@naisys/common";
-import { ADMIN_USERNAME, determineAgentStatus } from "@naisys/common";
+import { ADMIN_USERNAME, determineAgentStatus, pushToArrayMap } from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import type { UserListResponse } from "@naisys/hub-protocol";
 import { HubEvents, UserListResponseSchema } from "@naisys/hub-protocol";
@@ -149,14 +149,7 @@ export function createUserService(
       const hostId = Number(hostIdStr);
       for (const userId of userIds) {
         newActiveUserIds.add(userId);
-        if (hostIdStr) {
-          const existing = newUserHostIds.get(userId);
-          if (existing) {
-            existing.push(hostId);
-          } else {
-            newUserHostIds.set(userId, [hostId]);
-          }
-        }
+        if (hostIdStr) pushToArrayMap(newUserHostIds, userId, hostId);
       }
     }
 

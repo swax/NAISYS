@@ -1,3 +1,4 @@
+import { getOrInsert, keyBy, unique } from "@naisys/common";
 import type {
   CostBucket,
   CostByAgent,
@@ -77,15 +78,15 @@ export async function getCostHistogram(
   });
 
   // Collect unique user IDs and resolve usernames
-  const costUserIds = new Set(costs.map((c) => c.user_id));
+  const costUserIds = unique(costs.map((c) => c.user_id));
   const users =
-    costUserIds.size > 0
+    costUserIds.length > 0
       ? await hubDb.users.findMany({
-          where: { id: { in: Array.from(costUserIds) } },
+          where: { id: { in: costUserIds } },
           select: { id: true, username: true },
         })
       : [];
-  const userMap = new Map(users.map((u) => [u.id, u.username]));
+  const userMap = keyBy(users, (u) => u.id);
 
   // Build buckets
   const bucketMs = bucketHours * 60 * 60 * 1000;
@@ -121,7 +122,8 @@ export async function getCostHistogram(
       const bucket = buckets[bucketIndex];
       bucket.cost += amount;
       bucket.tokens += tokens;
-      const username = userMap.get(cost.user_id) ?? `user-${cost.user_id}`;
+      const username =
+        userMap.get(cost.user_id)?.username ?? `user-${cost.user_id}`;
       bucket.byAgent[username] = (bucket.byAgent[username] ?? 0) + amount;
       bucket.byAgentTokens[username] =
         (bucket.byAgentTokens[username] ?? 0) + tokens;
@@ -160,10 +162,12 @@ export async function getCostsByAgent(
   // Aggregate by user_id
   const byUserId = new Map<number, { cost: number; tokens: number }>();
   for (const c of costs) {
-    const entry = byUserId.get(c.user_id) ?? { cost: 0, tokens: 0 };
+    const entry = getOrInsert(byUserId, c.user_id, () => ({
+      cost: 0,
+      tokens: 0,
+    }));
     entry.cost += c.cost ?? 0;
     entry.tokens += (c.input_tokens ?? 0) + (c.output_tokens ?? 0);
-    byUserId.set(c.user_id, entry);
   }
 
   if (byUserId.size === 0) return [];
@@ -174,9 +178,7 @@ export async function getCostsByAgent(
     select: { id: true, username: true, title: true },
   });
 
-  const userMap = new Map(
-    users.map((u) => [u.id, { username: u.username, title: u.title }]),
-  );
+  const userMap = keyBy(users, (u) => u.id);
 
   return Array.from(byUserId.entries())
     .map(([userId, totals]) => {
@@ -216,10 +218,12 @@ export async function getCostsByModel(
   const byModel = new Map<string, { cost: number; tokens: number }>();
   for (const c of costs) {
     const modelName = c.model || "unknown";
-    const entry = byModel.get(modelName) ?? { cost: 0, tokens: 0 };
+    const entry = getOrInsert(byModel, modelName, () => ({
+      cost: 0,
+      tokens: 0,
+    }));
     entry.cost += c.cost ?? 0;
     entry.tokens += (c.input_tokens ?? 0) + (c.output_tokens ?? 0);
-    byModel.set(modelName, entry);
   }
 
   return Array.from(byModel.entries())

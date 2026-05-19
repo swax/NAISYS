@@ -1,3 +1,4 @@
+import { keyBy } from "@naisys/common";
 import {
   type OperationRunStatus,
   OperationRunStatus as OperationRunStatusValues,
@@ -209,7 +210,7 @@ export async function getOpRunFieldRefSummary(
     },
   });
 
-  const stepRunMap = new Map(stepRuns.map((sr) => [sr.stepId, sr]));
+  const stepRunMap = keyBy(stepRuns, (sr) => sr.stepId);
 
   return fieldRefs.map((ref) => {
     const sr = stepRunMap.get(ref.sourceStep.id);

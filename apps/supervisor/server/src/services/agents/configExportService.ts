@@ -2,6 +2,7 @@ import {
   ADMIN_USERNAME,
   dbFieldsToImageModel,
   dbFieldsToLlmModel,
+  keyBy,
   type ModelDbRow,
 } from "@naisys/common";
 import yaml from "js-yaml";
@@ -50,7 +51,7 @@ export function buildExportFiles(
     (u) => u.username !== ADMIN_USERNAME && !u.archived,
   );
 
-  const userById = new Map(activeUsers.map((u) => [u.id, u]));
+  const userById = keyBy(activeUsers, (u) => u.id);
 
   // Walk up ancestor chain to build full directory path
   function agentDirPath(user: ExportUserRow): string {

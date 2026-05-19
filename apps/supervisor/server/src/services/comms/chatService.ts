@@ -1,3 +1,4 @@
+import { keyBy } from "@naisys/common";
 import type { ChatConversation, ChatMessage } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../../database/hubDb.js";
@@ -55,7 +56,7 @@ export async function getConversations(
     where: { username: { in: [...allUsernames] } },
     select: { username: true, title: true },
   });
-  const titleMap = new Map(users.map((u) => [u.username, u.title]));
+  const userByName = keyBy(users, (u) => u.username);
 
   // Group by participants and take the latest message for each
   const conversationMap = new Map<
@@ -101,7 +102,9 @@ export async function getConversations(
     conversations.push({
       participants,
       participantNames,
-      participantTitles: participantNames.map((n) => titleMap.get(n) ?? ""),
+      participantTitles: participantNames.map(
+        (n) => userByName.get(n)?.title ?? "",
+      ),
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt.toISOString(),
       lastMessageFrom: conv.lastMessageFrom,

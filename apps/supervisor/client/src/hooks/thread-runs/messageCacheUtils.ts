@@ -1,3 +1,4 @@
+import { keyBy } from "@naisys/common";
 import type { MailPush } from "@naisys/hub-protocol";
 
 /** Discriminated union for events pushed to mail/chat browser rooms */
@@ -30,7 +31,7 @@ export function mergeIntoCache<K, T extends MergeCacheItem>(
   if (newItems.length === 0 && total === undefined) return false;
 
   const existing = itemCache.get(key) || [];
-  const mergeMap = new Map(existing.map((m) => [m.id, m]));
+  const mergeMap = keyBy(existing, (m) => m.id);
 
   const existingCount = mergeMap.size;
   for (const item of newItems) {

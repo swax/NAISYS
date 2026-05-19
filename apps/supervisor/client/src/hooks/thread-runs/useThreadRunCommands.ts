@@ -1,3 +1,4 @@
+import { addToSetMap, pushToArrayMap } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -70,9 +71,7 @@ export function useThreadRunCommands(
     const runsByUser = new Map<string, ThreadRun[]>();
     for (const r of runs) {
       if (!r.username) continue;
-      const list = runsByUser.get(r.username) ?? [];
-      list.push(r);
-      runsByUser.set(r.username, list);
+      pushToArrayMap(runsByUser, r.username, r);
     }
 
     for (const username of participants) {
@@ -105,9 +104,7 @@ export function useThreadRunCommands(
       for (const runId of explicitlyLoadedRunIds) {
         const owner = ownerByRunId.get(runId);
         if (!owner) continue;
-        const set = target.get(owner) ?? new Set();
-        set.add(runId);
-        target.set(owner, set);
+        addToSetMap(target, owner, runId);
       }
     }
 

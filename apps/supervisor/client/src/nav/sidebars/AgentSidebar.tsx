@@ -8,7 +8,7 @@ import {
   Text,
   Tooltip,
 } from "@mantine/core";
-import { hasAction } from "@naisys/common";
+import { hasAction, keyBy, pushToArrayMap } from "@naisys/common";
 import {
   IconArchive,
   IconChevronDown,
@@ -99,16 +99,14 @@ export const AgentSidebar: React.FC = () => {
   type AgentWithDepth = Agent & { depth: number; hasChildren: boolean };
 
   const organizeAgentsHierarchically = (agents: Agent[]): AgentWithDepth[] => {
-    const agentsByName = new Map(agents.map((agent) => [agent.name, agent]));
+    const agentsByName = keyBy(agents, (agent) => agent.name);
     const childrenMap = new Map<string, Agent[]>();
     const rootAgents: Agent[] = [];
 
     agents.forEach((agent) => {
       const leadName = agent.leadUsername;
       if (leadName && agentsByName.has(leadName)) {
-        const children = childrenMap.get(leadName) ?? [];
-        children.push(agent);
-        childrenMap.set(leadName, children);
+        pushToArrayMap(childrenMap, leadName, agent);
       } else {
         rootAgents.push(agent);
       }

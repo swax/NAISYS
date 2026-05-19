@@ -1,3 +1,4 @@
+import { unique } from "@naisys/common";
 import { useEffect, useMemo, useRef } from "react";
 import type { Socket } from "socket.io-client";
 
@@ -93,16 +94,14 @@ export function useRoomSubscriptions<T>(
   // Set fingerprint — equal sets produce equal keys regardless of order.
   const roomsKey = useMemo(
     () =>
-      Array.from(new Set(entries.map((e) => e.room)))
+      unique(entries.map((e) => e.room))
         .sort()
         .join("\n"),
     [entries],
   );
 
   useEffect(() => {
-    const rooms = Array.from(
-      new Set(entriesRef.current.map((e) => e.room)),
-    );
+    const rooms = unique(entriesRef.current.map((e) => e.room));
     const cleanups = rooms.map((room) =>
       addRoomSubscription(room, (data) => {
         const match = entriesRef.current.find((e) => e.room === room);

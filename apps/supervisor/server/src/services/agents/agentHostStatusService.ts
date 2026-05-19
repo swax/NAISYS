@@ -1,4 +1,9 @@
-import { type AgentStatus, determineAgentStatus } from "@naisys/common";
+import {
+  type AgentStatus,
+  determineAgentStatus,
+  replaceSetContents,
+  setEquals,
+} from "@naisys/common";
 import type {
   AgentStatusEvent,
   HostStatusEvent,
@@ -55,22 +60,14 @@ export function updateAgentsStatus(
   hostActiveAgents: Record<string, number[]>,
   notifications?: Record<string, { latestLogId: number; latestMailId: number }>,
 ): void {
-  const nextActiveAgentIds = new Set<number>();
-  for (const userIds of Object.values(hostActiveAgents)) {
-    for (const id of userIds) {
-      nextActiveAgentIds.add(id);
-    }
-  }
+  const nextActiveAgentIds = new Set(Object.values(hostActiveAgents).flat());
 
   for (const [key, entry] of activeSubagentCounts) {
     if (nextActiveAgentIds.has(entry.userId)) continue;
     activeSubagentCounts.delete(key);
   }
 
-  activeAgentIds.clear();
-  for (const id of nextActiveAgentIds) {
-    activeAgentIds.add(id);
-  }
+  replaceSetContents(activeAgentIds, nextActiveAgentIds);
 
   if (notifications) {
     for (const [key, value] of Object.entries(notifications)) {
@@ -92,10 +89,7 @@ export function updateHostsStatus(
 ): void {
   // Detect if the set of host IDs changed
   const newHostIds = new Set(hosts.map((h) => h.hostId));
-  const prevHostIds = new Set(hostStates.keys());
-  const hostSetChanged =
-    newHostIds.size !== prevHostIds.size ||
-    [...newHostIds].some((id) => !prevHostIds.has(id));
+  const hostSetChanged = !setEquals(newHostIds, new Set(hostStates.keys()));
 
   hostStates.clear();
   connectedHostIds.clear();
@@ -139,14 +133,8 @@ export function markAgentStopped(userId: number): void {
  * parent sessions count — a paused subagent doesn't make the agent paused. */
 export function updatePausedAgents(userIds: number[]): void {
   const next = new Set(userIds);
-  if (
-    next.size === pausedAgentIds.size &&
-    [...next].every((id) => pausedAgentIds.has(id))
-  ) {
-    return;
-  }
-  pausedAgentIds.clear();
-  for (const id of next) pausedAgentIds.add(id);
+  if (setEquals(next, pausedAgentIds)) return;
+  replaceSetContents(pausedAgentIds, next);
   broadcastAgentStatus(getAgentSnapshot());
 }
 

@@ -7,6 +7,7 @@ import {
   llmModelToDbFields,
   type ModelDbFields,
   type ModelDbRow,
+  unique,
 } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import { loadCustomModels } from "@naisys/common-node";
@@ -152,13 +153,12 @@ async function seedModels(hubDb: PrismaClient, logService: DualLogger) {
 
   // Ensure API key variables referenced by built-in models exist in the variables table
   // so they show up in the supervisor UI for the user to configure
-  const apiKeyVars = [
-    ...new Set(
-      [...builtInLlmModels, ...builtInImageModels]
-        .map((m) => m.apiKeyVar)
-        .filter(Boolean),
-    ),
-  ];
+  // Built-in models with no API key use "" as a sentinel — drop those.
+  const apiKeyVars = unique(
+    [...builtInLlmModels, ...builtInImageModels]
+      .map((m) => m.apiKeyVar)
+      .filter(Boolean),
+  );
   await ensureVariables(
     hubDb,
     apiKeyVars.map((key) => ({ key, sensitive: true })),

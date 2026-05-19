@@ -1,3 +1,4 @@
+import { isDefined, keyBy } from "@naisys/common";
 import {
   OperationRunStatus as OperationRunStatusValues,
   type OrderRunPriority,
@@ -258,7 +259,7 @@ export async function deleteOrderRun(id: number): Promise<void> {
       });
       const fieldRecordIds = stepRuns
         .map((s) => s.fieldRecordId)
-        .filter((id): id is number => id !== null);
+        .filter(isDefined);
 
       if (fieldRecordIds.length > 0) {
         await tx.fieldValue.deleteMany({
@@ -409,8 +410,8 @@ export async function completeOrderRun(
     }
 
     const itemFields = order.item.fieldSet?.fields ?? [];
-    const fieldsBySeqNo = new Map(itemFields.map((f) => [f.seqNo, f]));
-    const fieldsById = new Map(itemFields.map((f) => [f.id, f]));
+    const fieldsBySeqNo = keyBy(itemFields, (f) => f.seqNo);
+    const fieldsById = keyBy(itemFields, (f) => f.id);
 
     // Validate caller-supplied fieldSeqNos exist on the item.
     const callerValues = data.fieldValues ?? [];

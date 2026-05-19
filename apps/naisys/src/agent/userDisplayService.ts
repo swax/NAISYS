@@ -1,3 +1,4 @@
+import { keyBy, pushToArrayMap } from "@naisys/common";
 import table from "text-table";
 
 import { usersCmd } from "../command/commandDefs.js";
@@ -80,17 +81,12 @@ function getRelevantUserIds(
   currentUserId: number,
 ): Set<number> {
   const relevant = new Set<number>();
-  const byId = new Map(allUsers.map((u) => [u.userId, u]));
+  const byId = keyBy(allUsers, (u) => u.userId);
   const childrenOf = new Map<number, number[]>();
 
   for (const u of allUsers) {
     if (u.leadUserId != null) {
-      const siblings = childrenOf.get(u.leadUserId);
-      if (siblings) {
-        siblings.push(u.userId);
-      } else {
-        childrenOf.set(u.leadUserId, [u.userId]);
-      }
+      pushToArrayMap(childrenOf, u.leadUserId, u.userId);
     }
   }
 
@@ -165,12 +161,7 @@ export function createUserDisplayService(
     const fullChildrenOf = new Map<number, number[]>();
     for (const u of userItems) {
       if (u.leadUserId != null) {
-        const children = fullChildrenOf.get(u.leadUserId);
-        if (children) {
-          children.push(u.userId);
-        } else {
-          fullChildrenOf.set(u.leadUserId, [u.userId]);
-        }
+        pushToArrayMap(fullChildrenOf, u.leadUserId, u.userId);
       }
     }
 
@@ -202,10 +193,7 @@ export function createUserDisplayService(
     const flattened = flattenHierarchy(hierarchy, hiddenCounts);
 
     // Build userId → username lookup for lead display
-    const userIdToUsername = new Map<number, string>();
-    for (const u of userItems) {
-      userIdToUsername.set(u.userId, u.username);
-    }
+    const userById = keyBy(userItems, (u) => u.userId);
 
     const isDebug = inputMode.isDebug();
     const headers = ["Username", "Title", "Lead", "Status"];
@@ -225,7 +213,7 @@ export function createUserDisplayService(
       const indent = "  ".repeat(depth);
       const displayName = `${indent}${node.username}`;
       const leadUsername = node.leadUserId
-        ? userIdToUsername.get(node.leadUserId) || "(unknown)"
+        ? userById.get(node.leadUserId)?.username || "(unknown)"
         : "(none)";
 
       const row = [

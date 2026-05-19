@@ -1,3 +1,4 @@
+import { addToSetMap, deleteFromSetMap } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
 import type { AgentsStatus } from "@naisys/hub-protocol";
@@ -150,21 +151,12 @@ export function createHubOwnershipService(
   }
 
   function addStartedAgent(hostId: number, userId: number) {
-    let userIds = hostActiveAgents.get(hostId);
-    if (!userIds) {
-      userIds = new Set();
-      hostActiveAgents.set(hostId, userIds);
-    }
-    userIds.add(userId);
+    addToSetMap(hostActiveAgents, hostId, userId);
     throttledPushAgentsStatus();
   }
 
   function removeStoppedAgent(hostId: number, userId: number) {
-    const userIds = hostActiveAgents.get(hostId);
-    if (userIds) {
-      userIds.delete(userId);
-      if (userIds.size === 0) hostActiveAgents.delete(hostId);
-    }
+    deleteFromSetMap(hostActiveAgents, hostId, userId);
     throttledPushAgentsStatus();
   }
 

@@ -1,4 +1,5 @@
 import type { LlmReasoningLevel } from "@naisys/common";
+import { isDefined } from "@naisys/common";
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources";
 import type { ReasoningEffort } from "openai/resources/shared";
@@ -146,5 +147,5 @@ function formatContentForOpenAI(
       }
       return null;
     })
-    .filter(Boolean);
+    .filter(isDefined);
 }

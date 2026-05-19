@@ -10,7 +10,7 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { formatTokens, formatTokensLong } from "@naisys/common";
+import { formatTokens, formatTokensLong, sumBy } from "@naisys/common";
 import type {
   Chart,
   ChartData,
@@ -347,14 +347,13 @@ export const CostsPage: React.FC = () => {
               return rate ? `${base} · ${rate}` : base;
             },
             footer: (items) => {
-              const totalPrimary = items.reduce(
-                (s, it) => s + Number(it.parsed.y || 0),
-                0,
+              const totalPrimary = sumBy(items, (it) =>
+                Number(it.parsed.y || 0),
               );
-              const totalSecondary = items.reduce((s, it) => {
+              const totalSecondary = sumBy(items, (it) => {
                 const name = seriesNames[it.datasetIndex];
-                return s + (secondaryByName.get(name)?.[it.dataIndex] ?? 0);
-              }, 0);
+                return secondaryByName.get(name)?.[it.dataIndex] ?? 0;
+              });
               const totalCost =
                 metric === "cost" ? totalPrimary : totalSecondary;
               const totalTokens =
