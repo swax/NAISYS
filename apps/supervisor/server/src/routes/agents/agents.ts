@@ -155,6 +155,14 @@ function agentActions(
         permission: "manage_agents",
         visibleWhen: (ctx) => !ctx.archived && ctx.hasSpendLimit,
       },
+      {
+        rel: "trigger-schedule",
+        path: "/schedules/{scheduleName}/trigger",
+        method: "POST",
+        title: "Trigger Schedule",
+        permission: "manage_agents",
+        visibleWhen: (ctx) => !ctx.archived,
+      },
     ],
     href,
     { user, active, archived, enabled, hasSpendLimit: hasSpendLimit ?? false },
@@ -172,6 +180,10 @@ function agentLinks(
     {
       rel: "startup-attachments",
       href: `${API_PREFIX}/agents/${username}/startup-attachments`,
+    },
+    {
+      rel: "schedules",
+      href: `${API_PREFIX}/agents/${username}/schedules`,
     },
     collectionLink("agents"),
   ];

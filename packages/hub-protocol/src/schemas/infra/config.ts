@@ -25,6 +25,10 @@ export const ConfigResponseSchema = z.object({
       useToolsForLlmConsoleResponses: z.boolean(),
       autoStartAgentsOnMessage: z.boolean(),
       mailServiceEnabled: z.boolean(),
+      /** IANA TZ all hub-side time evaluation uses (cron firing, log
+       *  display defaults, etc). Controlled by the TIMEZONE variable;
+       *  falls back to the hub process's resolved TZ. */
+      hubTimezone: z.string(),
     })
     .optional(),
 });

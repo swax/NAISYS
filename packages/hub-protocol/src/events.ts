@@ -107,6 +107,9 @@ export const HubEvents = {
   /** Rotate the hub access key */
   ROTATE_ACCESS_KEY: "rotate_access_key",
 
+  /** Fire a named schedule on demand */
+  SCHEDULE_TRIGGER: "schedule_trigger",
+
   // ---------------------------------------------------------------------------
   // NAISYS/Supervisor -> Hub (request/response) – OAuth
   // ---------------------------------------------------------------------------

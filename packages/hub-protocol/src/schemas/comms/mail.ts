@@ -221,6 +221,8 @@ export const MailPushSchema = z.object({
   createdAt: z.string(),
   participants: z.string(),
   attachments: z.array(MailAttachmentDataSchema).optional(),
+  /** `"schedule:<name>"` for scheduler-fired chats. */
+  source: z.string().optional(),
 });
 export type MailPush = z.infer<typeof MailPushSchema>;
 

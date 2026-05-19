@@ -51,6 +51,7 @@ import {
   unarchiveAgent,
 } from "../../lib/api/apiAgents";
 import { useBoomGuard } from "../../lib/useBoomGuard";
+import { AgentSchedulesCard } from "./AgentSchedulesCard";
 import { AgentStartupAttachmentsSummary } from "./config/AgentStartupAttachmentsSummary";
 import { ConfigSummary } from "./config/ConfigSummary";
 
@@ -696,6 +697,13 @@ export const AgentDetail: React.FC = () => {
       )}
 
       {config && <AgentStartupAttachmentsSummary username={username} />}
+
+      {config && (
+        <AgentSchedulesCard
+          username={username}
+          canTrigger={!!hasAction(actions, "trigger-schedule")}
+        />
+      )}
 
       <Button
         variant="subtle"

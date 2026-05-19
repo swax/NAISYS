@@ -238,7 +238,15 @@ export function createHubCostService(
       try {
         const { spendLimitDollars, spendLimitHours } =
           parseSpendLimitsFromConfigJson(user.config);
-        if (spendLimitDollars === undefined) continue;
+        if (spendLimitDollars === undefined) {
+          // Self-heal: clear any stale budget_left left over from a prior
+          // per-agent limit that's since been removed from the config.
+          await hubDb.user_notifications.updateMany({
+            where: { user_id: user.id, budget_left: { not: null } },
+            data: { budget_left: null },
+          });
+          continue;
+        }
 
         await checkAgentSpendLimit(
           hubDb,

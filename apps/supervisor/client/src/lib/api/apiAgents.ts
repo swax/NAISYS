@@ -13,6 +13,8 @@ import type {
   HostDetailResponse,
   HostListResponse,
   ImportAgentConfigResponse,
+  ScheduleOverviewResponse,
+  ScheduleTriggerResult,
   StartupAttachmentListResponse,
   StartupAttachmentResponse,
   UpdateAgentConfigResponse,
@@ -215,6 +217,26 @@ export const deleteAgentPermanently = async (
 ): Promise<AgentActionResult> => {
   return await api.delete<AgentActionResult>(
     apiEndpoints.agentDelete(username),
+  );
+};
+
+// --- Schedules ---
+
+export const getAgentSchedules = async (
+  username: string,
+): Promise<ScheduleOverviewResponse> => {
+  return await api.get<ScheduleOverviewResponse>(
+    apiEndpoints.agentSchedules(username),
+  );
+};
+
+export const triggerAgentSchedule = async (
+  username: string,
+  scheduleName: string,
+): Promise<ScheduleTriggerResult> => {
+  return await api.post<{}, ScheduleTriggerResult>(
+    apiEndpoints.agentScheduleTrigger(username, scheduleName),
+    {},
   );
 };
 

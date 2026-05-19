@@ -27,6 +27,7 @@ export function createHubSendMailService(
     kind: MessageKind;
     hostId?: number;
     attachmentIds?: number[];
+    source?: string;
   }) {
     const now = new Date();
     // Redact once at entry — DB row, supervisor push, and any future fan-out
@@ -57,6 +58,7 @@ export function createHubSendMailService(
           participants,
           subject,
           body,
+          source: params.source,
           created_at: now,
         },
       });
@@ -174,6 +176,7 @@ export function createHubSendMailService(
       createdAt: now.toISOString(),
       participants,
       attachments,
+      source: params.source,
     });
   }
 

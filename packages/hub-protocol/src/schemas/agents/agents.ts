@@ -180,3 +180,21 @@ export const RuntimeKeyReissueSchema = z.object({
   runtimeApiKey: z.string(),
 });
 export type RuntimeKeyReissue = z.infer<typeof RuntimeKeyReissueSchema>;
+
+/** Supervisor → hub: fire a named schedule on demand. */
+export const ScheduleTriggerRequestSchema = z.object({
+  userId: z.number(),
+  scheduleName: z.string(),
+});
+export type ScheduleTriggerRequest = z.infer<
+  typeof ScheduleTriggerRequestSchema
+>;
+
+/** `ok` covers delivered-or-already-pending; `reason` is UI-ready text. */
+export const ScheduleTriggerResponseSchema = z.object({
+  ok: z.boolean(),
+  reason: z.string(),
+});
+export type ScheduleTriggerResponse = z.infer<
+  typeof ScheduleTriggerResponseSchema
+>;

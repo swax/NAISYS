@@ -66,6 +66,7 @@ export async function createHubConfigService(
     { key: "CODEX_USAGE_CHECK_MINUTES" },
     { key: "TARGET_VERSION" },
     { key: "MAIL_ENABLED" },
+    { key: "TIMEZONE" },
   ]);
 
   /** Read variables from DB and build a ConfigResponse */

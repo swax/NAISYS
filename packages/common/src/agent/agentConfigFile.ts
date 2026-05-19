@@ -5,6 +5,7 @@ import {
   URL_SAFE_KEY_REGEX,
 } from "../auth/urlSafeKey.js";
 import { TARGET_MEGAPIXELS } from "../config/constants.js";
+import { ScheduleEntrySchema } from "./scheduleUtils.js";
 
 export const commandProtectionValues = [
   "none",
@@ -218,6 +219,28 @@ export const AgentConfigFileSchema = z.object({
     .optional()
     .describe(
       "Tell the agent in its system message how to call the supervisor API to manage NAISYS agents, hosts, variables, models, users, etc. Useful for admin / assistant agents",
+    ),
+
+  schedules: z
+    .array(ScheduleEntrySchema)
+    .optional()
+    .superRefine((schedules, ctx) => {
+      if (!schedules) return;
+      const seen = new Set<string>();
+      for (let i = 0; i < schedules.length; i++) {
+        const name = schedules[i].name;
+        if (seen.has(name)) {
+          ctx.addIssue({
+            code: "custom",
+            path: [i, "name"],
+            message: `Duplicate schedule name "${name}"`,
+          });
+        }
+        seen.add(name);
+      }
+    })
+    .describe(
+      "Cron schedules that wake the agent and deliver a chat from admin at fire time. Cron runs in the hub's local timezone. If the agent is offline, the chat queues and dedupes per schedule name.",
     ),
 });
 

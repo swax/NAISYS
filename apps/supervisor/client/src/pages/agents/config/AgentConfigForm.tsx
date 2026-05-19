@@ -1,11 +1,7 @@
 import {
-  ActionIcon,
-  Badge,
+  Accordion,
   Button,
-  CloseButton,
-  Collapse,
   Group,
-  Menu,
   NumberInput,
   Select,
   type SelectProps,
@@ -16,19 +12,26 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { AgentConfigFile } from "@naisys/common";
+import type { AgentConfigFile, ScheduleEntry } from "@naisys/common";
 import { AgentConfigFileSchema } from "@naisys/common";
 import { zodResolver } from "@naisys/common-browser";
 import {
   IconCheck,
-  IconChevronDown,
-  IconChevronRight,
-  IconPlus,
+  IconClock,
+  IconGauge,
+  IconPaperclip,
   IconServer,
+  IconSettings,
+  IconToggleRight,
+  IconTool,
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useBlocker } from "react-router-dom";
+import { useBlocker } from "react-router-dom";
+
+import { AgentAssignedHostsPanel } from "./AgentAssignedHostsPanel";
+import { AgentSchedulesEditor } from "./AgentSchedulesEditor";
+import { AgentStartupAttachments } from "./AgentStartupAttachments";
 
 interface ModelOption {
   value: string;
@@ -42,19 +45,25 @@ interface HostOption {
 
 interface AgentConfigFormProps {
   config: AgentConfigFile;
+  username: string;
   llmModelOptions: ModelOption[];
   imageModelOptions: ModelOption[];
+  /** Hub TZ for schedule preview computations; matches what the scheduler fires in. */
+  hubTimezone: string;
   saving?: boolean;
   onSave?: (config: AgentConfigFile) => void;
-  assignedHosts?: HostOption[];
-  availableHosts?: HostOption[];
-  hostActionInProgress?: boolean;
-  onAssignHost?: (hostname: string) => void;
-  onUnassignHost?: (hostname: string) => void;
-  /** Optional element rendered inside Identity, after the Title field. */
+  /** Optional element rendered inside General, after the Title field. */
   afterTitle?: React.ReactNode;
   /** Optional element rendered at the end of the Advanced section. */
   advancedExtras?: React.ReactNode;
+  assignedHosts: HostOption[];
+  availableHosts: HostOption[];
+  hostActionInProgress?: boolean;
+  onAssignHost?: (hostname: string) => void;
+  onUnassignHost?: (hostname: string) => void;
+  /** Controlled by parent so accordion state survives the save-driven remount. */
+  expandedPanels: string[];
+  onExpandedPanelsChange: (next: string[]) => void;
 }
 
 /** Convert form values to AgentConfigFile, omitting empty optionals. */
@@ -97,6 +106,15 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
       .map((s) => s.trim())
       .filter(Boolean);
 
+  if (values.schedules.length > 0) {
+    result.schedules = values.schedules.map((s) => ({
+      name: s.name,
+      cron: s.cron,
+      enabled: s.enabled !== false,
+      ...(s.prompt && s.prompt.trim() ? { prompt: s.prompt } : {}),
+    }));
+  }
+
   return result;
 }
 
@@ -124,6 +142,7 @@ interface FormValues {
   continuity: string;
   debugPauseSeconds: number | string;
   initialCommands: string;
+  schedules: ScheduleEntry[];
 }
 
 /** Extract .describe() text from schema shape, keyed by field name. */
@@ -179,31 +198,26 @@ function ModelSelect(props: SelectProps & { data: ModelOption[] }) {
 
 export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   config,
+  username,
   llmModelOptions,
   imageModelOptions,
+  hubTimezone,
   saving,
   onSave,
+  afterTitle,
+  advancedExtras,
   assignedHosts,
   availableHosts,
   hostActionInProgress,
   onAssignHost,
   onUnassignHost,
-  afterTitle,
-  advancedExtras,
+  expandedPanels,
+  onExpandedPanelsChange,
 }) => {
-  const showHostsSection = assignedHosts !== undefined;
-  const unassignedHosts = useMemo(() => {
-    if (!availableHosts || !assignedHosts) return [];
-    const assignedIds = new Set(assignedHosts.map((h) => h.id));
-    return availableHosts.filter((h) => !assignedIds.has(h.id));
-  }, [availableHosts, assignedHosts]);
-
   const sortedLlmModelOptions = useMemo(
     () => [...llmModelOptions].sort((a, b) => a.label.localeCompare(b.label)),
     [llmModelOptions],
   );
-
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const form = useForm<FormValues>({
     initialValues: {
@@ -230,6 +244,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       continuity: config.continuity ?? "fresh",
       debugPauseSeconds: config.debugPauseSeconds ?? 0,
       initialCommands: config.initialCommands?.join("\n\n") ?? "",
+      schedules: config.schedules ?? [],
     },
     validate: (values) =>
       zodResolver(AgentConfigFileSchema)(transformFormValues(values)),
@@ -271,311 +286,339 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
     onSave?.(parsed);
   };
 
+  const saveDiscardBar = isDirty ? (
+    <Group
+      pt="sm"
+      mt="sm"
+      style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+    >
+      <Button
+        type="submit"
+        color="green"
+        leftSection={<IconCheck size={16} />}
+        loading={saving}
+        disabled={saving}
+      >
+        Save
+      </Button>
+      <Button
+        color="gray"
+        leftSection={<IconX size={16} />}
+        onClick={() => form.reset()}
+        disabled={saving}
+      >
+        Discard
+      </Button>
+    </Group>
+  ) : null;
+
+  const autoSaveNote = (
+    <Text
+      size="xs"
+      c="dimmed"
+      pt="sm"
+      mt="sm"
+      style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}
+    >
+      Changes save automatically.
+    </Text>
+  );
+
   return (
     <form onSubmit={form.onSubmit(handleSubmit)}>
-      <Stack gap="lg">
-        {/* Assigned Hosts */}
-        {showHostsSection && (
-          <>
+      <Accordion
+        multiple
+        variant="separated"
+        value={expandedPanels}
+        onChange={onExpandedPanelsChange}
+      >
+        <Accordion.Item value="general">
+          <Accordion.Control>
             <Group gap="xs" align="center">
-              <Text fw={600} size="sm" c="dimmed">
-                Assigned Hosts
+              <IconSettings size={16} />
+              <Text fw={600}>General</Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <TextInput
+                label="Username"
+                description={desc("username")}
+                withAsterisk
+                {...form.getInputProps("username")}
+              />
+              <TextInput
+                label="Title"
+                description={desc("title")}
+                {...form.getInputProps("title")}
+              />
+              {afterTitle}
+
+              <ModelSelect
+                label="Shell Model"
+                description={desc("shellModel")}
+                withAsterisk
+                data={sortedLlmModelOptions}
+                {...form.getInputProps("shellModel")}
+              />
+
+              <Textarea
+                label="Agent Prompt"
+                description={desc("agentPrompt")}
+                withAsterisk
+                autosize
+                minRows={4}
+                styles={{
+                  input: { fontFamily: "monospace", fontSize: "0.875rem" },
+                }}
+                {...form.getInputProps("agentPrompt")}
+              />
+              <Select
+                label="Continuity"
+                description={desc("continuity")}
+                data={[
+                  { value: "fresh", label: "Fresh" },
+                  { value: "summary", label: "Summary" },
+                  { value: "full", label: "Full" },
+                ]}
+                {...form.getInputProps("continuity")}
+              />
+
+              <Textarea
+                label="Initial Commands"
+                description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
+                autosize
+                minRows={2}
+                styles={{
+                  input: { fontFamily: "monospace", fontSize: "0.875rem" },
+                }}
+                {...form.getInputProps("initialCommands")}
+              />
+
+              {saveDiscardBar}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="limits">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconGauge size={16} />
+              <Text fw={600}>Limits</Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <NumberInput
+                label="Token Max"
+                description={desc("tokenMax")}
+                withAsterisk
+                min={1}
+                {...form.getInputProps("tokenMax")}
+              />
+              <NumberInput
+                label="Spend Limit ($)"
+                description={desc("spendLimitDollars")}
+                min={0}
+                decimalScale={2}
+                {...form.getInputProps("spendLimitDollars")}
+              />
+              <NumberInput
+                label="Spend Limit Hours"
+                description={desc("spendLimitHours")}
+                min={0}
+                {...form.getInputProps("spendLimitHours")}
+              />
+
+              {saveDiscardBar}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="features">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconToggleRight size={16} />
+              <Text fw={600}>Features</Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <Switch
+                label="Chat Enabled"
+                description={desc("chatEnabled")}
+                {...form.getInputProps("chatEnabled", { type: "checkbox" })}
+              />
+              <Switch
+                label="Complete Session Enabled"
+                description={desc("completeSessionEnabled")}
+                {...form.getInputProps("completeSessionEnabled", {
+                  type: "checkbox",
+                })}
+              />
+              <Switch
+                label="Wake On Message"
+                description={desc("wakeOnMessage")}
+                {...form.getInputProps("wakeOnMessage", { type: "checkbox" })}
+              />
+              <Switch
+                label="Text Web"
+                description={desc("webEnabled")}
+                {...form.getInputProps("webEnabled", { type: "checkbox" })}
+              />
+              <Switch
+                label="Headless Browser"
+                description={`${desc("browserEnabled") ?? ""} Often blocked for being a bot — use a browser through desktop mode to get around that.`.trim()}
+                {...form.getInputProps("browserEnabled", { type: "checkbox" })}
+              />
+              <Text size="xs" c="dimmed">
+                With Text Web or Headless Browser enabled and the GOOGLE_API_KEY
+                + GOOGLE_SEARCH_ENGINE_ID env vars set, the agent gets
+                ns-websearch — a Google Custom Search command that isn&apos;t
+                bot-blocked.
               </Text>
-              {onAssignHost && (
-                <Menu shadow="md" width={260} position="bottom-start">
-                  <Menu.Target>
-                    <ActionIcon
-                      size="sm"
-                      variant="subtle"
-                      color="blue"
-                      loading={hostActionInProgress}
-                      disabled={unassignedHosts.length === 0}
-                      title="Assign host"
-                    >
-                      <IconPlus size={14} />
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    {unassignedHosts.map((h) => (
-                      <Menu.Item
-                        key={h.id}
-                        onClick={() => onAssignHost(h.name)}
-                      >
-                        {h.name}
-                      </Menu.Item>
-                    ))}
-                  </Menu.Dropdown>
-                </Menu>
-              )}
+              <Switch
+                label="Control Desktop"
+                description={desc("controlDesktop")}
+                {...form.getInputProps("controlDesktop", { type: "checkbox" })}
+              />
+              <Switch
+                label="Supervisor API Hints"
+                description={desc("supervisorApiHints")}
+                {...form.getInputProps("supervisorApiHints", {
+                  type: "checkbox",
+                })}
+              />
+
+              {saveDiscardBar}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="schedules">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconClock size={16} />
+              <Text fw={600}>Schedules</Text>
+              <Text c="dimmed" size="sm">
+                ({form.values.schedules.length})
+              </Text>
             </Group>
-            <Group gap="xs" wrap="wrap">
-              {assignedHosts.length === 0 ? (
-                <Text size="sm" c="dimmed">
-                  None assigned, agent can run on any host
-                </Text>
-              ) : (
-                assignedHosts.map((h) => (
-                  <Badge
-                    key={h.id}
-                    component={Link}
-                    to={`/hosts/${h.name}`}
-                    variant="light"
-                    color="blue"
-                    size="lg"
-                    leftSection={<IconServer size={14} />}
-                    style={{ cursor: "pointer", textTransform: "none" }}
-                    rightSection={
-                      onUnassignHost ? (
-                        <CloseButton
-                          size="xs"
-                          variant="transparent"
-                          disabled={hostActionInProgress}
-                          aria-label="Unassign host"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onUnassignHost(h.name);
-                          }}
-                        />
-                      ) : undefined
-                    }
-                  >
-                    {h.name}
-                  </Badge>
-                ))
-              )}
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <AgentSchedulesEditor
+                schedules={form.values.schedules}
+                hubTimezone={hubTimezone}
+                onChange={(next) => form.setFieldValue("schedules", next)}
+                errors={form.errors as Record<string, React.ReactNode>}
+              />
+              {saveDiscardBar}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="hosts">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconServer size={16} />
+              <Text fw={600}>Assigned Hosts</Text>
+              <Text c="dimmed" size="sm">
+                ({assignedHosts.length})
+              </Text>
             </Group>
-          </>
-        )}
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <AgentAssignedHostsPanel
+                assignedHosts={assignedHosts}
+                availableHosts={availableHosts}
+                hostActionInProgress={hostActionInProgress}
+                onAssignHost={onAssignHost}
+                onUnassignHost={onUnassignHost}
+              />
+              {autoSaveNote}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
 
-        {/* Identity */}
-        <TextInput
-          label="Username"
-          description={desc("username")}
-          withAsterisk
-          {...form.getInputProps("username")}
-        />
-        <TextInput
-          label="Title"
-          description={desc("title")}
-          {...form.getInputProps("title")}
-        />
-        {afterTitle}
+        <Accordion.Item value="attachments">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconPaperclip size={16} />
+              <Text fw={600}>Startup Attachments</Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <AgentStartupAttachments username={username} />
+              {autoSaveNote}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
 
-        <ModelSelect
-          label="Shell Model"
-          description={desc("shellModel")}
-          withAsterisk
-          data={sortedLlmModelOptions}
-          {...form.getInputProps("shellModel")}
-        />
-
-        {/* Prompt */}
-        <Textarea
-          label="Agent Prompt"
-          description={desc("agentPrompt")}
-          withAsterisk
-          autosize
-          minRows={4}
-          styles={{
-            input: { fontFamily: "monospace", fontSize: "0.875rem" },
-          }}
-          {...form.getInputProps("agentPrompt")}
-        />
-        <Select
-          label="Continuity"
-          description={desc("continuity")}
-          data={[
-            { value: "fresh", label: "Fresh" },
-            { value: "summary", label: "Summary" },
-            { value: "full", label: "Full" },
-          ]}
-          {...form.getInputProps("continuity")}
-        />
-
-        {/* Limits */}
-        <Text fw={600} size="sm" c="dimmed">
-          Limits
-        </Text>
-        <NumberInput
-          label="Token Max"
-          description={desc("tokenMax")}
-          withAsterisk
-          min={1}
-          {...form.getInputProps("tokenMax")}
-        />
-        <NumberInput
-          label="Spend Limit ($)"
-          description={desc("spendLimitDollars")}
-          min={0}
-          decimalScale={2}
-          {...form.getInputProps("spendLimitDollars")}
-        />
-        <NumberInput
-          label="Spend Limit Hours"
-          description={desc("spendLimitHours")}
-          min={0}
-          {...form.getInputProps("spendLimitHours")}
-        />
-
-        {/* Features */}
-        <Text fw={600} size="sm" c="dimmed">
-          Features
-        </Text>
-        <Switch
-          label="Chat Enabled"
-          description={desc("chatEnabled")}
-          {...form.getInputProps("chatEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Complete Session Enabled"
-          description={desc("completeSessionEnabled")}
-          {...form.getInputProps("completeSessionEnabled", {
-            type: "checkbox",
-          })}
-        />
-        <Switch
-          label="Wake On Message"
-          description={desc("wakeOnMessage")}
-          {...form.getInputProps("wakeOnMessage", { type: "checkbox" })}
-        />
-        <Switch
-          label="Text Web"
-          description={desc("webEnabled")}
-          {...form.getInputProps("webEnabled", { type: "checkbox" })}
-        />
-        <Switch
-          label="Headless Browser"
-          description={`${desc("browserEnabled") ?? ""} Often blocked for being a bot — use a browser through desktop mode to get around that.`.trim()}
-          {...form.getInputProps("browserEnabled", { type: "checkbox" })}
-        />
-        <Text size="xs" c="dimmed">
-          With Text Web or Headless Browser enabled and the GOOGLE_API_KEY +
-          GOOGLE_SEARCH_ENGINE_ID env vars set, the agent gets ns-websearch — a
-          Google Custom Search command that isn&apos;t bot-blocked.
-        </Text>
-        <Switch
-          label="Control Desktop"
-          description={desc("controlDesktop")}
-          {...form.getInputProps("controlDesktop", { type: "checkbox" })}
-        />
-        <Switch
-          label="Supervisor API Hints"
-          description={desc("supervisorApiHints")}
-          {...form.getInputProps("supervisorApiHints", { type: "checkbox" })}
-        />
-
-        {/* Initial Commands */}
-        <Textarea
-          label="Initial Commands"
-          description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
-          autosize
-          minRows={2}
-          styles={{
-            input: { fontFamily: "monospace", fontSize: "0.875rem" },
-          }}
-          {...form.getInputProps("initialCommands")}
-        />
-
-        {/* Advanced */}
-        <Group
-          gap="xs"
-          align="center"
-          style={{ cursor: "pointer", userSelect: "none" }}
-          onClick={() => setShowAdvanced((v) => !v)}
-        >
-          {showAdvanced ? (
-            <IconChevronDown size={14} />
-          ) : (
-            <IconChevronRight size={14} />
-          )}
-          <Text fw={600} size="sm" c="dimmed">
-            Advanced
-          </Text>
-        </Group>
-        <Collapse in={showAdvanced}>
-          <Stack gap="lg">
-            <ModelSelect
-              label="Image Model"
-              description={desc("imageModel")}
-              clearable
-              data={imageModelOptions}
-              {...form.getInputProps("imageModel")}
-            />
-            <Switch
-              label="Auto Compact"
-              description={desc("autoCompact")}
-              {...form.getInputProps("autoCompact", { type: "checkbox" })}
-            />
-            <Switch
-              label="Mail Enabled"
-              description={`${desc("mailEnabled") ?? ""} The MAIL_ENABLED variable must be set to true as well.`.trim()}
-              {...form.getInputProps("mailEnabled", { type: "checkbox" })}
-            />
-            <Switch
-              label="Workspaces Enabled"
-              description={desc("workspacesEnabled")}
-              {...form.getInputProps("workspacesEnabled", { type: "checkbox" })}
-            />
-            <Switch
-              label="Multiple Commands Enabled"
-              description={desc("multipleCommandsEnabled")}
-              {...form.getInputProps("multipleCommandsEnabled", {
-                type: "checkbox",
-              })}
-            />
-            <Select
-              label="Command Protection"
-              description={desc("commandProtection")}
-              data={[
-                { value: "none", label: "None" },
-                { value: "manual", label: "Manual" },
-                { value: "auto", label: "Auto" },
-              ]}
-              {...form.getInputProps("commandProtection")}
-            />
-            <NumberInput
-              label="Debug Pause Seconds"
-              description={desc("debugPauseSeconds")}
-              min={0}
-              {...form.getInputProps("debugPauseSeconds")}
-            />
-            {advancedExtras}
-          </Stack>
-        </Collapse>
-      </Stack>
-
-      {/* Sticky Save / Discard */}
-      {isDirty && (
-        <Group
-          style={{
-            position: "sticky",
-            bottom: 0,
-            backgroundColor: "var(--mantine-color-body)",
-            borderTop: "1px solid var(--mantine-color-default-border)",
-            padding: "var(--mantine-spacing-sm) 0",
-            zIndex: 10,
-          }}
-        >
-          <Button
-            type="submit"
-            color="green"
-            leftSection={<IconCheck size={16} />}
-            loading={saving}
-            disabled={saving}
-          >
-            Save
-          </Button>
-          <Button
-            color="gray"
-            leftSection={<IconX size={16} />}
-            onClick={() => form.reset()}
-            disabled={saving}
-          >
-            Discard
-          </Button>
-        </Group>
-      )}
+        <Accordion.Item value="advanced">
+          <Accordion.Control>
+            <Group gap="xs" align="center">
+              <IconTool size={16} />
+              <Text fw={600}>Advanced</Text>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="lg">
+              <ModelSelect
+                label="Image Model"
+                description={desc("imageModel")}
+                clearable
+                data={imageModelOptions}
+                {...form.getInputProps("imageModel")}
+              />
+              <Switch
+                label="Auto Compact"
+                description={desc("autoCompact")}
+                {...form.getInputProps("autoCompact", { type: "checkbox" })}
+              />
+              <Switch
+                label="Mail Enabled"
+                description={`${desc("mailEnabled") ?? ""} The MAIL_ENABLED variable must be set to true as well.`.trim()}
+                {...form.getInputProps("mailEnabled", { type: "checkbox" })}
+              />
+              <Switch
+                label="Workspaces Enabled"
+                description={desc("workspacesEnabled")}
+                {...form.getInputProps("workspacesEnabled", {
+                  type: "checkbox",
+                })}
+              />
+              <Switch
+                label="Multiple Commands Enabled"
+                description={desc("multipleCommandsEnabled")}
+                {...form.getInputProps("multipleCommandsEnabled", {
+                  type: "checkbox",
+                })}
+              />
+              <Select
+                label="Command Protection"
+                description={desc("commandProtection")}
+                data={[
+                  { value: "none", label: "None" },
+                  { value: "manual", label: "Manual" },
+                  { value: "auto", label: "Auto" },
+                ]}
+                {...form.getInputProps("commandProtection")}
+              />
+              <NumberInput
+                label="Debug Pause Seconds"
+                description={desc("debugPauseSeconds")}
+                min={0}
+                {...form.getInputProps("debugPauseSeconds")}
+              />
+              {advancedExtras}
+              {saveDiscardBar}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
     </form>
   );
 };

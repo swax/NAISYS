@@ -29,6 +29,9 @@ export const ChatMessageSchema = z.object({
   createdAt: z.string(),
   attachments: z.array(ChatAttachmentSchema).optional(),
   readBy: z.array(z.number()).optional(), // user IDs who have read
+  /** Provenance tag from `mail_messages.source`, e.g. "schedule:<name>".
+   *  UI uses it to badge scheduler-fired chats distinctly from user input. */
+  source: z.string().optional(),
 });
 
 export const ChatConversationsRequestSchema = z.object({

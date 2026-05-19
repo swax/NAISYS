@@ -200,9 +200,6 @@ export const AgentStartupAttachments: React.FC<
 
   return (
     <Stack gap="sm">
-      <Text fw={600} size="sm" c="dimmed">
-        Startup Attachments
-      </Text>
       <Text size="xs" c="dimmed">
         Files copied into the agent&apos;s home directory at startup. The path
         is the full relative location including filename — e.g.

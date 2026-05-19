@@ -1,5 +1,6 @@
 import {
   Anchor,
+  Badge,
   Box,
   Button,
   Container,
@@ -385,6 +386,17 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                     {!isOwn && (
                       <Text size="xs" fw={600} c="dimmed" mb={4}>
                         {msg.fromUsername} ({msg.fromTitle})
+                        {msg.source?.startsWith("schedule:") && (
+                          <Badge
+                            size="xs"
+                            color="blue"
+                            variant="light"
+                            ml={6}
+                            style={{ verticalAlign: "middle" }}
+                          >
+                            scheduled · {msg.source.slice("schedule:".length)}
+                          </Badge>
+                        )}
                       </Text>
                     )}
                     <CommandList

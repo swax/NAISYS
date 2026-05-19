@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 
 import type { AgentConfig } from "../../agent/agentConfig.js";
+import type { HubClient } from "../../hub/hubClient.js";
 import type { HubAttachmentClient } from "../hub/hubAttachmentClient.js";
 import { ensureFileDirExists } from "../runtime/pathService.js";
 
@@ -13,18 +14,28 @@ import { ensureFileDirExists } from "../runtime/pathService.js";
  *  pathological configs. */
 const STARTUP_DOWNLOAD_CONCURRENCY = 4;
 
+interface FailedAttachment {
+  path: string;
+  publicId: string;
+  filename: string;
+  error: string;
+}
+
 // Constructed unconditionally so commandLoop can always call getSummary()
 // at startup, even when no files were configured.
 export function createStartupAttachmentService(
   hubAttachmentClient: HubAttachmentClient,
+  hubClient: HubClient | undefined,
   agentConfig: AgentConfig,
 ) {
   let downloaded = 0;
   let alreadyPresent = 0;
+  const failures: FailedAttachment[] = [];
 
-  // First rejection propagates so the caller can refuse to start the agent
-  // rather than launching it with missing files. Other in-flight downloads
-  // may still settle in the background — file writes are idempotent.
+  // Per-file failures are captured and reported via getSummary rather than
+  // rejecting the whole stage — startup-attachment download is a corner
+  // case where the agent can curl the file itself once it's up, and we'd
+  // rather start the agent and let it triage than block it on flaky I/O.
   async function stage(
     attachments: StartupAttachmentDispatch[],
   ): Promise<void> {
@@ -47,23 +58,53 @@ export function createStartupAttachmentService(
         // Defense in depth — server-side validation should already prevent escape.
         const rel = path.relative(resolvedHome, targetPath);
         if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
-          throw `Refusing to stage attachment at '${a.path}': resolves outside home dir`;
+          failures.push({
+            path: a.path,
+            publicId: a.publicId,
+            filename: a.filename,
+            error: "resolves outside home dir",
+          });
+          return;
         }
         if (hashFileIfExists(targetPath) === a.fileHash) {
           alreadyPresent++;
           return;
         }
-        ensureFileDirExists(targetPath);
-        await hubAttachmentClient.downloadToFile(a.publicId, targetPath);
-        downloaded++;
+        try {
+          ensureFileDirExists(targetPath);
+          await hubAttachmentClient.downloadToFile(a.publicId, targetPath);
+          downloaded++;
+        } catch (err) {
+          failures.push({
+            path: a.path,
+            publicId: a.publicId,
+            filename: a.filename,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       },
     );
   }
 
   function getSummary(): string | undefined {
-    const total = downloaded + alreadyPresent;
+    const total = downloaded + alreadyPresent + failures.length;
     if (total === 0) return undefined;
-    return `Startup files: ${total} staged (${downloaded} downloaded, ${alreadyPresent} already present)`;
+    const lines = [
+      `Startup files: ${downloaded + alreadyPresent} of ${total} staged ` +
+        `(${downloaded} downloaded, ${alreadyPresent} already present` +
+        (failures.length > 0 ? `, ${failures.length} failed)` : `)`),
+    ];
+    if (failures.length > 0) {
+      const hubUrl = hubClient?.getHubUrl() ?? "<HUB_URL>";
+      lines.push("Failed downloads — retry with:");
+      for (const f of failures) {
+        lines.push(
+          `  curl -H "Authorization: Bearer $NAISYS_API_KEY" ` +
+            `"${hubUrl}/attachments/${f.publicId}" -o "${f.path}"  # ${f.error}`,
+        );
+      }
+    }
+    return lines.join("\n");
   }
 
   return { stage, getSummary };

@@ -31,7 +31,6 @@ import {
   type ModelsResponse,
 } from "../../../lib/api/apiClient";
 import { AgentConfigForm } from "./AgentConfigForm";
-import { AgentStartupAttachments } from "./AgentStartupAttachments";
 import { ConfigYamlDialog } from "./ConfigYamlDialog";
 
 export const AgentConfig: React.FC = () => {
@@ -57,11 +56,13 @@ export const AgentConfig: React.FC = () => {
     { value: string; label: string }[]
   >([]);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
+  const [hubTimezone, setHubTimezone] = useState<string>("UTC");
   const [configRevision, setConfigRevision] = useState(0);
   const [configDialogMode, setConfigDialogMode] = useState<
     "import" | "export" | null
   >(null);
   const [settingLead, setSettingLead] = useState(false);
+  const [expandedPanels, setExpandedPanels] = useState<string[]>([]);
 
   useEffect(() => {
     api
@@ -86,6 +87,7 @@ export const AgentConfig: React.FC = () => {
       setConfig(data.config);
       setAssignedHosts(data.assignedHosts ?? []);
       setActions(data._actions);
+      setHubTimezone(data.hubTimezone);
       setConfigRevision((r) => r + 1);
     } catch (err) {
       console.error("Error fetching agent config:", err);
@@ -275,11 +277,15 @@ export const AgentConfig: React.FC = () => {
           <AgentConfigForm
             key={configRevision}
             config={config}
+            username={username}
+            expandedPanels={expandedPanels}
+            onExpandedPanelsChange={setExpandedPanels}
             llmModelOptions={llmModelOptions}
             imageModelOptions={imageModelOptions}
+            hubTimezone={hubTimezone}
             saving={saving}
             onSave={handleSave}
-            assignedHosts={assignedHosts}
+            assignedHosts={assignedHosts ?? []}
             availableHosts={hosts.map((h) => ({ id: h.id, name: h.name }))}
             hostActionInProgress={hostActionInProgress}
             onAssignHost={
@@ -345,8 +351,6 @@ export const AgentConfig: React.FC = () => {
             onSuccess={fetchConfig}
           />
         )}
-
-        {config && <AgentStartupAttachments username={username} />}
       </Stack>
     </Box>
   );

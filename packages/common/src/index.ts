@@ -1,5 +1,6 @@
 export * from "./agent/agentConfigFile.js";
 export * from "./agent/agentStatus.js";
+export * from "./agent/scheduleUtils.js";
 export * from "./agent/subagentIds.js";
 export * from "./auth/authCache.js";
 export * from "./auth/codexOAuth.js";

@@ -7,11 +7,13 @@ import type {
   CodexAccessTokenResponse,
   MailSendResponse,
   RotateAccessKeyResponse,
+  ScheduleTriggerResponse,
   SupervisorEmitEvents,
   SupervisorListenEvents,
 } from "@naisys/hub-protocol";
 import {
   AgentsStatusSchema,
+  ConfigResponseSchema,
   CostPushSchema,
   HostListSchema,
   HubEvents,
@@ -47,6 +49,7 @@ let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
 let resolvedHubUrl: string | undefined;
 let hubVersion = "";
+let hubTimezone = "UTC";
 let shuttingDown = false;
 
 export function initHubConnection(hubUrl: string) {
@@ -122,6 +125,12 @@ export function initHubConnection(hubUrl: string) {
       parsed.data.hostActiveAgents,
       parsed.data.agentNotifications,
     );
+  });
+
+  socket.on(HubEvents.VARIABLES_UPDATED, (data) => {
+    const parsed = ConfigResponseSchema.safeParse(data);
+    if (!parsed.success || !parsed.data.config) return;
+    hubTimezone = parsed.data.config.hubTimezone;
   });
 
   socket.on(HubEvents.HOSTS_UPDATED, (data) => {
@@ -421,6 +430,10 @@ export function getHubVersion(): string {
   return hubVersion;
 }
 
+export function getHubTimezone(): string {
+  return hubTimezone;
+}
+
 export function sendAgentStart(
   startUserId: number,
   taskDescription: string | undefined,
@@ -552,6 +565,21 @@ export function sendAgentStop(userId: number, reason: string) {
       }
       resolve(response);
     });
+  });
+}
+
+export function sendScheduleTrigger(userId: number, scheduleName: string) {
+  return new Promise<ScheduleTriggerResponse>((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    socket.emit(
+      HubEvents.SCHEDULE_TRIGGER,
+      { userId, scheduleName },
+      (response) => resolve(response),
+    );
   });
 }
 

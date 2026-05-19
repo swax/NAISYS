@@ -162,6 +162,10 @@ function canonicalConfigOrder(
   if (config.initialCommands !== undefined)
     ordered.initialCommands = config.initialCommands;
 
+  // Schedules — collapse empty arrays to omitted so YAML stays clean.
+  if (config.schedules !== undefined && config.schedules.length > 0)
+    ordered.schedules = config.schedules;
+
   return ordered;
 }
 
@@ -254,6 +258,8 @@ export async function updateAgentConfigById(
         title: config.title,
       },
     });
+    // next_run_at is recomputed hub-side on USERS_CHANGED using the
+    // hub's authoritative TZ.
   });
 
   // Update user notification modified date

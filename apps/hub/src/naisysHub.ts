@@ -29,9 +29,11 @@ import { createHubModelsService } from "./config/hubModelsService.js";
 import { seedAgentConfigs } from "./lifecycle/agentRegistrar.js";
 import { createHostRegistrar } from "./lifecycle/hostRegistrar.js";
 import { createHubAgentService } from "./lifecycle/hubAgentService.js";
+import { createHubAgentStartService } from "./lifecycle/hubAgentStartService.js";
 import { createHubHeartbeatService } from "./lifecycle/hubHeartbeatService.js";
 import { createHubHostService } from "./lifecycle/hubHostService.js";
 import { createHubRunService } from "./lifecycle/hubRunService.js";
+import { createHubScheduleService } from "./lifecycle/hubScheduleService.js";
 import { createHubAttachmentService } from "./mail/hubAttachmentService.js";
 import { createHubMailService } from "./mail/hubMailService.js";
 import { createHubSendMailService } from "./mail/hubSendMailService.js";
@@ -183,6 +185,16 @@ export const startHub: StartHub = async (
       redactionService,
     );
 
+    // Start lifecycle: lock + prepare + placeholder + transport + finalize.
+    // Lives outside hubAgentService so the dispatch surface is explicit.
+    const agentStartService = createHubAgentStartService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      heartbeatService,
+      runtimeKeyService,
+    );
+
     // Register hub agent service for agent_start requests routed to target hosts
     const agentService = createHubAgentService(
       naisysServer,
@@ -193,6 +205,7 @@ export const startHub: StartHub = async (
       hostRegistrar,
       runtimeKeyService,
       configService,
+      agentStartService,
     );
 
     // Register hub mail service for mail events from NAISYS instances
@@ -206,6 +219,21 @@ export const startHub: StartHub = async (
       costService,
       configService,
     );
+
+    // Cron-driven schedule fires: recomputes next_run_at on startup, ticks
+    // every 30s, and exposes triggerNow for the supervisor API.
+    const scheduleService = createHubScheduleService(
+      naisysServer,
+      hubDatabaseService,
+      logService,
+      sendMailService,
+      agentService,
+      heartbeatService,
+      costService,
+      configService,
+      redactionService,
+    );
+    scheduleService.start();
 
     /**
      * There should be no dependency between supervisor and hub
@@ -255,6 +283,7 @@ export const startHub: StartHub = async (
         heartbeatService.cleanup();
         costService.cleanup();
         mailService.cleanup();
+        scheduleService.cleanup();
       } finally {
         await hubDatabaseService.disconnect();
       }

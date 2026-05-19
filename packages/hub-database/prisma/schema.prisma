@@ -128,6 +128,9 @@ model mail_messages {
   participants     String // Sorted CSV of participant usernames, used as conversation lookup key
   subject          String
   body             String
+  /// `"schedule:<name>"` for scheduler-fired admin chats; null otherwise.
+  /// Drives per-(agent, schedule) dedupe and the UI badge.
+  source           String?
   created_at       DateTime           @default(now())
   from_user        users              @relation("mail_messages_from_user", fields: [from_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   host             hosts?             @relation(fields: [host_id], references: [id])
@@ -137,21 +140,22 @@ model mail_messages {
   @@index([from_user_id], map: "idx_mail_messages_from_user_id") // WHERE from_user_id in sent messages filter
   @@index([created_at(sort: Desc)], map: "idx_mail_messages_created_at_desc") // ORDER BY created_at DESC in listMessages and searchMessages
   @@index([participants], map: "idx_mail_messages_participants") // WHERE participants in chat recent filtering
+  @@index([source], map: "idx_mail_messages_source") // scheduler dedupe lookup by source tag
 }
 
 model attachments {
-  id                        Int                         @id @default(autoincrement())
-  public_id                 String                      @unique
-  filepath                  String
-  filename                  String
-  file_size                 Int
-  file_hash                 String
-  purpose                   AttachmentPurpose
-  uploaded_by               Int?
-  created_at                DateTime                    @default(now())
-  uploader                  users?                      @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  mail_attachments          mail_attachments[]
-  context_logs              context_log[]
+  id                       Int                        @id @default(autoincrement())
+  public_id                String                     @unique
+  filepath                 String
+  filename                 String
+  file_size                Int
+  file_hash                String
+  purpose                  AttachmentPurpose
+  uploaded_by              Int?
+  created_at               DateTime                   @default(now())
+  uploader                 users?                     @relation("uploaded_attachments", fields: [uploaded_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  mail_attachments         mail_attachments[]
+  context_logs             context_log[]
   user_startup_attachments user_startup_attachments[]
 }
 
@@ -195,36 +199,41 @@ model mail_recipients {
 }
 
 model users {
-  id                        Int                         @id @default(autoincrement())
-  uuid                      String                      @unique
-  username                  String                      @unique
-  title                     String
-  api_key_hash              String?                     @unique
-  lead_user_id              Int?
-  config                    String                      @default("{}")
+  id                       Int                        @id @default(autoincrement())
+  uuid                     String                     @unique
+  username                 String                     @unique
+  title                    String
+  api_key_hash             String?                    @unique
+  lead_user_id             Int?
+  config                   String                     @default("{}")
   /// Points at the most recent context_log row of type=compact. AGENT_START
   /// uses it as a cursor: summary text lives on that row, anything with a
   /// higher id is unsummarized activity.
-  compact_log_id            Int?
-  compact_log               context_log?                @relation("users_compact_log", fields: [compact_log_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  created_at                DateTime                    @default(now())
-  updated_at                DateTime                    @updatedAt
-  enabled                   Boolean                     @default(true)
-  archived                  Boolean                     @default(false)
-  lead_user                 users?                      @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subagents                 users[]                     @relation("lead_to_subagents")
-  mail_messages_sent        mail_messages[]             @relation("mail_messages_from_user")
-  mail_recipients           mail_recipients[]
-  run_sessions              run_session[]
-  context_logs              context_log[]               @relation("context_log_user")
-  costs                     costs[]                     @relation("costs_user")
-  uploaded_attachments      attachments[]               @relation("uploaded_attachments")
-  user_notifications        user_notifications?
-  user_hosts                user_hosts[]
-  config_revisions          config_revisions[]          @relation("config_revision_user")
-  config_changes_made       config_revisions[]          @relation("config_revision_changed_by")
+  compact_log_id           Int?
+  compact_log              context_log?               @relation("users_compact_log", fields: [compact_log_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  /// MIN(next fire) across enabled `config.schedules`; null when none.
+  /// Indexed for the scheduler's `WHERE next_run_at <= now()` poll.
+  next_run_at              DateTime?
+  created_at               DateTime                   @default(now())
+  updated_at               DateTime                   @updatedAt
+  enabled                  Boolean                    @default(true)
+  archived                 Boolean                    @default(false)
+  lead_user                users?                     @relation("lead_to_subagents", fields: [lead_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subagents                users[]                    @relation("lead_to_subagents")
+  mail_messages_sent       mail_messages[]            @relation("mail_messages_from_user")
+  mail_recipients          mail_recipients[]
+  run_sessions             run_session[]
+  context_logs             context_log[]              @relation("context_log_user")
+  costs                    costs[]                    @relation("costs_user")
+  uploaded_attachments     attachments[]              @relation("uploaded_attachments")
+  user_notifications       user_notifications?
+  user_hosts               user_hosts[]
+  config_revisions         config_revisions[]         @relation("config_revision_user")
+  config_changes_made      config_revisions[]         @relation("config_revision_changed_by")
   user_startup_attachments user_startup_attachments[]
   // username has @unique which creates an implicit index
+
+  @@index([next_run_at], map: "idx_users_next_run_at") // scheduler tick: WHERE next_run_at <= now()
 }
 
 model user_notifications {
@@ -264,6 +273,8 @@ model run_session {
   total_lines   Int           @default(0)
   total_tokens  Int           @default(0)
   total_cost    Float         @default(0)
+  /// `"manual"` | `"wake-on-message"` | `"schedule:<name>"`; null on legacy rows.
+  triggered_by  String?
   created_at    DateTime      @default(now())
   updated_at    DateTime      @updatedAt
   users         users         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)

@@ -31,6 +31,7 @@ export const AgentSchema = z.object({
   shellModel: z.string().optional(),
   /** Agent's configured compaction ceiling, for context-fullness math. */
   tokenMax: z.number().int().positive().optional(),
+  hasActiveSchedules: z.boolean().optional(),
   status: z
     .enum(["active", "available", "disabled", "offline", "paused", "suspended"])
     .optional(),
@@ -184,6 +185,43 @@ export const AgentRunCommandResultSchema = z.object({
   message: z.string(),
 });
 export type AgentRunCommandResult = z.infer<typeof AgentRunCommandResultSchema>;
+
+// --- Schedules ---
+
+/** Per-entry status returned by the schedule overview endpoint. The cron
+ *  expression is shown verbatim so the UI can render it (with or without a
+ *  human-readable preview). `nextFireAt` is the next scheduled fire after
+ *  now in the hub's timezone; null when the cron is invalid or disabled. */
+export const ScheduleStatusEntrySchema = z.object({
+  name: z.string(),
+  cron: z.string(),
+  enabled: z.boolean(),
+  prompt: z.string().optional(),
+  nextFireAt: z.string().nullable(),
+  lastFireAt: z.string().nullable(),
+  lastFireBody: z.string().nullable(),
+});
+export type ScheduleStatusEntry = z.infer<typeof ScheduleStatusEntrySchema>;
+
+export const ScheduleOverviewResponseSchema = z.object({
+  hubTimezone: z.string(),
+  entries: z.array(ScheduleStatusEntrySchema),
+});
+export type ScheduleOverviewResponse = z.infer<
+  typeof ScheduleOverviewResponseSchema
+>;
+
+export const ScheduleNameParamsSchema = z.object({
+  username: z.string(),
+  scheduleName: z.string(),
+});
+export type ScheduleNameParams = z.infer<typeof ScheduleNameParamsSchema>;
+
+export const ScheduleTriggerResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type ScheduleTriggerResult = z.infer<typeof ScheduleTriggerResultSchema>;
 
 // --- Host CRUD schemas ---
 

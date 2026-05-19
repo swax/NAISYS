@@ -324,6 +324,7 @@ export function createMockGlobalConfig(): GlobalConfig {
       supervisorUrl: undefined,
       autoStartAgentsOnMessage: true,
       mailServiceEnabled: true,
+      hubTimezone: "UTC",
     }),
   };
 }

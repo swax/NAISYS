@@ -1,5 +1,17 @@
 import { sanitizeSpendLimit } from "./configUtils.js";
 
+/** Returns the input if it's a valid IANA TZ (e.g. "America/Los_Angeles");
+ *  otherwise undefined. Empty/missing → undefined so callers can fall back. */
+export function validateTimezone(tz: string | undefined): string | undefined {
+  if (!tz?.trim()) return undefined;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return tz;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface ClientConfig {
   shellCommand: {
     outputTokenMax: number;
@@ -22,6 +34,8 @@ export interface ClientConfig {
   useToolsForLlmConsoleResponses: boolean;
   autoStartAgentsOnMessage: boolean;
   mailServiceEnabled: boolean;
+  /** IANA TZ the hub process resolves crons in. */
+  hubTimezone: string;
 }
 
 /** Keys that should never be distributed to clients */
@@ -86,6 +100,14 @@ export function buildClientConfig(
   const useToolsForLlmConsoleResponses = true;
   const autoStartAgentsOnMessage = true;
 
+  // Operator override via TIMEZONE var; falls back to the hub process's TZ.
+  // Invalid IANA names are rejected via Intl validation rather than failing
+  // later in cron-parser or date formatters.
+  const hubTimezone =
+    validateTimezone(variableMap.TIMEZONE) ??
+    Intl.DateTimeFormat().resolvedOptions().timeZone ??
+    "UTC";
+
   return {
     shellCommand,
     retrySecondsBase,
@@ -102,5 +124,6 @@ export function buildClientConfig(
     useToolsForLlmConsoleResponses,
     autoStartAgentsOnMessage,
     mailServiceEnabled,
+    hubTimezone,
   };
 }

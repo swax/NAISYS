@@ -6,12 +6,14 @@ import {
   Group,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { hasAction } from "@naisys/common";
 import {
   IconArchive,
   IconChevronDown,
   IconChevronRight,
+  IconClock,
   IconFileText,
   IconMail,
   IconPlus,
@@ -362,11 +364,23 @@ export const AgentSidebar: React.FC = () => {
               {agent.title}
             </Text>
           </Group>
-          {agent.budgetLeft != null && (
-            <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-              ${agent.budgetLeft.toFixed(2)}
-            </Text>
-          )}
+          <Group gap={4} align="center" wrap="nowrap" style={{ flexShrink: 0 }}>
+            {/* Hide remaining budget for "none" shell models — they don't do
+                LLM work, so the spend limit is just a fail-safe against
+                runaway realtime chat charges and isn't intuitive here. */}
+            {agent.budgetLeft != null && agent.shellModel !== "none" && (
+              <Tooltip label="Remaining spend limit" withArrow>
+                <Text size="xs" c="dimmed">
+                  ${agent.budgetLeft.toFixed(2)}
+                </Text>
+              </Tooltip>
+            )}
+            {agent.hasActiveSchedules && (
+              <Tooltip label="Has active schedules" withArrow>
+                <IconClock size="0.85rem" style={{ opacity: 0.6 }} />
+              </Tooltip>
+            )}
+          </Group>
         </Group>
       </Stack>
     </Card>

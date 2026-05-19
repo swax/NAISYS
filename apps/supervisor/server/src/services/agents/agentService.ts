@@ -71,6 +71,9 @@ export async function getAgents(
       config,
       shellModel: config?.shellModel,
       tokenMax: config?.tokenMax,
+      hasActiveSchedules: (config?.schedules ?? []).some(
+        (s) => s.enabled !== false,
+      ),
     };
   });
 
@@ -226,6 +229,7 @@ export async function getAgent(
 }
 
 export async function enableAgent(id: number): Promise<void> {
+  // next_run_at is recomputed hub-side on USERS_CHANGED.
   await hubDb.users.update({
     where: { id },
     data: { enabled: true },
@@ -236,20 +240,22 @@ export async function disableAgent(id: number): Promise<void> {
   // Null api_key_hash so the user's runtime key stops authenticating against
   // ERP/supervisor immediately, even if an agent process is still alive
   // somewhere holding the plaintext.
+  // Clear next_run_at so the scheduler tick stops considering this agent.
   await hubDb.users.update({
     where: { id },
-    data: { enabled: false, api_key_hash: null },
+    data: { enabled: false, api_key_hash: null, next_run_at: null },
   });
 }
 
 export async function archiveAgent(id: number): Promise<void> {
   await hubDb.users.update({
     where: { id },
-    data: { archived: true, api_key_hash: null },
+    data: { archived: true, api_key_hash: null, next_run_at: null },
   });
 }
 
 export async function unarchiveAgent(id: number): Promise<void> {
+  // next_run_at is recomputed hub-side on USERS_CHANGED.
   await hubDb.users.update({
     where: { id },
     data: { archived: false },

@@ -19,6 +19,8 @@ import type {
   AgentStopRequest,
   AgentStopResponse,
   RuntimeKeyReissue,
+  ScheduleTriggerRequest,
+  ScheduleTriggerResponse,
 } from "./schemas/agents/agents.js";
 import type { AgentsStatus, Heartbeat } from "./schemas/agents/heartbeat.js";
 import type {
@@ -138,6 +140,10 @@ export interface HubRequestEvents {
   [HubEvents.ROTATE_ACCESS_KEY]: {
     request: RotateAccessKeyRequest;
     response: RotateAccessKeyResponse;
+  };
+  [HubEvents.SCHEDULE_TRIGGER]: {
+    request: ScheduleTriggerRequest;
+    response: ScheduleTriggerResponse;
   };
   [HubEvents.COST_WRITE]: {
     request: CostWriteRequest;

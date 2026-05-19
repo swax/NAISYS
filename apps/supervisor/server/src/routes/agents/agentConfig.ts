@@ -35,6 +35,7 @@ import {
   updateAgentConfigById,
 } from "../../services/agents/agentConfigService.js";
 import { resolveAgentId } from "../../services/agents/agentService.js";
+import { getHubTimezone } from "../../services/comms/hubConnectionService.js";
 import { getAllModelsFromDb } from "../../services/modelService.js";
 
 /** Validate model keys in config against known models. Returns error message or null. */
@@ -115,6 +116,7 @@ export default function agentConfigRoutes(
         return {
           config,
           assignedHosts,
+          hubTimezone: getHubTimezone(),
           _actions: canManage
             ? [
                 {

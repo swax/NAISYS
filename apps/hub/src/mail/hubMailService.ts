@@ -39,12 +39,16 @@ export function createHubMailService(
 
       const activeUserIds = heartbeatService.getActiveUserIds();
 
-      // Find distinct users with unread mail (exclude 'from' type - senders pre-mark as read)
+      // Find distinct users with unread mail (exclude 'from' type - senders pre-mark as read).
+      // Scheduled chats (source="schedule:*") have their own start path in
+      // hubScheduleService — handling them here would mislabel the run as
+      // wake-on-message and lose the schedule provenance.
       const unreadRecipients = await hubDb.mail_recipients.findMany({
         where: {
           read_at: null,
           type: { not: "from" },
           user: { enabled: true, archived: false },
+          message: { source: null },
         },
         select: {
           user_id: true,
@@ -63,7 +67,7 @@ export function createHubMailService(
       for (const userId of inactiveUserIds) {
         if (heartbeatService.getActiveUserIds().has(userId)) continue;
         if (costService.isUserSpendSuspended(userId)) continue;
-        void agentService.tryStartAgent(userId);
+        void agentService.tryStartAgent(userId, "wake-on-message");
       }
     } catch (error) {
       logService.error(`[Hub:Mail] Auto-start check failed: ${error}`);

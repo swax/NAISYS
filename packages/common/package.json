@@ -17,6 +17,7 @@
     "npm:publish": "npm publish --access public"
   },
   "dependencies": {
+    "cron-parser": "^5.5.0",
     "semver": "^7.7.4",
     "zod": "^4.3.6"
   },

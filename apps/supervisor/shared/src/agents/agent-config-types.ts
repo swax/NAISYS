@@ -57,6 +57,9 @@ export const GetAgentConfigResponseSchema = z.object({
   assignedHosts: z
     .array(z.object({ id: z.number(), name: z.string() }))
     .optional(),
+  /** Hub's IANA TZ — schedule editor previews use this so the cron is
+   *  evaluated in the same TZ the scheduler will fire in. */
+  hubTimezone: z.string(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

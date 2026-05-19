@@ -98,6 +98,7 @@ export const useChatMessages = (
             body: event.body,
             createdAt: event.createdAt,
             attachments: event.attachments as ChatMessage["attachments"],
+            source: event.source,
           };
           mergeMessages([msg]);
 

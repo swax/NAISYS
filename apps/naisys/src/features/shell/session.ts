@@ -8,7 +8,12 @@ import type { RestoreData, ResumeEntry } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 
 import type { AgentConfig } from "../../agent/agentConfig.js";
-import { chatCmd, mailCmd, sessionCmd } from "../../command/commandDefs.js";
+import {
+  chatCmd,
+  commentCmd,
+  mailCmd,
+  sessionCmd,
+} from "../../command/commandDefs.js";
 import type {
   CommandResponse,
   RegistrableCommand,
@@ -498,9 +503,9 @@ export function createSessionService(
   }
 
   /** Called by the command handler after each successful dispatch to
-   *  maintain the `canComplete` gate. Waits preserve the flag so
-   *  `chat send → wait → complete` is allowed; any other command clears
-   *  it. */
+   *  maintain the `canComplete` gate. Waits and ns-comment preserve the
+   *  flag so `chat send → wait → complete` or `chat send → ns-comment →
+   *  complete` is allowed; any other command clears it. */
   function updateCanComplete(commandName: string, cmdArgs: string): void {
     const sub = stringArgv(cmdArgs)[0];
 
@@ -512,6 +517,12 @@ export function createSessionService(
         return;
       }
       canComplete = false;
+      return;
+    }
+
+    // ns-comment is thinking-out-loud, not a real action — preserve the
+    // gate so the agent can narrate between a send and complete.
+    if (commandName === commentCmd.name) {
       return;
     }
 

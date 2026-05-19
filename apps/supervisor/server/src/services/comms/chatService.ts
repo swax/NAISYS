@@ -159,6 +159,7 @@ export async function getMessages(
       id: true,
       from_user_id: true,
       body: true,
+      source: true,
       created_at: true,
       from_user: { select: { username: true, title: true } },
       recipients: {
@@ -199,6 +200,7 @@ export async function getMessages(
             }))
           : undefined,
       readBy: readByIds.length > 0 ? readByIds : undefined,
+      source: msg.source ?? undefined,
     };
   });
 

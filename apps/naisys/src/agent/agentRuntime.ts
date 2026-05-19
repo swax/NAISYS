@@ -108,6 +108,7 @@ export async function createAgentRuntime(
 
   const startupAttachmentService = createStartupAttachmentService(
     hubAttachmentClient,
+    hubClient,
     agentConfig,
   );
   if (startupAttachments?.length) {
@@ -277,7 +278,11 @@ export async function createAgentRuntime(
   // `ns-more` always pages the most recent over-budget output for THIS agent.
   const pagedOutputBuffer = createPagedOutputBuffer(globalConfig);
 
-  const lynxService = createLynxService(globalConfig, output, pagedOutputBuffer);
+  const lynxService = createLynxService(
+    globalConfig,
+    output,
+    pagedOutputBuffer,
+  );
   const browserService = createBrowserService(
     globalConfig,
     agentConfig,
