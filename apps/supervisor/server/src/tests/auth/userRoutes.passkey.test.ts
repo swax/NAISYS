@@ -103,7 +103,7 @@ vi.mock("../../services/userService.js", () => ({
   updateUser: mocks.updateUser,
 }));
 
-import userRoutes from "../../routes/admin/users.js";
+import userRoutes from "../../routes/users/users.js";
 
 const adminUser: AuthUser = {
   id: 7,

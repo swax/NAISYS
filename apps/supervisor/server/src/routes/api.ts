@@ -3,8 +3,6 @@ import type { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 import { registerAuthMiddleware } from "../authMiddleware.js";
 import adminRoutes from "./admin/admin.js";
-import authRoutes from "./admin/auth.js";
-import userRoutes from "./admin/users.js";
 import variablesRoutes from "./admin/variables.js";
 import agentChatRoutes from "./agents/agentChat.js";
 import agentConfigRoutes from "./agents/agentConfig.js";
@@ -14,6 +12,7 @@ import agentRunsRoutes from "./agents/agentRuns.js";
 import agentsRoutes from "./agents/agents.js";
 import agentSchedulesRoutes from "./agents/agentSchedules.js";
 import agentStartupAttachmentsRoutes from "./agents/agentStartupAttachments.js";
+import authRoutes from "./auth/auth.js";
 import attachmentRoutes from "./infra/attachments.js";
 import costsRoutes from "./infra/costs.js";
 import hostsRoutes from "./infra/hosts.js";
@@ -22,6 +21,7 @@ import voiceRoutes from "./infra/voice.js";
 import rootRoutes from "./root.js";
 import schemaRoutes from "./schemas.js";
 import statusRoutes from "./status.js";
+import userRoutes from "./users/users.js";
 
 interface ApiRoutesOptions extends FastifyPluginOptions {
   plugins?: SupervisorPlugin[];

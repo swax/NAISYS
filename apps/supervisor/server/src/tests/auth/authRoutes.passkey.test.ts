@@ -77,7 +77,7 @@ vi.mock("../../services/userService.js", () => ({
   getUserPermissions: mocks.getUserPermissions,
 }));
 
-import authRoutes from "../../routes/admin/auth.js";
+import authRoutes from "../../routes/auth/auth.js";
 
 const authChallengeCookie = "naisys_passkey_auth_chal";
 const regChallengeCookie = "naisys_passkey_reg_chal";
