@@ -1,46 +1,26 @@
 import { mergeByKey } from "@naisys/common";
-import type {
-  CommandLoopState,
-  CostPushEntry,
-  LogPushSessionUpdate,
-  SessionHeartbeatUpdate,
-} from "@naisys/hub-protocol";
+import type { CommandLoopState } from "@naisys/hub-protocol";
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
-
-type CachedRunSession = BaseRunSession & {
-  activeSubagentCount?: number;
-  paused?: boolean;
-  state?: CommandLoopState;
-};
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getRunsData } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { useSubscription } from "../socket/useSubscription";
+import { applyRunsEvent, runKey, type RunsEvent } from "./runEvents";
+
+type CachedRunSession = BaseRunSession & {
+  activeSubagentCount?: number;
+  paused?: boolean;
+  state?: CommandLoopState;
+};
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
-
-const runKey = (run: {
-  userId: number;
-  runId: number;
-  subagentId?: number | null;
-  sessionId: number;
-}) => `${run.userId}-${run.runId}-${run.subagentId ?? 0}-${run.sessionId}`;
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const runsCache = new Map<string, CachedRunSession[]>();
 const totalCache = new Map<string, number>();
 const pagesLoadedCache = new Map<string, number>();
-
-type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
-type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
-type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
-  type: "heartbeat-update";
-  activeSubagentCount: number;
-  online: boolean;
-};
-type RunsEvent = RunsLogUpdate | RunsCostUpdate | RunsHeartbeatUpdate;
 
 export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
@@ -110,21 +90,11 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
       const key = runKey(event);
       const existing = existingRuns.find((r) => runKey(r) === key);
 
-      if (event.type === "heartbeat-update") {
-        if (existing) {
-          const updated: CachedRunSession = {
-            ...existing,
-            lastActive: event.lastActive,
-            isOnline: event.online,
-            activeSubagentCount: event.activeSubagentCount,
-            paused: event.paused,
-            state: event.state,
-            totalTokens: event.totalTokens ?? existing.totalTokens,
-          };
-          mergeRuns([updated]);
-        } else if (event.online) {
-          // A run we don't have yet (created after page load) — pull the full
-          // row via REST.
+      if (!existing) {
+        // A run we don't have yet (created after page load) — pull the full
+        // row via REST. Only a heartbeat announces a new run; a stray log or
+        // cost delta has no row to land on and is safely dropped.
+        if (event.type === "heartbeat-update" && event.online) {
           void queryClient.invalidateQueries({
             queryKey: ["runs-data", agentUsername],
           });
@@ -132,24 +102,7 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
         return;
       }
 
-      // log-update / cost-update only refine a run we already know about.
-      if (!existing) return;
-
-      if (event.type === "log-update") {
-        const updated: CachedRunSession = {
-          ...existing,
-          lastActive: event.lastActive,
-          latestLogId: event.latestLogId,
-          totalLines: existing.totalLines + event.totalLinesDelta,
-        };
-        mergeRuns([updated]);
-      } else if (event.type === "cost-update") {
-        const updated: CachedRunSession = {
-          ...existing,
-          totalCost: existing.totalCost + event.costDelta,
-        };
-        mergeRuns([updated]);
-      }
+      mergeRuns([applyRunsEvent(existing, event)]);
     },
     [agentUsername, mergeRuns, queryClient],
   );

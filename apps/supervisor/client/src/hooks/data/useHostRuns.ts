@@ -1,109 +1,40 @@
-import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 
 import { getHostRuns } from "../../lib/api/apiRuns";
-import type { RunSession } from "../../types/runSession";
+import { useLiveRuns } from "./useLiveRuns";
 
 const PAGE_SIZE = 15;
 
+/**
+ * Runs recorded on a host, newest first, kept live — online/offline, cost and
+ * line counts update from socket pushes. A host's runs span many agents and
+ * the hub has no host-scoped room, so liveness rides each run's own
+ * `runs:${username}` room (see useLiveRuns). `pullNewRuns` is on: a new run by
+ * an agent already in the list is pulled in live; one by an agent with no runs
+ * listed yet lands on the next refetch (reconnect or navigation).
+ */
 export const useHostRuns = (hostname: string | undefined) => {
-  const [baseRuns, setBaseRuns] = useState<BaseRunSession[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pagesLoaded, setPagesLoaded] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
-
-  // Reset and fetch page 1 whenever hostname changes
-  useEffect(() => {
-    if (!hostname) {
-      setBaseRuns([]);
-      setTotal(0);
-      setPagesLoaded(0);
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoading(true);
-    setBaseRuns([]);
-    setTotal(0);
-    setPagesLoaded(0);
-
-    void (async () => {
-      try {
-        const result = await getHostRuns({
-          hostname,
-          page: 1,
-          count: PAGE_SIZE,
-        });
-        if (cancelled) return;
-        if (result.success && result.data) {
-          setBaseRuns(result.data.runs);
-          setTotal(result.data.total ?? result.data.runs.length);
-          setPagesLoaded(1);
-        }
-      } catch (err) {
-        console.error("Error fetching host runs:", err);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hostname]);
-
-  const loadMore = useCallback(async () => {
-    if (!hostname || loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    try {
-      const nextPage = pagesLoaded + 1;
-      const result = await getHostRuns({
-        hostname,
-        page: nextPage,
-        count: PAGE_SIZE,
-      });
+  const fetchPage = useCallback(
+    async (page: number) => {
+      if (!hostname) return null;
+      const result = await getHostRuns({ hostname, page, count: PAGE_SIZE });
       if (result.success && result.data) {
-        setBaseRuns((prev) => {
-          const seen = new Set(
-            prev.map(
-              (r) =>
-                `${r.userId}-${r.runId}-${r.subagentId ?? 0}-${r.sessionId}`,
-            ),
-          );
-          const additions = result.data!.runs.filter(
-            (r) =>
-              !seen.has(
-                `${r.userId}-${r.runId}-${r.subagentId ?? 0}-${r.sessionId}`,
-              ),
-          );
-          return [...prev, ...additions];
-        });
-        setPagesLoaded(nextPage);
-        if (result.data.total !== undefined) setTotal(result.data.total);
+        return {
+          runs: result.data.runs,
+          total: result.data.total ?? result.data.runs.length,
+        };
       }
-    } catch (err) {
-      console.error("Error loading more host runs:", err);
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [hostname, pagesLoaded]);
+      return null;
+    },
+    [hostname],
+  );
 
-  // isOnline arrives on the REST snapshot; the host page doesn't subscribe
-  // for live run updates, so it reflects liveness as of the last fetch.
-  const runs: RunSession[] = baseRuns;
+  const { runs, total, isLoading, loadMore, loadingMore, hasMore } =
+    useLiveRuns({
+      resetKey: hostname ? `host:${hostname}` : null,
+      fetchPage,
+      pullNewRuns: true,
+    });
 
-  const hasMore = runs.length < total;
-
-  return {
-    runs,
-    total,
-    isLoading,
-    loadMore,
-    loadingMore,
-    hasMore,
-  };
+  return { runs, total, isLoading, loadMore, loadingMore, hasMore };
 };
