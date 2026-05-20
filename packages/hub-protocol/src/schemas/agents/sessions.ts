@@ -2,24 +2,6 @@ import { z } from "zod";
 
 import { CommandLoopStateSchema } from "./heartbeat.js";
 
-/** Full session data pushed from hub to supervisor after creation */
-export const SessionPushSchema = z.object({
-  session: z.object({
-    userId: z.number(),
-    runId: z.number(),
-    subagentId: z.number().nullable().optional(),
-    sessionId: z.number(),
-    modelName: z.string(),
-    createdAt: z.string(),
-    lastActive: z.string(),
-    latestLogId: z.number(),
-    totalLines: z.number(),
-    totalTokens: z.number(),
-    totalCost: z.number(),
-  }),
-});
-export type SessionPush = z.infer<typeof SessionPushSchema>;
-
 /** Request to create a new run session. If subagentId is set, parentRunId is
  * required and the row is materialized under the parent's run. */
 export const SessionCreateRequestSchema = z.object({
@@ -60,7 +42,7 @@ export type SessionIncrementResponse = z.infer<
   typeof SessionIncrementResponseSchema
 >;
 
-/** A lastActive bump for a single run session, derived from a heartbeat */
+/** Per-session liveness from a heartbeat. */
 export const SessionHeartbeatUpdateSchema = z.object({
   userId: z.number(),
   runId: z.number(),
@@ -76,7 +58,7 @@ export type SessionHeartbeatUpdate = z.infer<
   typeof SessionHeartbeatUpdateSchema
 >;
 
-/** Session lastActive bumps pushed from hub to supervisor, one per active agent */
+/** Full set of active run sessions, pushed from hub to supervisor each tick */
 export const SessionHeartbeatSchema = z.object({
   updates: z.array(SessionHeartbeatUpdateSchema),
 });

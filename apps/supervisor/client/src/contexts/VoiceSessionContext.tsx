@@ -5,7 +5,6 @@ import type {
   LogPushSessionUpdate,
   MailPush,
   SessionHeartbeatUpdate,
-  SessionPush,
 } from "@naisys/hub-protocol";
 import React, {
   createContext,
@@ -17,8 +16,8 @@ import React, {
   useState,
 } from "react";
 
+import { useOnSocketReconnect } from "../hooks/socket/useOnSocketReconnect";
 import { useSubscription } from "../hooks/socket/useSubscription";
-import { isRunActive } from "../hooks/thread-runs/runStatus";
 import type { VoiceMode } from "../lib/api/apiClient";
 import { getRunsData } from "../lib/api/apiRuns";
 import {
@@ -39,7 +38,7 @@ import {
  *
  * Run-log target tracking is event-driven off the `runs:${target}` socket
  * room (the same feed the runs page uses): one REST snapshot when the voice
- * session opens, then `new-session` / `heartbeat-update` events keep
+ * session opens, then `heartbeat-update` events keep
  * {@link LogTarget} latched onto the right (run, session, subagent) across
  * compaction, subagent handoff, and cold-start wake-ups from `talk_to_agent`.
  */
@@ -99,28 +98,32 @@ interface TrackedRun {
   sessionId: number;
   subagentId: number;
   lastActive: string;
+  isOnline: boolean;
 }
 
-const trackedKey = (r: TrackedRun) =>
-  `${r.runId}-${r.subagentId}-${r.sessionId}`;
+const trackedKey = (r: {
+  runId: number;
+  subagentId: number;
+  sessionId: number;
+}) => `${r.runId}-${r.subagentId}-${r.sessionId}`;
 
 /** Pick the most-recently-active online run. Returns undefined when nothing
  *  is online — the caller leaves the previous target in place (resilient
  *  against brief gaps during compaction / subagent handoff). */
 function pickActiveRun(runs: TrackedRun[]): TrackedRun | undefined {
   return maxBy(
-    runs.filter((r) => isRunActive(r.lastActive)),
+    runs.filter((r) => r.isOnline),
     (r) => new Date(r.lastActive),
   );
 }
 
-// All four event types from `runs:${target}`. Mirroring useRunsData's
-// shape TS-forces any new event into an explicit case here.
+// Event types from `runs:${target}`. Mirroring useRunsData's shape so TS
+// forces any new event into an explicit case here.
 type RunsRoomEvent =
-  | (SessionPush["session"] & { type: "new-session" })
   | (SessionHeartbeatUpdate & {
       type: "heartbeat-update";
       activeSubagentCount: number;
+      online: boolean;
     })
   | (LogPushSessionUpdate & { type: "log-update" })
   | (CostPushEntry & { type: "cost-update" });
@@ -161,6 +164,39 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
         : next,
     );
   }, []);
+
+  /** Pull the target's runs snapshot into runsRef. Used on session open and
+   *  on socket reconnect (to recover a missed online:false). Gated on
+   *  sessionRef so a late fetch can't stomp a replaced session. */
+  const loadRunsSnapshot = useCallback(
+    async (targetUsername: string) => {
+      const instance = sessionRef.current;
+      try {
+        const res = await getRunsData({ agentUsername: targetUsername });
+        if (sessionRef.current !== instance) return;
+        for (const r of res.data?.runs ?? []) {
+          runsRef.current.set(
+            trackedKey({
+              runId: r.runId,
+              subagentId: r.subagentId ?? 0,
+              sessionId: r.sessionId,
+            }),
+            {
+              runId: r.runId,
+              sessionId: r.sessionId,
+              subagentId: r.subagentId ?? 0,
+              lastActive: r.lastActive,
+              isOnline: r.isOnline,
+            },
+          );
+        }
+        recomputeLogTarget();
+      } catch (error) {
+        console.warn("[Voice] could not load runs snapshot:", error);
+      }
+    },
+    [recomputeLogTarget],
+  );
 
   const hangUp = useCallback(() => {
     sessionRef.current?.abort();
@@ -225,34 +261,13 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
       sessionRef.current = instance;
       void instance.start();
 
-      // Initial runs snapshot — picks up a run that's already running when
-      // the voice session opens. Tied to session creation (not a useEffect
-      // on session?.status) so a normal connecting → live transition can't
-      // wipe runsRef after socket events have already populated it. Gated
-      // by `sessionRef.current === instance` so a late-returning fetch
-      // can't stomp a replaced session.
-      void (async () => {
-        try {
-          const res = await getRunsData({
-            agentUsername: params.targetUsername,
-          });
-          if (sessionRef.current !== instance) return;
-          for (const r of res.data?.runs ?? []) {
-            const tracked: TrackedRun = {
-              runId: r.runId,
-              sessionId: r.sessionId,
-              subagentId: r.subagentId ?? 0,
-              lastActive: r.lastActive,
-            };
-            runsRef.current.set(trackedKey(tracked), tracked);
-          }
-          recomputeLogTarget();
-        } catch (error) {
-          console.warn("[Voice] could not load runs snapshot:", error);
-        }
-      })();
+      // Initial runs snapshot — picks up a run already running when the voice
+      // session opens. Fired here (not in a useEffect on session?.status) so
+      // a normal connecting → live transition can't wipe runsRef after socket
+      // events have already populated it.
+      void loadRunsSnapshot(params.targetUsername);
     },
-    [recomputeLogTarget],
+    [loadRunsSnapshot],
   );
 
   // Live updates from the runs room — follow new runs (cold-start wake from
@@ -260,18 +275,35 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   // and lastActive bumps that change which run is most-recently-active.
   const handleRunsEvent = useCallback(
     (event: RunsRoomEvent) => {
-      // cost-update has no lastActive — nothing for pickActiveRun to use.
+      // cost-update carries no lastActive — nothing for pickActiveRun to use.
       if (event.type === "cost-update") return;
-      // The other three upsert into runsRef so any one recovers a missed
-      // new-session (socket reconnect, subscription timing race) and keeps
-      // voice off a stale logTarget.
-      const tracked: TrackedRun = {
+
+      const key = trackedKey({
         runId: event.runId,
-        sessionId: event.sessionId,
         subagentId: event.subagentId ?? 0,
-        lastActive: event.lastActive,
-      };
-      runsRef.current.set(trackedKey(tracked), tracked);
+        sessionId: event.sessionId,
+      });
+
+      if (event.type === "heartbeat-update") {
+        // Heartbeats are the authority for a run's existence and liveness.
+        runsRef.current.set(key, {
+          runId: event.runId,
+          sessionId: event.sessionId,
+          subagentId: event.subagentId ?? 0,
+          lastActive: event.lastActive,
+          isOnline: event.online,
+        });
+        recomputeLogTarget();
+        return;
+      }
+
+      // log-update only refines a run we already track: it bumps recency for
+      // pickActiveRun but is not a liveness signal, so isOnline is left as the
+      // last heartbeat set it — a trailing log after an online:false heartbeat
+      // must not relatch voice onto a dead run.
+      const existing = runsRef.current.get(key);
+      if (!existing) return;
+      runsRef.current.set(key, { ...existing, lastActive: event.lastActive });
       recomputeLogTarget();
     },
     [recomputeLogTarget],
@@ -285,6 +317,15 @@ export const VoiceSessionProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [session?.status, session?.targetUsername]);
 
   useSubscription<RunsRoomEvent>(runsRoom, handleRunsEvent);
+
+  // A dropped socket can miss a run's online:false event; re-pull the runs
+  // snapshot on reconnect so voice can't stay latched onto a dead run.
+  useOnSocketReconnect(
+    () => {
+      if (session) void loadRunsSnapshot(session.targetUsername);
+    },
+    session?.status === "live" || session?.status === "connecting",
+  );
 
   // Forward log entries to the active session; it owns narration timing
   // and decides when (if at all) to give the model a turn.

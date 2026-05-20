@@ -3,14 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getHostRuns } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
-import { isRunActive } from "../thread-runs/runStatus";
-import { useTick } from "../useTick";
 
 const PAGE_SIZE = 15;
 
 export const useHostRuns = (hostname: string | undefined) => {
-  useTick(1000);
-
   const [baseRuns, setBaseRuns] = useState<BaseRunSession[]>([]);
   const [total, setTotal] = useState(0);
   const [pagesLoaded, setPagesLoaded] = useState(0);
@@ -96,10 +92,9 @@ export const useHostRuns = (hostname: string | undefined) => {
     }
   }, [hostname, pagesLoaded]);
 
-  const runs: RunSession[] = baseRuns.map((run) => ({
-    ...run,
-    isOnline: isRunActive(run.lastActive),
-  }));
+  // isOnline arrives on the REST snapshot; the host page doesn't subscribe
+  // for live run updates, so it reflects liveness as of the last fetch.
+  const runs: RunSession[] = baseRuns;
 
   const hasMore = runs.length < total;
 

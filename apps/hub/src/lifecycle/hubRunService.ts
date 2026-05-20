@@ -16,26 +16,6 @@ export function createHubRunService(
   logService: DualLogger,
   ownershipService: HubOwnershipService,
 ) {
-  function pushSessionToSupervisors(session: {
-    userId: number;
-    runId: number;
-    subagentId?: number;
-    sessionId: number;
-    modelName: string;
-    createdAt: string;
-    lastActive: string;
-  }) {
-    naisysServer.broadcastToSupervisors(HubEvents.SESSION_PUSH, {
-      session: {
-        ...session,
-        latestLogId: 0,
-        totalLines: 0,
-        totalTokens: 0,
-        totalCost: 0,
-      },
-    });
-  }
-
   naisysServer.registerEvent(
     HubEvents.SESSION_CREATE,
     async (hostId, data, ack) => {
@@ -104,16 +84,6 @@ export function createHubRunService(
           runId,
           sessionId: newSessionId,
         });
-
-        pushSessionToSupervisors({
-          userId: parsed.userId,
-          runId,
-          subagentId: parsed.subagentId,
-          sessionId: newSessionId,
-          modelName: parsed.modelName,
-          createdAt: now,
-          lastActive: now,
-        });
       } catch (error) {
         logService.error(
           `[Hub:Runs] session_create error for host ${hostId}: ${error}`,
@@ -167,16 +137,6 @@ export function createHubRunService(
         });
 
         ack({ success: true, sessionId: newSessionId });
-
-        pushSessionToSupervisors({
-          userId: parsed.userId,
-          runId: parsed.runId,
-          subagentId: parsed.subagentId,
-          sessionId: newSessionId,
-          modelName: parsed.modelName,
-          createdAt: now,
-          lastActive: now,
-        });
       } catch (error) {
         logService.error(
           `[Hub:Runs] session_increment error for host ${hostId}: ${error}`,

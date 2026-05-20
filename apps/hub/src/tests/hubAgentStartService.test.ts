@@ -296,17 +296,6 @@ describe("hubAgentStartService", () => {
       BEST_HOST_ID,
       START_USER_ID,
     );
-    expect(h.server.broadcastToSupervisors).toHaveBeenCalledWith(
-      HubEvents.SESSION_PUSH,
-      expect.objectContaining({
-        session: expect.objectContaining({
-          userId: START_USER_ID,
-          runId: 11,
-          sessionId: 1,
-          modelName: "gpt-5",
-        }),
-      }),
-    );
   });
 
   test("rejects a duplicate start for the same user while the first ack is pending", async () => {

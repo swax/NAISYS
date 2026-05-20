@@ -162,10 +162,11 @@ describe("hubHeartbeatService", () => {
         }),
       );
 
-      expect(hubDb.hosts.updateMany).toHaveBeenCalled();
-
       await vi.advanceTimersByTimeAsync(HUB_HEARTBEAT_INTERVAL_MS);
 
+      // The publish runs off in-memory state; the deferred hosts.updateMany
+      // write is still pending (resolved only below).
+      expect(hubDb.hosts.updateMany).toHaveBeenCalled();
       expect(server.broadcastToSupervisors).toHaveBeenCalledWith(
         HubEvents.SESSION_HEARTBEAT,
         {

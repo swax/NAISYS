@@ -21,7 +21,6 @@ import {
   MailPushSchema,
   MailReadPushSchema,
   SessionHeartbeatSchema,
-  SessionPushSchema,
 } from "@naisys/hub-protocol";
 import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
@@ -36,7 +35,8 @@ import {
   emitHubConnectionStatus,
   markAgentStarted,
   markAgentStopped,
-  updateActiveSubagentCount,
+  replaceActiveSubagentCounts,
+  syncOnlineRuns,
   updateAgentsStatus,
   updateHostsStatus,
   updatePausedAgents,
@@ -231,25 +231,6 @@ export function initHubConnection(hubUrl: string) {
     }
   });
 
-  socket.on(HubEvents.SESSION_PUSH, (data) => {
-    const parsed = SessionPushSchema.safeParse(data);
-    if (!parsed.success) {
-      getLogger().warn(
-        "[Supervisor:HubClient] Invalid session push: %o",
-        parsed.error,
-      );
-      return;
-    }
-
-    const { session } = parsed.data;
-    const username = resolveUsername(session.userId);
-    if (!username) return;
-
-    const browserIO = getIO();
-    const room = `runs:${username}`;
-    browserIO.to(room).emit(room, { type: "new-session", ...session });
-  });
-
   socket.on(HubEvents.SESSION_HEARTBEAT, (data) => {
     const parsed = SessionHeartbeatSchema.safeParse(data);
     if (!parsed.success) {
@@ -279,9 +260,13 @@ export function initHubConnection(hubUrl: string) {
       countByRunKey.set(key, entry);
     }
 
-    for (const entry of countByRunKey.values()) {
-      updateActiveSubagentCount(entry.userId, entry.runId, entry.count);
-    }
+    // Replace the whole count mirror from this snapshot so a run that dropped
+    // out doesn't leave a stale count behind for a later REST read.
+    replaceActiveSubagentCounts([...countByRunKey.values()]);
+
+    // The heartbeat is the full active-session snapshot — runs that were
+    // online and aren't in it have ended; relay them offline.
+    const departed = syncOnlineRuns(parsed.data.updates);
 
     for (const update of parsed.data.updates) {
       // Only parent sessions affect the agent-level paused indicator —
@@ -297,8 +282,22 @@ export function initHubConnection(hubUrl: string) {
         ...update,
         activeSubagentCount:
           countByRunKey.get(`${update.userId}-${update.runId}`)?.count ?? 0,
+        online: true,
       });
     }
+
+    for (const update of departed) {
+      const username = resolveUsername(update.userId);
+      if (!username) continue;
+      const room = `runs:${username}`;
+      browserIO.to(room).emit(room, {
+        type: "heartbeat-update",
+        ...update,
+        activeSubagentCount: 0,
+        online: false,
+      });
+    }
+
     updatePausedAgents(pausedUserIds);
   });
 

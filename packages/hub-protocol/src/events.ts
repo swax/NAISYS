@@ -44,9 +44,7 @@ export const HubEvents = {
   MAIL_READ_PUSH: "mail_read_push",
   /** Cost delta push per session */
   COST_PUSH: "cost_push",
-  /** New session push with full RunSession data */
-  SESSION_PUSH: "session_push",
-  /** Per-heartbeat lastActive bumps for active run sessions */
+  /** Full active-session snapshot, pushed each heartbeat tick */
   SESSION_HEARTBEAT: "session_heartbeat",
 
   // ---------------------------------------------------------------------------

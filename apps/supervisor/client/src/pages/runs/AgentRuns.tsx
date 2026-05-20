@@ -230,11 +230,11 @@ export const AgentRuns: React.FC = () => {
     try {
       const result = await stopAgent(username);
       if (result.success) {
-        // Force isOnline false locally so the Stop/pause/command surfaces
-        // disappear and "Start new run" returns without waiting for the
-        // 8s heartbeat-staleness window.
+        // Flip isOnline off locally so the Stop/pause/command surfaces
+        // disappear immediately, rather than waiting for the next heartbeat
+        // snapshot to drop the run.
         patchRun(run.userId, run.runId, run.sessionId, run.subagentId, {
-          lastActive: new Date(0).toISOString(),
+          isOnline: false,
           paused: false,
         });
       } else {

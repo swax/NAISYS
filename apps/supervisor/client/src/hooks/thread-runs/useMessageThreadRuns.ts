@@ -2,35 +2,33 @@ import type {
   CommandLoopState,
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
-  SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession } from "@naisys/supervisor-shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getMessageThreadRuns } from "../../lib/api/apiRuns";
+import { useOnSocketReconnect } from "../socket/useOnSocketReconnect";
 import {
   useRoomSubscriptions,
   useSubscription,
 } from "../socket/useSubscription";
-import { useTick } from "../useTick";
-import { isRunActive } from "./runStatus";
 
 type StoredRun = RunSession & {
   paused?: boolean;
   state?: CommandLoopState;
 };
 
-export type ThreadRun = StoredRun & { isOnline: boolean };
+export type ThreadRun = StoredRun;
 
 type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
   type: "heartbeat-update";
   activeSubagentCount: number;
+  online: boolean;
 };
 
 type RunsEvent =
   | (LogPushSessionUpdate & { type: "log-update" })
-  | RunsHeartbeatUpdate
-  | (SessionPush["session"] & { type: "new-session" });
+  | RunsHeartbeatUpdate;
 
 const runKey = (run: {
   userId: number;
@@ -59,9 +57,6 @@ export const useMessageThreadRuns = (
   useEffect(() => {
     runMapRef.current = runMap;
   }, [runMap]);
-
-  // Drives the 1s isOnline transition without waiting on a refetch.
-  const tick = useTick(1000);
 
   // Matches mail_messages.participants and the relevant socket room key.
   const participantsKey = useMemo(
@@ -120,11 +115,7 @@ export const useMessageThreadRuns = (
   // per (runId, subagentId, sessionId), so without them the subagent's
   // command stream stays dark.
   const handleRunsEvent = useCallback((event: RunsEvent) => {
-    if (
-      event.type !== "log-update" &&
-      event.type !== "heartbeat-update" &&
-      event.type !== "new-session"
-    ) {
+    if (event.type !== "log-update" && event.type !== "heartbeat-update") {
       return;
     }
     const key = runKey(event);
@@ -139,6 +130,7 @@ export const useMessageThreadRuns = (
           lastActive: event.lastActive,
           ...(event.type === "heartbeat-update"
             ? {
+                isOnline: event.online,
                 activeSubagentCount: event.activeSubagentCount,
                 paused: event.paused,
                 state: event.state,
@@ -186,25 +178,16 @@ export const useMessageThreadRuns = (
 
   useSubscription<unknown>(messageRoom, handleMessageEvent);
 
-  // Recomputes each tick. Returning a string makes the dep value-stable, so
-  // the runs memo (and downstream consumers) only invalidate when an actual
-  // online/offline transition happens — not every second.
-  const onlineFingerprint = useMemo(() => {
-    void tick;
-    const keys: string[] = [];
-    for (const [key, run] of runMap) {
-      if (isRunActive(run.lastActive)) keys.push(key);
-    }
-    return keys.sort().join("|");
-  }, [runMap, tick]);
+  // A dropped socket can miss a run's online:false event; refetch on
+  // reconnect so a stale "online" indicator can't persist.
+  useOnSocketReconnect(
+    () => setRefetchTick((t) => t + 1),
+    !!participantsKey && !!currentAgentUsername,
+  );
 
   const runs: ThreadRun[] = useMemo(
-    () =>
-      Array.from(runMap.values()).map((run) => ({
-        ...run,
-        isOnline: isRunActive(run.lastActive),
-      })),
-    [runMap, onlineFingerprint],
+    () => Array.from(runMap.values()),
+    [runMap],
   );
 
   const patchRun = useCallback(

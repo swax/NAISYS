@@ -29,7 +29,6 @@ import type {
   SessionHeartbeat,
   SessionIncrementRequest,
   SessionIncrementResponse,
-  SessionPush,
 } from "./schemas/agents/sessions.js";
 import type {
   CostControl,
@@ -192,7 +191,6 @@ export interface HubSupervisorPushEvents {
   [HubEvents.MAIL_PUSH]: MailPush;
   [HubEvents.MAIL_READ_PUSH]: MailReadPush;
   [HubEvents.COST_PUSH]: CostPush;
-  [HubEvents.SESSION_PUSH]: SessionPush;
   [HubEvents.SESSION_HEARTBEAT]: SessionHeartbeat;
 }
 

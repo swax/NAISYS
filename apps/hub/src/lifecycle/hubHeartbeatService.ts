@@ -55,6 +55,15 @@ export function createHubHeartbeatService(
   const sessionKey = (userId: number, subagentId: number | null | undefined) =>
     `${userId}:${subagentId ?? 0}`;
 
+  // Full-identity key for an active session — used to detect when a host's
+  // session set changes (a run started, ended, or compacted).
+  const sessionRunKey = (s: {
+    userId: number;
+    runId: number;
+    subagentId: number | null;
+    sessionId: number;
+  }) => `${s.userId}-${s.runId}-${s.subagentId ?? 0}-${s.sessionId}`;
+
   naisysServer.registerEvent(HubEvents.HEARTBEAT, async (hostId, data) => {
     const parsed = HeartbeatSchema.parse(data);
     const now = new Date().toISOString();
@@ -159,7 +168,21 @@ export function createHubHeartbeatService(
           tokenCount: session.tokenCount,
         });
       }
+      // Detect a change in this host's active-session set — a run started,
+      // ended, or compacted to a new session. Mirrors the agent's
+      // onHeartbeatNeeded: on a change, push immediately so the supervisor
+      // reflects it within roundtrip latency, not at the next interval tick.
+      const prevSessions = hostActiveSessions.get(hostId);
+      const prevKeys = new Set(
+        prevSessions ? [...prevSessions.values()].map(sessionRunKey) : [],
+      );
+      const sessionSetChanged =
+        prevKeys.size !== sessionMap.size ||
+        [...sessionMap.values()].some((s) => !prevKeys.has(sessionRunKey(s)));
+
       hostActiveSessions.set(hostId, sessionMap);
+
+      if (sessionSetChanged) pushSessionHeartbeat();
 
       await hubDb.hosts.updateMany({
         where: { id: hostId },
@@ -206,7 +229,10 @@ export function createHubHeartbeatService(
   // The ACL is durable across disconnect (hubOwnershipService); only the
   // session-liveness mirror is cleared here.
   naisysServer.registerEvent(HubEvents.CLIENT_DISCONNECTED, (hostId) => {
+    const hadSessions = (hostActiveSessions.get(hostId)?.size ?? 0) > 0;
     hostActiveSessions.delete(hostId);
+    // The host's runs just went offline — push immediately, don't wait.
+    if (hadSessions) pushSessionHeartbeat();
   });
 
   function pushSessionHeartbeat() {
@@ -225,8 +251,10 @@ export function createHubHeartbeatService(
         });
       }
     }
-    if (updates.length === 0) return;
 
+    // Always broadcast, even an empty snapshot: it's the full active set, so
+    // an empty one is how the supervisor retires the last session — and how a
+    // supervisor that reconnected mid-idle resyncs against current truth.
     naisysServer.broadcastToSupervisors(HubEvents.SESSION_HEARTBEAT, {
       updates,
     });

@@ -3,6 +3,12 @@ import { io } from "socket.io-client";
 
 let socket: Socket | null = null;
 
+// Flips true the first time an established connection drops. A later
+// `connect` is then a reconnect, not the initial connection. Module-scoped so
+// it's correct regardless of when a listener is added — a hook that mounts
+// mid-outage still sees the recovery connect as a reconnect.
+let everDisconnected = false;
+
 export function getSocket(): Socket {
   if (!socket) {
     socket = io({
@@ -12,8 +18,17 @@ export function getSocket(): Socket {
       reconnectionDelay: 1000,
       // No backoff, we need to know asap when the server is back up
     });
+    socket.on("disconnect", () => {
+      everDisconnected = true;
+    });
   }
   return socket;
+}
+
+/** True once the socket has dropped at least one established connection — so a
+ *  `connect` after this holds is a reconnect, not the first connect. */
+export function socketHasDisconnected(): boolean {
+  return everDisconnected;
 }
 
 /**

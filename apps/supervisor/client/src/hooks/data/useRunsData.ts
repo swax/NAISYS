@@ -4,7 +4,6 @@ import type {
   CostPushEntry,
   LogPushSessionUpdate,
   SessionHeartbeatUpdate,
-  SessionPush,
 } from "@naisys/hub-protocol";
 import type { RunSession as BaseRunSession } from "@naisys/supervisor-shared";
 
@@ -13,15 +12,12 @@ type CachedRunSession = BaseRunSession & {
   paused?: boolean;
   state?: CommandLoopState;
 };
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { RunsDataParams } from "../../lib/api/apiRuns";
 import { getRunsData } from "../../lib/api/apiRuns";
 import type { RunSession } from "../../types/runSession";
 import { useSubscription } from "../socket/useSubscription";
-import { isRunActive } from "../thread-runs/runStatus";
-import { useTick } from "../useTick";
 
 type RunSessionWithFlag = RunSession & { isFirst?: boolean };
 
@@ -34,30 +30,22 @@ const runKey = (run: {
 
 // Module-level caches (shared across all hook instances and persist across remounts)
 const runsCache = new Map<string, CachedRunSession[]>();
-const updatedSinceCache = new Map<string, string | undefined>();
 const totalCache = new Map<string, number>();
 const pagesLoadedCache = new Map<string, number>();
 
 type RunsLogUpdate = LogPushSessionUpdate & { type: "log-update" };
 type RunsCostUpdate = CostPushEntry & { type: "cost-update" };
-type RunsNewSession = SessionPush["session"] & { type: "new-session" };
 type RunsHeartbeatUpdate = SessionHeartbeatUpdate & {
   type: "heartbeat-update";
   activeSubagentCount: number;
+  online: boolean;
 };
-type RunsEvent =
-  | RunsLogUpdate
-  | RunsCostUpdate
-  | RunsNewSession
-  | RunsHeartbeatUpdate;
+type RunsEvent = RunsLogUpdate | RunsCostUpdate | RunsHeartbeatUpdate;
 
 export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   // Version counter to trigger re-renders when cache updates
   const [, setCacheVersion] = useState(0);
-
-  // Force a re-render every second so isOnline recomputes off the threshold
-  // even when no socket events are arriving (e.g. dead host, dropped socket).
-  useTick(1000);
+  const queryClient = useQueryClient();
 
   const mergeRuns = useCallback(
     (updatedRuns: CachedRunSession[], total?: number) => {
@@ -90,8 +78,6 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
         totalCache.set(agentUsername, currentTotal + newCount);
       }
 
-      updatedSinceCache.set(agentUsername, new Date().toISOString());
-
       setCacheVersion((v) => v + 1);
     },
     [agentUsername],
@@ -122,29 +108,31 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     (event: RunsEvent) => {
       const existingRuns = runsCache.get(agentUsername) || [];
       const key = runKey(event);
+      const existing = existingRuns.find((r) => runKey(r) === key);
 
-      if (event.type === "new-session") {
-        // Heartbeats carry activeSubagentCount; brand-new sessions start at 0.
-        const newRun: CachedRunSession = {
-          userId: event.userId,
-          runId: event.runId,
-          subagentId: event.subagentId,
-          sessionId: event.sessionId,
-          modelName: event.modelName,
-          createdAt: event.createdAt,
-          lastActive: event.lastActive,
-          latestLogId: event.latestLogId,
-          totalLines: event.totalLines,
-          totalTokens: event.totalTokens,
-          totalCost: event.totalCost,
-          activeSubagentCount: 0,
-        };
-        mergeRuns([newRun]);
+      if (event.type === "heartbeat-update") {
+        if (existing) {
+          const updated: CachedRunSession = {
+            ...existing,
+            lastActive: event.lastActive,
+            isOnline: event.online,
+            activeSubagentCount: event.activeSubagentCount,
+            paused: event.paused,
+            state: event.state,
+            totalTokens: event.totalTokens ?? existing.totalTokens,
+          };
+          mergeRuns([updated]);
+        } else if (event.online) {
+          // A run we don't have yet (created after page load) — pull the full
+          // row via REST.
+          void queryClient.invalidateQueries({
+            queryKey: ["runs-data", agentUsername],
+          });
+        }
         return;
       }
 
-      // Find existing run to update
-      const existing = existingRuns.find((r) => runKey(r) === key);
+      // log-update / cost-update only refine a run we already know about.
       if (!existing) return;
 
       if (event.type === "log-update") {
@@ -161,32 +149,20 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
           totalCost: existing.totalCost + event.costDelta,
         };
         mergeRuns([updated]);
-      } else if (event.type === "heartbeat-update") {
-        const updated: CachedRunSession = {
-          ...existing,
-          lastActive: event.lastActive,
-          activeSubagentCount: event.activeSubagentCount,
-          paused: event.paused,
-          state: event.state,
-          totalTokens: event.totalTokens ?? existing.totalTokens,
-        };
-        mergeRuns([updated]);
       }
     },
-    [agentUsername, mergeRuns],
+    [agentUsername, mergeRuns, queryClient],
   );
 
   const queryFn = useCallback(async ({ queryKey }: any) => {
     const [, agentUsername] = queryKey;
 
-    const params: RunsDataParams = {
-      agentUsername,
-      updatedSince: updatedSinceCache.get(agentUsername),
-      page: 1,
-      count: 50,
-    };
-
-    return await getRunsData(params);
+    // Always a full page-1 fetch — no updatedSince cursor. The socket carries
+    // live updates; this query only reconciles (mount, focus, reconnect). An
+    // incremental cursor can't see a run that went offline — its last_active
+    // froze — so a missed online:false event would strand the row online
+    // forever. Page 1 covers every online run (rows are ordered run_id desc).
+    return await getRunsData({ agentUsername, page: 1, count: 50 });
   }, []);
 
   const query = useQuery({
@@ -213,6 +189,10 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
     enabled && agentUsername ? `runs:${agentUsername}` : null,
     handleRunsEvent,
   );
+
+  // Reconnect recovery is app-wide: useSocketReconnect (App.tsx) invalidates
+  // every query on reconnect, and this query's fetch is full — so a missed
+  // online:false is reconciled without a per-hook listener here.
 
   // Load more (next page of historical data)
   const [loadingMore, setLoadingMore] = useState(false);
@@ -245,7 +225,6 @@ export const useRunsData = (agentUsername: string, enabled: boolean = true) => {
   const baseRuns = runsCache.get(agentUsername) || [];
   const runs: RunSessionWithFlag[] = baseRuns.map((run, index) => ({
     ...run,
-    isOnline: isRunActive(run.lastActive),
     isFirst: index === 0,
   }));
   const total = totalCache.get(agentUsername) || 0;

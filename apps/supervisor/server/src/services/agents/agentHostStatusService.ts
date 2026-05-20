@@ -4,6 +4,7 @@ import {
   replaceSetContents,
   setEquals,
 } from "@naisys/common";
+import type { SessionHeartbeatUpdate } from "@naisys/hub-protocol";
 import type {
   AgentStatusEvent,
   HostStatusEvent,
@@ -26,6 +27,12 @@ const activeSubagentCounts = new Map<
   { userId: number; runId: number; count: number }
 >();
 
+// Online run sessions, mirrored from the hub's SESSION_HEARTBEAT snapshot.
+// Keyed per run session; the value is the last heartbeat so a departed run
+// can be relayed offline with its final state. The supervisor doesn't decide
+// liveness — the hub does — this just caches the answer for REST + diffing.
+const onlineRunSessions = new Map<string, SessionHeartbeatUpdate>();
+
 interface HostState {
   online: boolean;
   restricted: boolean;
@@ -37,6 +44,13 @@ const hostStates = new Map<number, HostState>();
 const agentHostAssignments = new Map<number, number[]>();
 
 const parentRunKey = (userId: number, runId: number) => `${userId}-${runId}`;
+
+const runSessionKey = (
+  userId: number,
+  runId: number,
+  subagentId: number | null | undefined,
+  sessionId: number,
+) => `${userId}-${runId}-${subagentId ?? 0}-${sessionId}`;
 
 function broadcast<T>(room: string, event: T) {
   try {
@@ -138,17 +152,51 @@ export function updatePausedAgents(userIds: number[]): void {
   broadcastAgentStatus(getAgentSnapshot());
 }
 
-export function updateActiveSubagentCount(
-  userId: number,
-  runId: number,
-  count: number,
+/** Replace the whole subagent-count mirror from a heartbeat snapshot. Done
+ *  wholesale (not per-run) so a run that dropped out of the snapshot can't
+ *  leave a stale count behind for a later REST read. */
+export function replaceActiveSubagentCounts(
+  counts: { userId: number; runId: number; count: number }[],
 ): void {
-  const key = parentRunKey(userId, runId);
-  if (count > 0) {
-    activeSubagentCounts.set(key, { userId, runId, count });
-  } else {
-    activeSubagentCounts.delete(key);
+  activeSubagentCounts.clear();
+  for (const { userId, runId, count } of counts) {
+    if (count > 0) {
+      activeSubagentCounts.set(parentRunKey(userId, runId), {
+        userId,
+        runId,
+        count,
+      });
+    }
   }
+}
+
+/** Replace the online-run mirror with the hub's latest heartbeat snapshot.
+ *  Returns the runs that were online but dropped out of it — i.e. ended. */
+export function syncOnlineRuns(
+  updates: SessionHeartbeatUpdate[],
+): SessionHeartbeatUpdate[] {
+  const nextKeys = new Set(
+    updates.map((u) =>
+      runSessionKey(u.userId, u.runId, u.subagentId, u.sessionId),
+    ),
+  );
+  const departed: SessionHeartbeatUpdate[] = [];
+  for (const [key, last] of onlineRunSessions) {
+    if (!nextKeys.has(key)) departed.push(last);
+  }
+  onlineRunSessions.clear();
+  for (const update of updates) {
+    onlineRunSessions.set(
+      runSessionKey(
+        update.userId,
+        update.runId,
+        update.subagentId,
+        update.sessionId,
+      ),
+      update,
+    );
+  }
+  return departed;
 }
 
 export function emitAgentsListChanged(): void {
@@ -236,6 +284,18 @@ export function getAgentStatus(agentId: number): AgentStatus {
 
 export function getActiveSubagentCount(userId: number, runId: number): number {
   return activeSubagentCounts.get(parentRunKey(userId, runId))?.count ?? 0;
+}
+
+/** Whether a run session is in the hub's current heartbeat snapshot. */
+export function isRunOnline(
+  userId: number,
+  runId: number,
+  subagentId: number | null | undefined,
+  sessionId: number,
+): boolean {
+  return onlineRunSessions.has(
+    runSessionKey(userId, runId, subagentId, sessionId),
+  );
 }
 
 export function isHostConnected(hostId: number): boolean {

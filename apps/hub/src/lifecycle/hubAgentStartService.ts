@@ -137,8 +137,7 @@ export function createHubAgentStartService(
       bestHostId,
       triggeredBy,
     );
-    const { runId, sessionId, rowWhere, now, rollbackPlaceholder } =
-      placeholder;
+    const { runId, sessionId, rowWhere, rollbackPlaceholder } = placeholder;
 
     const transport = await waitForStartAck(bestHostId, {
       ...payload,
@@ -212,20 +211,7 @@ export function createHubAgentStartService(
 
     if (naisysServer.getConnectionByHostId(bestHostId)) {
       ownershipService.addStartedAgent(bestHostId, startUserId);
-      naisysServer.broadcastToSupervisors(HubEvents.SESSION_PUSH, {
-        session: {
-          userId: startUserId,
-          runId,
-          sessionId,
-          modelName,
-          createdAt: now,
-          lastActive: now,
-          latestLogId: 0,
-          totalLines: 0,
-          totalTokens: 0,
-          totalCost: 0,
-        },
-      });
+      // The session reaches supervisors via the next SESSION_HEARTBEAT.
     } else {
       logService.log(
         `[Hub:Agents] Host ${bestHostId} disconnected after successful ack for run ${runId}; row kept, awaiting reconnect heartbeat`,

@@ -27,7 +27,7 @@ import { AgentDataProvider } from "./contexts/AgentDataContext";
 import { HostDataProvider } from "./contexts/HostDataContext";
 import { SessionProvider, useSession } from "./contexts/SessionContext";
 import { VoiceSessionProvider } from "./contexts/VoiceSessionContext";
-import { useSocketReconnect } from "./hooks/socket/useSocketReconnect";
+import { useReconnectQueryRefresh } from "./hooks/socket/useReconnectQueryRefresh";
 import { useChartThemeSync } from "./lib/charts";
 import { queryClient } from "./lib/queryClient";
 import { useBoomGuard } from "./lib/useBoomGuard";
@@ -70,7 +70,7 @@ export interface AppOutletContext {
 
 const AppContent: React.FC = () => {
   useBoomGuard("root");
-  useSocketReconnect();
+  useReconnectQueryRefresh();
   const [opened, { toggle, close }] = useDisclosure();
   const [plugins, setPlugins] = React.useState<string[]>([]);
   const [publicRead, setPublicRead] = React.useState(false);

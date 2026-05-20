@@ -14,6 +14,8 @@ export const RunSessionSchema = z.object({
   sessionId: z.number(),
   createdAt: z.string(),
   lastActive: z.string(),
+  /** Liveness from the hub's heartbeat snapshot (see agentHostStatusService). */
+  isOnline: z.boolean(),
   modelName: z.string(),
   latestLogId: z.number(),
   totalLines: z.number(),

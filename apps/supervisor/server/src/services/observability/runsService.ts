@@ -15,7 +15,10 @@ import {
 import { hubDb } from "../../database/hubDb.js";
 import { attachmentUrl } from "../../hateoas.js";
 import { timestampCursorWhere } from "../../paging.js";
-import { getActiveSubagentCount } from "../agents/agentHostStatusService.js";
+import {
+  getActiveSubagentCount,
+  isRunOnline,
+} from "../agents/agentHostStatusService.js";
 
 function parseHostEnvironment(raw: string | null): HostEnvironment | null {
   if (!raw) return null;
@@ -183,6 +186,12 @@ export async function getRunsData(
       sessionId: session.session_id,
       createdAt: session.created_at.toISOString(),
       lastActive: session.last_active.toISOString(),
+      isOnline: isRunOnline(
+        session.user_id,
+        session.run_id,
+        dbSubagentIdToWire(session.subagent_id),
+        session.session_id,
+      ),
       modelName: session.model_name,
       latestLogId: session.latest_log_id,
       totalLines: session.total_lines,
@@ -250,6 +259,12 @@ export async function getMessageThreadRuns(
     sessionId: session.session_id,
     createdAt: session.created_at.toISOString(),
     lastActive: session.last_active.toISOString(),
+    isOnline: isRunOnline(
+      session.user_id,
+      session.run_id,
+      dbSubagentIdToWire(session.subagent_id),
+      session.session_id,
+    ),
     modelName: session.model_name,
     latestLogId: session.latest_log_id,
     totalLines: session.total_lines,
