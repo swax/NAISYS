@@ -21,6 +21,8 @@ fi
 
 collect_packages
 
+check_npm_auth
+
 echo "=== Publish Beta ==="
 echo "Will publish version $BETA_VERSION for:"
 show_packages "$BETA_VERSION"

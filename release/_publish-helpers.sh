@@ -134,6 +134,47 @@ confirm_or_exit() {
   fi
 }
 
+# Verify the npm auth token works before any slow build/publish work. A bad
+# token otherwise surfaces deep into publishing as a confusing "404" — npm
+# returns 404, not 401, on a publish PUT when auth fails.
+check_npm_auth() {
+  echo ""
+  echo "=== Checking npm authentication ==="
+
+  local whoami_output
+  if whoami_output=$(npm whoami --registry=https://registry.npmjs.org/ 2>&1); then
+    echo "Authenticated as: $whoami_output"
+    return 0
+  fi
+
+  echo ""
+  echo "ERROR: Not authenticated with the npm registry — aborting before build."
+  echo ""
+  if [[ "$whoami_output" == *401* ]]; then
+    echo "  Your npm token is expired or was revoked (registry returned 401)."
+  elif [[ "$whoami_output" == *ENEEDAUTH* ]]; then
+    echo "  No npm token is configured."
+  else
+    echo "  npm whoami failed:"
+    echo "    $whoami_output"
+  fi
+  echo ""
+  echo "  The auth token is read from: $ROOT/.npmrc"
+  echo "    (line: //registry.npmjs.org/:_authToken=...)"
+  echo ""
+  echo "  To fix:"
+  echo "    1. Sign in at https://www.npmjs.com/ -> avatar -> Access Tokens"
+  echo "       -> Generate New Token -> Granular Access Token"
+  echo "         - Permissions: Read and write"
+  echo "         - Packages:    the '@naisys' scope AND the unscoped 'naisys' package"
+  echo "         - Must publish without a 2FA prompt: a Granular token works;"
+  echo "           for a classic token, choose type \"Automation\" (not \"Publish\")"
+  echo "    2. Replace the _authToken line in $ROOT/.npmrc"
+  echo "    3. Verify with: npm whoami"
+  echo ""
+  exit 1
+}
+
 # Copy root README to the naisys package so npm shows the project overview
 setup_readme() {
   cp "$ROOT/apps/naisys/README.md" "$ROOT/apps/naisys/README.md.bak"

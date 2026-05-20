@@ -17,6 +17,8 @@ fi
 
 collect_packages
 
+check_npm_auth
+
 echo "=== Publish Release ==="
 echo "Will publish version $VERSION for:"
 show_packages "$VERSION"
