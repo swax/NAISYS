@@ -26,15 +26,11 @@ export interface UseLiveRunsOptions {
   /** Fetch one (1-based) page of runs; resolves to `null` on failure. */
   fetchPage: (page: number) => Promise<LiveRunsPage | null>;
   /**
-   * Reconcile when a heartbeat names an online run with a run id not already
-   * in the list (default false). A `runs:${username}` room also carries that
-   * user's runs from outside this list's filter — another host, another
-   * thread — so enable this only where a genuinely new in-filter run has no
-   * other signal to announce it (e.g. a host page). Each unseen run reconciles
-   * at most once, so an out-of-filter run cannot refetch on every heartbeat.
-   *
-   * Session/subagent rows of a run already in the list are pulled in either
-   * way — their parent is in-filter, so the row is too.
+   * Reconcile when a heartbeat names a new online run not in the list
+   * (default false). A `runs:` room also carries that user's runs from
+   * outside this list's filter, so enable this only where a new in-filter run
+   * has no other way to announce itself — e.g. a host page. Sub-rows of an
+   * already-loaded run are pulled in regardless; see `handleRunsEvent`.
    */
   pullNewRuns?: boolean;
 }
@@ -78,13 +74,11 @@ function updateRun(
 /**
  * A live, paginated list of run sessions, backed by React Query. Pages are
  * fetched over REST; `runs:${username}` socket rooms keep them current —
- * heartbeats flip online/offline and paused/state, log and cost deltas
- * accumulate — all merged straight into the query cache.
+ * heartbeats flip online/offline and paused/state, log/cost deltas accumulate
+ * — merged straight into the query cache.
  *
- * React Query owns fetching, pagination, staleness, and in-flight coalescing.
- * Reconciliation is a query invalidation: on a heartbeat for a run not yet
- * loaded (see `pullNewRuns`), and — app-wide via useReconnectQueryRefresh — on
- * socket reconnect.
+ * Reconciliation is a query invalidation: on a heartbeat for an unloaded run
+ * (see `pullNewRuns`), and app-wide on socket reconnect.
  */
 export function useLiveRuns(options: UseLiveRunsOptions): UseLiveRunsResult {
   const { resetKey, fetchPage, pullNewRuns = false } = options;
@@ -149,17 +143,13 @@ export function useLiveRuns(options: UseLiveRunsOptions): UseLiveRunsResult {
         return;
       }
 
-      // An unknown run — its `runs:${username}` room also carries that user's
-      // runs from outside this list's filter, so reconcile selectively, and
-      // at most once per run so an out-of-filter run can't invalidate on
-      // every event:
-      //  - a session/subagent row of a run already loaded belongs in the list
-      //    whatever event named it (its parent is in-filter), so any event
-      //    type pulls it in — a short-lived subagent may surface only via a
-      //    log delta, never an online heartbeat;
-      //  - a wholly new run is pulled in only when `pullNewRuns` is set, and
-      //    only off an online heartbeat — its reliable "I exist" signal; a
-      //    stray log/cost delta for one has no row to land on.
+      // An unknown run — its `runs:` room also carries the user's runs from
+      // outside this list's filter, so reconcile selectively, once per run:
+      //  - a sub-row of a loaded run belongs here whatever event named it (a
+      //    short-lived subagent may surface only via a log delta), so any
+      //    event type pulls it in;
+      //  - a wholly new run only when `pullNewRuns` is set, off an online
+      //    heartbeat — its reliable announce signal.
       if (reconciledUnknownKeysRef.current.has(key)) return;
       const isRowOfLoadedRun = loaded.some(
         (run) => run.userId === event.userId && run.runId === event.runId,

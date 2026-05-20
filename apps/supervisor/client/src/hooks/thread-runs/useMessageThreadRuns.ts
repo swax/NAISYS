@@ -42,11 +42,9 @@ export const useMessageThreadRuns = (
     return null;
   }, [enabled, kind, currentAgentUsername, participantsKey]);
 
-  // `pullNewRuns` is left off: a run joins a thread only by reading or
-  // sending a thread message, and that always fires a message event, which
-  // refetches via `messageRoom` below. Participants' unrelated runs share
-  // their `runs:` room but must not trigger refetches — useLiveRuns still
-  // pulls in session/subagent rows of runs already in the thread.
+  // `pullNewRuns` is off — the message room (below) already refetches when a
+  // run joins the thread, and a participant's unrelated runs must not trigger
+  // refetches just for sharing its `runs:` room.
   const { runs, isLoading, patchRun, refetch } = useLiveRuns({
     resetKey: enabled
       ? `thread:${kind}:${currentAgentUsername}:${participantsKey}`

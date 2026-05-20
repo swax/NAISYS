@@ -260,8 +260,6 @@ export function initHubConnection(hubUrl: string) {
       countByRunKey.set(key, entry);
     }
 
-    // Replace the whole count mirror from this snapshot so a run that dropped
-    // out doesn't leave a stale count behind for a later REST read.
     replaceActiveSubagentCounts([...countByRunKey.values()]);
 
     // The heartbeat is the full active-session snapshot — runs that were

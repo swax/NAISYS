@@ -6,12 +6,10 @@ import { useLiveRuns } from "./useLiveRuns";
 const PAGE_SIZE = 15;
 
 /**
- * Runs recorded on a host, newest first, kept live — online/offline, cost and
- * line counts update from socket pushes. A host's runs span many agents and
- * the hub has no host-scoped room, so liveness rides each run's own
- * `runs:${username}` room (see useLiveRuns). `pullNewRuns` is on: a new run by
- * an agent already in the list is pulled in live; one by an agent with no runs
- * listed yet lands on the next refetch (reconnect or navigation).
+ * Runs recorded on a host, newest first, kept live from each run's
+ * `runs:${username}` room (the hub has no host-scoped room). `pullNewRuns` is
+ * on, so a new run by an already-listed agent appears live; one by an agent
+ * with no runs listed yet waits for the next refetch.
  */
 export const useHostRuns = (hostname: string | undefined) => {
   const fetchPage = useCallback(

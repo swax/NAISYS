@@ -55,8 +55,7 @@ export function createHubHeartbeatService(
   const sessionKey = (userId: number, subagentId: number | null | undefined) =>
     `${userId}:${subagentId ?? 0}`;
 
-  // Full-identity key for an active session — used to detect when a host's
-  // session set changes (a run started, ended, or compacted).
+  // Full-identity key for an active session, used to detect set changes.
   const sessionRunKey = (s: {
     userId: number;
     runId: number;
@@ -168,10 +167,9 @@ export function createHubHeartbeatService(
           tokenCount: session.tokenCount,
         });
       }
-      // Detect a change in this host's active-session set — a run started,
-      // ended, or compacted to a new session. Mirrors the agent's
-      // onHeartbeatNeeded: on a change, push immediately so the supervisor
-      // reflects it within roundtrip latency, not at the next interval tick.
+      // On a session-set change, push immediately — like the agent's
+      // onHeartbeatNeeded — so the supervisor sees it within roundtrip
+      // latency, not at the next interval tick.
       const prevSessions = hostActiveSessions.get(hostId);
       const prevKeys = new Set(
         prevSessions ? [...prevSessions.values()].map(sessionRunKey) : [],

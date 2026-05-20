@@ -3,10 +3,9 @@ import { io } from "socket.io-client";
 
 let socket: Socket | null = null;
 
-// Flips true the first time an established connection drops. A later
-// `connect` is then a reconnect, not the initial connection. Module-scoped so
-// it's correct regardless of when a listener is added — a hook that mounts
-// mid-outage still sees the recovery connect as a reconnect.
+// Flips true the first time an established connection drops, so a later
+// `connect` reads as a reconnect. Module-scoped so it's correct no matter
+// when a listener starts watching.
 let everDisconnected = false;
 
 export function getSocket(): Socket {

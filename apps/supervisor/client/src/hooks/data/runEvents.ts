@@ -31,12 +31,8 @@ export const runKey = (run: {
 
 /**
  * Apply one `runs:` room event to the run it targets, returning the patched
- * run. Heartbeats carry liveness plus paused/state; log and cost events carry
- * deltas folded onto the running totals.
- *
- * The caller locates `run` by {@link runKey} beforehand and decides what to do
- * when an event names a run not yet loaded — typically refetch on a heartbeat,
- * and drop a stray log/cost delta that has no row to apply it to.
+ * run. Heartbeats carry liveness plus paused/state; log and cost events fold
+ * deltas onto the running totals. The caller locates `run` by {@link runKey}.
  */
 export function applyRunsEvent(
   run: RunSession,

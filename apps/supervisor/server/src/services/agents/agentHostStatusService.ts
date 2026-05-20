@@ -27,10 +27,9 @@ const activeSubagentCounts = new Map<
   { userId: number; runId: number; count: number }
 >();
 
-// Online run sessions, mirrored from the hub's SESSION_HEARTBEAT snapshot.
-// Keyed per run session; the value is the last heartbeat so a departed run
-// can be relayed offline with its final state. The supervisor doesn't decide
-// liveness — the hub does — this just caches the answer for REST + diffing.
+// Online run sessions mirrored from the hub's SESSION_HEARTBEAT snapshot. The
+// hub owns liveness; this caches its answer for REST reads and diffs the
+// snapshot to find departed runs. Value is each run's last heartbeat.
 const onlineRunSessions = new Map<string, SessionHeartbeatUpdate>();
 
 interface HostState {
