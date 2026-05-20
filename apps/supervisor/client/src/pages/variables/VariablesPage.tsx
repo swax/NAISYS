@@ -4,6 +4,7 @@ import {
   Container,
   Group,
   Loader,
+  Select,
   Stack,
   Table,
   Text,
@@ -38,6 +39,65 @@ interface VariableRow {
   exportToShell: boolean;
   sensitive: boolean;
 }
+
+/** IANA timezone names supported by this runtime; powers the TIMEZONE picker. */
+const TIMEZONES = Intl.supportedValuesOf("timeZone");
+
+interface VariableValueInputProps {
+  /** `TIMEZONE` renders a timezone picker; every other key gets a text box. */
+  variableKey: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit?: () => void;
+  onCancel?: () => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+}
+
+/** Value editor for the variables table. The TIMEZONE key gets a searchable
+ *  picker so the saved value is always a valid IANA name — the server rejects
+ *  invalid names too, but the picker keeps the UI from ever sending one. */
+const VariableValueInput: React.FC<VariableValueInputProps> = ({
+  variableKey,
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  placeholder,
+  autoFocus,
+}) => {
+  if (variableKey.trim() === "TIMEZONE") {
+    // A previously-saved alias (e.g. "US/Pacific") isn't in the canonical
+    // list — keep it selectable so editing doesn't blank a valid value.
+    const data =
+      value && !TIMEZONES.includes(value) ? [value, ...TIMEZONES] : TIMEZONES;
+    return (
+      <Select
+        data={data}
+        value={value || null}
+        onChange={(next) => onChange(next ?? "")}
+        placeholder={placeholder ?? "Select a timezone"}
+        size="xs"
+        searchable
+        nothingFoundMessage="No matching timezone"
+        autoFocus={autoFocus}
+      />
+    );
+  }
+  return (
+    <TextInput
+      value={value}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.currentTarget.value)}
+      size="xs"
+      autoFocus={autoFocus}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onSubmit?.();
+        if (e.key === "Escape") onCancel?.();
+      }}
+    />
+  );
+};
 
 export const VariablesPage: React.FC = () => {
   const [data, setData] = useState<VariablesResponse | null>(null);
@@ -217,14 +277,12 @@ export const VariablesPage: React.FC = () => {
                 <Table.Td>{item.key}</Table.Td>
                 <Table.Td>
                   {editingKey === item.key ? (
-                    <TextInput
+                    <VariableValueInput
+                      variableKey={item.key}
                       value={editValue}
-                      onChange={(e) => setEditValue(e.currentTarget.value)}
-                      size="xs"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") void handleSaveEdit(item.key);
-                        if (e.key === "Escape") cancelEdit();
-                      }}
+                      onChange={setEditValue}
+                      onSubmit={() => void handleSaveEdit(item.key)}
+                      onCancel={cancelEdit}
                       autoFocus
                     />
                   ) : (
@@ -397,14 +455,12 @@ export const VariablesPage: React.FC = () => {
                   />
                 </Table.Td>
                 <Table.Td>
-                  <TextInput
-                    placeholder="Value"
+                  <VariableValueInput
+                    variableKey={newKey}
                     value={newValue}
-                    onChange={(e) => setNewValue(e.currentTarget.value)}
-                    size="xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleSaveNew();
-                    }}
+                    onChange={setNewValue}
+                    onSubmit={() => void handleSaveNew()}
+                    placeholder="Value"
                   />
                 </Table.Td>
                 <Table.Td>

@@ -224,7 +224,11 @@ export default function variablesRoutes(
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to save variable";
-        const status = message.includes("reserved") ? 400 : 500;
+        // Reserved-key and invalid-timezone errors are client mistakes (400);
+        // anything else is an unexpected server failure (500).
+        const isClientError =
+          message.includes("reserved") || message.includes("not a valid IANA");
+        const status = isClientError ? 400 : 500;
         return reply.code(status).send({ success: false, message });
       }
     },

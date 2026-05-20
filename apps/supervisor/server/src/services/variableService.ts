@@ -1,3 +1,5 @@
+import { validateTimezone } from "@naisys/common";
+
 import { hubDb } from "../database/hubDb.js";
 
 // Reserved at the agent shell — set by the runtime, not editable as a variable.
@@ -46,6 +48,13 @@ export async function saveVariable(
 ): Promise<{ success: boolean; message: string }> {
   if (RESERVED_VARIABLE_KEYS.has(key)) {
     throw new Error(`'${key}' is reserved and cannot be set as a variable`);
+  }
+  // TIMEZONE drives cron evaluation and date formatting hub-wide; reject names
+  // the runtime can't resolve rather than silently falling back later.
+  if (key === "TIMEZONE" && value.trim() && !validateTimezone(value)) {
+    throw new Error(
+      `'${value}' is not a valid IANA timezone name (e.g. "America/New_York")`,
+    );
   }
   await hubDb.variables.upsert({
     where: { key },

@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Anchor,
   Button,
   Group,
   Select,
@@ -13,6 +14,7 @@ import type { ScheduleEntry } from "@naisys/common";
 import { nextFireAt, validateCron } from "@naisys/common";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 interface AgentSchedulesEditorProps {
   schedules: ScheduleEntry[];
@@ -216,8 +218,12 @@ export const AgentSchedulesEditor: React.FC<AgentSchedulesEditorProps> = ({
         </Button>
       </Group>
       <Text size="xs" c="dimmed">
-        Cron evaluates in the hub&apos;s timezone ({hubTimezone}). On fire, the
-        agent gets a chat from admin and is started if not running.
+        Cron evaluates in the hub&apos;s timezone ({hubTimezone}) — set the{" "}
+        <Anchor component={Link} to="/variables" inherit>
+          TIMEZONE variable
+        </Anchor>{" "}
+        to override it. On fire, the agent gets a chat from admin and is
+        started if not running.
       </Text>
       {schedules.length === 0 ? (
         <Text size="sm" c="dimmed">
