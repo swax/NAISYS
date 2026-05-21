@@ -15,11 +15,8 @@ import {
   ADMIN_USERNAME,
   formatDisabledReason,
   hasAction,
-  type HateoasAction,
 } from "@naisys/common";
 import { TextDiffViewer } from "@naisys/common-browser";
-import type { AgentDetailResponse } from "@naisys/supervisor-shared";
-import { type ConfigRevision } from "@naisys/supervisor-shared";
 import {
   IconArchive,
   IconArchiveOff,
@@ -30,7 +27,8 @@ import {
   IconPower,
   IconTrash,
 } from "@tabler/icons-react";
-import React, { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { getPlatformBadgeColor } from "../../components/badges/PlatformBadge";
@@ -62,19 +60,26 @@ export const AgentDetail: React.FC = () => {
   const { agents } = useAgentDataContext();
   const { hosts } = useHostDataContext();
   const { serverReachable } = useConnectionStatus();
+  const queryClient = useQueryClient();
 
   const agentData = username ? agents.find((a) => a.name === username) : null;
-  const [config, setConfig] = useState<AgentDetailResponse["config"] | null>(
-    null,
-  );
-  const [assignedHosts, setAssignedHosts] = useState<
-    { id: number; name: string }[] | undefined
-  >();
-  const [costSuspendedReason, setCostSuspendedReason] = useState<
-    string | undefined
-  >();
-  const [actions, setActions] = useState<HateoasAction[] | undefined>();
-  const [loading, setLoading] = useState(true);
+  const {
+    data: agentDetail,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ["agent-detail", username],
+    queryFn: () => getAgentDetail(username!),
+    enabled: !!username,
+  });
+  const config = agentDetail?.config;
+  const resolvedEnvVars = agentDetail?.resolvedEnvVars;
+  const assignedHosts = agentDetail?.assignedHosts;
+  const costSuspendedReason = agentDetail?.costSuspendedReason;
+  const currentSpend = agentDetail?.currentSpend;
+  const spendLimitResetAt = agentDetail?.spendLimitResetAt;
+  const actions = agentDetail?._actions;
+
   const [taskInput, setTaskInput] = useState("");
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
@@ -82,67 +87,29 @@ export const AgentDetail: React.FC = () => {
   const [archiving, setArchiving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const [currentSpend, setCurrentSpend] = useState<number | undefined>();
-  const [spendLimitResetAt, setSpendLimitResetAt] = useState<
-    string | undefined
-  >();
-  const [revisions, setRevisions] = useState<ConfigRevision[]>([]);
-  const [currentYaml, setCurrentYaml] = useState<string | null>(null);
   const [selectedRevisionId, setSelectedRevisionId] = useState<
     number | "current" | null
   >(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [resolvedEnvVars, setResolvedEnvVars] = useState<
-    Record<string, string> | undefined
-  >();
 
-  const fetchDetail = async () => {
-    if (!username) return;
-    try {
-      const data = await getAgentDetail(username);
-      setConfig(data.config);
-      setResolvedEnvVars(data.resolvedEnvVars);
-      setAssignedHosts(data.assignedHosts);
-      setCostSuspendedReason(data.costSuspendedReason);
-      setCurrentSpend(data.currentSpend);
-      setSpendLimitResetAt(data.spendLimitResetAt);
-      setActions(data._actions);
-    } catch (err) {
-      console.error("Error fetching agent detail:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!username) {
-      setLoading(false);
-      return;
-    }
-
-    void fetchDetail();
-  }, [username]);
-
-  const fetchHistory = async () => {
-    if (!username) return;
-    try {
+  // Config-history panel: lazy — fetched only once the panel is opened.
+  const historyQuery = useQuery({
+    queryKey: ["agent-config-history", username],
+    queryFn: async () => {
       const [revs, current] = await Promise.all([
-        getConfigRevisions(username),
-        exportAgentConfig(username),
+        getConfigRevisions(username!),
+        exportAgentConfig(username!),
       ]);
-      setRevisions(revs.items);
-      setCurrentYaml(current.yaml);
-    } catch (err) {
-      console.error("Error fetching config revisions:", err);
-    }
-  };
+      return { revisions: revs.items, currentYaml: current.yaml };
+    },
+    enabled: !!username && showHistory,
+  });
+  const revisions = historyQuery.data?.revisions ?? [];
+  const currentYaml = historyQuery.data?.currentYaml ?? null;
 
   const handleToggleHistory = () => {
     const next = !showHistory;
     setShowHistory(next);
-    if (next && revisions.length === 0) {
-      void fetchHistory();
-    }
     if (!next) {
       setSelectedRevisionId(null);
     }
@@ -162,7 +129,7 @@ export const AgentDetail: React.FC = () => {
             : "Agent started",
           color: "green",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: "Start Failed",
@@ -201,7 +168,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "green",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: "Stop Failed",
@@ -247,7 +214,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: isEnabled ? "orange" : "green",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: isEnabled ? "Disable Failed" : "Enable Failed",
@@ -282,7 +249,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "orange",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: "Archive Failed",
@@ -312,7 +279,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "teal",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: "Unarchive Failed",
@@ -352,6 +319,12 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "red",
         });
+        // Evict the deleted agent's detail caches so the staleTime window
+        // can't render them if the route is revisited.
+        queryClient.removeQueries({ queryKey: ["agent-detail", username] });
+        queryClient.removeQueries({
+          queryKey: ["agent-config-history", username],
+        });
         void navigate("/agents");
       } else {
         notifications.show({
@@ -387,7 +360,7 @@ export const AgentDetail: React.FC = () => {
           message: result.message,
           color: "green",
         });
-        await fetchDetail();
+        await refetch();
       } else {
         notifications.show({
           title: "Reset Failed",

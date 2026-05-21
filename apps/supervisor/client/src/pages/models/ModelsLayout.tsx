@@ -2,6 +2,7 @@ import { Box, Drawer, Group, Text, UnstyledButton } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import type { HateoasAction } from "@naisys/common";
 import { IconCpu } from "@tabler/icons-react";
+import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import {
   Outlet,
@@ -38,25 +39,17 @@ export const ModelsLayout: React.FC = () => {
     useDisclosure();
   const location = useLocation();
   const { key: modelKey } = useParams<{ key: string }>();
-  const [llmModels, setLlmModels] = React.useState<LlmModelDetail[]>([]);
-  const [imageModels, setImageModels] = React.useState<ImageModelDetail[]>([]);
-  const [actions, setActions] = React.useState<HateoasAction[] | undefined>();
-  const [isLoading, setIsLoading] = React.useState(true);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["models"],
+    queryFn: () => api.get<ModelsResponse>(apiEndpoints.models),
+  });
+  const llmModels = data?.llmModelDetails ?? [];
+  const imageModels = data?.imageModelDetails ?? [];
+  const actions = data?._actions;
 
   const refreshModels = React.useCallback(async () => {
-    try {
-      const data = await api.get<ModelsResponse>(apiEndpoints.models);
-      setLlmModels(data.llmModelDetails);
-      setImageModels(data.imageModelDetails);
-      setActions(data._actions);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void refreshModels().finally(() => setIsLoading(false));
-  }, [refreshModels]);
+    await refetch();
+  }, [refetch]);
 
   // Close drawer on navigation
   React.useEffect(() => {

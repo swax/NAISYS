@@ -70,6 +70,10 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({
       await apiLogout();
     } finally {
       disconnectSocket();
+      // Drop every cached query — privileged responses (variables, the hub
+      // access key, user details, ...) must not survive into the next
+      // session or be reused by the next login.
+      queryClient.clear();
       setUser(null);
     }
   };

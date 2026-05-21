@@ -16,8 +16,8 @@ import {
 import { notifications } from "@mantine/notifications";
 import { formatVersion, hasAction, parseVersion } from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
-import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
 import { useHostDataContext } from "../../contexts/HostDataContext";
 import type { NpmVersionsResponse } from "../../lib/api/apiClient";
@@ -41,9 +41,16 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
   const { hosts } = useHostDataContext();
   const queryClient = useQueryClient();
 
-  const [npmData, setNpmData] = useState<NpmVersionsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: npmData,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["npm-versions"],
+    queryFn: () => api.get<NpmVersionsResponse>(apiEndpoints.adminNpmVersions),
+    enabled: opened,
+  });
 
   const [selectedOption, setSelectedOption] = useState<VersionOption>("latest");
   const [customVersion, setCustomVersion] = useState("");
@@ -55,58 +62,57 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
 
   const [saving, setSaving] = useState(false);
 
-  const fetchNpmVersions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await api.get<NpmVersionsResponse>(
-        apiEndpoints.adminNpmVersions,
-      );
-      setNpmData(result);
-
-      // Initialize form from current target version
-      if (result.targetVersion) {
-        const {
-          operator,
-          npm: npmPart,
-          hash: hashPart,
-        } = parseVersion(result.targetVersion);
-
-        if (hashPart) setCommitHash(hashPart);
-        setAllowNewer(operator === ">=");
-
-        if (!npmPart) {
-          setSelectedOption("none");
-        } else if (npmPart === result.latest) {
-          setSelectedOption("latest");
-        } else if (npmPart === result.beta) {
-          setSelectedOption("beta");
-        } else {
-          setSelectedOption("custom");
-          setCustomVersion(npmPart);
-          setCustomValid(true);
-        }
-      } else {
-        setSelectedOption("latest");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch npm versions",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // "Check for updates" must reflect current npm/target data on every open,
+  // so evict the cached response on close — the next open is then a cold
+  // fetch behind a loader, never a stale cache hit.
   useEffect(() => {
-    if (opened) {
-      setCustomVersion("");
-      setCustomValid(null);
-      setCommitHash("");
-      setAllowNewer(true);
-      void fetchNpmVersions();
+    if (!opened) {
+      queryClient.removeQueries({ queryKey: ["npm-versions"] });
     }
-  }, [opened, fetchNpmVersions]);
+  }, [opened, queryClient]);
+
+  // Initialize the form from the loaded target version, once per dialog open.
+  // A background refetch must not clobber edits in progress, so this is keyed
+  // on `opened` rather than firing on every npmData change.
+  const formInitialized = useRef(false);
+  useEffect(() => {
+    if (!opened) {
+      formInitialized.current = false;
+      return;
+    }
+    if (formInitialized.current || !npmData) return;
+    formInitialized.current = true;
+
+    setCustomVersion("");
+    setCustomValid(null);
+    setCommitHash("");
+    setAllowNewer(true);
+
+    if (npmData.targetVersion) {
+      const {
+        operator,
+        npm: npmPart,
+        hash: hashPart,
+      } = parseVersion(npmData.targetVersion);
+
+      if (hashPart) setCommitHash(hashPart);
+      setAllowNewer(operator === ">=");
+
+      if (!npmPart) {
+        setSelectedOption("none");
+      } else if (npmPart === npmData.latest) {
+        setSelectedOption("latest");
+      } else if (npmPart === npmData.beta) {
+        setSelectedOption("beta");
+      } else {
+        setSelectedOption("custom");
+        setCustomVersion(npmPart);
+        setCustomValid(true);
+      }
+    } else {
+      setSelectedOption("latest");
+    }
+  }, [opened, npmData]);
 
   const validateCustomVersion = async () => {
     const version = customVersion.trim();
@@ -177,8 +183,9 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         { success: boolean; message: string }
       >(apiEndpoints.adminTargetVersion, { version });
       if (result.success) {
-        setNpmData((prev) =>
-          prev ? { ...prev, targetVersion: version } : prev,
+        queryClient.setQueryData<NpmVersionsResponse>(
+          ["npm-versions"],
+          (prev) => (prev ? { ...prev, targetVersion: version } : prev),
         );
         onUpdate();
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
@@ -213,7 +220,10 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         apiEndpoints.adminTargetVersion,
       );
       if (result.success) {
-        setNpmData((prev) => (prev ? { ...prev, targetVersion: "" } : prev));
+        queryClient.setQueryData<NpmVersionsResponse>(
+          ["npm-versions"],
+          (prev) => (prev ? { ...prev, targetVersion: "" } : prev),
+        );
         onUpdate();
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         notifications.show({
@@ -245,8 +255,8 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
         </Stack>
       ) : error ? (
         <Stack gap="md">
-          <Text c="red">{error}</Text>
-          <Button variant="light" onClick={fetchNpmVersions}>
+          <Text c="red">{error.message}</Text>
+          <Button variant="light" onClick={() => void refetch()}>
             Retry
           </Button>
         </Stack>

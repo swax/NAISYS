@@ -11,6 +11,7 @@ import {
   Title,
 } from "@mantine/core";
 import { formatTokens, formatTokensLong, sumBy } from "@naisys/common";
+import { useQuery } from "@tanstack/react-query";
 import type {
   Chart,
   ChartData,
@@ -87,13 +88,15 @@ export const CostsPage: React.FC = () => {
   useBoomGuard("costs");
   const { agents } = useAgentDataContext();
   const resolveColor = useColorResolver();
-  const [data, setData] = useState<CostsHistogramResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [rangeHours, setRangeHours] = useState("168");
   const [bucketHours, setBucketHours] = useState<string | null>(null);
   const [leadUsername, setLeadUsername] = useState<string>("");
   const [groupBy, setGroupBy] = useState<"agent" | "model">("agent");
   const [metric, setMetric] = useState<"cost" | "tokens">("cost");
+  // Fixed server config that arrives with the costs response. Mirrored into
+  // state so effectiveBucketHours — and thus the query key — never depends on
+  // this query's own result.
+  const [spendLimitHours, setSpendLimitHours] = useState<number>();
 
   const formatCost = useCallback((n: number) => `$${n.toFixed(2)}`, []);
 
@@ -118,7 +121,39 @@ export const CostsPage: React.FC = () => {
   // Default to spend limit window on first load, then fall back to 24h
   const effectiveBucketHours = bucketHours
     ? parseFloat(bucketHours)
-    : (data?.spendLimitHours ?? 24);
+    : (spendLimitHours ?? 24);
+
+  const costsQuery = useQuery({
+    queryKey: ["costs", rangeHours, effectiveBucketHours, leadUsername],
+    queryFn: () => {
+      const now = new Date();
+      const start = new Date(
+        now.getTime() - parseFloat(rangeHours) * 60 * 60 * 1000,
+      );
+      return api.get<CostsHistogramResponse>(
+        apiEndpoints.costs({
+          start: start.toISOString(),
+          end: now.toISOString(),
+          bucketHours: effectiveBucketHours,
+          leadUsername: leadUsername || undefined,
+        }),
+      );
+    },
+  });
+  const data = costsQuery.data;
+  const loading = costsQuery.isLoading;
+
+  // spendLimitHours arrives with the costs response; mirror it into state so
+  // effectiveBucketHours can default to it without the query keying on its
+  // own result.
+  useEffect(() => {
+    if (
+      data?.spendLimitHours != null &&
+      data.spendLimitHours !== spendLimitHours
+    ) {
+      setSpendLimitHours(data.spendLimitHours);
+    }
+  }, [data, spendLimitHours]);
 
   // Annotate the bucket size that matches the spend limit window
   const bucketSizes = useMemo(() => {
@@ -139,33 +174,6 @@ export const CostsPage: React.FC = () => {
     }
     return annotated;
   }, [data?.spendLimitHours]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = new Date();
-      const start = new Date(
-        now.getTime() - parseFloat(rangeHours) * 60 * 60 * 1000,
-      );
-      const result = await api.get<CostsHistogramResponse>(
-        apiEndpoints.costs({
-          start: start.toISOString(),
-          end: now.toISOString(),
-          bucketHours: effectiveBucketHours,
-          leadUsername: leadUsername || undefined,
-        }),
-      );
-      setData(result);
-    } catch {
-      // error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, [rangeHours, effectiveBucketHours, leadUsername]);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
 
   const breakdownFor = useCallback(
     (bucket: CostsHistogramResponse["buckets"][number]) => {

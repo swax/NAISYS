@@ -19,9 +19,9 @@ import { hasAction } from "@naisys/common";
 import type {
   CreateUserResponse,
   UserListItem,
-  UserListResponse,
 } from "@naisys/supervisor-shared";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Link,
   useNavigate,
@@ -45,12 +45,11 @@ export const UserList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { allowPasswordLogin } = useOutletContext<AppOutletContext>();
+  const queryClient = useQueryClient();
 
   const page = Number(searchParams.get("page")) || 1;
   const search = searchParams.get("search") || "";
 
-  const [data, setData] = useState<UserListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [createOpened, { open: openCreate, close: closeCreate }] =
     useDisclosure();
   const [newUsername, setNewUsername] = useState("");
@@ -69,21 +68,10 @@ export const UserList: React.FC = () => {
   const [agentError, setAgentError] = useState("");
   const [loadingAgents, setLoadingAgents] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await getUsers({ page, pageSize: 20, search });
-      setData(result);
-    } catch {
-      // error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search]);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["users", page, search],
+    queryFn: () => getUsers({ page, pageSize: 20, search }),
+  });
 
   const handleCreate = async () => {
     setCreating(true);
@@ -91,7 +79,9 @@ export const UserList: React.FC = () => {
     try {
       const result = await createUser({ username: newUsername });
       setCreatedLink(result);
-      void fetchData();
+      // Invalidate every cached page/search, not just the current view, so
+      // the new user can't be missing behind the 5-minute staleTime.
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch (err) {
       setCreateError(
         err instanceof Error ? err.message : "Failed to create user",
@@ -145,6 +135,7 @@ export const UserList: React.FC = () => {
     try {
       const result = await createAgentUser(Number(selectedAgentId));
       closeAgent();
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
       void navigate(`/users/${result.username}`);
     } catch (err) {
       setAgentError(

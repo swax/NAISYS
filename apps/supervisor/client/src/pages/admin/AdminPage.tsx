@@ -27,7 +27,8 @@ import {
   VersionBadge,
 } from "@naisys/common-browser";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
 
 import {
   downloadExportConfig,
@@ -38,27 +39,14 @@ import { api, API_BASE, apiEndpoints } from "../../lib/api/apiClient";
 import { UpdateDialog } from "./UpdateDialog";
 
 export const AdminPage: React.FC = () => {
-  const [data, setData] = useState<AdminInfoResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await api.get<AdminInfoResponse>(apiEndpoints.admin);
-      setData(result);
-    } catch {
-      // error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ["admin-info"],
+    queryFn: () => api.get<AdminInfoResponse>(apiEndpoints.admin),
+  });
 
   const handleExport = async () => {
     setExporting(true);
@@ -81,7 +69,7 @@ export const AdminPage: React.FC = () => {
     try {
       const result = await rotateHubAccessKey();
       if (result.success) {
-        void fetchData();
+        void refetch();
       }
     } finally {
       setRotating(false);
@@ -317,7 +305,7 @@ export const AdminPage: React.FC = () => {
       <UpdateDialog
         opened={updateOpen}
         onClose={() => setUpdateOpen(false)}
-        onUpdate={fetchData}
+        onUpdate={refetch}
         currentVersion={data?.supervisorVersion ?? ""}
       />
     </Container>

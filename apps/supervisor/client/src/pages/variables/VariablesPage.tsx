@@ -26,7 +26,8 @@ import {
   IconTrash,
   IconX,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import type { VariablesResponse } from "../../lib/api/apiClient";
 import { api, apiEndpoints } from "../../lib/api/apiClient";
@@ -100,8 +101,6 @@ const VariableValueInput: React.FC<VariableValueInputProps> = ({
 };
 
 export const VariablesPage: React.FC = () => {
-  const [data, setData] = useState<VariablesResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [oauthOpened, setOauthOpened] = useState(false);
 
   // New row state
@@ -120,21 +119,10 @@ export const VariablesPage: React.FC = () => {
   // Visibility toggle for sensitive values
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await api.get<VariablesResponse>(apiEndpoints.variables);
-      setData(result);
-    } catch {
-      // error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ["variables"],
+    queryFn: () => api.get<VariablesResponse>(apiEndpoints.variables),
+  });
 
   const canManage = data ? !!hasAction(data._actions, "save") : false;
 
@@ -153,7 +141,7 @@ export const VariablesPage: React.FC = () => {
         setNewValue("");
         setNewExportToShell(false);
         setNewSensitive(false);
-        void fetchData();
+        void refetch();
       }
     } finally {
       setSaving(false);
@@ -171,7 +159,7 @@ export const VariablesPage: React.FC = () => {
       );
       if (result.success) {
         setEditingKey(null);
-        void fetchData();
+        void refetch();
       }
     } finally {
       setSaving(false);
@@ -182,7 +170,7 @@ export const VariablesPage: React.FC = () => {
     if (!window.confirm(`Delete variable "${key}"?`)) return;
     const result = await deleteVariable(key);
     if (result.success) {
-      void fetchData();
+      void refetch();
     }
   };
 
@@ -522,7 +510,7 @@ export const VariablesPage: React.FC = () => {
       <CodexOAuthSetupDialog
         opened={oauthOpened}
         onClose={() => setOauthOpened(false)}
-        onComplete={() => void fetchData()}
+        onComplete={() => void refetch()}
       />
     </Container>
   );

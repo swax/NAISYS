@@ -14,13 +14,11 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import type { HateoasAction } from "@naisys/common";
 import { formatVersion, hasAction, hasActionTemplate } from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
-import type { HostDetailResponse } from "@naisys/supervisor-shared";
 import { IconEdit, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
-import { useQueryClient } from "@tanstack/react-query";
-import React, { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
@@ -55,9 +53,16 @@ export const HostPage: React.FC = () => {
   const { serverReachable } = useConnectionStatus();
   const llmModels = useLlmModels();
 
-  const [hostDetail, setHostDetail] = useState<HostDetailResponse | null>(null);
-  const [actions, setActions] = useState<HateoasAction[] | undefined>();
-  const [loading, setLoading] = useState(true);
+  const {
+    data: hostDetail,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ["host-detail", hostname],
+    queryFn: () => getHostDetail(hostname!),
+    enabled: !!hostname,
+  });
+  const actions = hostDetail?._actions;
 
   // Editable fields
   const [editName, setEditName] = useState("");
@@ -81,30 +86,17 @@ export const HostPage: React.FC = () => {
     hasMore: hostRunsHasMore,
   } = useHostRuns(hostname);
 
-  const fetchDetail = useCallback(async () => {
-    if (!hostname) return;
-    try {
-      const data = await getHostDetail(hostname);
-      setHostDetail(data);
-      setActions(data._actions);
-      setEditName(data.name);
-      setEditRestricted(data.restricted);
-    } catch (err) {
-      console.error("Error fetching host detail:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [hostname]);
-
+  // Seed the editable fields from the loaded host, once per hostname. A
+  // background refetch must not overwrite an edit in progress, so this is
+  // keyed on hostname rather than firing on every hostDetail change.
+  const seededHost = useRef<string | null>(null);
   useEffect(() => {
-    if (!hostname) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!hostDetail || seededHost.current === hostname) return;
+    seededHost.current = hostname ?? null;
+    setEditName(hostDetail.name);
+    setEditRestricted(hostDetail.restricted);
     setNameEditable(false);
-    void fetchDetail();
-  }, [hostname, fetchDetail]);
+  }, [hostDetail, hostname]);
 
   const hasChanges =
     hostDetail &&
@@ -129,9 +121,11 @@ export const HostPage: React.FC = () => {
         setNameEditable(false);
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         if (updates.name && updates.name !== hostname) {
+          // The old hostname's detail-cache key is now orphaned.
+          queryClient.removeQueries({ queryKey: ["host-detail", hostname] });
           void navigate(`/hosts/${updates.name}`, { replace: true });
         } else {
-          void fetchDetail();
+          void refetch();
         }
       } else {
         notifications.show({
@@ -180,6 +174,7 @@ export const HostPage: React.FC = () => {
           color: "red",
         });
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        queryClient.removeQueries({ queryKey: ["host-detail", hostname] });
         void navigate("/hosts");
       } else {
         notifications.show({
@@ -212,7 +207,7 @@ export const HostPage: React.FC = () => {
         });
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
-        void fetchDetail();
+        void refetch();
       } else {
         notifications.show({
           title: "Assign Failed",
@@ -243,7 +238,7 @@ export const HostPage: React.FC = () => {
         });
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
         void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
-        void fetchDetail();
+        void refetch();
       } else {
         notifications.show({
           title: "Unassign Failed",

@@ -22,6 +22,7 @@ import {
   type UserDetailResponse,
 } from "@naisys/supervisor-shared";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import {
   Link,
@@ -48,8 +49,7 @@ export const UserDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useSession();
   const { allowPasswordLogin } = useOutletContext<AppOutletContext>();
-  const [user, setUser] = useState<UserDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
   const [editUsername, setEditUsername] = useState("");
   const [saving, setSaving] = useState(false);
@@ -63,23 +63,24 @@ export const UserDetail: React.FC = () => {
 
   const isSelf = currentUser?.username === routeUsername;
 
-  const fetchUser = useCallback(async () => {
-    if (!routeUsername) return;
-    setLoading(true);
-    try {
-      const result = await getUser(routeUsername);
-      setUser(result);
-      setApiKey(null);
-    } catch {
-      // error handled silently
-    } finally {
-      setLoading(false);
-    }
-  }, [routeUsername]);
+  const { data: user, isLoading: loading, refetch } = useQuery({
+    queryKey: ["user", routeUsername],
+    queryFn: () => getUser(routeUsername!),
+    enabled: !!routeUsername,
+  });
 
+  // Mutations re-pull the user; clearing apiKey also drops a freshly-rotated
+  // key from view, as the old fetchUser() did.
+  const refreshUser = useCallback(async () => {
+    setApiKey(null);
+    await refetch();
+  }, [refetch]);
+
+  // A rotated key belongs to one user — clear it on navigation so user A's
+  // key can't carry over and render on user B's page.
   useEffect(() => {
-    void fetchUser();
-  }, [fetchUser]);
+    setApiKey(null);
+  }, [routeUsername]);
 
   const handleDelete = async () => {
     if (!routeUsername) return;
@@ -98,6 +99,10 @@ export const UserDetail: React.FC = () => {
     }
     try {
       await deleteUser(routeUsername);
+      // Evict the deleted user's detail cache and refresh the list so the
+      // 5-minute staleTime can't resurface them.
+      queryClient.removeQueries({ queryKey: ["user", routeUsername] });
+      void queryClient.invalidateQueries({ queryKey: ["users"] });
       void navigate("/users");
     } catch (err) {
       notifications.show({
@@ -116,9 +121,12 @@ export const UserDetail: React.FC = () => {
       await updateUser(routeUsername, { username: editUsername });
       closeEdit();
       if (editUsername !== routeUsername) {
+        // The rename refreshes the list and orphans the old detail-cache key.
+        void queryClient.invalidateQueries({ queryKey: ["users"] });
+        queryClient.removeQueries({ queryKey: ["user", routeUsername] });
         void navigate(`/users/${editUsername}`, { replace: true });
       } else {
-        void fetchUser();
+        void refreshUser();
       }
     } catch (err) {
       setEditError(
@@ -141,7 +149,7 @@ export const UserDetail: React.FC = () => {
     setClearingPassword(true);
     try {
       await clearUserPassword(routeUsername);
-      void fetchUser();
+      void refreshUser();
     } catch (err) {
       notifications.show({
         title: "Remove Password Failed",
@@ -183,8 +191,10 @@ export const UserDetail: React.FC = () => {
     try {
       const result = await rotateUserApiKey(routeUsername);
       setApiKey(result.apiKey ?? null);
-      setUser((current) =>
-        current ? { ...current, hasApiKey: !!result.apiKey } : current,
+      queryClient.setQueryData<UserDetailResponse>(
+        ["user", routeUsername],
+        (current) =>
+          current ? { ...current, hasApiKey: !!result.apiKey } : current,
       );
     } catch (err) {
       notifications.show({
@@ -363,7 +373,7 @@ export const UserDetail: React.FC = () => {
         routeUsername={user.username}
         permissions={user.permissions}
         userActions={user._actions}
-        onChange={fetchUser}
+        onChange={refreshUser}
       />
 
       <Modal opened={editOpened} onClose={closeEdit} title="Edit User">

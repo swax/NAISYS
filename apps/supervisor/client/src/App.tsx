@@ -6,7 +6,7 @@ import { AppShell, Box, MantineProvider } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import type { Permission } from "@naisys/supervisor-shared";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import React from "react";
 import {
   createBrowserRouter,
@@ -68,46 +68,66 @@ export interface AppOutletContext {
   voice: VoiceAvailability;
 }
 
+/** `/client-config` payload: route context plus the app-gating flags. */
+interface ClientConfig extends AppOutletContext {
+  plugins: string[];
+  publicRead: boolean;
+}
+
+// Used until /client-config resolves, and as the fallback if it fails — a
+// config outage must never silently unlock the app.
+const FAIL_CLOSED_CONFIG: ClientConfig = {
+  plugins: [],
+  publicRead: false,
+  allowPasswordLogin: false,
+  permissions: [],
+  mailServiceEnabled: false,
+  voice: { available: false },
+};
+
 const AppContent: React.FC = () => {
   useBoomGuard("root");
   useReconnectQueryRefresh();
   const [opened, { toggle, close }] = useDisclosure();
-  const [plugins, setPlugins] = React.useState<string[]>([]);
-  const [publicRead, setPublicRead] = React.useState(false);
-  const [allowPasswordLogin, setAllowPasswordLogin] = React.useState(false);
-  const [permissions, setPermissions] = React.useState<Permission[]>([]);
-  const [mailServiceEnabled, setMailServiceEnabled] = React.useState(false);
-  // Fail-closed until /client-config resolves.
-  const [voice, setVoice] = React.useState<VoiceAvailability>({
-    available: false,
-  });
-  const [clientConfigLoaded, setClientConfigLoaded] = React.useState(false);
   const { isAuthenticated, isCheckingSession } = useSession();
 
-  // Fetch client config (plugins, publicRead, permissions) on mount
-  React.useEffect(() => {
-    fetch("/supervisor/api/client-config")
-      .then((r) => r.json())
-      .then((d) => {
-        setPlugins(d.plugins);
-        setPublicRead(d.publicRead);
-        setAllowPasswordLogin(d.allowPasswordLogin === true);
-        setPermissions(d.permissions);
-        setMailServiceEnabled(d.mailServiceEnabled === true);
-        setVoice(
+  // Client config gates rendering (public read, login mode) and feeds route
+  // context. A failed fetch leaves the query without data, and the app falls
+  // back to FAIL_CLOSED_CONFIG below.
+  const clientConfigQuery = useQuery({
+    queryKey: ["client-config"],
+    queryFn: async (): Promise<ClientConfig> => {
+      const response = await fetch("/supervisor/api/client-config");
+      if (!response.ok) {
+        throw new Error(`client-config: ${response.status}`);
+      }
+      const d = await response.json();
+      return {
+        plugins: d.plugins ?? [],
+        publicRead: d.publicRead === true,
+        allowPasswordLogin: d.allowPasswordLogin === true,
+        permissions: d.permissions ?? [],
+        mailServiceEnabled: d.mailServiceEnabled === true,
+        voice:
           d.voice && typeof d.voice.available === "boolean"
             ? { available: d.voice.available, reason: d.voice.reason }
             : { available: false },
-        );
-      })
-      .catch(() => {})
-      .finally(() => setClientConfigLoaded(true));
-  }, []);
+      };
+    },
+  });
 
+  const {
+    plugins,
+    publicRead,
+    allowPasswordLogin,
+    permissions,
+    mailServiceEnabled,
+    voice,
+  } = clientConfigQuery.data ?? FAIL_CLOSED_CONFIG;
   const hasErp = plugins.includes("erp");
 
-  // Wait for both session check and client config to complete
-  if (isCheckingSession || !clientConfigLoaded) {
+  // Wait for both the session check and the client-config fetch to settle.
+  if (isCheckingSession || clientConfigQuery.isLoading) {
     return null;
   }
 
