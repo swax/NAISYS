@@ -1,11 +1,13 @@
 import {
   ActionIcon,
+  Alert,
   Anchor,
   Badge,
   Button,
   Group,
   Loader,
   Menu,
+  Modal,
   Stack,
   Switch,
   Table,
@@ -16,7 +18,14 @@ import {
 import { notifications } from "@mantine/notifications";
 import { formatVersion, hasAction, hasActionTemplate } from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
-import { IconEdit, IconPlus, IconTrash, IconX } from "@tabler/icons-react";
+import {
+  IconEdit,
+  IconInfoCircle,
+  IconPlus,
+  IconPower,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,6 +42,7 @@ import {
   assignAgentToHost,
   deleteHost,
   getHostDetail,
+  terminateHostClient,
   unassignAgentFromHost,
   updateHostApi,
 } from "../../lib/api/apiAgents";
@@ -74,6 +84,8 @@ export const HostPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [terminating, setTerminating] = useState(false);
+  const [terminateModalOpen, setTerminateModalOpen] = useState(false);
 
   const host = hostname ? hosts.find((h) => h.name === hostname) : undefined;
 
@@ -191,6 +203,39 @@ export const HostPage: React.FC = () => {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleTerminate = async () => {
+    if (!hostname) return;
+
+    setTerminating(true);
+    try {
+      const result = await terminateHostClient(hostname);
+      if (result.success) {
+        notifications.show({
+          title: "NAISYS Terminating",
+          message: result.message,
+          color: "orange",
+        });
+        setTerminateModalOpen(false);
+        void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        void refetch();
+      } else {
+        notifications.show({
+          title: "Terminate Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Terminate Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setTerminating(false);
     }
   };
 
@@ -332,6 +377,16 @@ export const HostPage: React.FC = () => {
               </Button>
             </>
           )}
+          {hasAction(actions, "terminate") && (
+            <Button
+              color="orange"
+              variant="outline"
+              leftSection={<IconPower size={16} />}
+              onClick={() => setTerminateModalOpen(true)}
+            >
+              Terminate NAISYS on Host
+            </Button>
+          )}
           {hasAction(actions, "delete") && (
             <Button
               color="red"
@@ -345,6 +400,56 @@ export const HostPage: React.FC = () => {
           )}
         </Group>
       </Group>
+
+      {/* Terminate confirmation */}
+      <Modal
+        opened={terminateModalOpen}
+        onClose={() => setTerminateModalOpen(false)}
+        title={`Terminate NAISYS on "${host?.name ?? hostname}"`}
+        centered
+      >
+        <Stack gap="sm">
+          <Text size="sm">
+            This stops every agent running on the host and shuts the NAISYS
+            process down. It cannot be turned back on from this website —
+            someone has to start NAISYS again on the host itself.
+          </Text>
+          <Text size="sm">
+            If the supervisor is running inside this host's NAISYS process,
+            terminating it will also shut down the supervisor (this website).
+          </Text>
+          <Text size="sm" c="dimmed">
+            Note: if a process manager such as PM2 is keeping NAISYS alive,
+            terminating it may only restart the process rather than shut it
+            down permanently.
+          </Text>
+          <Alert
+            color="blue"
+            variant="light"
+            icon={<IconInfoCircle size={16} />}
+          >
+            Just want to stop new agents from running here? Set the host to{" "}
+            <b>Restricted</b> instead — only agents assigned to a restricted
+            host can run on it, and NAISYS keeps running.
+          </Alert>
+          <Group justify="flex-end" mt="xs">
+            <Button
+              variant="default"
+              onClick={() => setTerminateModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              loading={terminating}
+              leftSection={<IconPower size={16} />}
+              onClick={handleTerminate}
+            >
+              Terminate NAISYS
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Host Details */}
       <Table withRowBorders={false} style={{ maxWidth: 600 }}>

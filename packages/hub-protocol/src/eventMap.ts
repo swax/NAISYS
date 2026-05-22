@@ -66,7 +66,12 @@ import type {
 } from "./schemas/identity/codex.js";
 import type { UserListResponse } from "./schemas/identity/users.js";
 import type { ConfigResponse } from "./schemas/infra/config.js";
-import type { HostList, HostRegistered } from "./schemas/infra/hosts.js";
+import type {
+  HostList,
+  HostRegistered,
+  HostTerminateRequest,
+  HostTerminateResponse,
+} from "./schemas/infra/hosts.js";
 import type { ModelsResponse } from "./schemas/infra/models.js";
 
 // ---------------------------------------------------------------------------
@@ -99,6 +104,10 @@ export interface HubRequestEvents {
   [HubEvents.AGENT_PEEK]: {
     request: AgentPeekRequest;
     response: AgentPeekResponse;
+  };
+  [HubEvents.HOST_TERMINATE]: {
+    request: HostTerminateRequest;
+    response: HostTerminateResponse;
   };
   [HubEvents.SESSION_CREATE]: {
     request: SessionCreateRequest;

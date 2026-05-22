@@ -47,6 +47,15 @@ export const deleteHost = async (
   return await api.delete<AgentActionResult>(apiEndpoints.hostDelete(hostname));
 };
 
+export const terminateHostClient = async (
+  hostname: string,
+): Promise<AgentActionResult> => {
+  return await api.post<{}, AgentActionResult>(
+    apiEndpoints.hostTerminate(hostname),
+    {},
+  );
+};
+
 export const getAgentDetail = async (
   username: string,
 ): Promise<AgentDetailResponse> => {

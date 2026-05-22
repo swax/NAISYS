@@ -97,6 +97,8 @@ export const HubEvents = {
   AGENT_RUN_COMMAND: "agent_run_command",
   /** Peek at an agent's output buffer */
   AGENT_PEEK: "agent_peek",
+  /** Terminate the NAISYS client process running on a host */
+  HOST_TERMINATE: "host_terminate",
 
   // ---------------------------------------------------------------------------
   // Supervisor -> Hub (request/response) – Admin

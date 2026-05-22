@@ -340,6 +340,7 @@ export const apiEndpoints = {
   hostUnassignAgent: (hostname: string, agentName: string) =>
     `/hosts/${hostname}/agents/${agentName}`,
   hostDelete: (hostname: string) => `/hosts/${hostname}`,
+  hostTerminate: (hostname: string) => `/hosts/${hostname}/terminate`,
   hostRuns: (hostname: string) => `/hosts/${hostname}/runs`,
   models: "/models",
   openRouterCatalog: "/models/openrouter-catalog",

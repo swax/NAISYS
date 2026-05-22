@@ -1,6 +1,6 @@
 import type { DualLogger } from "@naisys/common-node";
 import type { HostList } from "@naisys/hub-protocol";
-import { HubEvents } from "@naisys/hub-protocol";
+import { HostTerminateRequestSchema, HubEvents } from "@naisys/hub-protocol";
 
 import type { NaisysConnection } from "../server/naisysConnection.js";
 import type { NaisysServer } from "../server/naisysServer.js";
@@ -73,5 +73,37 @@ export function createHubHostService(
     await hostRegistrar.refreshHosts();
     cachedHostListJson = ""; // Force broadcast
     broadcastHostList();
+  });
+
+  // Relay a terminate request from the supervisor to the target host. The host
+  // acks before it begins shutting down, so a successful ack means the request
+  // was accepted — not that the process has fully exited yet.
+  naisysServer.registerEvent(HubEvents.HOST_TERMINATE, (hostId, data, ack) => {
+    try {
+      const parsed = HostTerminateRequestSchema.parse(data);
+
+      logService.log(
+        `[Hub:Hosts] Relaying host_terminate for host ${parsed.hostId} (from ${hostId})`,
+      );
+
+      const sent = naisysServer.sendMessage(
+        parsed.hostId,
+        HubEvents.HOST_TERMINATE,
+        { hostId: parsed.hostId, sourceHostId: hostId },
+        (response) => ack(response),
+      );
+
+      if (!sent) {
+        ack({
+          success: false,
+          error: `Host ${parsed.hostId} is not connected`,
+        });
+      }
+    } catch (error) {
+      logService.error(
+        `[Hub:Hosts] host_terminate error from host ${hostId}: ${error}`,
+      );
+      ack({ success: false, error: String(error) });
+    }
   });
 }

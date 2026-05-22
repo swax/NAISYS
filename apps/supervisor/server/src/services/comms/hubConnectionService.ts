@@ -5,6 +5,7 @@ import type {
   AgentStartResponse,
   AgentStopResponse,
   CodexAccessTokenResponse,
+  HostTerminateResponse,
   MailSendResponse,
   RotateAccessKeyResponse,
   ScheduleTriggerResponse,
@@ -560,6 +561,19 @@ export function sendAgentStop(userId: number, reason: string) {
       if (response.success) {
         markAgentStopped(userId);
       }
+      resolve(response);
+    });
+  });
+}
+
+export function sendHostTerminate(hostId: number) {
+  return new Promise<HostTerminateResponse>((resolve, reject) => {
+    if (!socket || !connected) {
+      reject(new Error("Not connected to hub"));
+      return;
+    }
+
+    socket.emit(HubEvents.HOST_TERMINATE, { hostId }, (response) => {
       resolve(response);
     });
   });

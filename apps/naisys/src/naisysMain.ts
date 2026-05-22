@@ -5,6 +5,7 @@ import {
   expandNaisysFolder,
   runSetupWizard,
 } from "@naisys/common-node";
+import { HubEvents } from "@naisys/hub-protocol";
 import { program } from "commander";
 import path from "path";
 
@@ -210,6 +211,20 @@ const handleShutdownSignal = (signal: "SIGINT" | "SIGTERM") => {
 };
 process.on("SIGINT", () => handleShutdownSignal("SIGINT"));
 process.on("SIGTERM", () => handleShutdownSignal("SIGTERM"));
+
+// Remote terminate request relayed from the supervisor via the hub. Ack first
+// so the supervisor gets a response before the socket closes, then drain
+// agents — the main flow exits the process once they complete.
+hubClient?.registerEvent(HubEvents.HOST_TERMINATE, (_data, ack) => {
+  ack({ success: true });
+
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log("\n[NAISYS] Shutting down (remote terminate request)...");
+  agentManager.stopAll("Remote terminate request").catch((err) => {
+    console.error("[NAISYS] Error stopping agents:", err);
+  });
+});
 
 await agentManager.waitForAllAgentsToComplete();
 

@@ -1,4 +1,4 @@
-import type { HateoasAction } from "@naisys/common";
+import type { HateoasAction, HateoasActionTemplate } from "@naisys/common";
 import type {
   AgentActionResult,
   AssignAgentToHostRequest,
@@ -31,7 +31,11 @@ import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { hubDb } from "../../database/hubDb.js";
 import { badRequest, conflict, notFound } from "../../errorHelpers.js";
 import { API_PREFIX, selfLink, timestampCursorLinks } from "../../hateoas.js";
-import { permGate, resolveActions } from "../../routeHelpers.js";
+import {
+  permGate,
+  resolveActions,
+  resolveActionTemplates,
+} from "../../routeHelpers.js";
 import {
   emitHostsListChanged,
   getHostVersion,
@@ -39,6 +43,7 @@ import {
 } from "../../services/agents/agentHostStatusService.js";
 import {
   sendHostsChanged,
+  sendHostTerminate,
   sendUserListChanged,
 } from "../../services/comms/hubConnectionService.js";
 import {
@@ -83,6 +88,15 @@ function hostActions(
               title: "Assign Agent",
               permission: "manage_hosts" as const,
             },
+            {
+              rel: "terminate" as const,
+              path: "/terminate",
+              method: "POST" as const,
+              title: "Terminate NAISYS on Host",
+              permission: "manage_hosts" as const,
+              disabledWhen: (ctx: HostCtx) =>
+                ctx.isOnline ? null : "Host is offline",
+            },
           ]
         : []),
       {
@@ -101,20 +115,24 @@ function hostActions(
 
 function hostActionTemplates(
   hostname: string,
-  hasManageHostsPermission: boolean,
+  user: SupervisorUser | undefined,
   hostType: string,
-) {
+): HateoasActionTemplate[] {
   // Supervisor hosts can't have agents unassigned — hide entirely (state guard)
   if (hostType === "supervisor") return [];
-  return [
-    {
-      rel: "unassignAgent",
-      hrefTemplate: `${API_PREFIX}/hosts/${hostname}/agents/{agentName}`,
-      method: "DELETE",
-      title: "Unassign Agent",
-      ...permGate(hasManageHostsPermission, "manage_hosts"),
-    },
-  ];
+  return resolveActionTemplates(
+    [
+      {
+        rel: "unassignAgent",
+        path: "/agents/{agentName}",
+        method: "DELETE",
+        title: "Unassign Agent",
+        permission: "manage_hosts",
+      },
+    ],
+    `${API_PREFIX}/hosts/${hostname}`,
+    { user },
+  );
 }
 
 export default function hostsRoutes(
@@ -250,7 +268,6 @@ export default function hostsRoutes(
       }
 
       const user = request.supervisorUser;
-      const hasManageHostsPermission = hasPermission(user, "manage_hosts");
       const online = isHostConnected(host.id);
 
       return {
@@ -260,11 +277,7 @@ export default function hostsRoutes(
         assignedAgents: host.assignedAgents,
         _links: [selfLink(`/hosts/${hostname}`)],
         _actions: hostActions(hostname, user, online, host.hostType),
-        _actionTemplates: hostActionTemplates(
-          hostname,
-          hasManageHostsPermission,
-          host.hostType,
-        ),
+        _actionTemplates: hostActionTemplates(hostname, user, host.hostType),
       };
     },
   );
@@ -369,6 +382,62 @@ export default function hostsRoutes(
       sendHostsChanged();
 
       return { success: true, message: "Host permanently deleted" };
+    },
+  );
+
+  // POST /:hostname/terminate — Terminate the NAISYS client process on a host
+  fastify.post<{
+    Params: HostNameParams;
+    Reply: AgentActionResult | ErrorResponse;
+  }>(
+    "/:hostname/terminate",
+    {
+      preHandler: [requirePermission("manage_hosts")],
+      schema: {
+        description: "Terminate the NAISYS client process running on a host",
+        tags: ["Hosts"],
+        params: HostNameParamsSchema,
+        response: {
+          200: AgentActionResultSchema,
+          400: ErrorResponseSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { hostname } = request.params;
+
+      const host = await getHostDetail(hostname);
+      if (!host) {
+        return notFound(reply, `Host "${hostname}" not found`);
+      }
+      if (host.hostType === "supervisor") {
+        return badRequest(reply, "Cannot terminate the supervisor host");
+      }
+      if (!isHostConnected(host.id)) {
+        return badRequest(reply, "Host is offline — nothing to terminate");
+      }
+
+      try {
+        const result = await sendHostTerminate(host.id);
+        if (!result.success) {
+          return badRequest(
+            reply,
+            result.error || "Failed to terminate host client",
+          );
+        }
+        return {
+          success: true,
+          message: `Termination request sent to "${hostname}"`,
+        };
+      } catch (error) {
+        return badRequest(
+          reply,
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      }
     },
   );
 
