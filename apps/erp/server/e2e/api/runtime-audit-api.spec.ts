@@ -12,8 +12,9 @@
  *  8. Fill the step-run's required string field, then upload an
  *     attachment to the attachment field.
  *  9. Add an operation-run comment (issue type).
- * 10. Clock out + clock in to create a second labor ticket; list
- *     labor and assert two tickets exist.
+ * 10. Clock out + clock in to create a second labor ticket; while
+ *     clocked out, assert the op detail surfaces the clock-in action;
+ *     list labor and assert two tickets exist.
  * 11. Complete the step run, then complete op1.
  * 12. Assert op2 transitioned to pending (unblocked); start and
  *     complete op2.
@@ -298,6 +299,28 @@ test.describe("Runtime + audit API workflow", () => {
 
   test("clock out + clock in produces a second labor ticket", async () => {
     await clockOut(api, { orderKey, runNo, seqNo: 10 });
+
+    // With no open ticket, the op-run detail itself surfaces clock-in as an
+    // available action and disables complete with the clock-in requirement —
+    // an agent never has to follow the `labor` link to discover it.
+    const offShift = await expectJson<{
+      _actions: {
+        rel: string;
+        href: string;
+        disabled?: boolean;
+        disabledReason?: string;
+      }[];
+    }>(
+      await api.get(erpApiPath(`/orders/${orderKey}/runs/${runNo}/ops/10`)),
+      200,
+    );
+    const clockInAction = offShift._actions.find((a) => a.rel === "clock-in");
+    expect(clockInAction?.href).toContain("/labor/clock-in");
+    expect(clockInAction?.disabled).toBeFalsy();
+    const completeAction = offShift._actions.find((a) => a.rel === "complete");
+    expect(completeAction?.disabled).toBe(true);
+    expect(completeAction?.disabledReason).toContain("clocked in");
+
     await clockIn(api, { orderKey, runNo, seqNo: 10 });
 
     const tickets = await listLaborTickets(api, { orderKey, runNo, seqNo: 10 });

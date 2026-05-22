@@ -41,6 +41,7 @@ import {
   updateOpRun,
   validateStatusFor,
 } from "../../services/operations/operation-run-service.js";
+import { isUserClockedIn } from "../../services/production/labor-ticket-service.js";
 
 function opRunResource(orderKey: string, runNo: number) {
   return `orders/${orderKey}/runs/${runNo}/ops`;
@@ -57,11 +58,21 @@ async function opRunItemActions(
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
   const isExecutor = hasPermission(user, "order_executor");
+  const isInProgress = status === OperationRunStatus.in_progress;
   const stepsErr =
-    isExecutor && status === OperationRunStatus.in_progress
-      ? await checkStepsComplete(opRunId)
-      : null;
+    isExecutor && isInProgress ? await checkStepsComplete(opRunId) : null;
   const wcErr = user ? await checkWorkCenterAccess(operationId, user) : null;
+  // Completing an op requires the caller to be clocked in (enforced by the
+  // /complete transition). Surface clock-in and the requirement here so an
+  // agent inspecting the op run finds it without following the `labor` link.
+  const userClockedIn =
+    isExecutor && isInProgress && user
+      ? await isUserClockedIn(opRunId, user.id)
+      : false;
+  const notClockedInErr =
+    isExecutor && isInProgress && !userClockedIn
+      ? "You must be clocked in to complete an operation"
+      : null;
 
   return resolveActions(
     [
@@ -101,6 +112,19 @@ async function opRunItemActions(
             : null),
       },
       {
+        rel: "clock-in",
+        path: "/labor/clock-in",
+        method: "POST",
+        title: "Clock In",
+        permission: "order_executor",
+        statuses: [OperationRunStatus.in_progress],
+        disabledWhen: () =>
+          wcErr ??
+          (userClockedIn
+            ? "You are already clocked in to this operation"
+            : null),
+      },
+      {
         rel: "update",
         method: "PUT",
         title: "Update",
@@ -118,7 +142,7 @@ async function opRunItemActions(
         body: { note: "" },
         permission: "order_executor",
         statuses: [OperationRunStatus.in_progress],
-        disabledWhen: () => wcErr ?? stepsErr,
+        disabledWhen: () => wcErr ?? notClockedInErr ?? stepsErr,
       },
       {
         rel: "skip",
