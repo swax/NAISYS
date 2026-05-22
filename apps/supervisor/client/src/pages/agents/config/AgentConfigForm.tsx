@@ -248,6 +248,9 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
       zodResolver(AgentConfigFileSchema)(transformFormValues(values)),
   });
 
+  // Null until AgentStartupAttachments reports its first fetch.
+  const [attachmentCount, setAttachmentCount] = useState<number | null>(null);
+
   const isDirty = form.isDirty();
 
   // Block in-app navigation while form has unsaved changes
@@ -366,6 +369,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
                 withAsterisk
                 autosize
                 minRows={4}
+                spellCheck={false}
                 styles={{
                   input: { fontFamily: "monospace", fontSize: "0.875rem" },
                 }}
@@ -387,6 +391,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
                 description={`${desc("initialCommands") ?? ""} Separate commands with a blank line.`}
                 autosize
                 minRows={2}
+                spellCheck={false}
                 styles={{
                   input: { fontFamily: "monospace", fontSize: "0.875rem" },
                 }}
@@ -545,11 +550,19 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
             <Group gap="xs" align="center">
               <IconPaperclip size={16} />
               <Text fw={600}>Startup Attachments</Text>
+              {attachmentCount !== null && (
+                <Text c="dimmed" size="sm">
+                  ({attachmentCount})
+                </Text>
+              )}
             </Group>
           </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="lg">
-              <AgentStartupAttachments username={username} />
+              <AgentStartupAttachments
+                username={username}
+                onCountChange={setAttachmentCount}
+              />
               {autoSaveNote}
             </Stack>
           </Accordion.Panel>

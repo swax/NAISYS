@@ -8,6 +8,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
+import { useSessionStorage } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
 import { hasAction } from "@naisys/common";
@@ -62,7 +63,13 @@ export const AgentConfig: React.FC = () => {
     "import" | "export" | null
   >(null);
   const [settingLead, setSettingLead] = useState(false);
-  const [expandedPanels, setExpandedPanels] = useState<string[]>([]);
+  // Backed by sessionStorage so expanded panels persist across the per-agent
+  // layout remount (AgentsLayout keys its Outlet on :username).
+  const [expandedPanels, setExpandedPanels] = useSessionStorage<string[]>({
+    key: "agent-config-expanded-panels",
+    defaultValue: [],
+    getInitialValueInEffect: false,
+  });
 
   useEffect(() => {
     api

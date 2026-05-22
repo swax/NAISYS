@@ -40,6 +40,8 @@ interface PendingFile {
 
 interface AgentStartupAttachmentsProps {
   username: string;
+  /** Reports the configured attachment count so the parent can label its accordion. */
+  onCountChange?: (count: number) => void;
 }
 
 function formatFileSize(bytes: number): string {
@@ -50,7 +52,7 @@ function formatFileSize(bytes: number): string {
 
 export const AgentStartupAttachments: React.FC<
   AgentStartupAttachmentsProps
-> = ({ username }) => {
+> = ({ username, onCountChange }) => {
   const [items, setItems] = useState<StartupAttachment[]>([]);
   const [actions, setActions] = useState<HateoasAction[] | undefined>();
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,7 @@ export const AgentStartupAttachments: React.FC<
       setItems(data.items);
       setActions(data._actions);
       setPathEdits({});
+      onCountChange?.(data.items.length);
     } catch (err) {
       console.error("Error fetching startup attachments:", err);
       setError(
@@ -77,7 +80,7 @@ export const AgentStartupAttachments: React.FC<
     } finally {
       setLoading(false);
     }
-  }, [username]);
+  }, [username, onCountChange]);
 
   useEffect(() => {
     void fetchItems();
