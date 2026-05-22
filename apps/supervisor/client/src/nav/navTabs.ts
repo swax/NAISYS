@@ -7,6 +7,7 @@ export interface NavTab {
 }
 
 export const navTabs: NavTab[] = [
+  { path: "/dashboard", label: "Dashboard" },
   { path: "/agents", label: "Agents" },
   { path: "/hosts", label: "Hosts" },
   { path: "/variables", label: "Variables" },

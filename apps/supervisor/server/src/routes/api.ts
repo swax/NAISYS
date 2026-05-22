@@ -13,6 +13,7 @@ import agentsRoutes from "./agents/agents.js";
 import agentSchedulesRoutes from "./agents/agentSchedules.js";
 import agentStartupAttachmentsRoutes from "./agents/agentStartupAttachments.js";
 import authRoutes from "./auth/auth.js";
+import dashboardRoutes from "./dashboard.js";
 import attachmentRoutes from "./infra/attachments.js";
 import costsRoutes from "./infra/costs.js";
 import hostsRoutes from "./infra/hosts.js";
@@ -71,6 +72,9 @@ export default async function apiRoutes(
 
   // Register costs routes
   await fastify.register(costsRoutes, { prefix: "/costs" });
+
+  // Register dashboard routes
+  await fastify.register(dashboardRoutes, { prefix: "/dashboard" });
 
   // Register admin routes
   await fastify.register(adminRoutes, { prefix: "/admin" });

@@ -41,6 +41,7 @@ import { AgentsLayout } from "./pages/agents/AgentsLayout";
 import { AgentConfig } from "./pages/agents/config/AgentConfig";
 import { AgentChat } from "./pages/chat/AgentChat";
 import { CostsPage } from "./pages/costs/CostsPage";
+import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { HostIndex } from "./pages/hosts/HostIndex";
 import { HostPage } from "./pages/hosts/HostPage";
 import { HostsLayout } from "./pages/hosts/HostsLayout";
@@ -305,6 +306,11 @@ const router = createBrowserRouter(
           errorElement={<RouteErrorPage />}
         />
       </Route>
+      <Route
+        path="/dashboard"
+        element={<DashboardPage />}
+        errorElement={<RouteErrorPage />}
+      />
       <Route
         path="/costs"
         element={<CostsPage />}

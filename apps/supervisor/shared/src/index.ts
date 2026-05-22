@@ -12,6 +12,7 @@ export * from "./comms/voice-types.js";
 export * from "./error-types.js";
 export * from "./model-types.js";
 export * from "./observability/cost-types.js";
+export * from "./observability/dashboard-types.js";
 export * from "./observability/log-types.js";
 export * from "./observability/run-types.js";
 export * from "./observability/status-types.js";
