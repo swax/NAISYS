@@ -33,12 +33,23 @@ export const saveVariable = async (
   value: string,
   exportToShell: boolean,
   sensitive: boolean,
+  category: string | null,
 ): Promise<SaveVariableResponse> => {
   try {
     return await api.put<
-      { value: string; exportToShell: boolean; sensitive: boolean },
+      {
+        value: string;
+        exportToShell: boolean;
+        sensitive: boolean;
+        category: string | null;
+      },
       SaveVariableResponse
-    >(apiEndpoints.saveVariable(key), { value, exportToShell, sensitive });
+    >(apiEndpoints.saveVariable(key), {
+      value,
+      exportToShell,
+      sensitive,
+      category,
+    });
   } catch (error) {
     return {
       success: false,

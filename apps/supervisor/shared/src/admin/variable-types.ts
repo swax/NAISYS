@@ -4,6 +4,7 @@ import { z } from "zod";
 export const VariableSchema = z.object({
   key: z.string(),
   value: z.string(),
+  category: z.string().nullable(),
   exportToShell: z.boolean(),
   sensitive: z.boolean(),
 });
@@ -19,6 +20,7 @@ export type VariablesResponse = z.infer<typeof VariablesResponseSchema>;
 
 export const SaveVariableRequestSchema = z.object({
   value: z.string(),
+  category: z.string().nullable().optional(),
   exportToShell: z.boolean(),
   sensitive: z.boolean(),
 });

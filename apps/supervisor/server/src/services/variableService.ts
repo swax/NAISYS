@@ -1,4 +1,4 @@
-import { validateTimezone } from "@naisys/common";
+import { defaultCategoryForVariable, validateTimezone } from "@naisys/common";
 
 import { hubDb } from "../database/hubDb.js";
 
@@ -45,6 +45,7 @@ export async function saveVariable(
   exportToShell: boolean,
   sensitive: boolean,
   userUuid: string,
+  category?: string | null,
 ): Promise<{ success: boolean; message: string }> {
   if (RESERVED_VARIABLE_KEYS.has(key)) {
     throw new Error(`'${key}' is reserved and cannot be set as a variable`);
@@ -56,6 +57,13 @@ export async function saveVariable(
       `'${value}' is not a valid IANA timezone name (e.g. "America/New_York")`,
     );
   }
+  // `category` undefined => caller doesn't manage categories: leave the column
+  // untouched on update (don't clobber a user's choice) and fall back to the
+  // key's known default on create. An explicit value is honored as-is — a
+  // blank string clears the category back to uncategorized.
+  const explicitCategory = category?.trim() || null;
+  const createCategory =
+    category === undefined ? defaultCategoryForVariable(key) : explicitCategory;
   await hubDb.variables.upsert({
     where: { key },
     update: {
@@ -63,10 +71,12 @@ export async function saveVariable(
       export_to_shell: exportToShell,
       sensitive,
       updated_by: userUuid,
+      ...(category !== undefined && { category: explicitCategory }),
     },
     create: {
       key,
       value,
+      category: createCategory,
       export_to_shell: exportToShell,
       sensitive,
       created_by: userUuid,

@@ -49,7 +49,12 @@ function variableActions(hasManagePermission: boolean): HateoasAction[] {
       method: "PUT",
       title: "Save Variable",
       schema: `${API_PREFIX}/schemas/SaveVariable`,
-      body: { value: "", exportToShell: false, sensitive: false },
+      body: {
+        value: "",
+        category: null,
+        exportToShell: false,
+        sensitive: false,
+      },
       ...gate,
     },
     {
@@ -90,6 +95,7 @@ export default function variablesRoutes(
         items: items.map((v) => ({
           key: v.key,
           value: v.sensitive && !hasManagePermission ? "" : v.value,
+          category: v.category,
           exportToShell: v.export_to_shell,
           sensitive: v.sensitive,
         })),
@@ -211,13 +217,14 @@ export default function variablesRoutes(
     async (request, reply) => {
       try {
         const { key } = request.params;
-        const { value, exportToShell, sensitive } = request.body;
+        const { value, category, exportToShell, sensitive } = request.body;
         const result = await saveVariable(
           key,
           value,
           exportToShell,
           sensitive,
           request.supervisorUser!.uuid,
+          category,
         );
         sendVariablesChanged();
         return result;

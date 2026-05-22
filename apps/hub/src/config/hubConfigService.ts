@@ -3,6 +3,7 @@ import {
   builtInImageModels,
   builtInLlmModels,
   CODEX_REFRESH_TOKEN_VAR,
+  defaultCategoryForVariable,
 } from "@naisys/common";
 import type { DualLogger } from "@naisys/common-node";
 import type { HubDatabaseService } from "@naisys/hub-database";
@@ -45,6 +46,7 @@ export async function createHubConfigService(
         data: entries.map(([key, value]) => ({
           key,
           value,
+          category: defaultCategoryForVariable(key),
           sensitive: sensitiveKeys.has(key),
           created_by: "hub",
           updated_by: "hub",
@@ -141,9 +143,10 @@ export type HubConfigService = Awaited<
   ReturnType<typeof createHubConfigService>
 >;
 
-/** Create variable placeholders if they don't already exist.
- *  If a variable already exists and `sensitive` is explicitly true,
- *  upgrade it to sensitive (e.g. API keys seeded before model init). */
+/** Create variable placeholders if they don't already exist, stamping each new
+ *  one with its known default category. If a variable already exists and
+ *  `sensitive` is explicitly true, upgrade it to sensitive (e.g. API keys
+ *  seeded before model init). */
 export async function ensureVariables(
   hubDb: HubDatabaseService["hubDb"],
   keys: { key: string; sensitive?: boolean }[],
@@ -155,6 +158,7 @@ export async function ensureVariables(
         data: {
           key,
           value: "",
+          category: defaultCategoryForVariable(key),
           sensitive: sensitive ?? false,
           export_to_shell: false,
           created_by: "hub",

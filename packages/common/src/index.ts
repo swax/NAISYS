@@ -9,6 +9,7 @@ export * from "./config/configUtils.js";
 export * from "./config/constants.js";
 export * from "./config/globalConfigLoader.js";
 export * from "./config/hostedServices.js";
+export * from "./config/knownVariables.js";
 export * from "./http/hateoas.js";
 export * from "./http/hateoas-types.js";
 export * from "./http/lenientJsonParser.js";
