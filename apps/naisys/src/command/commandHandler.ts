@@ -134,6 +134,16 @@ export function createCommandHandler(
               return response.nextCommandResponse;
             }
           }
+        } else if (
+          command.startsWith("ns-") &&
+          !shellCommand.isShellSuspended()
+        ) {
+          // Unknown NAISYS command. NAISYS owns the `ns-` namespace, so don't
+          // hand a typo to the shell — its command-not-found handler would
+          // tell the LLM to run it on its own line, which it already did.
+          contextManager.append(
+            `'${command}' is not a recognized NAISYS command. Run 'ns-help' to see available commands.`,
+          );
         } else {
           const { response, exitApp } = await shellCommand.handleCommand(input);
 

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { createCommandHandler } from "../../command/commandHandler.js";
 import { createCommandRegistry } from "../../command/commandRegistry.js";
@@ -23,13 +23,13 @@ import {
 const userHostPrompt = "bob@naisys";
 const userHostPathPrompt = "bob@naisys:/users/bob";
 
-function createPopFirstCommand() {
+function createTestHandler() {
   const promptBuilder = createMockPromptBuilder(
     userHostPrompt,
     userHostPathPrompt,
   );
   const shellCommand = createMockShellCommand();
-
+  const contextManager = createMockContextManager();
   const inputMode = createMockInputMode();
 
   const commandRegistry = createCommandRegistry(inputMode, [
@@ -48,7 +48,7 @@ function createPopFirstCommand() {
     shellCommand,
     createMockShellWrapper(),
     commandRegistry,
-    createMockContextManager(),
+    contextManager,
     createMockOutputService(),
     inputMode,
     createMockCommandLoopState(),
@@ -56,13 +56,16 @@ function createPopFirstCommand() {
   );
 
   return {
+    processCommand: commandHandler.processCommand,
     popFirstCommand: commandHandler.exportedForTesting.popFirstCommand,
+    shellCommand,
+    contextManager,
   };
 }
 
 describe("popFirstCommand function", () => {
   test("handles input with a prompt at beginning", async () => {
-    const { popFirstCommand } = createPopFirstCommand();
+    const { popFirstCommand } = createTestHandler();
     const nextInput = `${userHostPathPrompt}$ command1`;
     const commandList = [nextInput];
 
@@ -76,7 +79,7 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles input with wrong prompt at beginning", async () => {
-    const { popFirstCommand } = createPopFirstCommand();
+    const { popFirstCommand } = createTestHandler();
     const wrongPathPrompt = `${userHostPrompt}:/wrong`;
     const nextInput = `${wrongPathPrompt}$ command1`;
     const commandList = [nextInput];
@@ -91,7 +94,7 @@ describe("popFirstCommand function", () => {
   });
 
   test("handle input with prompt in the middle", async () => {
-    const { popFirstCommand } = createPopFirstCommand();
+    const { popFirstCommand } = createTestHandler();
     const nextInput = `command1\n${userHostPathPrompt}$ command2`;
     const commandList = [nextInput];
 
@@ -105,7 +108,7 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles ns-comment command in quotes", async () => {
-    const { popFirstCommand } = createPopFirstCommand();
+    const { popFirstCommand } = createTestHandler();
     const commentCommand = `ns-comment "Today
         \\"is\\"
         Tuesday"`;
@@ -122,7 +125,7 @@ describe("popFirstCommand function", () => {
   });
 
   test("handles input with nothing special", async () => {
-    const { popFirstCommand } = createPopFirstCommand();
+    const { popFirstCommand } = createTestHandler();
     const nextInput = "command1 --help\n";
     const commandList = [nextInput];
 
@@ -133,5 +136,33 @@ describe("popFirstCommand function", () => {
       splitResult: "popped",
     });
     expect(commandList).toEqual([]);
+  });
+});
+
+describe("unknown ns- commands", () => {
+  test("are reported, not handed to the shell", async () => {
+    const { processCommand, shellCommand, contextManager } =
+      createTestHandler();
+
+    await processCommand("prompt", ["ns-bogus"]);
+
+    // Never reaches the shell — so its command-not-found handler can't
+    // mislabel the typo as "run it on its own line".
+    expect(shellCommand.handleCommand).not.toHaveBeenCalled();
+
+    const appendCalls = vi.mocked(contextManager.append).mock.calls;
+    const appendedText = appendCalls.map((call) => call[0]).join("\n");
+    expect(appendedText).toContain(
+      "'ns-bogus' is not a recognized NAISYS command",
+    );
+    expect(appendedText).toContain("ns-help");
+  });
+
+  test("an unknown non-ns command still runs on the shell", async () => {
+    const { processCommand, shellCommand } = createTestHandler();
+
+    await processCommand("prompt", ["frobnicate --x"]);
+
+    expect(shellCommand.handleCommand).toHaveBeenCalledWith("frobnicate --x");
   });
 });

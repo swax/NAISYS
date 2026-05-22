@@ -457,6 +457,7 @@ export const helpCmd: CommandDef = {
 
 export const exitCmd: CommandDef = {
   name: "exit",
+  aliases: ["ns-exit"],
   usage: "[all]",
   description:
     "Exit the current agent. Use 'exit all' to exit all agents, ending the application",
