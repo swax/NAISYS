@@ -34,6 +34,7 @@ import type { ThreadRun } from "../../hooks/thread-runs/useMessageThreadRuns";
 import { useMessageThreadRuns } from "../../hooks/thread-runs/useMessageThreadRuns";
 import { buildAgentCandidates } from "../../lib/agentCandidates";
 import { archiveAllChat, sendChatMessage } from "../../lib/api/apiChat";
+import { queryKeys } from "../../lib/api/queryKeys";
 import { ChatConversationList } from "./ChatConversationList";
 import { ChatInput } from "./ChatInput";
 import { ChatThread } from "./ChatThread";
@@ -244,16 +245,24 @@ export const AgentChat: React.FC = () => {
       />
     ) : null;
 
-  // Browser back/forward can reuse this route component with the module-level
-  // message cache already populated. Revalidate the active thread whenever the
-  // route entry is activated so missed socket pushes are backfilled promptly.
+  // Browser back/forward can reuse this route component with React Query's
+  // cache already populated from a prior visit. Revalidate the conversation
+  // list and the active thread on route activation so a push missed while
+  // this route was unmounted is backfilled — the conversation list has no
+  // gap detection of its own to recover it otherwise.
   useEffect(() => {
-    if (!username || !selectedParticipants) return;
+    if (!username) return;
 
     void queryClient.invalidateQueries({
-      queryKey: ["chat-messages", username, selectedParticipants],
+      queryKey: queryKeys.chatConversations(username),
       refetchType: "active",
     });
+    if (selectedParticipants) {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.chatThread(username, selectedParticipants),
+        refetchType: "active",
+      });
+    }
   }, [location.key, queryClient, selectedParticipants, username]);
 
   const canSend = !!hasAction(convActions, "send");
@@ -261,8 +270,13 @@ export const AgentChat: React.FC = () => {
 
   const handleArchiveAll = useCallback(async () => {
     await archiveAllChat(username ?? "");
+    // Archiving clears every thread — reset the message caches too so a
+    // revisited thread can't merge stale rows back in.
+    void queryClient.resetQueries({
+      queryKey: queryKeys.chatThreads(username ?? ""),
+    });
     await refreshConversations();
-  }, [username, refreshConversations]);
+  }, [username, queryClient, refreshConversations]);
 
   const handleSendMessage = useCallback(
     async (message: string, files?: File[]) => {

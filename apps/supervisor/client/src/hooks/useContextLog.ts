@@ -1,20 +1,46 @@
+import { mergeByKey, sortBy } from "@naisys/common";
 import type { LogPushEntry } from "@naisys/hub-protocol";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
-import { useAgentDataContext } from "../contexts/AgentDataContext";
 import type { LogEntry } from "../lib/api/apiClient";
-import type { ContextLogParams } from "../lib/api/apiRuns";
 import { getContextLog } from "../lib/api/apiRuns";
+import { queryKeys } from "../lib/api/queryKeys";
+import { useAgentLookups } from "./data/useAgentLookups";
+import { useGapRecovery } from "./socket/useGapRecovery";
 import { useSubscription } from "./socket/useSubscription";
 
-// Module-level caches (shared across all hook instances and persist across remounts)
-const logsCache = new Map<string, LogEntry[]>();
-const logsAfterCache = new Map<string, number | undefined>();
+/** Merge incoming log entries into the accumulated list, deduped by id and
+ *  sorted ascending. Returns the original array when there is nothing new. */
+export function mergeLogEntries(
+  existing: LogEntry[],
+  incoming: LogEntry[],
+): LogEntry[] {
+  if (incoming.length === 0) return existing;
+  // Live runs stream sorted appends — skip the dedupe + full re-sort when
+  // every incoming id is past what we already hold.
+  const maxId = existing.length ? existing[existing.length - 1].id : 0;
+  if (incoming.every((log) => log.id > maxId)) {
+    return [...existing, ...sortBy(incoming, (log) => log.id)];
+  }
+  // Gap recovery splices in an older range — dedupe by id, then re-sort.
+  return sortBy(
+    mergeByKey(existing, incoming, (log) => log.id),
+    (log) => log.id,
+  );
+}
 
-// Tracks gap recovery attempts per session to prevent re-fetch loops
-const gapRecoveryAttempted = new Map<string, Set<string>>();
+/** Stable empty reference so `logs` keeps a constant identity while loading. */
+const EMPTY_LOGS: LogEntry[] = [];
 
+/**
+ * The context log for one run session, backed by React Query. The query cache
+ * holds the accumulated, id-sorted `LogEntry[]`; the `logsAfter` cursor is the
+ * highest id already cached, so every fetch (mount, focus, reconnect) is an
+ * incremental catch-up. While the run is online a `logs:` socket room streams
+ * pushes straight into the cache; a missing `previousId` means a push was
+ * dropped, so a bounded range-fetch fills the gap.
+ */
 export const useContextLog = (
   agentUsername: string,
   runId: number,
@@ -23,70 +49,58 @@ export const useContextLog = (
   isOnline: boolean = false,
   subagentId: number | null = null,
 ) => {
-  const { agents } = useAgentDataContext();
-  const userLookup = useMemo(
-    () => new Map(agents.map((a) => [a.id, a.name])),
-    [agents],
-  );
+  const { userLookup } = useAgentLookups();
+  const queryClient = useQueryClient();
 
   // Subagent sessions share their parent's username + runId; the discriminator
-  // is the subagentId. Bake it into the cache key so subagents don't collide
-  // with the parent (or each other) in the module-level cache maps.
+  // is the subagentId. Bake it into the query key so subagents don't collide
+  // with the parent (or each other) in the cache.
   const subagentKey = subagentId ?? 0;
   const sessionKey = `${agentUsername}-${runId}-${subagentKey}-${sessionId}`;
-  // Version counter to trigger re-renders when cache updates
-  const [, setCacheVersion] = useState(0);
-
-  // Clean up gap recovery state when leaving a session
-  useEffect(() => {
-    return () => {
-      gapRecoveryAttempted.delete(sessionKey);
-    };
-  }, [sessionKey]);
-
-  const mergeLogs = useCallback(
-    (newLogs: LogEntry[]) => {
-      if (newLogs.length === 0) return;
-
-      const existingLogs = logsCache.get(sessionKey) || [];
-
-      const logsMap = new Map(
-        existingLogs.map((log: LogEntry) => [log.id, log]),
-      );
-
-      newLogs.forEach((log) => {
-        logsMap.set(log.id, log);
-      });
-
-      const sortedLogs = Array.from(logsMap.values()).sort(
-        (a, b) => a.id - b.id,
-      );
-
-      logsCache.set(sessionKey, sortedLogs);
-
-      if (sortedLogs.length > 0) {
-        const maxLogId = sortedLogs[sortedLogs.length - 1].id;
-        logsAfterCache.set(sessionKey, maxLogId);
-      }
-
-      setCacheVersion((v) => v + 1);
-    },
+  const queryKey = useMemo(
+    () => queryKeys.contextLog(sessionKey),
     [sessionKey],
   );
 
-  // Fetch a bounded range of missing logs to fill a detected gap
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      // The cursor is the highest id we already hold — fetch only what's new.
+      const before = queryClient.getQueryData<LogEntry[]>(queryKey) ?? [];
+      const logsAfter = before.length
+        ? before[before.length - 1].id
+        : undefined;
+      const result = await getContextLog({
+        agentUsername,
+        runId,
+        sessionId,
+        subagentId,
+        logsAfter,
+      });
+      const delta = result.success && result.data ? result.data.logs : [];
+      // A socket push may have merged entries in while the fetch was in flight.
+      const current = queryClient.getQueryData<LogEntry[]>(queryKey) ?? before;
+      return mergeLogEntries(current, delta);
+    },
+    enabled: enabled && !!agentUsername,
+    refetchOnWindowFocus: !isOnline,
+    refetchOnMount: "always",
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  const markGapRecovered = useGapRecovery(queryKey);
+
+  // Fetch a bounded range of missing logs to fill a detected gap.
   const recoverGap = useCallback(
     async (gapPreviousId: number, gapFirstId: number) => {
       const gapKey = `${gapPreviousId}-${gapFirstId}`;
-      const attempted = gapRecoveryAttempted.get(sessionKey) ?? new Set();
-      if (attempted.has(gapKey)) return;
-      attempted.add(gapKey);
-      gapRecoveryAttempted.set(sessionKey, attempted);
+      if (!markGapRecovered(gapKey)) return;
 
       try {
-        // Find the highest ID we have below the gap to narrow the range
-        const existingLogs = logsCache.get(sessionKey) ?? [];
-        const logsBeforeGap = existingLogs.filter((l) => l.id < gapFirstId);
+        // Narrow the range to just below the gap with the highest id we hold.
+        const current = queryClient.getQueryData<LogEntry[]>(queryKey) ?? [];
+        const logsBeforeGap = current.filter((l) => l.id < gapFirstId);
         const rangeStart =
           logsBeforeGap.length > 0
             ? logsBeforeGap[logsBeforeGap.length - 1].id
@@ -101,10 +115,13 @@ export const useContextLog = (
           logsBefore: gapFirstId,
         });
         if (result.success && result.data) {
+          const recovered = result.data.logs;
           console.info(
-            `[useContextLog] Gap recovery for ${sessionKey}: fetched ${result.data.logs.length} logs (after=${rangeStart}, before=${gapFirstId})`,
+            `[useContextLog] Gap recovery for ${sessionKey}: fetched ${recovered.length} logs (after=${rangeStart}, before=${gapFirstId})`,
           );
-          mergeLogs(result.data.logs);
+          queryClient.setQueryData<LogEntry[]>(queryKey, (old) =>
+            mergeLogEntries(old ?? [], recovered),
+          );
         }
       } catch (err) {
         console.error(
@@ -113,10 +130,19 @@ export const useContextLog = (
         );
       }
     },
-    [agentUsername, runId, sessionId, sessionKey, mergeLogs],
+    [
+      agentUsername,
+      runId,
+      sessionId,
+      subagentId,
+      sessionKey,
+      queryClient,
+      queryKey,
+      markGapRecovered,
+    ],
   );
 
-  // Handle push entries: resolve userId to username from agent context
+  // Handle push entries: resolve userId to username from agent context.
   const handlePushEntries = useCallback(
     (entries: (LogPushEntry & { attachmentDownloadUrl?: string })[]) => {
       const logs: LogEntry[] = entries.map((e) => ({
@@ -136,65 +162,29 @@ export const useContextLog = (
             }
           : undefined,
       }));
-      mergeLogs(logs);
+      queryClient.setQueryData<LogEntry[]>(queryKey, (old) =>
+        mergeLogEntries(old ?? [], logs),
+      );
 
-      // Gap detection: check if first entry's previousId exists in our cache
+      // Gap detection: the first entry's previousId should already be cached.
       const firstEntry = entries[0];
       if (firstEntry?.previousId != null) {
-        const existingLogs = logsCache.get(sessionKey);
-        if (existingLogs && existingLogs.length > 0) {
-          const hasPrevious = existingLogs.some(
-            (l) => l.id === firstEntry.previousId,
+        const current = queryClient.getQueryData<LogEntry[]>(queryKey);
+        if (
+          current &&
+          current.length > 0 &&
+          !current.some((l) => l.id === firstEntry.previousId)
+        ) {
+          console.warn(
+            `[useContextLog] Gap detected in ${sessionKey}: missing previousId ${firstEntry.previousId}, recovering before id ${firstEntry.id}`,
           );
-          if (!hasPrevious) {
-            console.warn(
-              `[useContextLog] Gap detected in ${sessionKey}: missing previousId ${firstEntry.previousId}, recovering before id ${firstEntry.id}`,
-            );
-            void recoverGap(firstEntry.previousId, firstEntry.id);
-          }
+          void recoverGap(firstEntry.previousId, firstEntry.id);
         }
       }
     },
-    [mergeLogs, userLookup, sessionKey, recoverGap],
+    [queryClient, queryKey, userLookup, sessionKey, recoverGap],
   );
 
-  const queryFn = useCallback(
-    async ({ queryKey }: any) => {
-      const [, sessionKey] = queryKey;
-
-      const params: ContextLogParams = {
-        agentUsername,
-        runId,
-        sessionId,
-        subagentId,
-        logsAfter: logsAfterCache.get(sessionKey),
-      };
-
-      return await getContextLog(params);
-    },
-    [agentUsername, runId, sessionId, subagentId],
-  );
-
-  const query = useQuery({
-    queryKey: ["context-log", sessionKey],
-    queryFn,
-    enabled: enabled && !!agentUsername,
-    refetchInterval: false,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: !isOnline,
-    refetchOnMount: "always",
-    retry: 3,
-    retryDelay: 1000,
-  });
-
-  // Merge REST data when it arrives
-  useEffect(() => {
-    if (query.data?.success && query.data.data) {
-      mergeLogs(query.data.data.logs);
-    }
-  }, [query.data, mergeLogs]);
-
-  // WebSocket subscription for real-time log updates when online
   useSubscription<LogPushEntry[]>(
     isOnline && enabled && agentUsername
       ? `logs:${agentUsername}:${runId}:${subagentKey}:${sessionId}`
@@ -202,8 +192,7 @@ export const useContextLog = (
     handlePushEntries,
   );
 
-  // Get current logs from cache (already sorted)
-  const logs = logsCache.get(sessionKey) || [];
+  const logs = query.data ?? EMPTY_LOGS;
 
   return {
     logs,

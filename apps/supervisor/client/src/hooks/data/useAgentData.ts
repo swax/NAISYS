@@ -1,120 +1,74 @@
-import { type HateoasAction, mergeByKey, sortBy } from "@naisys/common";
-import type {
-  Agent as BaseAgent,
-  AgentStatusEvent,
-} from "@naisys/supervisor-shared";
+import { type HateoasAction, sortBy } from "@naisys/common";
+import type { AgentStatusEvent } from "@naisys/supervisor-shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { useSession } from "../../contexts/SessionContext";
 import { getAgentData } from "../../lib/api/apiAgents";
+import type { AgentListResponse } from "../../lib/api/apiClient";
+import { queryKeys } from "../../lib/api/queryKeys";
 import type { Agent } from "../../types/agent";
 import { useSubscription } from "../socket/useSubscription";
 
-// Module-level caches (shared across all hook instances and persist across remounts)
-let agentCache: Agent[] = [];
-let actionsCache: HateoasAction[] | undefined = undefined;
-let updatedSinceCache: string | undefined = undefined;
-
+/**
+ * The agent roster, backed by React Query. The query cache holds the raw
+ * server response; the `agent-status` socket room folds fast-changing fields
+ * (status, latestLogId, latestMailId) straight into it via `setQueryData`, and
+ * a list-membership change triggers a reconciling refetch. Every fetch pulls
+ * the full list, so a deleted agent can't linger; reconnect recovery is
+ * app-wide via `useReconnectQueryRefresh`.
+ */
 export const useAgentData = () => {
   const { isAuthenticated } = useSession();
-  // Version counter to trigger re-renders when cache updates
-  const [, setCacheVersion] = useState(0);
   const queryClient = useQueryClient();
 
-  const queryFn = useCallback(async () => {
-    return await getAgentData({
-      updatedSince: updatedSinceCache,
-    });
-  }, []);
-
   const query = useQuery({
-    queryKey: ["agent-data"],
-    queryFn,
-    enabled: true,
+    queryKey: queryKeys.agentData,
+    queryFn: () => getAgentData(),
     refetchOnWindowFocus: true,
     retry: false,
   });
 
-  // Merge new data when it arrives
-  useEffect(() => {
-    if (query.data?.items) {
-      const updatedAgents = query.data.items;
-
-      let mergedAgents: BaseAgent[];
-
-      if (updatedSinceCache === undefined) {
-        // Full refetch — replace cache entirely (handles deletes)
-        mergedAgents = updatedAgents;
-      } else {
-        // Incremental update — merge with existing cache
-        mergedAgents = mergeByKey(
-          agentCache,
-          updatedAgents,
-          (agent) => agent.id,
-        );
-      }
-
-      const agentsWithStatus: Agent[] = mergedAgents.map((agent) => ({
-        ...agent,
-        status: agent.status ?? "offline",
-      }));
-
-      // Sort by name
-      const sortedAgents = sortBy(agentsWithStatus, (agent) => agent.name);
-
-      // Update caches
-      agentCache = sortedAgents;
-      actionsCache = query.data._actions;
-
-      // Update updatedSince with the current timestamp
-      updatedSinceCache = new Date().toISOString();
-
-      // Trigger re-render
-      setCacheVersion((v) => v + 1);
-    }
+  const agents = useMemo<Agent[]>(() => {
+    const withStatus = (query.data?.items ?? []).map((agent) => ({
+      ...agent,
+      status: agent.status ?? "offline",
+    }));
+    return sortBy(withStatus, (agent) => agent.name);
   }, [query.data]);
 
-  // Handle WebSocket updates for fast-changing fields (status, latestLogId, latestMailId)
+  const actions: HateoasAction[] | undefined = query.data?._actions;
+
   const handleStatusUpdate = useCallback(
     (event: AgentStatusEvent) => {
-      // Agent list changed (create/archive/unarchive/delete) — refetch full list
+      // List membership changed (create/archive/unarchive/delete) — refetch.
       if (event.agentsListChanged) {
-        updatedSinceCache = undefined;
-        void queryClient.invalidateQueries({ queryKey: ["agent-data"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.agentData });
         return;
       }
-
-      let changed = false;
-
-      const nextAgents = agentCache.map((agent) => {
-        const update = event.agents[String(agent.id)];
-        if (!update) return agent;
-
-        const newStatus = update.status;
-        const newLogId = update.latestLogId;
-        const newMailId = update.latestMailId;
-
-        if (
-          agent.status !== newStatus ||
-          agent.latestLogId !== newLogId ||
-          agent.latestMailId !== newMailId
-        ) {
-          changed = true;
-          return {
-            ...agent,
-            status: newStatus,
-            latestLogId: newLogId,
-            latestMailId: newMailId,
-          };
-        }
-        return agent;
+      queryClient.setQueryData<AgentListResponse>(queryKeys.agentData, (old) => {
+        if (!old?.items) return old;
+        let changed = false;
+        const items = old.items.map((agent) => {
+          const update = event.agents[String(agent.id)];
+          if (!update) return agent;
+          if (
+            agent.status !== update.status ||
+            agent.latestLogId !== update.latestLogId ||
+            agent.latestMailId !== update.latestMailId
+          ) {
+            changed = true;
+            return {
+              ...agent,
+              status: update.status,
+              latestLogId: update.latestLogId,
+              latestMailId: update.latestMailId,
+            };
+          }
+          return agent;
+        });
+        return changed ? { ...old, items } : old;
       });
-
-      if (changed) {
-        agentCache = nextAgents;
-        setCacheVersion((v) => v + 1);
-      }
     },
     [queryClient],
   );
@@ -125,8 +79,8 @@ export const useAgentData = () => {
   );
 
   return {
-    agents: agentCache,
-    actions: actionsCache,
+    agents,
+    actions,
     isLoading: query.isLoading,
     error: query.error,
   };

@@ -1,173 +1,105 @@
-import {
-  type HateoasAction,
-  mergeByKey,
-  sortByDesc,
-  unique,
-} from "@naisys/common";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { unique } from "@naisys/common";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
-import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { getChatConversations } from "../../lib/api/apiChat";
 import type { ChatConversation } from "../../lib/api/apiClient";
+import { queryKeys } from "../../lib/api/queryKeys";
+import { useAgentLookups } from "../data/useAgentLookups";
+import { type ListInfiniteData, moveToTopOfPage0 } from "../infinite/pageCache";
+import { useLiveInfiniteList } from "../infinite/useLiveInfiniteList";
+import type { MessageRoomEvent } from "../socket/messageRoomEvents";
 import { useSubscription } from "../socket/useSubscription";
-import type { MessageRoomEvent } from "../thread-runs/messageCacheUtils";
 
-// Module-level cache (shared across hook instances, persists across remounts)
-const conversationsCache = new Map<string, ChatConversation[]>();
-const totalCache = new Map<string, number>();
-const pagesLoadedCache = new Map<string, number>();
+/** Page size for the initial fetch and each `loadMore`. */
+const PAGE_SIZE = 50;
 
+const conversationKey = (c: ChatConversation) => c.participants;
+const conversationRecency = (c: ChatConversation) =>
+  new Date(c.lastMessageAt).getTime();
+
+/**
+ * A live, paginated list of an agent's chat conversations, backed by
+ * `useLiveInfiniteList`. The `chat-conversations:${username}` socket room keeps
+ * it current — a new message moves its conversation to the top. Conversations
+ * are keyed by their `participants` string.
+ */
 export const useChatConversations = (
   agentUsername: string,
   enabled: boolean = true,
 ) => {
-  const { agents } = useAgentDataContext();
-  const userLookup = useMemo(
-    () => new Map(agents.map((a) => [a.id, a.name])),
-    [agents],
-  );
-  const titleLookup = useMemo(
-    () => new Map(agents.map((a) => [a.id, a.title])),
-    [agents],
-  );
-  const [, setCacheVersion] = useState(0);
+  const { userLookup, titleLookup } = useAgentLookups();
+  const queryClient = useQueryClient();
 
-  const mergeConversations = useCallback(
-    (updated: ChatConversation[], total?: number) => {
-      if (updated.length === 0 && total === undefined) return;
-
-      const existing = conversationsCache.get(agentUsername) || [];
-      const mergedByParticipants = mergeByKey(
-        existing,
-        updated,
-        (c) => c.participants,
-      );
-      const newCount = mergedByParticipants.length - existing.length;
-
-      // Sort by latest message time (newest first)
-      const merged = sortByDesc(
-        mergedByParticipants,
-        (c) => new Date(c.lastMessageAt),
-      );
-
-      conversationsCache.set(agentUsername, merged);
-
-      if (total !== undefined) {
-        totalCache.set(agentUsername, total);
-      } else if (newCount > 0) {
-        totalCache.set(
-          agentUsername,
-          (totalCache.get(agentUsername) || 0) + newCount,
-        );
-      }
-
-      setCacheVersion((v) => v + 1);
-    },
+  const queryKey = useMemo(
+    () => queryKeys.chatConversations(agentUsername),
     [agentUsername],
   );
+
+  const list = useLiveInfiniteList<ChatConversation>({
+    queryKey,
+    enabled: enabled && !!agentUsername,
+    fetchPage: async (page) => {
+      const result = await getChatConversations({
+        agentUsername,
+        page,
+        count: PAGE_SIZE,
+      });
+      return {
+        items: result.conversations,
+        total: result.total ?? 0,
+        actions: result._actions,
+      };
+    },
+    getItemKey: conversationKey,
+    getRecency: conversationRecency,
+    getSortValue: conversationRecency,
+    descending: true,
+  });
 
   const handleChatPush = useCallback(
     (event: MessageRoomEvent) => {
       if (event.type !== "new-message") return;
 
       const allIds = unique([...event.recipientUserIds, event.fromUserId]);
-      // Match server: exclude the current user from participantNames so a 1:1
-      // conversation has length 1 (used by the sidebar title and candidate filter).
+      // Match the server: drop the current agent from participantNames so a
+      // 1:1 conversation has length 1 (the sidebar title and candidate filter
+      // rely on it).
       const otherIds = allIds.filter(
         (id) => userLookup.get(id) !== agentUsername,
       );
       const conv: ChatConversation = {
         participants: event.participants,
-        participantNames: otherIds.map(
-          (id) => userLookup.get(id) ?? String(id),
-        ),
+        participantNames: otherIds.map((id) => userLookup.get(id) ?? String(id)),
         participantTitles: otherIds.map((id) => titleLookup.get(id) ?? ""),
         lastMessage: event.body,
         lastMessageAt: event.createdAt,
         lastMessageFrom:
           userLookup.get(event.fromUserId) ?? String(event.fromUserId),
       };
-      mergeConversations([conv]);
+      queryClient.setQueryData<ListInfiniteData<ChatConversation>>(
+        queryKey,
+        (old) => moveToTopOfPage0(old, conv, conversationKey),
+      );
     },
-    [mergeConversations, userLookup, titleLookup, agentUsername],
+    [agentUsername, queryClient, queryKey, userLookup, titleLookup],
   );
 
-  const query = useQuery({
-    queryKey: ["chat-conversations", agentUsername],
-    queryFn: () => getChatConversations({ agentUsername, page: 1, count: 50 }),
-    enabled: enabled && !!agentUsername,
-    refetchInterval: false,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always",
-    retry: 3,
-    retryDelay: 1000,
-  });
-
-  // Merge REST data when it arrives
-  useEffect(() => {
-    if (query.data?.conversations) {
-      mergeConversations(query.data.conversations, query.data.total);
-    }
-  }, [query.data, mergeConversations]);
-
-  // WebSocket subscription for real-time conversation updates
   useSubscription<MessageRoomEvent>(
     enabled && agentUsername ? `chat-conversations:${agentUsername}` : null,
     handleChatPush,
   );
 
-  // Load more (next page of conversations)
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
-
-  const loadMore = useCallback(async () => {
-    if (loadingMoreRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    try {
-      const nextPage = (pagesLoadedCache.get(agentUsername) || 1) + 1;
-      const result = await getChatConversations({
-        agentUsername,
-        page: nextPage,
-        count: 50,
-      });
-      if (result.conversations) {
-        mergeConversations(result.conversations, result.total);
-        pagesLoadedCache.set(agentUsername, nextPage);
-      }
-    } catch (err) {
-      console.error("Error loading more conversations:", err);
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [agentUsername, mergeConversations]);
-
-  const refresh = useCallback(async () => {
-    conversationsCache.delete(agentUsername);
-    totalCache.delete(agentUsername);
-    pagesLoadedCache.delete(agentUsername);
-    setCacheVersion((v) => v + 1);
-    await query.refetch();
-  }, [agentUsername, query]);
-
-  const conversations = conversationsCache.get(agentUsername) || [];
-  const total = totalCache.get(agentUsername) || 0;
-  const hasMore = conversations.length < total;
-  const actions: HateoasAction[] | undefined = query.data?._actions;
-
   return {
-    conversations,
-    total,
-    actions,
-    isLoading: query.isLoading,
-    isFetchedAfterMount: query.isFetchedAfterMount,
-    error: query.error,
-    loadMore,
-    loadingMore,
-    hasMore,
-    refresh,
+    conversations: list.items,
+    total: list.total,
+    actions: list.actions,
+    isLoading: list.isLoading,
+    isFetchedAfterMount: list.isFetchedAfterMount,
+    error: list.error,
+    loadMore: list.loadMore,
+    loadingMore: list.loadingMore,
+    hasMore: list.hasMore,
+    refresh: list.refresh,
   };
 };

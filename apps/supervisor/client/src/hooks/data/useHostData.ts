@@ -1,85 +1,67 @@
 import { type HateoasAction, sortBy } from "@naisys/common";
-import type {
-  Host as BaseHost,
-  HostStatusEvent,
-} from "@naisys/supervisor-shared";
+import type { HostStatusEvent } from "@naisys/supervisor-shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { useSession } from "../../contexts/SessionContext";
 import { getHostData } from "../../lib/api/apiAgents";
+import type { HostListResponse } from "../../lib/api/apiClient";
+import { queryKeys } from "../../lib/api/queryKeys";
 import type { Host } from "../../types/agent";
 import { useSubscription } from "../socket/useSubscription";
 
-// Module-level cache (shared across all hook instances and persists across remounts)
-let hostCache: Host[] = [];
-let listActionsCache: HateoasAction[] | undefined;
-let targetVersionCache: string | undefined;
-
+/**
+ * The host roster, backed by React Query. The query cache holds the raw server
+ * response; the `host-status` socket room folds online/version changes
+ * straight into it via `setQueryData`, and a topology change triggers a
+ * reconciling refetch. Reconnect recovery is app-wide via
+ * `useReconnectQueryRefresh`.
+ */
 export const useHostData = () => {
   const { isAuthenticated } = useSession();
-  // Version counter to trigger re-renders when cache updates
-  const [, setCacheVersion] = useState(0);
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["host-data"],
+    queryKey: queryKeys.hostData,
     queryFn: getHostData,
-    enabled: true,
     refetchOnWindowFocus: true,
     retry: false,
   });
 
-  // Update cache when data arrives
-  useEffect(() => {
-    if (query.data?.items) {
-      const hostsWithOnline: Host[] = query.data.items.map(
-        (host: BaseHost) => ({
-          ...host,
-          online: host.online ?? false,
-        }),
-      );
-
-      // Sort by name
-      const sortedHosts = sortBy(hostsWithOnline, (host) => host.name);
-
-      hostCache = sortedHosts;
-      listActionsCache = query.data._actions;
-      targetVersionCache = query.data.targetVersion;
-
-      // Trigger re-render
-      setCacheVersion((v) => v + 1);
-    }
+  const hosts = useMemo<Host[]>(() => {
+    const withOnline = (query.data?.items ?? []).map((host) => ({
+      ...host,
+      online: host.online ?? false,
+    }));
+    return sortBy(withOnline, (host) => host.name);
   }, [query.data]);
 
-  // Handle WebSocket updates for host online status and list changes
+  const listActions: HateoasAction[] | undefined = query.data?._actions;
+  const targetVersion = query.data?.targetVersion;
+
   const handleStatusUpdate = useCallback(
     (event: HostStatusEvent) => {
-      // Host list changed (create/update/delete/topology change) — refetch
+      // Topology changed (create/update/delete) — refetch.
       if (event.hostsListChanged) {
-        void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.hostData });
         return;
       }
-
-      let changed = false;
-
-      for (const host of hostCache) {
-        const update = event.hosts[String(host.id)];
-        if (!update) continue;
-
-        if (host.online !== update.online) {
-          host.online = update.online;
-          changed = true;
-        }
-        if (update.version !== undefined && host.version !== update.version) {
-          host.version = update.version;
-          changed = true;
-        }
-      }
-
-      if (changed) {
-        setCacheVersion((v) => v + 1);
-      }
+      queryClient.setQueryData<HostListResponse>(queryKeys.hostData, (old) => {
+        if (!old?.items) return old;
+        let changed = false;
+        const items = old.items.map((host) => {
+          const update = event.hosts[String(host.id)];
+          if (!update) return host;
+          const nextVersion =
+            update.version !== undefined ? update.version : host.version;
+          if (host.online !== update.online || host.version !== nextVersion) {
+            changed = true;
+            return { ...host, online: update.online, version: nextVersion };
+          }
+          return host;
+        });
+        return changed ? { ...old, items } : old;
+      });
     },
     [queryClient],
   );
@@ -90,9 +72,9 @@ export const useHostData = () => {
   );
 
   return {
-    hosts: hostCache,
-    listActions: listActionsCache,
-    targetVersion: targetVersionCache,
+    hosts,
+    listActions,
+    targetVersion,
     isLoading: query.isLoading,
     error: query.error,
   };

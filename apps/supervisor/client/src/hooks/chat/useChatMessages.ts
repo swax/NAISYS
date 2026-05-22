@@ -1,88 +1,73 @@
-import type { HateoasAction } from "@naisys/common";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
-import { useAgentDataContext } from "../../contexts/AgentDataContext";
-import type { ChatMessagesParams } from "../../lib/api/apiChat";
 import { getChatMessages } from "../../lib/api/apiChat";
 import type { ChatMessage } from "../../lib/api/apiClient";
+import { queryKeys } from "../../lib/api/queryKeys";
+import { useAgentLookups } from "../data/useAgentLookups";
+import {
+  type ListInfiniteData,
+  prependToPage0,
+  updateItems,
+} from "../infinite/pageCache";
+import { useInfiniteListGapRecovery } from "../infinite/useInfiniteListGapRecovery";
+import { useLiveInfiniteList } from "../infinite/useLiveInfiniteList";
+import type { MessageRoomEvent } from "../socket/messageRoomEvents";
 import { useSubscription } from "../socket/useSubscription";
-import type { MessageRoomEvent } from "../thread-runs/messageCacheUtils";
-import { mergeIntoCache } from "../thread-runs/messageCacheUtils";
 
-// Module-level caches (persist across remounts)
-const messagesCache = new Map<string, ChatMessage[]>();
-const updatedSinceCache = new Map<string, string | undefined>();
-const totalCache = new Map<string, number>();
-const pagesLoadedCache = new Map<string, number>();
-let actionsCache: HateoasAction[] | undefined = undefined;
+/** Page size for the initial fetch and each `loadMore`. */
+const PAGE_SIZE = 50;
 
-// Tracks gap recovery attempts per cache key to prevent re-fetch loops
-const gapRecoveryAttempted = new Map<string, Set<string>>();
+const messageKey = (m: ChatMessage) => m.id;
+const messageSortValue = (m: ChatMessage) => new Date(m.createdAt).getTime();
 
+/**
+ * A live, paginated chat thread, backed by `useLiveInfiniteList`. The
+ * `chat-messages:${participants}` socket room keeps it current — a new message
+ * is spliced onto page 0, a read receipt folded across every page. A missing
+ * `previousMessageId` means a push was dropped, so the thread reconciles with
+ * a refetch.
+ */
 export const useChatMessages = (
   agentUsername: string,
   participants: string | null,
   enabled: boolean = true,
 ) => {
-  const { agents } = useAgentDataContext();
-  const userLookup = useMemo(
-    () => new Map(agents.map((a) => [a.id, a.name])),
-    [agents],
-  );
-  const titleLookup = useMemo(
-    () => new Map(agents.map((a) => [a.id, a.title])),
-    [agents],
-  );
-  const [, setCacheVersion] = useState(0);
-  const cacheKey = `${agentUsername}:${participants}`;
+  const { userLookup, titleLookup } = useAgentLookups();
   const queryClient = useQueryClient();
 
-  // Clean up gap recovery state when leaving a conversation
-  useEffect(() => {
-    return () => {
-      gapRecoveryAttempted.delete(cacheKey);
-    };
-  }, [cacheKey]);
-
-  const mergeMessages = useCallback(
-    (newMessages: ChatMessage[], total?: number) => {
-      if (
-        mergeIntoCache(
-          cacheKey,
-          newMessages,
-          total,
-          messagesCache,
-          totalCache,
-          updatedSinceCache,
-          false,
-        )
-      ) {
-        setCacheVersion((v) => v + 1);
-      }
-    },
-    [cacheKey],
+  const queryKey = useMemo(
+    () => queryKeys.chatThread(agentUsername, participants),
+    [agentUsername, participants],
   );
 
-  const recoverMessages = useCallback(
-    (previousMessageId: number, currentMessageId: number) => {
-      const gapKey = `${previousMessageId}-${currentMessageId}`;
-      const attempted = gapRecoveryAttempted.get(cacheKey) ?? new Set();
-      if (attempted.has(gapKey)) return;
-      attempted.add(gapKey);
-      gapRecoveryAttempted.set(cacheKey, attempted);
-
-      console.info(
-        `[useChatMessages] Gap recovery for ${cacheKey}: clearing cache and refetching`,
-      );
-
-      // Clear timestamp so next fetch gets all messages
-      updatedSinceCache.delete(cacheKey);
-      void queryClient.invalidateQueries({
-        queryKey: ["chat-messages", agentUsername, participants],
+  const list = useLiveInfiniteList<ChatMessage>({
+    queryKey,
+    enabled: enabled && !!agentUsername && !!participants,
+    fetchPage: async (page) => {
+      if (!participants) throw new Error("No conversation selected");
+      const result = await getChatMessages({
+        agentUsername,
+        participants,
+        page,
+        count: PAGE_SIZE,
       });
+      return {
+        items: result.messages,
+        total: result.total ?? 0,
+        actions: result._actions,
+      };
     },
-    [cacheKey, agentUsername, participants, queryClient],
+    getItemKey: messageKey,
+    getRecency: messageKey,
+    getSortValue: messageSortValue,
+    descending: false,
+  });
+
+  const checkGap = useInfiniteListGapRecovery(
+    queryKey,
+    messageKey,
+    "useChatMessages",
   );
 
   const handleChatPush = useCallback(
@@ -100,84 +85,31 @@ export const useChatMessages = (
             attachments: event.attachments as ChatMessage["attachments"],
             source: event.source,
           };
-          mergeMessages([msg]);
-
-          // Gap detection: check if previousMessageId exists in cache
-          if (event.previousMessageId != null) {
-            const cached = messagesCache.get(cacheKey);
-            if (cached && cached.length > 0) {
-              const hasPrevious = cached.some(
-                (m) => m.id === event.previousMessageId,
-              );
-              if (!hasPrevious) {
-                console.warn(
-                  `[useChatMessages] Gap detected in ${cacheKey}: missing previousMessageId ${event.previousMessageId}`,
-                );
-                recoverMessages(event.previousMessageId, event.messageId);
-              }
-            }
-          }
+          queryClient.setQueryData<ListInfiniteData<ChatMessage>>(
+            queryKey,
+            (old) => prependToPage0(old, msg, messageKey),
+          );
+          checkGap(event.previousMessageId, event.messageId);
           break;
         }
         case "read-receipt": {
-          const cached = messagesCache.get(cacheKey);
-          if (!cached) return;
-
-          let changed = false;
-          for (const msg of cached) {
-            if (event.messageIds.includes(msg.id)) {
-              const readBy = msg.readBy ?? [];
-              if (!readBy.includes(event.userId)) {
-                msg.readBy = [...readBy, event.userId];
-                changed = true;
-              }
-            }
-          }
-          if (changed) setCacheVersion((v) => v + 1);
+          queryClient.setQueryData<ListInfiniteData<ChatMessage>>(
+            queryKey,
+            (old) =>
+              updateItems(old, (m) => {
+                if (!event.messageIds.includes(m.id)) return m;
+                const readBy = m.readBy ?? [];
+                if (readBy.includes(event.userId)) return m;
+                return { ...m, readBy: [...readBy, event.userId] };
+              }),
+          );
           break;
         }
       }
     },
-    [cacheKey, mergeMessages, recoverMessages, userLookup, titleLookup],
+    [queryClient, queryKey, checkGap, userLookup, titleLookup],
   );
 
-  const queryFn = useCallback(async () => {
-    if (!participants) throw new Error("No conversation selected");
-
-    const params: ChatMessagesParams = {
-      agentUsername,
-      participants,
-      updatedSince: updatedSinceCache.get(cacheKey),
-      page: 1,
-      count: 50,
-    };
-
-    return await getChatMessages(params);
-  }, [agentUsername, participants, cacheKey]);
-
-  const query = useQuery({
-    queryKey: ["chat-messages", agentUsername, participants],
-    queryFn,
-    enabled: enabled && !!agentUsername && !!participants,
-    refetchInterval: false,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always",
-    retry: 3,
-    retryDelay: 1000,
-  });
-
-  // Merge REST data when it arrives
-  useEffect(() => {
-    if (query.data?._actions) {
-      actionsCache = query.data._actions;
-    }
-    if (query.data?.success && query.data.messages) {
-      mergeMessages(query.data.messages, query.data.total);
-    }
-  }, [query.data, mergeMessages]);
-
-  // WebSocket subscription for real-time chat message and read receipt updates
   useSubscription<MessageRoomEvent>(
     enabled && agentUsername && participants
       ? `chat-messages:${participants}`
@@ -185,46 +117,14 @@ export const useChatMessages = (
     handleChatPush,
   );
 
-  // Load more (next page of historical data)
-  const [loadingMore, setLoadingMore] = useState(false);
-  const loadingMoreRef = useRef(false);
-
-  const loadMore = useCallback(async () => {
-    if (loadingMoreRef.current || !participants) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    try {
-      const nextPage = (pagesLoadedCache.get(cacheKey) || 1) + 1;
-      const result = await getChatMessages({
-        agentUsername,
-        participants,
-        page: nextPage,
-        count: 50,
-      });
-      if (result.success && result.messages) {
-        mergeMessages(result.messages, result.total);
-        pagesLoadedCache.set(cacheKey, nextPage);
-      }
-    } catch (err) {
-      console.error("Error loading more chat messages:", err);
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [agentUsername, participants, cacheKey, mergeMessages]);
-
-  const messages = messagesCache.get(cacheKey) || [];
-  const total = totalCache.get(cacheKey) || 0;
-  const hasMore = messages.length < total;
-
   return {
-    messages,
-    total,
-    actions: actionsCache,
-    isLoading: query.isLoading,
-    error: query.error,
-    loadMore,
-    loadingMore,
-    hasMore,
+    messages: list.items,
+    total: list.total,
+    actions: list.actions,
+    isLoading: list.isLoading,
+    error: list.error,
+    loadMore: list.loadMore,
+    loadingMore: list.loadingMore,
+    hasMore: list.hasMore,
   };
 };
