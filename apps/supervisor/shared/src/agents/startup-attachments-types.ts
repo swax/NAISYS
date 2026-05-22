@@ -1,4 +1,9 @@
-import { HateoasActionSchema } from "@naisys/common";
+import {
+  HateoasActionSchema,
+  HateoasActionTemplateSchema,
+  HateoasLinkSchema,
+  HateoasLinkTemplateSchema,
+} from "@naisys/common";
 import { z } from "zod";
 
 export const StartupAttachmentSchema = z.object({
@@ -14,7 +19,10 @@ export const StartupAttachmentSchema = z.object({
 
 export const StartupAttachmentListResponseSchema = z.object({
   items: z.array(StartupAttachmentSchema),
+  _links: z.array(HateoasLinkSchema),
+  _linkTemplates: z.array(HateoasLinkTemplateSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
+  _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 
 export const StartupAttachmentResponseSchema = z.object({

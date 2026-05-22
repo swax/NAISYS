@@ -4,6 +4,7 @@ import {
   Anchor,
   Box,
   Button,
+  FileButton,
   Group,
   Loader,
   Paper,
@@ -21,6 +22,7 @@ import {
   IconPaperclip,
   IconRotateClockwise,
   IconTrash,
+  IconUpload,
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
@@ -29,6 +31,7 @@ import {
   deleteStartupAttachment,
   getStartupAttachments,
   renameStartupAttachment,
+  replaceStartupAttachmentContent,
   uploadStartupAttachment,
 } from "../../../lib/api/apiAgents";
 import type { StartupAttachment } from "../../../lib/api/apiClient";
@@ -62,6 +65,7 @@ export const AgentStartupAttachments: React.FC<
   const [error, setError] = useState<string | null>(null);
   const [pathEdits, setPathEdits] = useState<Record<string, string>>({});
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
+  const [replacingPath, setReplacingPath] = useState<string | null>(null);
 
   const canManage = hasAction(actions, "add");
 
@@ -159,6 +163,34 @@ export const AgentStartupAttachments: React.FC<
       });
     } finally {
       setRenamingPath(null);
+    }
+  };
+
+  const handleReplace = async (path: string, file: File) => {
+    setReplacingPath(path);
+    try {
+      const result = await replaceStartupAttachmentContent(
+        username,
+        path,
+        file,
+      );
+      if (!result.success) {
+        notifications.show({
+          title: "Replace failed",
+          message: result.message ?? "Unknown error",
+          color: "red",
+        });
+        return;
+      }
+      await fetchItems();
+    } catch (err) {
+      notifications.show({
+        title: "Replace failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setReplacingPath(null);
     }
   };
 
@@ -342,7 +374,9 @@ export const AgentStartupAttachments: React.FC<
                           color="green"
                           onClick={() => void handleRename(item.path)}
                           loading={isRenaming}
-                          disabled={renamingPath !== null}
+                          disabled={
+                            renamingPath !== null || replacingPath !== null
+                          }
                           aria-label="Save renamed path"
                         >
                           <IconCheck size={16} />
@@ -368,12 +402,42 @@ export const AgentStartupAttachments: React.FC<
                     </>
                   )}
                   {canManage && (
+                    <FileButton
+                      onChange={(file) => {
+                        if (file) void handleReplace(item.path, file);
+                      }}
+                    >
+                      {(props) => (
+                        <Tooltip label="Replace file content">
+                          <ActionIcon
+                            {...props}
+                            variant="subtle"
+                            color="blue"
+                            loading={replacingPath === item.path}
+                            disabled={
+                              deletingPath !== null ||
+                              renamingPath !== null ||
+                              replacingPath !== null
+                            }
+                            aria-label="Replace startup attachment content"
+                          >
+                            <IconUpload size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      )}
+                    </FileButton>
+                  )}
+                  {canManage && (
                     <ActionIcon
                       variant="subtle"
                       color="red"
                       onClick={() => void handleDelete(item.path)}
                       loading={deletingPath === item.path}
-                      disabled={deletingPath !== null || renamingPath !== null}
+                      disabled={
+                        deletingPath !== null ||
+                        renamingPath !== null ||
+                        replacingPath !== null
+                      }
                       aria-label="Delete startup attachment"
                     >
                       <IconTrash size={16} />

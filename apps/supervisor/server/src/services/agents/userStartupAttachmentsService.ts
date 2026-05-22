@@ -164,3 +164,41 @@ export async function updateStartupAttachmentPath(
   if (!found) throw new Error("Failed to update startup attachment path");
   return found;
 }
+
+/**
+ * Replace the file content of an existing startup attachment while keeping its
+ * `path` and database row stable. Attachment blobs are immutable, so a fresh
+ * attachment is uploaded and the row is repointed at it — `attachmentId` and
+ * `downloadUrl` change, but there is no window where the path is unoccupied.
+ * The previous blob becomes unreferenced and is reaped by attachmentGcService.
+ */
+export async function replaceStartupAttachmentContent(
+  userId: number,
+  path: string,
+  fileBuffer: Buffer,
+  filename: string,
+): Promise<StartupAttachment> {
+  const existing = await hubDb.user_startup_attachments.findUnique({
+    where: { user_id_path: { user_id: userId, path } },
+  });
+  if (!existing) {
+    throw new Error(`No startup attachment at path '${path}'`);
+  }
+
+  const attachmentId = await uploadToHub(
+    fileBuffer,
+    filename,
+    userId,
+    "context",
+  );
+
+  await hubDb.user_startup_attachments.update({
+    where: { user_id_path: { user_id: userId, path } },
+    data: { attachment_id: attachmentId },
+  });
+
+  const list = await listStartupAttachments(userId);
+  const found = list.find((r) => r.path === path);
+  if (!found) throw new Error("Failed to replace startup attachment content");
+  return found;
+}

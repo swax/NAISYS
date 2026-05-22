@@ -292,6 +292,8 @@ export const apiEndpoints = {
   agentMailArchive: (username: string) => `/agents/${username}/mail/archive`,
   agentStartupAttachments: (username: string) =>
     `/agents/${username}/startup-attachments`,
+  agentStartupAttachmentContent: (username: string) =>
+    `/agents/${username}/startup-attachments/content`,
   voiceToken: (username: string) => `/agents/${username}/voice/token`,
   voiceTool: (username: string) => `/agents/${username}/voice/tool`,
   voiceCost: (username: string) => `/agents/${username}/voice/cost`,

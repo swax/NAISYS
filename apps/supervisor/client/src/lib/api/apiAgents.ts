@@ -290,6 +290,25 @@ export const renameStartupAttachment = async (
   );
 };
 
+export const replaceStartupAttachmentContent = async (
+  username: string,
+  path: string,
+  file: File,
+): Promise<StartupAttachmentResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${API_BASE}${apiEndpoints.agentStartupAttachmentContent(username)}?path=${encodeURIComponent(path)}`,
+    { method: "PUT", body: formData },
+  );
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || `API Error: ${response.status}`);
+  }
+  return result;
+};
+
 // --- Host API functions ---
 
 export const getHostDetail = async (
