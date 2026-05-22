@@ -33,6 +33,14 @@ export const ScheduleEntrySchema = z.object({
     .describe(
       "Chat message sent to the agent when the schedule fires. Falls back to the schedule name when empty",
     ),
+
+  initiator: z
+    .string()
+    .regex(URL_SAFE_KEY_REGEX, URL_SAFE_KEY_MESSAGE)
+    .optional()
+    .describe(
+      "Username the fire message is sent from. The agent reports back to this user when done, letting that agent run its own post-processing. When unset, defaults to the agent's lead, or admin if it has no lead",
+    ),
 });
 
 export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;

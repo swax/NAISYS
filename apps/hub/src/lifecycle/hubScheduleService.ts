@@ -70,6 +70,32 @@ export function createHubScheduleService(
     return adminUserId;
   }
 
+  /** The user a schedule fires *from* — the agent replies to whoever sent
+   *  the chat, so this also decides who receives the agent's done report
+   *  (and can post-process it). Resolution order: the entry's explicit
+   *  initiator, then the agent's lead, then admin. */
+  async function resolveInitiatorId(
+    agentUserId: number,
+    entry: ScheduleEntry,
+  ): Promise<number | null> {
+    if (entry.initiator) {
+      const user = await hubDb.users.findUnique({
+        where: { username: entry.initiator },
+        select: { id: true },
+      });
+      if (user) return user.id;
+      logService.error(
+        `[Hub:Schedule] Initiator "${entry.initiator}" not found — falling back to lead/admin`,
+      );
+    }
+    const agent = await hubDb.users.findUnique({
+      where: { id: agentUserId },
+      select: { lead_user_id: true },
+    });
+    if (agent?.lead_user_id != null) return agent.lead_user_id;
+    return getAdminUserId();
+  }
+
   async function findChatForOccurrence(
     agentUserId: number,
     sourceTag: string,
@@ -101,9 +127,9 @@ export function createHubScheduleService(
     entry: ScheduleEntry,
     opts: { manual?: boolean } = {},
   ): Promise<{ delivered: boolean; reason: string }> {
-    const adminId = await getAdminUserId();
-    if (adminId === null) {
-      return { delivered: false, reason: "admin user not found" };
+    const fromUserId = await resolveInitiatorId(agentUserId, entry);
+    if (fromUserId === null) {
+      return { delivered: false, reason: "initiator/admin user not found" };
     }
 
     const sourceTag = `schedule:${entry.name}`;
@@ -158,7 +184,7 @@ export function createHubScheduleService(
       }
     } else {
       await sendMailService.sendMail({
-        fromUserId: adminId,
+        fromUserId,
         recipientUserIds: [agentUserId],
         subject: "",
         body,

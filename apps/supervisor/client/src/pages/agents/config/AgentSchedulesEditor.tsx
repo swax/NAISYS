@@ -20,6 +20,8 @@ interface AgentSchedulesEditorProps {
   schedules: ScheduleEntry[];
   /** Hub TZ so previews match the scheduler's actual fire time. */
   hubTimezone: string;
+  /** Agents selectable as a schedule's initiator (the fire message sender). */
+  initiatorOptions: { value: string; label: string }[];
   onChange: (next: ScheduleEntry[]) => void;
   /** Per-entry-name validation errors keyed like `"schedules.0.name"`. */
   errors?: Record<string, React.ReactNode>;
@@ -64,10 +66,19 @@ const ScheduleRow: React.FC<{
   entry: ScheduleEntry;
   index: number;
   hubTimezone: string;
+  initiatorOptions: { value: string; label: string }[];
   errors: Record<string, React.ReactNode>;
   onChange: (next: ScheduleEntry) => void;
   onDelete: () => void;
-}> = ({ entry, index, hubTimezone, errors, onChange, onDelete }) => {
+}> = ({
+  entry,
+  index,
+  hubTimezone,
+  initiatorOptions,
+  errors,
+  onChange,
+  onDelete,
+}) => {
   const initialPreset = PRESET_EXPRESSIONS.has(entry.cron)
     ? entry.cron
     : CUSTOM;
@@ -97,6 +108,21 @@ const ScheduleRow: React.FC<{
     setPresetValue(v);
     if (v !== CUSTOM) onChange({ ...entry, cron: v });
   };
+
+  // Keep a stored initiator visible even if it's no longer a selectable
+  // option (e.g. that agent was archived or renamed).
+  const initiatorData = useMemo(() => {
+    if (
+      entry.initiator &&
+      !initiatorOptions.some((o) => o.value === entry.initiator)
+    ) {
+      return [
+        { value: entry.initiator, label: `${entry.initiator} (unavailable)` },
+        ...initiatorOptions,
+      ];
+    }
+    return initiatorOptions;
+  }, [entry.initiator, initiatorOptions]);
 
   return (
     <Stack
@@ -159,7 +185,7 @@ const ScheduleRow: React.FC<{
 
       <Textarea
         label="Prompt"
-        description="Sent to the agent as an admin chat when this schedule fires. Falls back to the schedule name when empty."
+        description="Sent to the agent as a chat from the initiator when this schedule fires. Falls back to the schedule name when empty."
         placeholder="Check overnight builds and triage any failures."
         value={entry.prompt ?? ""}
         onChange={(e) =>
@@ -172,6 +198,19 @@ const ScheduleRow: React.FC<{
         minRows={2}
       />
 
+      <Select
+        label="Initiator"
+        description="Who the fire message comes from. The agent reports back to this user when done, so that agent can run its own post-processing. Defaults to the agent's lead, or admin if it has no lead."
+        placeholder="Lead agent, or admin (default)"
+        data={initiatorData}
+        value={entry.initiator ?? null}
+        onChange={(value) =>
+          onChange({ ...entry, initiator: value || undefined })
+        }
+        clearable
+        searchable
+      />
+
       <Text size="xs" c={cronValidation.ok ? "dimmed" : "red"}>
         {previewLine}
       </Text>
@@ -182,6 +221,7 @@ const ScheduleRow: React.FC<{
 export const AgentSchedulesEditor: React.FC<AgentSchedulesEditorProps> = ({
   schedules,
   hubTimezone,
+  initiatorOptions,
   onChange,
   errors = {},
 }) => {
@@ -222,8 +262,10 @@ export const AgentSchedulesEditor: React.FC<AgentSchedulesEditorProps> = ({
         <Anchor component={Link} to="/variables" inherit>
           TIMEZONE variable
         </Anchor>{" "}
-        to override it. On fire, the agent gets a chat from admin and is
-        started if not running.
+        to override it. On fire, the agent gets a chat from the initiator
+        (its lead, or admin, by default) and is started if not running. Its
+        reply goes back to the initiator, who can then run their own
+        post-processing.
       </Text>
       {schedules.length === 0 ? (
         <Text size="sm" c="dimmed">
@@ -236,6 +278,7 @@ export const AgentSchedulesEditor: React.FC<AgentSchedulesEditorProps> = ({
             entry={entry}
             index={i}
             hubTimezone={hubTimezone}
+            initiatorOptions={initiatorOptions}
             errors={errors}
             onChange={(next) => handleRowChange(i, next)}
             onDelete={() => handleRowDelete(i)}

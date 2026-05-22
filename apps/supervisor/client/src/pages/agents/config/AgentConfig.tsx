@@ -233,6 +233,10 @@ export const AgentConfig: React.FC = () => {
       label: a.title ? `${a.name} (${a.title})` : a.name,
     }));
 
+  // Agents this one's schedules can be initiated by. Self is excluded — a
+  // schedule reporting back to its own agent is a no-op.
+  const initiatorOptions = leadAgentOptions;
+
   const currentLeadValue = agentData?.leadUsername;
 
   if (!username) {
@@ -290,6 +294,7 @@ export const AgentConfig: React.FC = () => {
             llmModelOptions={llmModelOptions}
             imageModelOptions={imageModelOptions}
             hubTimezone={hubTimezone}
+            initiatorOptions={initiatorOptions}
             saving={saving}
             onSave={handleSave}
             assignedHosts={assignedHosts ?? []}

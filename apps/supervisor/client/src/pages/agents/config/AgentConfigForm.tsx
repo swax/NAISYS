@@ -50,6 +50,8 @@ interface AgentConfigFormProps {
   imageModelOptions: ModelOption[];
   /** Hub TZ for schedule preview computations; matches what the scheduler fires in. */
   hubTimezone: string;
+  /** Agents selectable as a schedule's initiator (the fire message sender). */
+  initiatorOptions: { value: string; label: string }[];
   saving?: boolean;
   onSave?: (config: AgentConfigFile) => void;
   /** Optional element rendered inside General, after the Title field. */
@@ -112,6 +114,7 @@ function transformFormValues(values: FormValues): Record<string, unknown> {
       cron: s.cron,
       enabled: s.enabled !== false,
       ...(s.prompt && s.prompt.trim() ? { prompt: s.prompt } : {}),
+      ...(s.initiator ? { initiator: s.initiator } : {}),
     }));
   }
 
@@ -200,6 +203,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
   llmModelOptions,
   imageModelOptions,
   hubTimezone,
+  initiatorOptions,
   saving,
   onSave,
   afterTitle,
@@ -513,6 +517,7 @@ export const AgentConfigForm: React.FC<AgentConfigFormProps> = ({
               <AgentSchedulesEditor
                 schedules={form.values.schedules}
                 hubTimezone={hubTimezone}
+                initiatorOptions={initiatorOptions}
                 onChange={(next) => form.setFieldValue("schedules", next)}
                 errors={form.errors as Record<string, React.ReactNode>}
               />
