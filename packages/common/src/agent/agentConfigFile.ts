@@ -294,6 +294,38 @@ export const adminAgentConfig = {
   spendLimitHours: 24,
 } satisfies AgentConfigFile;
 
+/**
+ * Force the model / loop-only fields of the admin user's config to safe
+ * values.
+ *
+ * The admin user is NAISYS's no-model human console: it has no LLM loop and is
+ * present on *every* host at once (it is ACL-exempt in the hub). Pointing its
+ * `shellModel` at a real model would therefore spawn an autonomous agent loop
+ * on every connected host simultaneously. Applied on every admin config write
+ * — supervisor form save and hand-edited YAML import alike — so neither path
+ * can arm that loop or set the other settings that mean nothing without a
+ * model.
+ *
+ * `imageModel` is intentionally NOT pinned: image generation is a standalone
+ * command the human operator may want to exercise from the console to
+ * diagnose it, so the admin keeps whatever image model is configured.
+ */
+export function applyAdminConfigInvariants(
+  config: AgentConfigFile,
+): AgentConfigFile {
+  return {
+    ...config,
+    shellModel: "none",
+    schedules: undefined,
+    completeSessionEnabled: undefined,
+    autoCompact: undefined,
+    continuity: undefined,
+    commandProtection: undefined,
+    multipleCommandsEnabled: undefined,
+    workspacesEnabled: undefined,
+  };
+}
+
 export interface UserEntry {
   userId: number;
   username: string;

@@ -151,14 +151,6 @@ export const AgentDetail: React.FC = () => {
   const handleStop = async (recursive?: boolean) => {
     if (!username) return;
 
-    if (agentData?.name === ADMIN_USERNAME) {
-      const confirmed = window.confirm(
-        "The admin agent keeps the NAISYS process running when all other agents are stopped. " +
-          "Stopping it may end the process. Are you sure?",
-      );
-      if (!confirmed) return;
-    }
-
     setStopping(true);
     try {
       const result = await stopAgent(username, recursive);
@@ -396,6 +388,7 @@ export const AgentDetail: React.FC = () => {
     <Stack p="xs" maw={1000}>
       <Group wrap="nowrap" style={{ overflowX: "auto" }}>
         {(() => {
+          if (username === ADMIN_USERNAME) return null;
           const startAction = hasAction(actions, "start", {
             includeDisabled: true,
           });
@@ -459,6 +452,7 @@ export const AgentDetail: React.FC = () => {
           );
         })()}
         {(() => {
+          if (username === ADMIN_USERNAME) return null;
           const stopAction = hasAction(actions, "stop", {
             includeDisabled: true,
           });

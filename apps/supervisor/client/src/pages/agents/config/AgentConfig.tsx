@@ -11,7 +11,7 @@ import {
 import { useSessionStorage } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
-import { hasAction } from "@naisys/common";
+import { ADMIN_USERNAME, hasAction } from "@naisys/common";
 import { IconFileExport, IconFileImport } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useState } from "react";
@@ -31,6 +31,7 @@ import {
   apiEndpoints,
   type ModelsResponse,
 } from "../../../lib/api/apiClient";
+import { AdminConfigForm } from "./AdminConfigForm";
 import { AgentConfigForm } from "./AgentConfigForm";
 import { ConfigYamlDialog } from "./ConfigYamlDialog";
 
@@ -284,7 +285,26 @@ export const AgentConfig: React.FC = () => {
           </Alert>
         )}
 
-        {config && (
+        {config && username === ADMIN_USERNAME && (
+          <Stack gap="md">
+            <Alert color="blue" title="Admin diagnostic console">
+              The admin user is NAISYS&apos;s built-in diagnostic console — a
+              no-model agent that runs on every host. Only the settings that
+              apply to a console are shown here; LLM-loop settings (shell
+              model, schedules, continuity, …) don&apos;t apply to it and are
+              managed by NAISYS.
+            </Alert>
+            <AdminConfigForm
+              key={configRevision}
+              config={config}
+              imageModelOptions={imageModelOptions}
+              saving={saving}
+              onSave={handleSave}
+            />
+          </Stack>
+        )}
+
+        {config && username !== ADMIN_USERNAME && (
           <AgentConfigForm
             key={configRevision}
             config={config}

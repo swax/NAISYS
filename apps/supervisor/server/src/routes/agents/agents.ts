@@ -1,4 +1,5 @@
 import type { AgentConfigFile, HateoasAction } from "@naisys/common";
+import { ADMIN_USERNAME } from "@naisys/common";
 import type {
   AgentDetailResponse,
   AgentListRequest,
@@ -46,6 +47,7 @@ type AgentCtx = {
   archived: boolean;
   enabled: boolean;
   hasSpendLimit: boolean;
+  isAdmin: boolean;
 };
 
 function agentActions(
@@ -57,6 +59,7 @@ function agentActions(
   hasSpendLimit?: boolean,
 ): HateoasAction[] {
   const active = agentId ? isAgentActive(agentId) : false;
+  const isAdmin = username === ADMIN_USERNAME;
   const href = `${API_PREFIX}/agents/${username}`;
 
   return resolveActions<AgentCtx>(
@@ -84,6 +87,9 @@ function agentActions(
         method: "POST",
         title: "Stop Agent",
         permission: "manage_agents",
+        // The admin user is the persistent per-host diagnostic console;
+        // stopping it isn't offered as an action.
+        visibleWhen: (ctx) => !ctx.isAdmin,
         disabledWhen: (ctx) => (!ctx.active ? "Agent is not running" : null),
       },
       {
@@ -92,7 +98,8 @@ function agentActions(
         method: "POST",
         title: "Disable Agent",
         permission: "manage_agents",
-        visibleWhen: (ctx) => !ctx.archived && ctx.enabled,
+        // Admin is the persistent per-host console — disabling it isn't offered.
+        visibleWhen: (ctx) => !ctx.archived && ctx.enabled && !ctx.isAdmin,
       },
       {
         rel: "enable",
@@ -108,7 +115,8 @@ function agentActions(
         method: "POST",
         title: "Archive Agent",
         permission: "manage_agents",
-        visibleWhen: (ctx) => !ctx.archived,
+        // Admin is the persistent per-host console — archiving it isn't offered.
+        visibleWhen: (ctx) => !ctx.archived && !ctx.isAdmin,
         disabledWhen: (ctx) =>
           ctx.active ? "Stop the agent before archiving" : null,
       },
@@ -165,7 +173,14 @@ function agentActions(
       },
     ],
     href,
-    { user, active, archived, enabled, hasSpendLimit: hasSpendLimit ?? false },
+    {
+      user,
+      active,
+      archived,
+      enabled,
+      hasSpendLimit: hasSpendLimit ?? false,
+      isAdmin,
+    },
   );
 }
 

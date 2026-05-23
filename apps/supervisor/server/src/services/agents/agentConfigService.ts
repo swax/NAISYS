@@ -2,6 +2,7 @@ import type { AgentConfigFile } from "@naisys/common";
 import {
   ADMIN_USERNAME,
   AgentConfigFileSchema,
+  applyAdminConfigInvariants,
   assertUrlSafeKey,
   buildDefaultAgentConfig,
   parseContinuityFromConfigJson,
@@ -201,6 +202,12 @@ export async function updateAgentConfigById(
   } else if (currentUser) {
     // Import: preserve the DB username, override it in the config
     config = { ...config, username: currentUser.username };
+  }
+
+  // The admin user is the no-model console replicated across every host —
+  // never let a write (form save or YAML import) arm an LLM loop on it.
+  if (currentUser?.username === ADMIN_USERNAME) {
+    config = applyAdminConfigInvariants(config);
   }
 
   const ordered = canonicalConfigOrder(config);

@@ -220,12 +220,7 @@ export const AgentRuns: React.FC = () => {
 
   const handleStop = async (run: RunSession) => {
     if (!username || stopLoading) return;
-    const prompt =
-      username === ADMIN_USERNAME
-        ? "The admin agent keeps the NAISYS process running when all other agents are stopped. " +
-          "Stopping it may end the process. Are you sure?"
-        : "Stop this run?";
-    if (!window.confirm(prompt)) return;
+    if (!window.confirm("Stop this run?")) return;
     setStopLoading(true);
     try {
       const result = await stopAgent(username);
@@ -523,7 +518,9 @@ export const AgentRuns: React.FC = () => {
                     Online
                   </Badge>
                 )}
-                {selectedRun.isOnline && selectedRun.subagentId == null && (
+                {selectedRun.isOnline &&
+                  selectedRun.subagentId == null &&
+                  username !== ADMIN_USERNAME && (
                   <Button
                     size="compact-xs"
                     variant="light"
