@@ -31,6 +31,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { getAgentStatusColor } from "../../components/badges/agentStatusColor";
 import { getPlatformBadgeColor } from "../../components/badges/PlatformBadge";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../contexts/HostDataContext";
@@ -608,15 +609,7 @@ export const AgentDetail: React.FC = () => {
           <Badge
             size="sm"
             variant="light"
-            color={
-              agentData.status === "active"
-                ? "green"
-                : agentData.status === "suspended"
-                  ? "red"
-                  : agentData.status === "available"
-                    ? "yellow"
-                    : "gray"
-            }
+            color={getAgentStatusColor(agentData.status)}
           >
             {agentData.status}
           </Badge>
@@ -649,6 +642,7 @@ export const AgentDetail: React.FC = () => {
 
       {config && (
         <ConfigSummary
+          username={username}
           config={config}
           resolvedEnvVars={resolvedEnvVars}
           leadUsername={agentData?.leadUsername}

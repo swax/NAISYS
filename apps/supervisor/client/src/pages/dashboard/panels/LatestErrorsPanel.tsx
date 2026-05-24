@@ -35,7 +35,7 @@ export const LatestErrorsPanel: React.FC<{
                 fw={500}
                 truncate
               >
-                {e.username}
+                {e.title}
               </Anchor>
               <Text size="xs" c="dimmed" truncate>
                 {e.errorCount} error{e.errorCount === 1 ? "" : "s"} in run{" "}

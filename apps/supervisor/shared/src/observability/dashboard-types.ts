@@ -49,8 +49,6 @@ export const DashboardMessageSchema = z.object({
   kind: z.enum(["mail", "chat"]),
   fromUsername: z.string(),
   fromTitle: z.string(),
-  /** Sorted CSV of participant usernames — the conversation key. */
-  participants: z.string(),
   subject: z.string(),
   snippet: z.string(),
   createdAt: z.string(),

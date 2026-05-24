@@ -249,20 +249,32 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                   }}
                 >
                   <Group gap="xs" justify="space-between" wrap="nowrap">
-                    <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                      ↳ subagent ·{" "}
-                      {formatDuration(run.createdAt, run.lastActive)}
-                    </Text>
-                    <Group gap={6} wrap="nowrap">
+                    <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
                       {run.isOnline && (
-                        <Badge size="xs" variant="dot" color="green">
-                          {run.paused ? "Paused" : "Online"}
-                        </Badge>
+                        <Tooltip
+                          label={run.paused ? "Paused" : "Online"}
+                          withArrow
+                        >
+                          <Box
+                            w={8}
+                            h={8}
+                            bg={run.paused ? "yellow.6" : "green.6"}
+                            style={{ borderRadius: "50%", flexShrink: 0 }}
+                          />
+                        </Tooltip>
                       )}
-                      <Text size="xs" fw={500} c="green">
-                        {formatCost(run.totalCost)}
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        ↳ subagent ·{" "}
+                        {formatDuration(run.createdAt, run.lastActive)}
                       </Text>
                     </Group>
+                    <Text size="xs" fw={500} c="green">
+                      {formatCost(run.totalCost)}
+                    </Text>
                   </Group>
                 </Box>
               );
@@ -278,9 +290,37 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                 label={
                   <Stack gap={2}>
                     <Group gap="xs" wrap="nowrap" justify="space-between">
-                      <Text size="sm" fw={500}>
-                        {formatPrimaryTime(run.createdAt)}
-                      </Text>
+                      <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                        {run.isOnline && (
+                          <Tooltip
+                            label={run.paused ? "Paused" : "Online"}
+                            withArrow
+                          >
+                            <Box
+                              w={8}
+                              h={8}
+                              bg={run.paused ? "yellow.6" : "green.6"}
+                              style={{ borderRadius: "50%", flexShrink: 0 }}
+                            />
+                          </Tooltip>
+                        )}
+                        <Text
+                          size="sm"
+                          fw={500}
+                          c={run.isOnline ? undefined : "dimmed"}
+                        >
+                          {formatPrimaryTime(run.createdAt)}
+                        </Text>
+                        {unread && (
+                          <Tooltip label="New log data" withArrow>
+                            <IconFileText
+                              size={14}
+                              color="var(--mantine-color-pink-5)"
+                              style={{ flexShrink: 0 }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Group>
                       {run.hostName && (
                         <Badge
                           size="xs"
@@ -356,19 +396,6 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                           </Tooltip>
                         );
                       })()}
-                    <Group gap={4}>
-                      {run.isOnline && (
-                        <Badge size="xs" variant="dot" color="green">
-                          Online
-                        </Badge>
-                      )}
-                      {unread && (
-                        <IconFileText
-                          size={14}
-                          color="var(--mantine-color-pink-5)"
-                        />
-                      )}
-                    </Group>
                   </Stack>
                 }
                 styles={{

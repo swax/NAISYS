@@ -22,6 +22,7 @@ import React, { useMemo, useRef } from "react";
 
 import { RunActivityRow } from "../../components/RunActivityRow";
 import { useMessageThreadRuns } from "../../hooks/thread-runs/useMessageThreadRuns";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { MailMessage } from "../../lib/api/apiClient";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 
@@ -106,7 +107,7 @@ export const MailThread: React.FC<MailThreadProps> = ({
 
             const recipientNames = msg.recipients
               .filter((r) => r.type !== "from")
-              .map((r) => `${r.username} (${r.title})`);
+              .map((r) => formatAgentLabel(r.username, r.title));
 
             // In newest-first order, show divider after the newest unread message
             // i.e. between msg.id > lastReadMailId and msg.id <= lastReadMailId
@@ -146,7 +147,7 @@ export const MailThread: React.FC<MailThreadProps> = ({
                           c={isOwn ? "blue" : undefined}
                           size="xs"
                         >
-                          {msg.fromUsername} ({msg.fromTitle})
+                          {formatAgentLabel(msg.fromUsername, msg.fromTitle)}
                         </Text>
                         {" → "}
                         {recipientNames.join(", ")}

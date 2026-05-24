@@ -26,6 +26,7 @@ import {
   unassignAgentFromHost,
   updateAgentConfig,
 } from "../../../lib/api/apiAgents";
+import { formatAgentLabel } from "../../../lib/agentLabel";
 import {
   api,
   apiEndpoints,
@@ -231,7 +232,7 @@ export const AgentConfig: React.FC = () => {
     .filter((a) => a.name !== username && !a.archived)
     .map((a) => ({
       value: a.name,
-      label: a.title ? `${a.name} (${a.title})` : a.name,
+      label: formatAgentLabel(a.name, a.title),
     }));
 
   // Agents this one's schedules can be initiated by. Self is excluded — a

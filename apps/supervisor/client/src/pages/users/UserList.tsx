@@ -32,6 +32,7 @@ import {
 import type { AppOutletContext } from "../../App";
 import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
 import { HelpTooltip } from "../../components/HelpTooltip";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import { getAgentData } from "../../lib/api/apiAgents";
 import { createAgentUser, createUser, getUsers } from "../../lib/api/apiUsers";
 
@@ -118,7 +119,7 @@ export const UserList: React.FC = () => {
         .filter((a) => !a.archived && !existingUuids.has(a.uuid))
         .map((a) => ({
           value: String(a.id),
-          label: a.title ? `${a.name} (${a.title})` : a.name,
+          label: formatAgentLabel(a.name, a.title),
         }));
       setAvailableAgents(filtered);
     } catch {

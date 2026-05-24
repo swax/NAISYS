@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { ADMIN_USERNAME } from "@naisys/common";
+import { ADMIN_USERNAME, formatTokens } from "@naisys/common";
 import {
   IconHelp,
   IconList,
@@ -514,8 +514,12 @@ export const AgentRuns: React.FC = () => {
                   {selectedRun.modelName}
                 </Badge>
                 {selectedRun.isOnline && (
-                  <Badge size="sm" variant="dot" color="green">
-                    Online
+                  <Badge
+                    size="sm"
+                    variant="dot"
+                    color={selectedRun.paused ? "yellow" : "green"}
+                  >
+                    {selectedRun.paused ? "Paused" : "Online"}
                   </Badge>
                 )}
                 {selectedRun.isOnline &&
@@ -543,6 +547,41 @@ export const AgentRuns: React.FC = () => {
                     selectedRun.lastActive,
                   )}
                 </Text>
+                {selectedRun.totalTokens > 0 &&
+                  (() => {
+                    const modelMax = llmModels.find(
+                      (m) => m.key === selectedRun.modelName,
+                    )?.maxTokens;
+                    const agentTokenMax = agent?.tokenMax;
+                    const tooltipParts = [
+                      `${selectedRun.totalTokens.toLocaleString()} tokens`,
+                    ];
+                    if (agentTokenMax) {
+                      const pct = Math.round(
+                        (selectedRun.totalTokens / agentTokenMax) * 100,
+                      );
+                      tooltipParts.push(
+                        `${pct}% of agent max (${agentTokenMax.toLocaleString()})`,
+                      );
+                    }
+                    if (modelMax) {
+                      tooltipParts.push(
+                        `model max ${modelMax.toLocaleString()}`,
+                      );
+                    }
+                    return (
+                      <Tooltip
+                        label={tooltipParts.join("\n")}
+                        multiline
+                        withArrow
+                        style={{ whiteSpace: "pre-line" }}
+                      >
+                        <Text size="xs" c="dimmed">
+                          {formatTokens(selectedRun.totalTokens)}
+                        </Text>
+                      </Tooltip>
+                    );
+                  })()}
                 <Text size="sm" fw={500} c="green">
                   {formatCost(selectedRun.totalCost)}
                 </Text>

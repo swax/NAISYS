@@ -27,15 +27,3 @@ export function formatUntil(iso: string): string {
   if (diffMs <= 0) return "now";
   return `in ${formatDuration(diffMs)}`;
 }
-
-/** The participants of a conversation other than `exclude` (the sender). */
-export function participantsExcept(
-  participants: string,
-  exclude: string,
-): string {
-  const others = participants
-    .split(",")
-    .map((p) => p.trim())
-    .filter((p) => p && p !== exclude);
-  return others.length > 0 ? others.join(", ") : "—";
-}

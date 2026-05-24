@@ -109,7 +109,6 @@ export async function getDashboard(): Promise<DashboardData> {
       select: {
         id: true,
         kind: true,
-        participants: true,
         subject: true,
         body: true,
         created_at: true,
@@ -167,7 +166,6 @@ export async function getDashboard(): Promise<DashboardData> {
     kind: m.kind,
     fromUsername: m.from_user.username,
     fromTitle: m.from_user.title,
-    participants: m.participants,
     subject: m.subject,
     snippet: makeSnippet(m.body),
     createdAt: m.created_at.toISOString(),

@@ -4,7 +4,7 @@ import { IconMessages } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
-import { formatRelative, participantsExcept } from "../dashboardFormat";
+import { formatRelative } from "../dashboardFormat";
 
 export const RecentMessagesPanel: React.FC<{
   messages: DashboardMessage[];
@@ -23,20 +23,16 @@ export const RecentMessagesPanel: React.FC<{
         {messages.map((m) => (
           <div key={m.id}>
             <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
-                <Anchor
-                  component={Link}
-                  to={`/agents/${m.fromUsername}/${m.kind}`}
-                  size="sm"
-                  fw={500}
-                  truncate
-                >
-                  {m.fromUsername}
-                </Anchor>
-                <Text size="xs" c="dimmed" truncate>
-                  → {participantsExcept(m.participants, m.fromUsername)}
-                </Text>
-              </Group>
+              <Anchor
+                component={Link}
+                to={`/agents/${m.fromUsername}/${m.kind}`}
+                size="sm"
+                fw={500}
+                truncate
+                style={{ minWidth: 0 }}
+              >
+                {m.fromTitle}
+              </Anchor>
               <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
                 {formatRelative(m.createdAt)}
               </Text>

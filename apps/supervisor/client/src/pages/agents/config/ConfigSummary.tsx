@@ -16,9 +16,11 @@ import { Link } from "react-router-dom";
 
 import { AgentModelIcon } from "../../../components/badges/AgentModelIcon";
 import { TemplatedText } from "../../../components/TemplatedText";
+import { formatAgentLabel } from "../../../lib/agentLabel";
 import type { Agent, Host } from "../../../types/agent";
 
 export const ConfigSummary: React.FC<{
+  username?: string;
   config: AgentDetailResponse["config"];
   resolvedEnvVars?: Record<string, string>;
   leadUsername?: string;
@@ -31,6 +33,7 @@ export const ConfigSummary: React.FC<{
   resettingSpend?: boolean;
   onResetSpend?: () => void;
 }> = ({
+  username,
   config,
   resolvedEnvVars,
   leadUsername,
@@ -59,6 +62,12 @@ export const ConfigSummary: React.FC<{
     <Stack gap="sm">
       <Table withRowBorders={false} style={{ maxWidth: 600 }}>
         <Table.Tbody>
+          {username && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Name</Table.Td>
+              <Table.Td>{username}</Table.Td>
+            </Table.Tr>
+          )}
           {config.title && (
             <Table.Tr>
               <Table.Td c="dimmed">Title</Table.Td>
@@ -79,9 +88,7 @@ export const ConfigSummary: React.FC<{
                       to={`/agents/${leadAgent.name}`}
                       size="sm"
                     >
-                      {leadAgent.title
-                        ? `${leadUsername} (${leadAgent.title})`
-                        : leadUsername}
+                      {formatAgentLabel(leadUsername, leadAgent.title)}
                     </Anchor>
                   ) : (
                     leadUsername

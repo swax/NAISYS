@@ -75,12 +75,6 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
       ? "Chat messages can be sent to this agent, but the agent isn't configured to use chat."
       : null;
 
-  // Check for unread data
-  const hasUnreadLogs =
-    currentAgent && agentName && readStatus[agentName]
-      ? currentAgent.latestLogId > readStatus[agentName].lastReadLogId
-      : false;
-
   const hasUnreadMail =
     currentAgent && agentName && readStatus[agentName]
       ? currentAgent.latestMailId > readStatus[agentName].lastReadMailId
@@ -197,26 +191,18 @@ export const AgentNavHeader: React.FC<AgentNavHeaderProps> = ({
                 Chat
               </Text>
             </Tabs.Tab>
-            <Indicator
-              disabled={!hasUnreadLogs}
-              color="pink"
-              size={8}
-              offset={7}
-              processing
+            <Tabs.Tab
+              value="runs"
+              leftSection={<IconTerminal2 size="1rem" />}
+              component="a"
+              // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
+              href={getAbsoluteUrl("runs")}
+              onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
             >
-              <Tabs.Tab
-                value="runs"
-                leftSection={<IconTerminal2 size="1rem" />}
-                component="a"
-                // @ts-expect-error - Mantine Tabs.Tab doesn't properly type component prop with href
-                href={getAbsoluteUrl("runs")}
-                onClick={(e: React.MouseEvent) => handleTabClick(e, "runs")}
-              >
-                <Text visibleFrom="sm" span>
-                  Runs
-                </Text>
-              </Tabs.Tab>
-            </Indicator>
+              <Text visibleFrom="sm" span>
+                Runs
+              </Text>
+            </Tabs.Tab>
             <Tabs.Tab
               value="config"
               leftSection={<IconSettings size="1rem" />}

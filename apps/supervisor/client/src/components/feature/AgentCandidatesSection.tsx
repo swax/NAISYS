@@ -3,6 +3,7 @@ import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { Agent } from "../../types/agent";
 import { AgentModelIcon } from "../badges/AgentModelIcon";
 
@@ -61,7 +62,7 @@ export const AgentCandidatesSection: React.FC<AgentCandidatesSectionProps> = ({
                 style={{ flexShrink: 0 }}
               />
               <Text size="sm" lineClamp={1}>
-                {candidate.name} ({candidate.title})
+                {formatAgentLabel(candidate.name, candidate.title)}
               </Text>
             </Group>
           );

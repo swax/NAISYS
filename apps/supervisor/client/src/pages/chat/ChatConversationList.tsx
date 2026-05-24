@@ -6,6 +6,7 @@ import {
   ScrollArea,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { IconArchive, IconMessagePlus } from "@tabler/icons-react";
 import React, { useState } from "react";
@@ -14,6 +15,7 @@ import { Link } from "react-router-dom";
 import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
 import { AgentCandidatesSection } from "../../components/feature/AgentCandidatesSection";
 import { RecipientMultiSelect } from "../../components/forms/RecipientMultiSelect";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { ChatConversation } from "../../lib/api/apiClient";
 import type { Agent } from "../../types/agent";
 
@@ -114,10 +116,21 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
                 .split(",")
                 .filter((n) => n !== agentName)
                 .join(",");
-              const iconName =
-                conv.participantNames.find((n) => n !== agentName) ??
-                conv.participantNames[0];
-              const iconAgent = agents.find((a) => a.name === iconName);
+              const archivedOpacity = conv.isArchived ? 0.5 : undefined;
+              const firstName = conv.participantNames[0];
+              const firstAgent = firstName
+                ? agents.find((a) => a.name === firstName)
+                : undefined;
+              const firstTitle =
+                firstAgent?.title ?? conv.participantTitles[0] ?? "";
+              const count = conv.participantNames.length;
+              const fullList = conv.participantNames
+                .map((name, i) => {
+                  const a = agents.find((ag) => ag.name === name);
+                  const t = a?.title ?? conv.participantTitles[i] ?? "";
+                  return formatAgentLabel(name, t);
+                })
+                .join(", ");
 
               return (
                 <NavLink
@@ -134,23 +147,32 @@ export const ChatConversationList: React.FC<ChatConversationListProps> = ({
                           style={{ opacity: 0.5, flexShrink: 0 }}
                         />
                       )}
-                      <AgentModelIcon
-                        shellModel={iconAgent?.shellModel}
-                        size={14}
-                        style={{
-                          flexShrink: 0,
-                          opacity: conv.isArchived ? 0.5 : undefined,
-                        }}
-                      />
-                      <Text
-                        size="sm"
-                        lineClamp={1}
-                        style={conv.isArchived ? { opacity: 0.5 } : undefined}
-                      >
-                        {conv.participantNames.length === 1
-                          ? `${conv.participantNames[0]} (${conv.participantTitles[0]})`
-                          : conv.participantNames.join(", ")}
-                      </Text>
+                      {firstName && (
+                        <>
+                          <AgentModelIcon
+                            shellModel={firstAgent?.shellModel}
+                            size={14}
+                            style={{
+                              flexShrink: 0,
+                              opacity: archivedOpacity,
+                            }}
+                          />
+                          <Tooltip
+                            label={fullList}
+                            disabled={count <= 1}
+                            withinPortal
+                          >
+                            <Text
+                              size="sm"
+                              lineClamp={1}
+                              style={{ opacity: archivedOpacity }}
+                            >
+                              {formatAgentLabel(firstName, firstTitle)}
+                              {count > 1 ? ` (${count})` : ""}
+                            </Text>
+                          </Tooltip>
+                        </>
+                      )}
                     </Group>
                   }
                   description={

@@ -23,6 +23,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { CostsHistogramResponse } from "../../lib/api/apiClient";
 import { api, apiEndpoints } from "../../lib/api/apiClient";
 import { AGENT_COLOR_TOKENS, useColorResolver } from "../../lib/charts";
@@ -268,7 +269,7 @@ export const CostsPage: React.FC = () => {
           AGENT_COLOR_TOKENS[i % AGENT_COLOR_TOKENS.length],
         );
         return {
-          label: title ? `${name} (${title})` : name,
+          label: formatAgentLabel(name, title),
           data: chartData.map((d) => Number(d[name] ?? 0)),
           backgroundColor: color,
           maxBarThickness: 50,
@@ -292,7 +293,7 @@ export const CostsPage: React.FC = () => {
     if (!data) return [];
     if (groupBy === "agent") {
       return data.byAgent.map((e) => ({
-        label: `${e.username} (${e.title})`,
+        label: formatAgentLabel(e.username, e.title),
         cost: e.cost,
         tokens: e.tokens,
       }));
@@ -503,7 +504,7 @@ export const CostsPage: React.FC = () => {
             placeholder="All agents"
             data={agents.map((a) => ({
               value: a.name,
-              label: `${a.name} (${a.title})`,
+              label: formatAgentLabel(a.name, a.title),
             }))}
             value={leadUsername || null}
             onChange={(v) => setLeadUsername(v ?? "")}

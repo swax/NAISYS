@@ -22,6 +22,7 @@ import { useChatScroll } from "../../hooks/chat/useChatScroll";
 import type { ThreadRun } from "../../hooks/thread-runs/useMessageThreadRuns";
 import type { ThreadRunCommand } from "../../hooks/thread-runs/useThreadRunCommands";
 import { useThreadRunCommands } from "../../hooks/thread-runs/useThreadRunCommands";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { ChatMessage } from "../../lib/api/apiClient";
 import { buildThreadRunActivity } from "../../lib/threadRunActivity";
 import { bucketRunCommandsByMessage } from "../../lib/threadRunCommandBuckets";
@@ -385,7 +386,7 @@ export const ChatThread: React.FC<ChatThreadProps> = ({
                   >
                     {!isOwn && (
                       <Text size="xs" fw={600} c="dimmed" mb={4}>
-                        {msg.fromUsername} ({msg.fromTitle})
+                        {formatAgentLabel(msg.fromUsername, msg.fromTitle)}
                         {msg.source?.startsWith("schedule:") && (
                           <Badge
                             size="xs"

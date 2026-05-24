@@ -6,6 +6,7 @@ import {
   ScrollArea,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import { IconArchive, IconPlus } from "@tabler/icons-react";
 import React from "react";
@@ -13,6 +14,7 @@ import { Link } from "react-router-dom";
 
 import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
 import { AgentCandidatesSection } from "../../components/feature/AgentCandidatesSection";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { Agent } from "../../types/agent";
 import type { MailConversation } from "./mailConversations";
 
@@ -117,14 +119,31 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
               const otherIndices = conv.participantNames
                 .map((n, i) => (n !== currentAgentName ? i : -1))
                 .filter((i) => i >= 0);
-              const displayNames =
-                otherIndices.length === 1
-                  ? `${conv.participantNames[otherIndices[0]]} (${conv.participantTitles[otherIndices[0]]})`
-                  : otherIndices.length > 0
-                    ? otherIndices
-                        .map((i) => conv.participantNames[i])
-                        .join(", ")
-                    : conv.participantNames.join(", ");
+              const fullOthersList = otherIndices
+                .map((i) =>
+                  formatAgentLabel(
+                    conv.participantNames[i],
+                    conv.participantTitles[i],
+                  ),
+                )
+                .join(", ");
+              const firstIdx = otherIndices[0];
+              const firstName =
+                firstIdx !== undefined
+                  ? conv.participantNames[firstIdx]
+                  : conv.participantNames[0];
+              const firstTitle =
+                firstIdx !== undefined
+                  ? conv.participantTitles[firstIdx]
+                  : (conv.participantTitles[0] ?? "");
+              const firstAgent = firstName
+                ? agents.find((a) => a.name === firstName)
+                : undefined;
+              const otherCount = otherIndices.length;
+              const compactLabel = firstName
+                ? formatAgentLabel(firstName, firstAgent?.title ?? firstTitle) +
+                  (otherCount > 1 ? ` (${otherCount})` : "")
+                : "";
 
               // Build link URL based on grouping mode
               const to = groupBySubject
@@ -133,10 +152,6 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                     .filter((n) => n !== currentAgentName)
                     .sort()
                     .join(",")}`;
-              const iconName =
-                conv.participantNames.find((n) => n !== currentAgentName) ??
-                conv.participantNames[0];
-              const iconAgent = agents.find((a) => a.name === iconName);
 
               return (
                 <NavLink
@@ -154,20 +169,30 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                         />
                       )}
                       <AgentModelIcon
-                        shellModel={iconAgent?.shellModel}
+                        shellModel={firstAgent?.shellModel}
                         size={14}
                         style={{
                           flexShrink: 0,
                           opacity: conv.isArchived ? 0.5 : undefined,
                         }}
                       />
-                      <Text
-                        size="sm"
-                        lineClamp={1}
-                        style={conv.isArchived ? { opacity: 0.5 } : undefined}
+                      <Tooltip
+                        label={fullOthersList}
+                        disabled={otherCount <= 1}
+                        withinPortal
                       >
-                        {groupBySubject ? conv.normalizedSubject : displayNames}
-                      </Text>
+                        <Text
+                          size="sm"
+                          lineClamp={1}
+                          style={
+                            conv.isArchived ? { opacity: 0.5 } : undefined
+                          }
+                        >
+                          {groupBySubject
+                            ? conv.normalizedSubject
+                            : compactLabel}
+                        </Text>
+                      </Tooltip>
                     </Group>
                   }
                   description={
@@ -178,7 +203,7 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                       style={conv.isArchived ? { opacity: 0.5 } : undefined}
                     >
                       {groupBySubject
-                        ? `${displayNames} (${conv.messageCount})`
+                        ? `${compactLabel} (${conv.messageCount})`
                         : `${conv.lastMessageFrom}: ${conv.lastMessagePreview}`}
                     </Text>
                   }

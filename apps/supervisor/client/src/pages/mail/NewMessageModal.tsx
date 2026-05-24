@@ -18,6 +18,7 @@ import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
 import React, { useEffect, useState } from "react";
 
 import { RecipientMultiSelect } from "../../components/forms/RecipientMultiSelect";
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { Agent } from "../../lib/api/apiClient";
 
 interface FileAttachment {
@@ -121,9 +122,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
 
   const currentAgent = agents.find((a) => a.id === currentAgentId);
   const currentAgentLabel = currentAgent
-    ? currentAgent.title
-      ? `${currentAgent.name} (${currentAgent.title})`
-      : currentAgent.name
+    ? formatAgentLabel(currentAgent.name, currentAgent.title)
     : "";
 
   const handleFilesAdd = (files: File[]) => {

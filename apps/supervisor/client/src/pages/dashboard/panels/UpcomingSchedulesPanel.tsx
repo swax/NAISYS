@@ -29,7 +29,7 @@ export const UpcomingSchedulesPanel: React.FC<{
               fw={500}
               truncate
             >
-              {s.username}
+              {s.title}
             </Anchor>
             <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
               {formatUntil(s.nextRunAt)}

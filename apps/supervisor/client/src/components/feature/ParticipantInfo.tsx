@@ -1,30 +1,17 @@
-import { ActionIcon, Anchor, Group, Text } from "@mantine/core";
+import { ActionIcon, Anchor, Group } from "@mantine/core";
 import { IconArrowsLeftRight } from "@tabler/icons-react";
 import React from "react";
 import { Link } from "react-router-dom";
 
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { Agent } from "../../types/agent";
 import { AgentModelIcon } from "../badges/AgentModelIcon";
+import { getAgentStatusCssColor } from "../badges/agentStatusColor";
 
 interface ParticipantInfoProps {
   names: string[];
   agents: Agent[];
   onSwitch?: (name: string) => void;
-}
-
-function statusColor(status: Agent["status"] | undefined): string {
-  switch (status) {
-    case "active":
-      return "var(--mantine-color-green-6)";
-    case "paused":
-      return "var(--mantine-color-yellow-6)";
-    case "available":
-      return "var(--mantine-color-blue-6)";
-    case "suspended":
-      return "var(--mantine-color-red-6)";
-    default:
-      return "var(--mantine-color-gray-6)";
-  }
 }
 
 export const ParticipantInfo: React.FC<ParticipantInfoProps> = ({
@@ -38,20 +25,20 @@ export const ParticipantInfo: React.FC<ParticipantInfoProps> = ({
         const a = agents.find((ag) => ag.name === name);
         return (
           <Group key={name} gap={6} wrap="nowrap">
+            <AgentModelIcon
+              shellModel={a?.shellModel}
+              size={14}
+              style={{ flexShrink: 0 }}
+            />
             <div
               style={{
                 width: 8,
                 height: 8,
                 borderRadius: "50%",
-                backgroundColor: statusColor(a?.status),
+                backgroundColor: getAgentStatusCssColor(a?.status),
                 flexShrink: 0,
               }}
               title={a?.status ?? "unknown"}
-            />
-            <AgentModelIcon
-              shellModel={a?.shellModel}
-              size={14}
-              style={{ flexShrink: 0 }}
             />
             <Anchor
               component={Link}
@@ -61,13 +48,8 @@ export const ParticipantInfo: React.FC<ParticipantInfoProps> = ({
               c="inherit"
               underline="hover"
             >
-              {name}
+              {formatAgentLabel(name, a?.title)}
             </Anchor>
-            {a?.title && (
-              <Text size="sm" c="dimmed">
-                ({a.title})
-              </Text>
-            )}
             {onSwitch && (
               <ActionIcon
                 size="sm"

@@ -1,4 +1,5 @@
 import { Anchor, Badge, Box, Group, Paper, Stack, Text } from "@mantine/core";
+import { useElementSize } from "@mantine/hooks";
 import { formatTokens } from "@naisys/common";
 import type { DashboardRun } from "@naisys/supervisor-shared";
 import { IconActivity } from "@tabler/icons-react";
@@ -11,14 +12,18 @@ import { useHostDataContext } from "../../../contexts/HostDataContext";
 import { useLlmModels } from "../../../hooks/useLlmModels";
 import { formatCost, formatRelative } from "../dashboardFormat";
 
+const BADGE_HIDE_WIDTH = 480;
+
 export const RecentRunsPanel: React.FC<{ runs: DashboardRun[] }> = ({
   runs,
 }) => {
   const llmModels = useLlmModels();
   const { hosts } = useHostDataContext();
+  const { ref, width } = useElementSize();
+  const showBadges = width === 0 || width >= BADGE_HIDE_WIDTH;
 
   return (
-    <Paper p="md" withBorder>
+    <Paper ref={ref} p="md" withBorder>
       <Group gap={8} mb="sm">
         <IconActivity size={18} />
         <Text fw={600}>Recent agent runs</Text>
@@ -57,25 +62,29 @@ export const RecentRunsPanel: React.FC<{ runs: DashboardRun[] }> = ({
                     fw={500}
                     truncate
                   >
-                    {run.username}
+                    {run.title}
                   </Anchor>
-                  <Badge
-                    size="xs"
-                    variant="light"
-                    color={getApiTypeBadgeColor(apiType)}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {run.modelName}
-                  </Badge>
-                  {run.hostName && (
-                    <Badge
-                      size="xs"
-                      variant="light"
-                      color={getPlatformBadgeColor(platform)}
-                      style={{ flexShrink: 0 }}
-                    >
-                      {run.hostName}
-                    </Badge>
+                  {showBadges && (
+                    <>
+                      <Badge
+                        size="xs"
+                        variant="light"
+                        color={getApiTypeBadgeColor(apiType)}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {run.modelName}
+                      </Badge>
+                      {run.hostName && (
+                        <Badge
+                          size="xs"
+                          variant="light"
+                          color={getPlatformBadgeColor(platform)}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {run.hostName}
+                        </Badge>
+                      )}
+                    </>
                   )}
                 </Group>
                 <Group gap="md" wrap="nowrap" style={{ flexShrink: 0 }}>

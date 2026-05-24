@@ -111,7 +111,7 @@ export const CostSummaryPanel: React.FC<{
                     size="sm"
                     truncate
                   >
-                    {a.username}
+                    {a.title}
                   </Anchor>
                   <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
                     {formatCost(a.cost)} · {formatTokens(a.tokens)}

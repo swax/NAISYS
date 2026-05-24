@@ -1,5 +1,6 @@
 import {
   Badge,
+  Box,
   Button,
   Card,
   Collapse,
@@ -14,7 +15,6 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconClock,
-  IconFileText,
   IconMail,
   IconPlus,
 } from "@tabler/icons-react";
@@ -22,6 +22,7 @@ import React, { useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { AgentModelIcon } from "../../components/badges/AgentModelIcon";
+import { getAgentStatusDotColor } from "../../components/badges/agentStatusColor";
 import { ROUTER_BASENAME } from "../../constants";
 import { useAgentDataContext } from "../../contexts/AgentDataContext";
 import { useConnectionStatus } from "../../hooks/useConnectionStatus";
@@ -187,40 +188,6 @@ export const AgentSidebar: React.FC = () => {
     });
   };
 
-  const getUnreadLogBadge = (agent: Agent) => {
-    const agentReadStatus = readStatus[agent.name];
-
-    const showBadge =
-      agentReadStatus && agent.latestLogId > agentReadStatus.lastReadLogId;
-
-    if (!showBadge) {
-      return null;
-    }
-
-    const handleLogClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      void navigate(`/agents/${agent.name}/runs?expand=new`);
-    };
-
-    return (
-      <Badge
-        size="xs"
-        variant="light"
-        color="pink"
-        p={0}
-        pl={1}
-        pt={3}
-        w={20}
-        h={20}
-        onClick={handleLogClick}
-        style={{ cursor: "pointer" }}
-      >
-        <IconFileText size="0.8rem" />
-      </Badge>
-    );
-  };
-
   const getUnreadMailBadge = (agent: Agent) => {
     const agentReadStatus = readStatus[agent.name];
     if (
@@ -243,13 +210,13 @@ export const AgentSidebar: React.FC = () => {
         color="blue"
         p={0}
         pl={0}
-        pt={3}
-        w={20}
-        h={20}
+        pt={2}
+        w={16}
+        h={16}
         onClick={handleMailClick}
         style={{ cursor: "pointer" }}
       >
-        <IconMail size="0.8rem" />
+        <IconMail size="0.7rem" />
       </Badge>
     );
   };
@@ -294,43 +261,32 @@ export const AgentSidebar: React.FC = () => {
               style={{ flexShrink: 0 }}
             />
             <Text size="sm" fw={500} truncate="end">
-              {agent.name}
+              {agent.title}
             </Text>
-            {getUnreadLogBadge(agent)}
-            {getUnreadMailBadge(agent)}
           </Group>
           {serverReachable && (
-            <Badge
-              size="xs"
-              variant="light"
-              color={
-                agent.status === "active"
-                  ? "green"
-                  : agent.status === "paused"
-                    ? "yellow"
-                    : agent.status === "available"
-                      ? "blue"
-                      : agent.status === "suspended"
-                        ? "red"
-                        : "gray"
-              }
-              style={{
-                flexShrink: 0,
-                cursor:
-                  agent.status === "active" || agent.status === "paused"
-                    ? "pointer"
-                    : "default",
-              }}
-              onClick={(e) => {
-                if (agent.status === "active" || agent.status === "paused") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  void navigate(`/agents/${agent.name}/runs?expand=online`);
-                }
-              }}
-            >
-              {agent.status}
-            </Badge>
+            <Tooltip label={agent.status} withArrow>
+              <Box
+                w={8}
+                h={8}
+                bg={getAgentStatusDotColor(agent.status)}
+                style={{
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  cursor:
+                    agent.status === "active" || agent.status === "paused"
+                      ? "pointer"
+                      : "default",
+                }}
+                onClick={(e) => {
+                  if (agent.status === "active" || agent.status === "paused") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void navigate(`/agents/${agent.name}/runs?expand=online`);
+                  }
+                }}
+              />
+            </Tooltip>
           )}
         </Group>
         <Group
@@ -359,8 +315,9 @@ export const AgentSidebar: React.FC = () => {
               )
             ) : null}
             <Text size="xs" c="dimmed" truncate="end">
-              {agent.title}
+              {agent.name}
             </Text>
+            {getUnreadMailBadge(agent)}
           </Group>
           <Group gap={4} align="center" wrap="nowrap" style={{ flexShrink: 0 }}>
             {/* Hide remaining budget for "none" shell models — they don't do

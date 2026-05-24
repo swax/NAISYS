@@ -1,6 +1,7 @@
 import { MultiSelect } from "@mantine/core";
 import React from "react";
 
+import { formatAgentLabel } from "../../lib/agentLabel";
 import type { Agent } from "../../lib/api/apiClient";
 
 interface RecipientMultiSelectProps {
@@ -28,7 +29,7 @@ export const RecipientMultiSelect: React.FC<RecipientMultiSelectProps> = ({
     .filter((agent) => agent.id !== currentAgentId)
     .map((agent) => ({
       value: String(agent.id),
-      label: agent.title ? `${agent.name} (${agent.title})` : agent.name,
+      label: formatAgentLabel(agent.name, agent.title),
     }));
 
   return (
