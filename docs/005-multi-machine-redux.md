@@ -46,7 +46,7 @@ The current multi-machine architecture (doc 001) works but is too complicated to
 3. **No shared DB schema** - The `@naisys/hub-database` package is hub-only at runtime. NAISYS production code has no database dependency. It talks to the hub via the WebSocket API. (Test fixtures still import the package to spin up a hub for integration tests.)
 4. **No multi-mastering** - One source of truth per deployment. Hub DB for multi-machine, in-memory for local.
 5. **Explicit control model** - Either "local controlled" (standalone, ephemeral) or "hub controlled" (persistent, managed).
-6. **Hosts identify NAISYS instances** - Each NAISYS instance is assigned a hostname and self-registers into the existing `hosts` table on first connection. A `user_hosts` table maps which users (agents) can run on which hosts. If a user has no `user_hosts` entries, they can run on any host. A host is a naisys process instance - typically one per machine, but multiple instances on the same machine are supported.
+6. **Hosts identify NAISYS instances** - Each NAISYS instance is paired with a `hosts` row created up-front in the supervisor UI (or auto-bootstrapped in integrated mode). The row's hashed access key is what the client presents at handshake — the key alone identifies the host; there is no `NAISYS_HOSTNAME` round-trip or auto-registration on first connect. A `user_hosts` table maps which users (agents) can run on which hosts. If a user has no `user_hosts` entries, they can run on any host.
 7. **Hub routes agent starts** - In hub mode, `ns-agent start` sends an `agent_start` request to the hub. Hub picks the least-loaded host the user is assigned to (or any non-restricted host if unassigned) and relays `agent_start` to that host. The target may be the requesting instance or a different one.
 
 ### Deployment Modes
@@ -148,16 +148,16 @@ The hub database uses the existing `hosts` table for NAISYS instance tracking, p
 
 ```
 hosts
-  id           Int       @id @default(autoincrement())
-  name         String    @unique          // NAISYS_HOSTNAME
-  machine_id   String?   @unique          // Stable per-machine UUID (sticks across hostname changes)
-  restricted   Boolean   @default(false)  // If true, only users in user_hosts may run here
-  host_type    HostType  @default(naisys) // "naisys" or "supervisor"
-  last_ip      String?
-  last_version String?
-  environment  String?                    // JSON: { platform, osVersion, shell, arch, nodeVersion }
-  last_active  DateTime?                  // Updated from heartbeat
-  created_at   DateTime  @default(now())
+  id              Int       @id @default(autoincrement())
+  name            String    @unique          // Operator-chosen, set at host creation
+  access_key_hash String?   @unique          // SHA-256 of the per-host access key (hex); null until generated
+  restricted      Boolean   @default(false)  // If true, only users in user_hosts may run here
+  host_type       HostType  @default(naisys) // "naisys" or "supervisor"
+  last_ip         String?
+  last_version    String?
+  environment     String?                    // JSON: { platform, osVersion, shell, arch, nodeVersion }
+  last_active     DateTime?                  // Updated from heartbeat
+  created_at      DateTime  @default(now())
 
 user_hosts
   user_id     Int
@@ -166,11 +166,12 @@ user_hosts
   @@id([user_id, host_id])                // Composite primary key
 ```
 
-- Both hub and NAISYS instance have `HUB_ACCESS_KEY` in their `.env` files. If they match, the connection is accepted
-- Hosts are not pre-registered. On first connection, hub creates the host entry automatically using the instance's hostname (and `machine_id` if provided). The hub pushes a targeted `host_registered` event back to the new client with its assigned `machineId` and `hostname`
-- Supervisor connections also register in the `hosts` table (with `host_type = supervisor`), so the supervisor UI is treated as a first-class connected client for routing/topology purposes
+- Each host has its own access key. The NAISYS client puts the plaintext in `HOST_ACCESS_KEY`; the hub stores only `sha256(plaintext)` in `access_key_hash` and looks it up at handshake. There is no global shared secret
+- Hosts are pre-created in the supervisor UI (Hosts → Add Host shows the plaintext once). Integrated/supervisor hosts self-bootstrap on first startup, caching their plaintext keys under `NAISYS_FOLDER/cert/` — see [doc 010](010-hub-security.md)
+- Unknown access keys are rejected (`invalid_access_key`); there is no auto-registration on first connect. The hub pushes a slim `host_registered` event back to the new client with just `{ hostId, hostName }` so it can label itself in `hosts_updated`
+- Supervisor connections also live in the `hosts` table (a single `SUPERVISOR` row with `host_type = supervisor`), so the supervisor UI is treated as a first-class connected client for routing/topology purposes
 - Users (agents) can be assigned to specific hosts via `user_hosts`. A user with no `user_hosts` entries can run on any non-restricted host. A host with `restricted = true` only runs users that are explicitly assigned to it
-- On connection, hub validates the access key, auto-creates the host if new, and pushes `users_updated` containing the configs for users eligible to run on that host
+- On connection, hub resolves the host by access-key hash, stamps connection metadata, and pushes `users_updated` containing the configs for users eligible to run on that host
 
 ### Agent Start Flow (Hub Mode)
 
@@ -239,7 +240,7 @@ High-frequency writes that don't need confirmation. Client buffers and sends per
 | Event                                                            | Params                                   | Returns          | Notes                                                                                                                |
 | ---------------------------------------------------------------- | ---------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **Registration**                                                 |                                          |                  |                                                                                                                      |
-| (auth handshake)                                                 | hostname, machineId, accessKey           | accepted/error   | Handled during Socket.IO auth middleware. Hub validates `HUB_ACCESS_KEY`, auto-creates host if name/machineId is new |
+| (auth handshake)                                                 | accessKey, instanceId, startedAt, clientVersion, environment | accepted/error   | Handled during Socket.IO auth middleware. Hub hashes `accessKey`, looks up the matching `hosts.access_key_hash`, and rejects if no row matches |
 | **Session**                                                      |                                          |                  |                                                                                                                      |
 | `session_create`                                                 | userId, modelName                        | runId, sessionId | On agent start                                                                                                       |
 | `session_increment`                                              | userId, runId                            | sessionId        | On session compact                                                                                                   |
@@ -259,7 +260,7 @@ High-frequency writes that don't need confirmation. Client buffers and sends per
 | `agent_run_command`                                              | userId, command                          | success/error    | Sends a command into the agent's active session (used by supervisor debug)                                           |
 | `agent_peek`                                                     | userId                                   | output snapshot  | Peeks at the agent's current output buffer                                                                           |
 | **Admin (Supervisor → Hub)**                                     |                                          |                  |                                                                                                                      |
-| `rotate_access_key`                                              | -                                        | new key          | Rotates `HUB_ACCESS_KEY` (admin-only)                                                                                |
+| `host_rekeyed`                                                   | hostId                                   | success          | Sent by supervisor after rotating a host's access key (REST `POST /hosts/:name/rotate-access-key`); hub force-disconnects any live socket for that host so it must reauth |
 
 ### Hub-Pushed Events
 
@@ -279,7 +280,7 @@ Hub pushes events over the WebSocket (no polling needed). Some events are broadc
 
 | Event             | Data                    | Trigger                                                              |
 | ----------------- | ----------------------- | -------------------------------------------------------------------- |
-| `host_registered` | machineId, hostname     | Sent to a newly connected client with its assigned identity          |
+| `host_registered` | hostId, hostName        | Sent to a freshly-authenticated client with its resolved identity     |
 | `cost_control`    | userId, enabled, reason | Spend-limit enforcement, sent to the host running the affected agent |
 | `mail_received`   | recipient user IDs      | New mail notification, sent to hosts running recipient agents        |
 
@@ -339,9 +340,10 @@ apps/hub/src/
   services/
     naisysServer.ts          # Socket.IO server, event registration/dispatch, auth middleware
     naisysConnection.ts      # Per-client connection lifecycle, forwards events to dispatcher
-    hostRegistrar.ts         # Auto-creates host entries on first connect, tracks online status
+  lifecycle/
+    hostRegistrar.ts         # Resolves hosts by access-key hash, marks active, tracks online status
+    integratedHostBootstrap.ts # Bootstraps the integrated naisys host + access key
     agentRegistrar.ts        # Seeds DB with agent configs from yaml at startup
-    accessKeyService.ts      # HUB_ACCESS_KEY rotation
   handlers/
     hubConfigService.ts      # variables_updated (global config) push
     hubUserService.ts        # users_updated push on connect / on supervisor change
@@ -354,7 +356,6 @@ apps/hub/src/
     hubSendMailService.ts    # Auxiliary mail send service (auto-starts agents if needed)
     hubCostService.ts        # cost_write ingestion + cost_control push + cost_push to supervisors
     hubAgentService.ts       # agent_start/stop/run_pause/run_resume/run_command/peek (routing + relay)
-    hubAccessKeyService.ts   # rotate_access_key admin handler
     hubAttachmentService.ts  # Mail/context attachment uploads
 ```
 
@@ -365,12 +366,11 @@ Hub services use Prisma queries — essentially the same queries that used to li
 ```
 NAISYS startup (hub mode):
   1. Connect to hub WebSocket (/hub namespace)
-  2. Auth handshake (Socket.IO middleware): { hostname, machineId, accessKey, version, ... }
-     -> hub validates accessKey matches its own HUB_ACCESS_KEY
-     -> if invalid: error + disconnect, NAISYS startup fails
-     -> if hostname/machineId is new: hub creates host entry in hosts table
-  3. Hub pushes initial state: host_registered (targeted), users_updated, hosts_updated,
-     variables_updated, models_updated
+  2. Auth handshake (Socket.IO middleware): { accessKey, instanceId, startedAt, clientVersion, environment }
+     -> hub hashes accessKey and looks up hosts.access_key_hash
+     -> if no row matches: error + disconnect, NAISYS startup fails (HOST_ACCESS_KEY mismatch)
+  3. Hub pushes initial state: host_registered (targeted, { hostId, hostName }), users_updated,
+     hosts_updated, variables_updated, models_updated
   4. For each lead agent the instance starts: call session_create -> receive runId, sessionId
   5. Start agents via AgentManager, begin heartbeat interval (every 2s)
   6. Agents run normally, all data operations go through hub API
@@ -411,7 +411,7 @@ Answers to design questions resolved during planning:
 
 6. **Cost tracking: hub-pushed** - No separate spend-check call. Hub monitors costs from `cost_write` batches and pushes `cost_control` (enabled/disabled) when limits change.
 
-7. **Hosts identify NAISYS instances** - Instances self-register into the existing `hosts` table on first connection (via auth handshake). A `user_hosts` table maps which agents can run on which hosts. If a user has no `user_hosts` entries, they can run on any non-restricted host; a host with `restricted = true` only accepts assigned users. Both hub and instance have `HUB_ACCESS_KEY` in `.env`; if they match, the connection is accepted. A host is typically one per machine but multiple on the same machine are supported (distinguished by `machine_id`). The supervisor connects as a host too, with `host_type = supervisor`.
+7. **Hosts identify NAISYS instances** - Hosts are created up-front in the supervisor (or auto-bootstrapped in integrated mode). Each host has its own access key, stored as `sha256(plaintext)` in `hosts.access_key_hash`; the NAISYS client presents the plaintext via `HOST_ACCESS_KEY` and the hub resolves the host by hash. There is no global shared secret and no auto-registration. A `user_hosts` table maps which agents can run on which hosts. If a user has no `user_hosts` entries, they can run on any non-restricted host; a host with `restricted = true` only accepts assigned users. The supervisor connects as a host too, with `host_type = supervisor`. See [doc 010](010-hub-security.md) for the full key model.
 
 8. **Hub routes agent starts** - In hub mode, `ns-agent start` sends an `agent_start` request to the hub. Hub looks up `user_hosts` (or considers all non-restricted hosts if no entries), picks the least-loaded eligible connected host based on heartbeat data, and relays `agent_start` to it. In local mode, `ns-agent start` just starts the agent directly in-process.
 

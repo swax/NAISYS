@@ -69,6 +69,7 @@ import {
   cleanupHubConnection,
   initHubConnection,
 } from "./services/comms/hubConnectionService.js";
+import { bootstrapSupervisorHost } from "./services/comms/supervisorHostBootstrap.js";
 import { startAttachmentGc } from "./services/observability/attachmentGcService.js";
 import { getVariableCachedValue } from "./services/variableService.js";
 import { getVoiceAvailability } from "./services/voice/voiceService.js";
@@ -102,6 +103,10 @@ export const bootstrapSupervisor: BootstrapSupervisor = async (opts) => {
 
   // Populate in-memory user lookup for username ↔ id resolution
   await refreshUserLookup();
+
+  // Ensure the supervisor's own host row + access key exist so its hub-client
+  // can authenticate. Generates a fresh key + cert file on first run.
+  await bootstrapSupervisorHost();
 
   const superAdminResult = await ensureSuperAdmin();
 

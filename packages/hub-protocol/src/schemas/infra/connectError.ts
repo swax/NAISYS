@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const HubConnectErrorCodeSchema = z.enum([
   "invalid_access_key",
-  "missing_host_name",
   "superseded_by_newer_instance",
   "registration_failed",
 ]);

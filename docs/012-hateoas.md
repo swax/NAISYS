@@ -274,9 +274,10 @@ first (for UI) and then bearer tokens (for agent / machine-to-machine
 clients). API keys are hashed for cache keys with `hashToken()` so tokens
 don't appear in any in-memory diagnostic structure either.
 
-`HUB_ACCESS_KEY`, per-user API keys, and similar secrets are on the
-`EXCLUDED_KEYS` list in `globalConfigLoader.ts` so the hub never distributes
-them to clients through the variable channel.
+`HOST_ACCESS_KEY` (and the legacy `HUB_ACCESS_KEY` name, for upgraded
+installs), per-user API keys, and similar secrets are on the `EXCLUDED_KEYS`
+list in `globalConfigLoader.ts` so the hub never distributes them to clients
+through the variable channel.
 
 ## Schemas: one source of truth
 

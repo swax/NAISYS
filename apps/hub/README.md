@@ -44,9 +44,9 @@ The hub owns mail, context logs and [attachments](../../docs/011-mail-attachment
 
 ### Security ([doc 010](../../docs/010-hub-security.md))
 
-- `Authorization: Bearer` header auth with a rotatable access key
+- Per-host access keys (SHA-256 hashed on `hosts.access_key_hash`) — Socket.IO handshake resolves a host by its key; no global shared secret
+- Per-user `Authorization: Bearer` API keys for REST endpoints, also hashed
 - Hardened spawning: no shell interpretation, timeouts on `execFileSync`
-- API keys stored as SHA-256 hashes; per-user keys read from headers, not query params
 - Dynamic runtime API keys minted per agent and re-issued on hub restart
 - Redaction service scrubs sensitive variables and runtime keys from logs and mail before they hit the DB
 - Hub socket served at `/hub` for reverse-proxy friendliness (TLS terminated at the proxy)

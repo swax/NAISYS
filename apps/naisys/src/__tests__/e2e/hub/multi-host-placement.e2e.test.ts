@@ -35,10 +35,10 @@ import type { NaisysTestProcess } from "../e2eTestHelper.js";
 import {
   cleanupTestDir,
   createAgentYaml,
-  extractAccessKey,
   formatDotenvValue,
   getFreePort,
   getTestDir,
+  seedHostAccessKey,
   setupTestDir,
   spawnNaisys,
 } from "../e2eTestHelper.js";
@@ -113,13 +113,13 @@ SERVER_PORT=${SERVER_PORT}
   function createClientEnvFile(
     dir: string,
     hostname: string,
-    hubAccessKey: string,
+    accessKey: string,
   ) {
     const envContent = `
 NAISYS_FOLDER=""
 NAISYS_HOSTNAME="${hostname}"
 SPEND_LIMIT_DOLLARS=10
-HUB_ACCESS_KEY=${hubAccessKey}
+HOST_ACCESS_KEY=${accessKey}
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }
@@ -145,16 +145,18 @@ HUB_ACCESS_KEY=${hubAccessKey}
     await integrated.waitForOutput("AGENT STARTED", 60000);
     await integrated.waitForPrompt();
 
-    const hubAccessKey = extractAccessKey(integratedDir);
+    // Pre-create remote hosts since the hub no longer auto-registers on connect.
+    const hostAKey = seedHostAccessKey(integratedDir, "HOST-A");
+    const hostBKey = seedHostAccessKey(integratedDir, "HOST-B");
     const admin = await loginAsSuperAdmin(integrated, API_BASE);
 
     // ---- Step 2: Standalone NAISYS clients ----
-    createClientEnvFile(hostADir, "HOST-A", hubAccessKey);
+    createClientEnvFile(hostADir, "HOST-A", hostAKey);
     hostA = spawnClient(hostADir);
     await hostA.waitForOutput("AGENT STARTED", 30000);
     await hostA.waitForPrompt();
 
-    createClientEnvFile(hostBDir, "HOST-B", hubAccessKey);
+    createClientEnvFile(hostBDir, "HOST-B", hostBKey);
     hostB = spawnClient(hostBDir);
     await hostB.waitForOutput("AGENT STARTED", 30000);
     await hostB.waitForPrompt();

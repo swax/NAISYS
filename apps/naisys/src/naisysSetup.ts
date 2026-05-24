@@ -33,8 +33,8 @@ export function getNaisysWizardConfig(
         {
           type: "fields",
           comment:
-            "Copy value from Supervisor admin page or hub server's NAISYS_FOLDER/cert/hub-access-key",
-          fields: [{ key: "HUB_ACCESS_KEY", label: "Hub Access Key" }],
+            "Generate one per host in the Supervisor (Hosts → host → Access Key). The key alone identifies this NAISYS instance.",
+          fields: [{ key: "HOST_ACCESS_KEY", label: "Host Access Key" }],
         },
         {
           type: "fields",
@@ -44,11 +44,6 @@ export function getNaisysWizardConfig(
               key: "NAISYS_FOLDER",
               label: "NAISYS Data Folder",
               defaultValue: cwdWithTilde(),
-            },
-            {
-              key: "NAISYS_HOSTNAME",
-              label: "Hostname",
-              defaultValue: os.hostname(),
             },
           ],
         },

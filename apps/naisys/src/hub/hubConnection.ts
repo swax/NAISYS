@@ -1,5 +1,5 @@
 import type { DualLogger } from "@naisys/common-node";
-import { resolveHubAccessKey } from "@naisys/common-node";
+import { resolveHostAccessKey } from "@naisys/common-node";
 import type { HubConnectErrorData } from "@naisys/hub-protocol";
 import { HubConnectErrorDataSchema } from "@naisys/hub-protocol";
 import type { Socket } from "socket.io-client";
@@ -42,9 +42,9 @@ export function createHubConnection(
   function connect() {
     hubClientLog.log(`[NAISYS:HubClient] Connecting to ${hubUrl}...`);
 
-    const hubAccessKey = resolveHubAccessKey();
-    if (!hubAccessKey) {
-      onConnectError({ message: "No hub access key available" });
+    const accessKey = resolveHostAccessKey();
+    if (!accessKey) {
+      onConnectError({ message: "HOST_ACCESS_KEY is not set" });
       return;
     }
 
@@ -56,12 +56,9 @@ export function createHubConnection(
       auth: (cb) => {
         // Re-read access key on each connection attempt so rotated keys are picked up
         cb({
-          hubAccessKey: resolveHubAccessKey(),
-          hostName: hubClientConfig.hostname,
-          machineId: hubClientConfig.machineId || undefined,
+          accessKey: resolveHostAccessKey(),
           instanceId: hubClientConfig.instanceId,
           startedAt: hubClientConfig.processStartedAt,
-          hostType: "naisys",
           clientVersion: hubClientConfig.clientVersion,
           environment: hubClientConfig.environment,
         });

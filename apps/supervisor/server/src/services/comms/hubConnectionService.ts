@@ -1,4 +1,5 @@
-import { resolveHubAccessKey } from "@naisys/common-node";
+import { randomUUID } from "node:crypto";
+
 import type {
   AgentRunCommandResponse,
   AgentRunPauseResponse,
@@ -7,7 +8,6 @@ import type {
   CodexAccessTokenResponse,
   HostTerminateResponse,
   MailSendResponse,
-  RotateAccessKeyResponse,
   ScheduleTriggerResponse,
   SupervisorEmitEvents,
   SupervisorListenEvents,
@@ -45,6 +45,7 @@ import {
 import { refreshUserLookup, resolveUsername } from "../agents/agentService.js";
 import { obfuscatePushEntries } from "../observability/runsService.js";
 import { getIO } from "./browserSocketService.js";
+import { readSupervisorAccessKey } from "./supervisorHostBootstrap.js";
 
 let socket: Socket<SupervisorListenEvents, SupervisorEmitEvents> | null = null;
 let connected = false;
@@ -53,14 +54,17 @@ let hubVersion = "";
 let hubTimezone = "UTC";
 let shuttingDown = false;
 
+const supervisorInstanceId = randomUUID();
+const supervisorProcessStartedAt = Date.now();
+
 export function initHubConnection(hubUrl: string) {
-  const hubAccessKey = resolveHubAccessKey();
+  const accessKey = readSupervisorAccessKey();
   resolvedHubUrl = hubUrl;
   shuttingDown = false;
 
-  if (!hubAccessKey) {
+  if (!accessKey) {
     getLogger().warn(
-      "[Supervisor:HubClient] HUB_ACCESS_KEY not set, skipping hub connection",
+      "[Supervisor:HubClient] Supervisor access key missing — bootstrap should have generated it. Skipping hub connection.",
     );
     return;
   }
@@ -75,11 +79,11 @@ export function initHubConnection(hubUrl: string) {
   socket = io(hubOrigin, {
     path: hubBasePath + "/socket.io",
     auth: (cb) => {
-      // Re-read access key on each connection attempt so rotated keys are picked up
+      // Re-read access key on each connection attempt so rotations land on retry
       cb({
-        hubAccessKey: resolveHubAccessKey(),
-        hostName: "SUPERVISOR",
-        hostType: "supervisor",
+        accessKey: readSupervisorAccessKey(),
+        instanceId: supervisorInstanceId,
+        startedAt: supervisorProcessStartedAt,
         clientVersion: getPackageVersion(),
       });
     },
@@ -416,10 +420,6 @@ export function isHubConnected(): boolean {
   return connected;
 }
 
-export function getHubAccessKey(): string | undefined {
-  return resolveHubAccessKey();
-}
-
 export function getHubUrl(): string | undefined {
   return resolvedHubUrl;
 }
@@ -532,19 +532,6 @@ export function sendCodexAccessTokenGet() {
     }
 
     socket.emit(HubEvents.CODEX_ACCESS_TOKEN_GET, {}, (response) => {
-      resolve(response);
-    });
-  });
-}
-
-export function sendRotateAccessKey() {
-  return new Promise<RotateAccessKeyResponse>((resolve, reject) => {
-    if (!socket || !connected) {
-      reject(new Error("Not connected to hub"));
-      return;
-    }
-
-    socket.emit(HubEvents.ROTATE_ACCESS_KEY, {}, (response) => {
       resolve(response);
     });
   });

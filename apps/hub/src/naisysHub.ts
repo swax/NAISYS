@@ -20,9 +20,8 @@ import Fastify from "fastify";
 import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
-import { loadOrCreateAccessKey } from "./auth/accessKeyService.js";
-import { createHubAccessKeyService } from "./auth/hubAccessKeyService.js";
 import { createHubCodexAuthService } from "./auth/hubCodexAuthService.js";
+import { bootstrapIntegratedNaisysHost } from "./lifecycle/integratedHostBootstrap.js";
 import { createHubRuntimeKeyService } from "./auth/hubRuntimeKeyService.js";
 import { createHubUserService } from "./auth/hubUserService.js";
 import { createHubConfigService } from "./config/hubConfigService.js";
@@ -68,18 +67,17 @@ export const startHub: StartHub = async (
 
     const serverPort = Number(process.env.SERVER_PORT) || 3300;
 
-    // Load or generate hub access key for client authentication
-    const hubAccessKey = loadOrCreateAccessKey();
-    const naisysFolder = process.env.NAISYS_FOLDER || "";
-    logService.log(
-      `[Hub] Hub access key located at: ${naisysFolder}/cert/hub-access-key`,
-    );
-
     // Schema version for sync protocol - should match NAISYS instance
     const hubDatabaseService = await createHubDatabaseService();
 
     // Seed database with agent configs from yaml files (one-time, skips if non-empty)
     await seedAgentConfigs(hubDatabaseService, logService, agentPath);
+
+    // Integrated mode: naisys runs a hub-client in the same process, so its
+    // host must exist + have an access key by the time the client connects.
+    if (startupType === "hosted") {
+      await bootstrapIntegratedNaisysHost(hubDatabaseService, logService);
+    }
 
     // Resolved once for the ACL exemption (see hubOwnershipService). Fail
     // fast at boot rather than on the first request that hits admin.
@@ -112,15 +110,7 @@ export const startHub: StartHub = async (
       path: "/hub/socket.io",
     });
 
-    const naisysServer = createNaisysServer(
-      io,
-      hubAccessKey,
-      logService,
-      hostRegistrar,
-    );
-
-    // Register hub access key rotation handler
-    createHubAccessKeyService(naisysServer, logService);
+    const naisysServer = createNaisysServer(io, logService, hostRegistrar);
 
     // Register hub config service for config_get requests from NAISYS instances
     const configService = await createHubConfigService(
@@ -250,7 +240,9 @@ export const startHub: StartHub = async (
     );
 
     // Cron-driven schedule fires: recomputes next_run_at on startup, ticks
-    // every 30s, and exposes triggerNow for the supervisor API.
+    // every 30s, and exposes triggerNow for the supervisor API. start() is
+    // deferred until after fastify.listen() so tick logs don't interleave
+    // with the supervisor bootstrap's interactive operator prompts.
     const scheduleService = createHubScheduleService(
       naisysServer,
       hubDatabaseService,
@@ -262,7 +254,6 @@ export const startHub: StartHub = async (
       configService,
       redactionService,
     );
-    scheduleService.start();
 
     /**
      * There should be no dependency between supervisor and hub
@@ -295,6 +286,9 @@ export const startHub: StartHub = async (
 
     // Start listening
     await fastify.listen({ port: serverPort, host: "0.0.0.0" });
+
+    // Now that interactive setup is past, the scheduler can safely log.
+    scheduleService.start();
 
     logService.log(
       `[Hub] Running on http://localhost:${serverPort}/hub, logs written to file`,

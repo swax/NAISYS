@@ -1,12 +1,4 @@
-import type { RotateAccessKeyResult } from "./apiClient";
-import { api, API_BASE, apiEndpoints } from "./apiClient";
-
-export async function rotateHubAccessKey(): Promise<RotateAccessKeyResult> {
-  return api.post<Record<string, never>, RotateAccessKeyResult>(
-    apiEndpoints.adminRotateAccessKey,
-    {},
-  );
-}
+import { API_BASE, apiEndpoints } from "./apiClient";
 
 export async function downloadExportConfig(): Promise<void> {
   const response = await fetch(`${API_BASE}${apiEndpoints.adminExportConfig}`);

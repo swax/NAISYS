@@ -215,27 +215,29 @@ important and hard to cover with pure unit tests.
 
 **Workflow**
 
-1. Start hub + supervisor + one NAISYS client.
-2. Assert client is connected.
-3. Rotate the hub access key through supervisor/admin or hub route.
-4. Assert old key no longer authenticates for a new client.
-5. Update the client env/key file.
+1. Start hub + supervisor + one NAISYS client connected with a host-scoped `HOST_ACCESS_KEY`.
+2. Assert the client is connected and the host shows online in the supervisor host list.
+3. Rotate that host's access key via `POST /supervisor/api/hosts/:name/rotate-access-key` (or the UI button).
+4. Assert the hub force-disconnects the live socket (the `HOST_REKEYED` path) and that the old key no longer authenticates on retry.
+5. Update `HOST_ACCESS_KEY` in the client `.env` to the new value.
 6. Restart or reconnect the client.
 7. Assert host and agent status recover.
 
 **Coverage targets**
 
-- `apps/hub/src/handlers/hubAccessKeyService.ts`
-- `apps/hub/src/services/accessKeyService.ts`
-- `apps/hub/src/services/naisysServer.ts`
+- `apps/hub/src/server/naisysServer.ts` (auth middleware)
+- `apps/hub/src/lifecycle/hostRegistrar.ts` (resolveByAccessKey, markActive)
+- `apps/hub/src/lifecycle/hubHostService.ts` (HOST_REKEYED handler)
+- `apps/supervisor/server/src/routes/infra/hosts.ts` (rotate route)
+- `apps/supervisor/server/src/services/hostService.ts` (rotateHostAccessKey)
 - `apps/naisys/src/hub/hubConnection.ts`
 - `apps/naisys/src/hub/hubClientConfig.ts`
-- `apps/supervisor/server/src/services/hubConnectionService.ts`
-- `packages/common-node`
+- `apps/supervisor/server/src/services/comms/hubConnectionService.ts`
+- `packages/common-node` (resolveHostAccessKey)
 
 **Best home**
 
-`apps/naisys/src/__tests__/e2e/hub-access-key-rotation.e2e.test.ts`
+`apps/naisys/src/__tests__/e2e/host-access-key-rotation.e2e.test.ts`
 
 ## Suggested Order
 

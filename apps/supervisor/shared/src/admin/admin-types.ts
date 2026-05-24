@@ -11,7 +11,6 @@ export const AdminInfoResponseSchema = z.object({
   hubDbSize: z.number().optional(),
   hubDbVersion: z.number(),
   hubConnected: z.boolean(),
-  hubAccessKey: z.string().optional(),
   targetVersion: z.string().optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -47,13 +46,6 @@ export const AdminAttachmentListResponseSchema = z.object({
 export type AdminAttachmentListResponse = z.infer<
   typeof AdminAttachmentListResponseSchema
 >;
-
-export const RotateAccessKeyResultSchema = z.object({
-  success: z.boolean(),
-  newAccessKey: z.string().optional(),
-  error: z.string().optional(),
-});
-export type RotateAccessKeyResult = z.infer<typeof RotateAccessKeyResultSchema>;
 
 export const ServerLogFileSchema = z.enum([
   "supervisor",

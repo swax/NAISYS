@@ -26,9 +26,9 @@ import {
   cleanupTestDir,
   createAgentYaml,
   createHubEnvFile,
-  extractAccessKey,
   getFreePort,
   getTestDir,
+  seedHostAccessKey,
   setupTestDir,
   spawnHub,
   spawnNaisys,
@@ -85,13 +85,13 @@ describe("Cross-Hub Mail E2E", () => {
   function createClientEnvFile(
     dir: string,
     hostname: string,
-    hubAccessKey: string,
+    accessKey: string,
   ) {
     const envContent = `
 NAISYS_FOLDER=""
 NAISYS_HOSTNAME="${hostname}"
 SPEND_LIMIT_DOLLARS=10
-HUB_ACCESS_KEY=${hubAccessKey}
+HOST_ACCESS_KEY=${accessKey}
 `.trim();
     writeFileSync(join(dir, ".env"), envContent);
   }
@@ -112,11 +112,13 @@ HUB_ACCESS_KEY=${hubAccessKey}
     // --- Start Hub ---
     hub = spawnHub(hubDir);
     await hub.waitForOutput("Running on http://localhost:", 30000);
-    const hubAccessKey = extractAccessKey(hubDir);
+    // Pre-create remote hosts since the hub no longer auto-registers on connect.
+    const hostAKey = seedHostAccessKey(hubDir, "HOST-A");
+    const hostBKey = seedHostAccessKey(hubDir, "HOST-B");
     await sleep(500);
 
     // --- Start Host A (admin starts automatically) ---
-    createClientEnvFile(hostADir, "HOST-A", hubAccessKey);
+    createClientEnvFile(hostADir, "HOST-A", hostAKey);
     hostA = spawnNaisys(hostADir, { args: [`--hub=${HUB_URL}`] });
     await hostA.waitForOutput("AGENT STARTED", 30000);
     await hostA.waitForPrompt();
@@ -127,7 +129,7 @@ HUB_ACCESS_KEY=${hubAccessKey}
     await hostA.switchAgent("alex");
 
     // --- Start Host B (admin starts automatically) ---
-    createClientEnvFile(hostBDir, "HOST-B", hubAccessKey);
+    createClientEnvFile(hostBDir, "HOST-B", hostBKey);
     hostB = spawnNaisys(hostBDir, { args: [`--hub=${HUB_URL}`] });
     await hostB.waitForOutput("AGENT STARTED", 30000);
     await hostB.waitForPrompt();

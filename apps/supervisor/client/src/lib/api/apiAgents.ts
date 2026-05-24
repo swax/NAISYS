@@ -10,6 +10,7 @@ import type {
   CreateAgentConfigResponse,
   ExportAgentConfigResponse,
   GetAgentConfigResponse,
+  HostAccessKeyResult,
   HostDetailResponse,
   HostListResponse,
   ImportAgentConfigResponse,
@@ -328,10 +329,19 @@ export const getHostDetail = async (
 
 export const createHostApi = async (
   name: string,
-): Promise<AgentActionResult> => {
-  return await api.post<{ name: string }, AgentActionResult>(
+): Promise<HostAccessKeyResult> => {
+  return await api.post<{ name: string }, HostAccessKeyResult>(
     apiEndpoints.hostCreate,
     { name },
+  );
+};
+
+export const rotateHostAccessKey = async (
+  hostname: string,
+): Promise<HostAccessKeyResult> => {
+  return await api.post<{}, HostAccessKeyResult>(
+    apiEndpoints.hostRotateAccessKey(hostname),
+    {},
   );
 };
 

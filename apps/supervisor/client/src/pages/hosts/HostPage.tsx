@@ -4,6 +4,8 @@ import {
   Anchor,
   Badge,
   Button,
+  Code,
+  CopyButton,
   Group,
   Loader,
   Menu,
@@ -19,8 +21,11 @@ import { notifications } from "@mantine/notifications";
 import { formatVersion, hasAction, hasActionTemplate } from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
 import {
+  IconCheck,
+  IconCopy,
   IconEdit,
   IconInfoCircle,
+  IconKey,
   IconPlus,
   IconPower,
   IconTrash,
@@ -42,6 +47,7 @@ import {
   assignAgentToHost,
   deleteHost,
   getHostDetail,
+  rotateHostAccessKey,
   terminateHostClient,
   unassignAgentFromHost,
   updateHostApi,
@@ -86,6 +92,9 @@ export const HostPage: React.FC = () => {
   const [assigning, setAssigning] = useState(false);
   const [terminating, setTerminating] = useState(false);
   const [terminateModalOpen, setTerminateModalOpen] = useState(false);
+  const [rotateConfirmOpen, setRotateConfirmOpen] = useState(false);
+  const [rotating, setRotating] = useState(false);
+  const [newAccessKey, setNewAccessKey] = useState<string | null>(null);
 
   const host = hostname ? hosts.find((h) => h.name === hostname) : undefined;
 
@@ -203,6 +212,39 @@ export const HostPage: React.FC = () => {
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleRotateAccessKey = async () => {
+    if (!hostname) return;
+    setRotating(true);
+    try {
+      const result = await rotateHostAccessKey(hostname);
+      if (result.success && result.accessKey) {
+        setRotateConfirmOpen(false);
+        setNewAccessKey(result.accessKey);
+        notifications.show({
+          title: "Access Key Rotated",
+          message: result.message,
+          color: "green",
+        });
+        void queryClient.invalidateQueries({ queryKey: ["host-data"] });
+        void refetch();
+      } else {
+        notifications.show({
+          title: "Rotate Failed",
+          message: result.message,
+          color: "red",
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: "Rotate Failed",
+        message: err instanceof Error ? err.message : "Unknown error",
+        color: "red",
+      });
+    } finally {
+      setRotating(false);
     }
   };
 
@@ -519,12 +561,6 @@ export const HostPage: React.FC = () => {
               </Table.Td>
             </Table.Tr>
           )}
-          {hostDetail?.machineId && (
-            <Table.Tr>
-              <Table.Td c="dimmed">Machine ID</Table.Td>
-              <Table.Td>{hostDetail.machineId}</Table.Td>
-            </Table.Tr>
-          )}
           {hostDetail?.lastIp && (
             <Table.Tr>
               <Table.Td c="dimmed">Last IP</Table.Td>
@@ -539,8 +575,116 @@ export const HostPage: React.FC = () => {
               </Table.Td>
             </Table.Tr>
           )}
+          {hostDetail?.hostType !== "supervisor" && (
+            <Table.Tr>
+              <Table.Td c="dimmed">Access Key</Table.Td>
+              <Table.Td>
+                <Group gap="sm" wrap="nowrap">
+                  <Badge
+                    size="sm"
+                    variant="light"
+                    color={hostDetail?.hasAccessKey ? "green" : "gray"}
+                  >
+                    {hostDetail?.hasAccessKey ? "configured" : "not set"}
+                  </Badge>
+                  {hasAction(actions, "rotate-access-key") && (
+                    <Button
+                      size="compact-xs"
+                      variant="subtle"
+                      leftSection={<IconKey size={14} />}
+                      onClick={() => setRotateConfirmOpen(true)}
+                    >
+                      {hostDetail?.hasAccessKey ? "Rotate" : "Generate"}
+                    </Button>
+                  )}
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          )}
         </Table.Tbody>
       </Table>
+
+      {/* Rotate-key confirmation */}
+      <Modal
+        opened={rotateConfirmOpen}
+        onClose={() => setRotateConfirmOpen(false)}
+        title={
+          hostDetail?.hasAccessKey
+            ? `Rotate access key for "${host?.name ?? hostname}"`
+            : `Generate access key for "${host?.name ?? hostname}"`
+        }
+        centered
+      >
+        <Stack gap="sm">
+          {hostDetail?.hasAccessKey ? (
+            <Text size="sm">
+              A fresh access key will be generated. The old key will be rejected
+              on future connections and reconnects, but the current connection
+              is not disconnected automatically. Terminate the host if you need
+              to force it off now.
+            </Text>
+          ) : (
+            <Text size="sm">
+              An access key will be generated for this host. Copy it into the
+              NAISYS instance's <Code>HOST_ACCESS_KEY</Code> env var to let it
+              connect — the plaintext will only be shown once.
+            </Text>
+          )}
+          <Group justify="flex-end" mt="xs">
+            <Button
+              variant="default"
+              onClick={() => setRotateConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="blue"
+              loading={rotating}
+              leftSection={<IconKey size={16} />}
+              onClick={handleRotateAccessKey}
+            >
+              {hostDetail?.hasAccessKey ? "Rotate" : "Generate"}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* One-time plaintext key display */}
+      <Modal
+        opened={newAccessKey !== null}
+        onClose={() => setNewAccessKey(null)}
+        title={`Access Key for "${host?.name ?? hostname}"`}
+        centered
+        size="lg"
+      >
+        <Stack gap="sm">
+          <Alert color="yellow" icon={<IconInfoCircle size={16} />}>
+            Copy this now — it will not be shown again. Set it on the NAISYS
+            host as <Code>HOST_ACCESS_KEY</Code> in its <Code>.env</Code>.
+          </Alert>
+          <Code block style={{ wordBreak: "break-all" }}>
+            {newAccessKey ?? ""}
+          </Code>
+          <Group justify="flex-end">
+            <CopyButton value={newAccessKey ?? ""}>
+              {({ copied, copy }) => (
+                <Button
+                  variant="default"
+                  leftSection={
+                    copied ? <IconCheck size={16} /> : <IconCopy size={16} />
+                  }
+                  onClick={copy}
+                >
+                  {copied ? "Copied" : "Copy key"}
+                </Button>
+              )}
+            </CopyButton>
+            <Button color="blue" onClick={() => setNewAccessKey(null)}>
+              Done
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Active Agents — not applicable for supervisor hosts */}
       {hostDetail?.hostType !== "supervisor" && (

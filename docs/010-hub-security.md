@@ -1,64 +1,95 @@
-# Hub Security: Access Key Authentication
+# Hub Security: Per-Host Access Keys
 
 ## Goal
 
-Make self-hosted hubs secure with zero manual secret setup. An auto-generated access key authenticates clients; TLS is delegated to a reverse proxy.
-
-## Problem
-
-The hub originally used plain HTTP with a manually configured `HUB_ACCESS_KEY` shared secret. Two issues:
-
-1. **No encryption** — traffic between hub and clients (NAISYS instances, Supervisor) was cleartext, including auth tokens and agent data.
-2. **Manual key management** — the admin had to invent a secret and copy it to every machine's `.env`.
+Each NAISYS instance authenticates to the hub with a key that identifies a specific host row in the DB. There is no global shared secret; rotating one host's key only affects that host. TLS is delegated to a reverse proxy.
 
 ## Design
 
 ### Division of responsibility
 
 - **Transport encryption** → reverse proxy (nginx, Caddy, Cloudflare, ngrok, etc.). The hub listens on plain HTTP bound to `0.0.0.0`; the proxy terminates TLS in front of it.
-- **Client authentication** → hub access key, checked in the Socket.IO auth middleware.
+- **Client identity + authentication** → per-host access key, hashed in the `hosts` table and checked in the Socket.IO auth middleware.
 - **Per-user authorization** (attachment upload/download, REST endpoints) → per-user API keys sent as `Authorization: Bearer <key>`. Two flavors — external (supervisor/ERP, user-managed) and internal (hub runtime keys, hub-minted) — both stored hashed. See [Per-user API keys](#per-user-api-keys).
 
-This keeps the hub implementation simple and lets operators use whatever TLS setup they already trust (Let's Encrypt via Caddy, a managed tunnel, an internal CA, etc.) instead of a self-signed fingerprint-pinning scheme.
+This keeps the hub implementation simple and lets operators use whatever TLS setup they already trust (Let's Encrypt via Caddy, a managed tunnel, an internal CA, etc.).
 
 ### Access key format
 
-A single random secret: 32 bytes of `crypto.randomBytes` hex-encoded to 64 characters. No structure, no prefix, no embedded identifier.
+A single random secret per host: 32 bytes of `crypto.randomBytes` hex-encoded to 64 characters. No structure, no prefix, no embedded identifier.
 
-Stored at `NAISYS_FOLDER/cert/hub-access-key` with mode `0o600`. On first startup the hub generates it; on subsequent startups it reads the existing file.
+Storage:
 
-The path still uses `cert/` for historical reasons (it previously held TLS material too).
+- **DB**: `hosts.access_key_hash` holds `sha256(plaintext)` (hex). The column is `@unique` so auth is a single indexed lookup.
+- **Plaintext**: never persisted by the hub. Shown once in the supervisor UI at create/rotate time. The operator copies it into the NAISYS client's `HOST_ACCESS_KEY` env var.
 
-### Access key resolution on clients
+A plain SHA-256 (not bcrypt/scrypt) is fine because the input is already 256 bits of entropy — there's no password to brute-force, so a slow KDF would buy nothing.
 
-Clients resolve the access key via `resolveHubAccessKey()` in `@naisys/common-node`:
+### How keys reach clients
 
-1. `process.env.HUB_ACCESS_KEY` if set (standalone/multi-machine mode)
-2. Otherwise fall back to reading `NAISYS_FOLDER/cert/hub-access-key` (integrated mode, where the hub and client share a data folder)
+There are three host shapes, each with its own provisioning path.
 
-The key is re-read on every connection attempt so that a rotated key is picked up on the next reconnect without restarting the client.
+**1. Remote NAISYS client** (`naisys --hub=https://…`)
+
+The standard case. The operator:
+
+1. Opens the supervisor → Hosts → **Add Host**, enters a name, clicks Create.
+2. Copies the plaintext key shown in the one-time modal (or copies the `HOST_ACCESS_KEY=…` snippet directly).
+3. Pastes it into the NAISYS machine's `.env`.
+4. Starts NAISYS — the client sends the key in the handshake, the hub hashes it, matches `hosts.access_key_hash`, attaches the socket to that host.
+
+If a host needs a new key (suspected leak, machine handoff), the supervisor's host detail page exposes a **Rotate** action that generates a fresh key, replaces the hash, and shows the new plaintext once. The previous key stops authenticating immediately.
+
+**2. Integrated NAISYS** (`naisys --integrated-hub`)
+
+The hub and a NAISYS client share a process, so the client needs a key but the operator usually doesn't want to babysit one. `bootstrapIntegratedNaisysHost` runs inside `startHub` (only when `startupType === "hosted"`) and:
+
+1. Resolves the hostname (`NAISYS_HOSTNAME` env, falling back to `os.hostname()`).
+2. Resolves the plaintext key in order: `process.env.HOST_ACCESS_KEY` → `NAISYS_FOLDER/cert/integrated-naisys-access-key` → freshly generated and cached to that file (mode `0o600`).
+3. Sets `process.env.HOST_ACCESS_KEY` so the in-process hub-client picks it up via `resolveHostAccessKey()`.
+4. Ensures a `hosts` row exists for that hostname with `access_key_hash = sha256(plaintext)` (creates if missing, reconciles if drifted).
+
+Net effect: first run silently generates and caches a key; later runs reuse it; setting the env var explicitly always wins.
+
+**3. Supervisor's own hub-client**
+
+The supervisor is also a hub-client (it subscribes to log/mail/cost push events). Its bootstrap mirrors the integrated path but is cleaner — there's no env var because the supervisor isn't user-configurable as a host. `bootstrapSupervisorHost` runs inside `bootstrapSupervisor`:
+
+1. Cached plaintext lives at `NAISYS_FOLDER/cert/integrated-supervisor-access-key`.
+2. If the file exists and its hash matches `hosts.access_key_hash` for the `SUPERVISOR` host, short-circuit.
+3. Otherwise generate a fresh key, write the file, upsert the `SUPERVISOR` row with `host_type = supervisor` and the new hash.
+
+The hash check on the short-circuit means a DB restore that doesn't restore the cert file (or vice versa) regenerates rather than failing handshake silently.
 
 ### Authentication middleware
 
-The hub's Socket.IO middleware (`apps/hub/src/services/naisysServer.ts`) validates `socket.handshake.auth.hubAccessKey` against the hub's current access key. Mismatch → connection rejected with error code `invalid_access_key`. Missing `hostName` → `missing_host_name`. Registration failure → `registration_failed`.
+`apps/hub/src/server/naisysServer.ts` handles every incoming socket:
 
-The middleware also records `hostType` (`naisys` or `supervisor`), `machineId`, `instanceId`, `processStartedAt`, and `clientVersion` on `socket.data` for downstream services. If a newer process for the same host reconnects, the older connection is superseded; an older process trying to reclaim a host is rejected with `superseded_by_newer_instance`.
+1. Pull `accessKey`, `instanceId`, `startedAt`, `clientVersion`, `environment` off `socket.handshake.auth`.
+2. Reject with `invalid_access_key` (non-fatal) if `accessKey` is missing.
+3. Call `hostRegistrar.resolveByAccessKey(accessKey)` — hashes the plaintext, looks up by `access_key_hash`. Returns `null` if no row matches; reject with `invalid_access_key`.
+4. Call `hostRegistrar.markActive(resolved, ip, version, environment)` — stamps `last_active`, `last_ip`, `last_version`, `environment` on the row and upserts the in-memory cache so the host shows up in the next `HOSTS_UPDATED` broadcast even if it was added after registrar startup.
+5. For `naisys` hostType: supersede any existing connection for this `hostId` from an older process (the newer `processStartedAt` wins). Older processes attempting to reclaim a host are rejected with `superseded_by_newer_instance`. Supervisors are exempt — multiple supervisor browsers can coexist on the same `SUPERVISOR` host.
+6. Attach `hostId`, `hostName`, `instanceId`, `processStartedAt`, `hostType`, `clientVersion` to `socket.data` for downstream services.
+
+The handshake no longer carries `hostName`, `machineId`, or `hostType` — the DB row resolved from the access key is authoritative for all three.
+
+After a successful connection, the hub pushes a slim `HOST_REGISTERED` event (`{ hostId, hostName }`) back to the client so it knows which row in `HOSTS_UPDATED` is itself.
 
 ### Access key rotation
 
-The supervisor admin page exposes a rotate action. The flow:
+Rotation is per-host, not global. The flow:
 
-1. Supervisor emits `rotate_access_key` to the hub over its existing socket.
-2. `hubAccessKeyService.ts` calls `rotateAccessKey()`, which writes a new random 32-byte hex key to `hub-access-key` (still mode `0o600`).
-3. The hub's auth middleware is updated in-memory via `naisysServer.updateHubAccessKey(newKey)` so new connections use the new key immediately.
-4. The ack response returns the new key to the requesting supervisor so the admin can copy it.
-5. The hub then calls `disconnectAllClients()`. All NAISYS instances and supervisors drop. Each will reconnect, but only clients that have been given the new key will succeed.
+1. Operator opens the supervisor → Hosts → selected host, clicks **Rotate**.
+2. Supervisor `POST /hosts/:hostname/rotate-access-key` calls `rotateHostAccessKey(hostname)` → generates a fresh 32-byte key, replaces `hosts.access_key_hash`, returns plaintext.
+3. The route also sends `HOST_REKEYED` to the hub. The hub handler force-disconnects any live socket bound to that `hostId` so the client is pushed off the stale key immediately; its next reauth fails with `invalid_access_key`, prompting the operator to update `HOST_ACCESS_KEY` on the remote machine.
+4. The plaintext is shown in a one-time modal (with `HOST_ACCESS_KEY=…` snippet + copy button). It is not persisted server-side and is never shown again.
 
-The rotated key is shown in the supervisor UI's admin page only — it is not pushed to other clients. Remote NAISYS instances must be re-configured with the new `HUB_ACCESS_KEY`.
+The `SUPERVISOR` host can't be rotated through this route — its bootstrap is self-managed; rotating from the UI would just race the bootstrap on next restart.
 
 ## Per-user API keys
 
-Distinct from the hub access key, individual users hold their own API keys for REST endpoints (attachment upload/download, supervisor and ERP HTTP routes). All are 32 random bytes hex-encoded and stored as SHA-256 hashes — `hashToken()` is the same helper across the codebase. Plaintext is never re-derivable from the DB. Two flavors:
+Distinct from the host access key, individual users hold their own API keys for REST endpoints (attachment upload/download, supervisor and ERP HTTP routes). All are 32 random bytes hex-encoded and stored as SHA-256 hashes — `hashToken()` is the same helper across the codebase. Plaintext is never re-derivable from the DB. Two flavors:
 
 ### External keys (supervisor / ERP user-facing)
 
@@ -66,7 +97,7 @@ Issued from the supervisor Users page and the ERP equivalent. The plaintext is s
 
 ### Internal keys (hub runtime keys for runners / agents)
 
-NAISYS runners and the agents they host need to call hub REST endpoints (e.g. attachment upload). They authenticate with a per-agent `NAISYS_API_KEY` minted by the hub, never displayed to a user. Stored as `api_key_hash` on the hub `users` table (`packages/hub-database/prisma/schema.prisma:185`).
+NAISYS runners and the agents they host need to call hub REST endpoints (e.g. attachment upload). They authenticate with a per-agent `NAISYS_API_KEY` minted by the hub, never displayed to a user. Stored as `api_key_hash` on the hub `users` table (`packages/hub-database/prisma/schema.prisma`).
 
 `hubRuntimeKeyService.ts` is the issuer: `issueRuntimeApiKey(userId)` generates 32 random bytes, writes the hash to `users.api_key_hash`, and registers the plaintext with the redaction service so log lines that happen to include the key get scrubbed before DB write. `revokeRuntimeApiKey(userId)` clears the hash and the redactor's per-user plaintext set.
 
@@ -74,7 +105,7 @@ NAISYS runners and the agents they host need to call hub REST endpoints (e.g. at
 
 Because internal keys are runtime-only, the hub holds the plaintext only in memory. After a hub restart it has the hash but not the plaintext, so it can no longer recognize the key in incoming logs to redact it. The fix: re-issue.
 
-The heartbeat carries a `runtimeApiKeys` array (`packages/hub-protocol/src/schemas/heartbeat.ts:36`) — one `{ userId, runtimeApiKey? }` claim per top-level agent the runner is hosting. On each heartbeat (`apps/hub/src/handlers/hubHeartbeatService.ts:128`) the hub:
+The heartbeat carries a `runtimeApiKeys` array — one `{ userId, runtimeApiKey? }` claim per top-level agent the runner is hosting. On each heartbeat the hub:
 
 1. Re-registers each claimed plaintext with the redactor (idempotent; old plaintexts accumulate per user as a `Set` so leaks during a rotation transition window still scrub — the set is cleared on `AGENT_STOP`).
 2. Compares `hashToken(claim.runtimeApiKey)` against `users.api_key_hash`. If it matches, nothing to do.
@@ -86,16 +117,18 @@ Net effect: across any hub restart the agent ends up with a key whose plaintext 
 
 `hubRedactionService.ts` strips known secrets from text before it hits the DB or gets rebroadcast. It sits in front of any persisted free-form input from clients:
 
-- `hubLogService.ts:35` — `redactionService.redact(entry.message)` on every log line.
-- `hubSendMailService.ts:33` — `redact(params.subject)` and `redact(params.body)` on every outgoing mail.
+- `hubLogService.ts` — `redactionService.redact(entry.message)` on every log line.
+- `hubSendMailService.ts` — `redact(params.subject)` and `redact(params.body)` on every outgoing mail.
 
 Sources of secrets to scrub:
 
 1. **DB variables flagged sensitive** — rows from the hub `variables` table where `sensitive = true`, loaded once at service startup (`rebuildDbSecrets`) and rebuilt on every `HubEvents.VARIABLES_CHANGED`. Replacement form is `[REDACTED:<key>]` so the variable name leaks but the value doesn't. Sorted longest-first so a value that's a prefix of another doesn't get partially replaced.
 2. **Runtime NAISYS API keys** — plaintext registered by `issueRuntimeApiKey` and by heartbeat re-registration, accumulated per `userId` as a `Set` so old plaintexts within an agent's transition window still match. Replacement form `[REDACTED:NAISYS_API_KEY:<userId>]`.
-3. **Pattern fallbacks** — generic shapes that catch unregistered tokens: `Authorization: Bearer/Basic ...`, PEM private key blocks, JWTs, AWS access key IDs (`AKIA...`).
+3. **Pattern fallbacks** — generic shapes that catch unregistered tokens: `Authorization: Bearer/Basic …`, PEM private key blocks, JWTs, AWS access key IDs (`AKIA…`).
 
 Values shorter than 6 characters are skipped to avoid pathological substitution. The redactor only runs on the hub side — clients trust nothing-redacted local logs.
+
+Host access keys are not registered with the redactor because the hub never receives them as text in normal operation (they're only in `socket.handshake.auth` on the connecting socket, never in messages).
 
 ### Why no fingerprint-pinning scheme?
 
@@ -105,62 +138,71 @@ The original design bundled a TLS certificate fingerprint prefix into the access
 - Even when the proxy uses self-signed certs, operators already have their own process for distributing trust roots.
 - Keeping the hub itself plain-HTTP simplifies testing, makes `ngrok` and managed tunnels work out of the box, and removes the need for cert rotation in the hub.
 
-Clients never do TLS pinning. The access key alone authenticates them to the hub; the TLS layer (if any) is the operator's responsibility.
+Clients never do TLS pinning. The per-host access key alone authenticates them to the hub; the TLS layer (if any) is the operator's responsibility.
 
 ## Setup flows
 
 ### Integrated mode (single machine)
 
-`naisys --integrated-hub` runs the hub in the same process as the NAISYS runner. Both read the access key from the shared `NAISYS_FOLDER/cert/hub-access-key` file, so no configuration is needed — it just works.
+`naisys --integrated-hub` just works. The bootstrap creates the SUPERVISOR host (if `--supervisor`) and the local naisys host on first run, caching plaintext keys under `NAISYS_FOLDER/cert/`. No env-var setup needed; no copying secrets.
 
 ### Standalone mode (multi-machine)
 
-1. Start the hub on machine A. It logs the access key path: `[Hub] Hub access key located at: <NAISYS_FOLDER>/cert/hub-access-key`. Read the file to get the key — or copy it from the supervisor admin page.
-2. On machine B, set the client `.env`:
+1. On the hub machine, open the supervisor → Hosts → **Add Host**, name it (e.g. `worker-gpu-01`), click Create.
+2. Copy the plaintext key from the one-time modal.
+3. On the worker machine, set the client `.env`:
    ```
-   HUB_ACCESS_KEY=<the access key from step 1>
+   HOST_ACCESS_KEY=<key from step 2>
    ```
-3. Run naisys with `--hub=https://hub.example.com/hub` (where the reverse proxy sits in front of machine A's plain-HTTP hub port).
-4. The client connects, the proxy terminates TLS, Socket.IO authenticates via the access key.
+4. Run `naisys --hub=https://hub.example.com/hub` (where the reverse proxy sits in front of the hub's plain-HTTP port).
+5. The client connects, the proxy terminates TLS, Socket.IO authenticates via the per-host access key.
 
-The access key only needs to be copied once per client machine. If it's rotated, every client needs the new key.
+`NAISYS_HOSTNAME` on the remote client is irrelevant — the hub already knows the host's name from the row the key resolves to.
+
+Repeat steps 1–4 for each additional remote host. Each gets its own key; nothing is shared.
 
 ### Reverse proxy notes
 
 - The hub serves Socket.IO on `/hub/socket.io` and attachment routes on `/hub/attachments`. Route everything under `/hub` through to the hub's `SERVER_PORT` (default 3300).
 - Socket.IO needs WebSocket upgrade support (`Connection: upgrade`, `Upgrade: websocket`).
-- For ngrok, clients send the `ngrok-skip-browser-warning: true` header automatically (`hubConnection.ts:54`).
+- For ngrok, clients send the `ngrok-skip-browser-warning: true` header automatically (`hubConnection.ts`).
 
 ## Security considerations
 
-- **File permissions** — `hub-access-key` is written with mode `0o600` (owner read/write only).
-- **Access key required** — Clients without an access key fail fast (`hubClientConfig.ts:11` throws; `hubConnection.ts:46` reports `No hub access key available`) rather than attempting an unauthenticated connection.
+- **File permissions** — Bootstrap cert files (`integrated-naisys-access-key`, `integrated-supervisor-access-key`) are written with mode `0o600` (owner read/write only).
+- **Access key required** — Clients without an access key fail fast (`hubClientConfig.ts` throws; `hubConnection.ts` reports `HOST_ACCESS_KEY is not set`) rather than attempting an unauthenticated connection.
+- **No auto-registration** — Unknown access keys are rejected. A host must exist in the supervisor (or be bootstrapped by an integrated process) before its key works. This eliminates the old "first-connect creates a host" footgun.
 - **Transport encryption** — Provided externally by the reverse proxy. The hub does not serve HTTPS itself, so deploying the hub directly on the public internet without a proxy exposes the access key in cleartext. The documented setup assumes a proxy is in front of any non-loopback deployment.
-- **Rotation disconnects everyone** — Rotation is deliberately disruptive: all clients are kicked so there's no grace period where the old key still works. The new key is returned only to the requesting supervisor.
-- **Persistence** — The access key survives restarts. Deleting `cert/hub-access-key` forces regeneration on next startup.
-- **Per-user keys are separate** — Attachment upload/download and REST endpoints use per-user API keys (`Authorization: Bearer`), not the hub access key. External keys are managed on the supervisor Users page; internal runtime keys are minted by the hub per agent and never surface in the UI. See [Per-user API keys](#per-user-api-keys).
+- **Rotation kicks the affected host** — Rotating a host's key sends `HOST_REKEYED` to the hub, which drops the live socket for that host. The next reauth attempt fails with `invalid_access_key` and the operator updates `HOST_ACCESS_KEY` on the remote machine. Other hosts are unaffected.
+- **Persistence** — Bootstrap keys for integrated/supervisor survive restarts. Deleting their cert files forces regeneration on next startup (and the bootstrap reconciles the matching `hosts` row to the new hash).
+- **Per-user keys are separate** — Attachment upload/download and REST endpoints use per-user API keys (`Authorization: Bearer`), not host access keys. External keys are managed on the supervisor Users page; internal runtime keys are minted by the hub per agent and never surface in the UI. See [Per-user API keys](#per-user-api-keys).
+- **Excluded from client config distribution** — `HOST_ACCESS_KEY` (and the legacy `HUB_ACCESS_KEY` name, for upgraded installs) are in `globalConfigLoader.EXCLUDED_KEYS` so the hub never distributes them via the config channel.
 
 ## Environment variables
 
-| Variable         | Where                     | Purpose                                                                  |
-| ---------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `NAISYS_FOLDER`  | Hub, NAISYS, Supervisor   | Base directory for the access key file (`NAISYS_FOLDER/cert/`)           |
-| `HUB_ACCESS_KEY` | NAISYS client, Supervisor | The hub's access key — required for remote (standalone) hub connections  |
+| Variable          | Where                     | Purpose                                                                  |
+| ----------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `NAISYS_FOLDER`   | Hub, NAISYS, Supervisor   | Base directory for cert files and databases (`NAISYS_FOLDER/cert/`)      |
+| `HOST_ACCESS_KEY` | NAISYS client             | The host's access key — required for remote (standalone) hub connections |
+| `NAISYS_HOSTNAME` | NAISYS (integrated only)  | Optional override for the host's name on first integrated bootstrap      |
 | `SERVER_PORT`    | Hub                       | Plain-HTTP port the hub listens on (default 3300); the proxy points here |
 
-`HUB_ACCESS_KEY` is listed in `globalConfigLoader.EXCLUDED_KEYS` so the hub never distributes it to clients through the config channel.
+`HOST_ACCESS_KEY` is listed in `globalConfigLoader.EXCLUDED_KEYS` (alongside the legacy `HUB_ACCESS_KEY` name) so the hub never distributes it to clients through the config channel.
 
 ## Files
 
-| File                                                          | Role                                                       |
-| ------------------------------------------------------------- | ---------------------------------------------------------- |
-| `apps/hub/src/services/accessKeyService.ts`                   | Generates, loads, and rotates the hub access key on disk   |
-| `apps/hub/src/handlers/hubAccessKeyService.ts`                | Handles `rotate_access_key` requests from the supervisor   |
-| `apps/hub/src/handlers/hubRuntimeKeyService.ts`               | Mints / revokes per-agent runtime API keys (hashed)        |
-| `apps/hub/src/handlers/hubRedactionService.ts`                | Scrubs sensitive variables and runtime keys from logs/mail |
-| `apps/hub/src/services/naisysServer.ts`                       | Socket.IO auth middleware that validates the access key    |
-| `packages/common-node/src/hubCertVerification.ts`             | Shared `resolveHubAccessKey()` / `readHubAccessKeyFile()`  |
-| `apps/naisys/src/hub/hubClientConfig.ts`                      | Client-side check that an access key is configured         |
-| `apps/naisys/src/hub/hubConnection.ts`                        | NAISYS Socket.IO client — sends the key in `auth`          |
-| `apps/supervisor/server/src/services/hubConnectionService.ts` | Supervisor Socket.IO client — sends the key in `auth`      |
-| `NAISYS_FOLDER/cert/hub-access-key`                           | The access key (mode 0o600)                                |
+| File                                                                       | Role                                                                       |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `apps/hub/src/server/naisysServer.ts`                                      | Socket.IO auth middleware that resolves host by access-key hash            |
+| `apps/hub/src/lifecycle/hostRegistrar.ts`                                  | `resolveByAccessKey` + `markActive` + cache                                |
+| `apps/hub/src/lifecycle/integratedHostBootstrap.ts`                        | Generates/reconciles the integrated naisys host + key                      |
+| `apps/hub/src/lifecycle/hubHostService.ts`                                 | Broadcasts host list; handles `HOST_REKEYED` (force-disconnect)            |
+| `apps/supervisor/server/src/services/comms/supervisorHostBootstrap.ts`     | Generates/reconciles the SUPERVISOR host + key                             |
+| `apps/supervisor/server/src/services/hostService.ts`                       | `createHost` + `rotateHostAccessKey` (DB-side key generation)              |
+| `apps/supervisor/server/src/routes/infra/hosts.ts`                         | `POST /hosts` (with plaintext in response) + rotate route                  |
+| `apps/supervisor/server/src/services/comms/hubConnectionService.ts`        | Supervisor's hub-client — reads cert key, sends `HOST_REKEYED`             |
+| `packages/common-node/src/hub/hostAccessKey.ts`                            | Shared `resolveHostAccessKey()` (env-var only)                             |
+| `apps/naisys/src/hub/hubClientConfig.ts`                                   | Client-side check that `HOST_ACCESS_KEY` is configured                     |
+| `apps/naisys/src/hub/hubConnection.ts`                                     | NAISYS Socket.IO client — sends the key in `auth`                          |
+| `NAISYS_FOLDER/cert/integrated-naisys-access-key`                          | Plaintext key for the integrated naisys host (mode 0o600)                  |
+| `NAISYS_FOLDER/cert/integrated-supervisor-access-key`                      | Plaintext key for the SUPERVISOR host (mode 0o600)                         |

@@ -1,8 +1,9 @@
 import { sleep } from "@naisys/common";
+import Database from "better-sqlite3";
 import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
-import { randomUUID } from "crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { createHash, randomBytes, randomUUID } from "crypto";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "fs";
 import { createServer } from "net";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
@@ -235,15 +236,26 @@ SERVER_PORT=${options.port}
 }
 
 /**
- * Extract the hub access key by reading it from the cert directory.
- * The hub writes the key to ${naisysFolder}/cert/hub-access-key on startup.
+ * Seed a host row with a fresh access key and return the plaintext.
+ * The hub no longer auto-registers on connect, so remote-client tests must
+ * pre-create the host before spawning a `--hub` NAISYS client.
  */
-export function extractAccessKey(naisysFolder: string): string {
-  const keyPath = join(naisysFolder, "cert", "hub-access-key");
-  if (!existsSync(keyPath)) {
-    throw new Error(`Hub access key file not found at: ${keyPath}`);
+export function seedHostAccessKey(
+  naisysFolder: string,
+  hostname: string,
+): string {
+  const dbPath = join(naisysFolder, "database", "naisys_hub.db");
+  const accessKey = randomBytes(32).toString("hex");
+  const hash = createHash("sha256").update(accessKey).digest("hex");
+  const db = new Database(dbPath);
+  try {
+    db.prepare(
+      `INSERT INTO hosts (name, host_type, access_key_hash) VALUES (?, 'naisys', ?)`,
+    ).run(hostname, hash);
+  } finally {
+    db.close();
   }
-  return readFileSync(keyPath, "utf-8").trim();
+  return accessKey;
 }
 
 export interface HubTestProcess {

@@ -6,36 +6,25 @@ import {
 import table from "text-table";
 
 import { hostCmd } from "../../command/commandDefs.js";
-import type { GlobalConfig } from "../../globalConfig.js";
 import type { HubClient } from "../../hub/hubClient.js";
-import type { HubClientConfig } from "../../hub/hubClientConfig.js";
-import type { PromptNotificationService } from "../../utils/output/promptNotificationService.js";
 
 interface HostEntry {
   hostName: string;
-  machineId: string;
   restricted: boolean;
   hostType: string;
   online: boolean;
 }
 
 /** Receives HOSTS_UPDATED pushes from the hub and provides hostId → hostName lookups */
-export function createHostService(
-  hubClient: HubClient | undefined,
-  hubClientConfig: HubClientConfig | undefined,
-  globalConfig: GlobalConfig,
-  promptNotification: PromptNotificationService,
-) {
+export function createHostService(hubClient: HubClient | undefined) {
   const hostMap = new Map<number, HostEntry>();
-  let localMachineId = hubClientConfig?.machineId ?? "";
+  let localHostId: number | undefined;
 
   if (hubClient) {
-    // Handle HOST_REGISTERED — store machineId if we didn't have one
+    // Capture our own hostId so we can label ourselves in HOSTS_UPDATED and ignore self-originated relays.
     hubClient.registerEvent(HubEvents.HOST_REGISTERED, (data) => {
       const registered = HostRegisteredSchema.parse(data);
-      localMachineId = registered.machineId;
-      globalConfig.updateEnvValue("NAISYS_MACHINE_ID", registered.machineId);
-      globalConfig.updateEnvValue("NAISYS_HOSTNAME", registered.hostName);
+      localHostId = registered.hostId;
     });
 
     hubClient.registerEvent(HubEvents.HOSTS_UPDATED, (data) => {
@@ -46,29 +35,10 @@ export function createHostService(
       for (const host of parsed.hosts) {
         hostMap.set(host.hostId, {
           hostName: host.hostName,
-          machineId: host.machineId,
           restricted: host.restricted,
           hostType: host.hostType,
           online: host.online,
         });
-
-        // Detect hostname rename: if this is our machineId but a different name
-        if (
-          localMachineId &&
-          host.machineId === localMachineId &&
-          host.hostName !== process.env.NAISYS_HOSTNAME
-        ) {
-          const oldName = process.env.NAISYS_HOSTNAME;
-          globalConfig.updateEnvValue("NAISYS_HOSTNAME", host.hostName);
-          if (oldName) {
-            promptNotification.notify({
-              wake: "always",
-              commentOutput: [
-                `Hostname changed: ${oldName} → ${host.hostName}`,
-              ],
-            });
-          }
-        }
       }
     });
   }
@@ -77,22 +47,8 @@ export function createHostService(
     return hostMap.get(hostId)?.hostName;
   }
 
-  /** Resolve lazily — HOSTS_UPDATED may arrive before VARIABLES_UPDATED */
   function getLocalHostId(): number | undefined {
-    if (localMachineId) {
-      for (const [hostId, entry] of hostMap) {
-        if (entry.machineId === localMachineId) return hostId;
-      }
-    }
-
-    // Fallback to hostname match
-    const localHostName = globalConfig.globalConfig()?.hostname;
-    if (!localHostName) return undefined;
-
-    for (const [hostId, entry] of hostMap) {
-      if (entry.hostName === localHostName) return hostId;
-    }
-    return undefined;
+    return localHostId;
   }
 
   function isHostActive(hostId: number): boolean {
@@ -111,8 +67,6 @@ export function createHostService(
     if (hostMap.size === 0) {
       return "No hosts registered";
     }
-
-    const localHostId = getLocalHostId();
 
     const rows = Array.from(hostMap, ([hostId, entry]) => {
       const isLocal = hostId === localHostId;

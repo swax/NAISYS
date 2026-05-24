@@ -240,9 +240,7 @@ export function createHubClient(
       case "superseded_by_newer_instance":
         return "This NAISYS instance was superseded by a newer local process.";
       case "invalid_access_key":
-        return "Hub access key was rejected by the server.";
-      case "missing_host_name":
-        return "Hub connection rejected: missing host name.";
+        return "Host access key was rejected by the server.";
       case "registration_failed":
         return `Hub rejected host registration: ${error.message}`;
       default:

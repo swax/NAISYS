@@ -24,7 +24,7 @@ For a production install that auto-restarts, see [PM2 deployment](guides/pm2-dep
 1. Start the integrated server on one machine.
 2. Make it reachable by the group with a reverse proxy or a tunnel like [ngrok](https://ngrok.com/).
 3. Create user accounts for the people who should help manage the organization.
-4. Have each person add their machine as a host:
+4. For each remote machine, add the host in the supervisor (Hosts → **Add Host**, copy the generated access key from the one-time modal), then on that machine run these commands which will as for the HOST_ACCESS_KEY:
 
 ```bash
 npm install naisys
@@ -56,10 +56,9 @@ NAISYS is split into four packages, each with its own README:
 ## Data, logs, and backups
 
 The setup wizard writes `.env`; `NAISYS_FOLDER` in that file controls where persistent state lives. Databases are stored under `NAISYS_FOLDER/database/`, logs under
-`NAISYS_FOLDER/logs/`, and the hub access key under `NAISYS_FOLDER/cert/`.
+`NAISYS_FOLDER/logs/`, and bootstrap access keys for the integrated naisys + supervisor hosts under `NAISYS_FOLDER/cert/` (remote hosts' keys are not stored here — they live in each remote machine's `HOST_ACCESS_KEY`).
 
-For production, back up the full `NAISYS_FOLDER`. At minimum, preserve `database/` and `cert/` together so restored hosts can keep their data and hub authentication
-intact.
+For production, back up the full `NAISYS_FOLDER`. At minimum, preserve `database/` and `cert/` together so restored hosts can keep their data and the integrated processes can reauthenticate. Remote hosts re-key through the supervisor UI if needed.
 
 ## Details
 
@@ -105,7 +104,7 @@ node apps/naisys/dist/naisys.js --integrated-hub --supervisor --erp
 
 - Check `node -v`; every machine needs Node.js 22 or newer.
 - If a server port is busy, set `SERVER_PORT` in `.env` and restart.
-- If a host cannot connect to a remote hub, verify the `--hub` URL includes `/hub` and that the local hub access key matches the server.
+- If a host cannot connect to a remote hub, verify the `--hub` URL includes `/hub` and that `HOST_ACCESS_KEY` in the client's `.env` matches the key shown when the host was created (or rotated) in the supervisor.
 - If `ns-browser` or `ns-desktop` fails, install the optional browser/desktop dependencies listed above.
 - Check `NAISYS_FOLDER/logs/` for hub, supervisor, ERP, and runner logs.
 

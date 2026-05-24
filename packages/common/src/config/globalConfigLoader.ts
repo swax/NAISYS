@@ -40,10 +40,12 @@ export interface ClientConfig {
 
 /** Keys that should never be distributed to clients */
 const EXCLUDED_KEYS = [
+  "HOST_ACCESS_KEY",
+  // Kept after the HUB_ACCESS_KEY → HOST_ACCESS_KEY rename: upgraded installs
+  // may still have the old key in .env, and it must not leak via client config.
   "HUB_ACCESS_KEY",
   "NAISYS_FOLDER",
   "NAISYS_HOSTNAME",
-  "NAISYS_MACHINE_ID",
   "NODE_ENV",
   "SERVER_PORT",
 ];

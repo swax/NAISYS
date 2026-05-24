@@ -16,11 +16,12 @@ export function createHubHostService(
   let cachedHostListJson = "";
 
   function broadcastHostList(newConnection?: NaisysConnection) {
-    // Index connected clients by hostId for O(1) lookup of online + version
+    // Multiple supervisor sockets share one hostId; whichever wins the map slot is fine.
     const clientByHostId = new Map(
-      naisysServer
-        .getConnectedClients()
-        .map((c) => [c.getHostId(), c] as const),
+      [
+        ...naisysServer.getConnectedClients(),
+        ...naisysServer.getSupervisorConnections(),
+      ].map((c) => [c.getHostId(), c] as const),
     );
 
     const hosts = hostRegistrar.getAllHosts().map((h) => {
@@ -28,7 +29,6 @@ export function createHubHostService(
       return {
         hostId: h.hostId,
         hostName: h.hostName,
-        machineId: h.machineId,
         restricted: h.restricted,
         hostType: h.hostType,
         online: !!client,
@@ -39,13 +39,11 @@ export function createHubHostService(
     const payload: HostList = { hubVersion: getHubVersion(), hosts };
     const json = JSON.stringify(payload);
 
-    // Send to the newly connecting client directly
     if (newConnection) {
       newConnection.sendMessage(HubEvents.HOSTS_UPDATED, payload);
     }
 
-    // Broadcast to all connections only if the list changed
-    // (new connection may get a harmless duplicate — HOSTS_UPDATED is idempotent)
+    // HOSTS_UPDATED is idempotent, so only fan out when the payload changed.
     if (json !== cachedHostListJson) {
       cachedHostListJson = json;
 

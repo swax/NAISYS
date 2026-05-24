@@ -1,9 +1,10 @@
 import {
-  Anchor,
+  Alert,
   Badge,
   Button,
   Card,
   Code,
+  CopyButton,
   Group,
   Modal,
   Stack,
@@ -12,7 +13,13 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { hasAction } from "@naisys/common";
-import { IconPlus, IconServer } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconInfoCircle,
+  IconPlus,
+  IconServer,
+} from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,9 +39,12 @@ export const HostSidebar: React.FC = () => {
   const { serverReachable } = useConnectionStatus();
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [showManualCreate, setShowManualCreate] = useState(false);
   const [newHostName, setNewHostName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createdHost, setCreatedHost] = useState<{
+    name: string;
+    accessKey: string;
+  } | null>(null);
 
   const isHostSelected = (hostname: string) => {
     const pathParts = location.pathname.split("/");
@@ -56,11 +66,12 @@ export const HostSidebar: React.FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!newHostName.trim()) return;
+    const name = newHostName.trim();
+    if (!name) return;
     setCreating(true);
     try {
-      const result = await createHostApi(newHostName.trim());
-      if (result.success) {
+      const result = await createHostApi(name);
+      if (result.success && result.accessKey) {
         notifications.show({
           title: "Host Created",
           message: result.message,
@@ -68,8 +79,8 @@ export const HostSidebar: React.FC = () => {
         });
         setCreateOpen(false);
         setNewHostName("");
+        setCreatedHost({ name, accessKey: result.accessKey });
         void queryClient.invalidateQueries({ queryKey: ["host-data"] });
-        void navigate(`/hosts/${newHostName.trim()}`);
       } else {
         notifications.show({
           title: "Create Failed",
@@ -86,6 +97,12 @@ export const HostSidebar: React.FC = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const dismissCreatedHost = () => {
+    const name = createdHost?.name;
+    setCreatedHost(null);
+    if (name) void navigate(`/hosts/${name}`);
   };
 
   if (isLoading) {
@@ -176,7 +193,6 @@ export const HostSidebar: React.FC = () => {
         opened={createOpen}
         onClose={() => {
           setCreateOpen(false);
-          setShowManualCreate(false);
           setNewHostName("");
         }}
         title="Add Host"
@@ -184,49 +200,67 @@ export const HostSidebar: React.FC = () => {
       >
         <Stack gap="md">
           <Text size="sm">
-            Use the hub key found on the{" "}
-            <Anchor href="/admin" fw={500}>
-              Admin
-            </Anchor>{" "}
-            page to configure a NAISYS instance with the environment variables{" "}
-            <Code>NAISYS_HOSTNAME</Code> and <Code>HUB_ACCESS_KEY</Code>. On
-            connect, the host will be created automatically if it doesn't
-            already exist.
+            Create the host here, then copy the generated access key into the
+            NAISYS instance's <Code>HOST_ACCESS_KEY</Code> env var.
           </Text>
-
-          {!showManualCreate ? (
-            <Anchor
-              size="sm"
-              component="button"
-              onClick={() => setShowManualCreate(true)}
+          <TextInput
+            label="Host Name"
+            placeholder="my-host"
+            value={newHostName}
+            onChange={(e) => setNewHostName(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleCreate();
+            }}
+            autoFocus
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              loading={creating}
+              disabled={!newHostName.trim()}
+              onClick={handleCreate}
             >
-              Manually create host
-            </Anchor>
-          ) : (
-            <Stack gap="sm">
-              <TextInput
-                label="Host Name"
-                placeholder="my-host"
-                value={newHostName}
-                onChange={(e) => setNewHostName(e.currentTarget.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleCreate();
-                }}
-              />
-              <Group justify="flex-end">
-                <Button variant="default" onClick={() => setCreateOpen(false)}>
-                  Cancel
-                </Button>
+              Create
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={createdHost !== null}
+        onClose={dismissCreatedHost}
+        title={`Access Key for "${createdHost?.name ?? ""}"`}
+        centered
+        size="lg"
+      >
+        <Stack gap="sm">
+          <Alert color="yellow" icon={<IconInfoCircle size={16} />}>
+            Copy this now — it will not be shown again. Set it on the NAISYS
+            host as <Code>HOST_ACCESS_KEY</Code> in its <Code>.env</Code>.
+          </Alert>
+          <Code block style={{ wordBreak: "break-all" }}>
+            {createdHost?.accessKey ?? ""}
+          </Code>
+          <Group justify="flex-end">
+            <CopyButton value={createdHost?.accessKey ?? ""}>
+              {({ copied, copy }) => (
                 <Button
-                  loading={creating}
-                  disabled={!newHostName.trim()}
-                  onClick={handleCreate}
+                  variant="default"
+                  leftSection={
+                    copied ? <IconCheck size={16} /> : <IconCopy size={16} />
+                  }
+                  onClick={copy}
                 >
-                  Create
+                  {copied ? "Copied" : "Copy key"}
                 </Button>
-              </Group>
-            </Stack>
-          )}
+              )}
+            </CopyButton>
+            <Button color="blue" onClick={dismissCreatedHost}>
+              Done
+            </Button>
+          </Group>
         </Stack>
       </Modal>
     </>

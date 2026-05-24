@@ -243,7 +243,6 @@ export type HostEnvironment = z.infer<typeof HostEnvironmentSchema>;
 export const HostDetailResponseSchema = z.object({
   id: z.number(),
   name: z.string(),
-  machineId: z.string().nullable(),
   lastActive: z.string().nullable(),
   lastIp: z.string().nullable(),
   restricted: z.boolean(),
@@ -251,12 +250,22 @@ export const HostDetailResponseSchema = z.object({
   online: z.boolean(),
   version: z.string(),
   environment: HostEnvironmentSchema.nullable(),
+  hasAccessKey: z.boolean(),
   assignedAgents: z.array(AssignedAgentSchema),
   _links: z.array(LinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
   _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });
 export type HostDetailResponse = z.infer<typeof HostDetailResponseSchema>;
+
+/** Returned after host create / access-key rotate — plaintext shown once */
+export const HostAccessKeyResultSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  /** Plaintext key — only included on success; shown once and never stored */
+  accessKey: z.string().optional(),
+});
+export type HostAccessKeyResult = z.infer<typeof HostAccessKeyResultSchema>;
 
 export const UpdateHostRequestSchema = z
   .object({

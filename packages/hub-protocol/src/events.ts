@@ -51,7 +51,7 @@ export const HubEvents = {
   // Hub -> NAISYS push (targeted to specific host)
   // ---------------------------------------------------------------------------
 
-  /** Sent to a newly connected client with its assigned machineId and hostname */
+  /** Sent to a freshly-authenticated client with its resolved hostId / hostName */
   HOST_REGISTERED: "host_registered",
   /** Spending limit enforcement, pushed to the host running the affected agent */
   COST_CONTROL: "cost_control",
@@ -103,9 +103,6 @@ export const HubEvents = {
   // ---------------------------------------------------------------------------
   // Supervisor -> Hub (request/response) – Admin
   // ---------------------------------------------------------------------------
-
-  /** Rotate the hub access key */
-  ROTATE_ACCESS_KEY: "rotate_access_key",
 
   /** Fire a named schedule on demand */
   SCHEDULE_TRIGGER: "schedule_trigger",

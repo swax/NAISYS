@@ -1,9 +1,20 @@
+import { createHash, randomBytes } from "node:crypto";
+
 import { assertUrlSafeKey } from "@naisys/common";
 import type { HostEnvironment } from "@naisys/supervisor-shared";
 import { HostEnvironmentSchema } from "@naisys/supervisor-shared";
 
 import { hubDb } from "../database/hubDb.js";
 import { resolveAgentId } from "./agents/agentService.js";
+
+/** SHA-256 hex — the form stored in `hosts.access_key_hash`. */
+function hashKey(plaintext: string): string {
+  return createHash("sha256").update(plaintext).digest("hex");
+}
+
+function generateAccessKey(): string {
+  return randomBytes(32).toString("hex");
+}
 
 export async function getHosts() {
   const hosts = await hubDb.hosts.findMany({
@@ -39,13 +50,13 @@ export async function getHostDetail(hostname: string) {
     select: {
       id: true,
       name: true,
-      machine_id: true,
       restricted: true,
       host_type: true,
       last_active: true,
       last_ip: true,
       last_version: true,
       environment: true,
+      access_key_hash: true,
       user_hosts: {
         select: {
           users: {
@@ -61,7 +72,6 @@ export async function getHostDetail(hostname: string) {
   return {
     id: host.id,
     name: host.name,
-    machineId: host.machine_id ?? null,
     lastActive: host.last_active?.toISOString() ?? null,
     lastIp: host.last_ip ?? null,
     restricted: host.restricted,
@@ -70,6 +80,7 @@ export async function getHostDetail(hostname: string) {
     version: "", // Caller overrides from agentHostStatusService
     lastVersion: host.last_version ?? "",
     environment: parseEnvironment(host.environment),
+    hasAccessKey: host.access_key_hash !== null,
     assignedAgents: host.user_hosts.map((uh) => ({
       id: uh.users.id,
       name: uh.users.username,
@@ -89,7 +100,9 @@ function parseEnvironment(raw: string | null): HostEnvironment | null {
   }
 }
 
-export async function createHost(name: string): Promise<{ id: number }> {
+export async function createHost(
+  name: string,
+): Promise<{ id: number; accessKey: string }> {
   assertUrlSafeKey(name, "Host name");
 
   const existing = await hubDb.hosts.findUnique({ where: { name } });
@@ -97,11 +110,34 @@ export async function createHost(name: string): Promise<{ id: number }> {
     throw new Error(`Host with name "${name}" already exists`);
   }
 
+  const accessKey = generateAccessKey();
   const host = await hubDb.hosts.create({
-    data: { name },
+    data: { name, access_key_hash: hashKey(accessKey) },
   });
 
-  return { id: host.id };
+  return { id: host.id, accessKey };
+}
+
+/**
+ * Generates a new access key, stores its hash, returns the plaintext.
+ * The previous key fails future handshakes; the existing socket keeps running
+ * until the host reconnects or is terminated explicitly.
+ */
+export async function rotateHostAccessKey(
+  hostname: string,
+): Promise<{ accessKey: string }> {
+  const host = await hubDb.hosts.findUnique({ where: { name: hostname } });
+  if (!host) {
+    throw new Error(`Host "${hostname}" not found`);
+  }
+
+  const accessKey = generateAccessKey();
+  await hubDb.hosts.update({
+    where: { id: host.id },
+    data: { access_key_hash: hashKey(accessKey) },
+  });
+
+  return { accessKey };
 }
 
 export async function updateHost(

@@ -296,7 +296,10 @@ model schema_version {
 model hosts {
   id                 Int                  @id @default(autoincrement())
   name               String               @unique(map: "unq_hosts_name") // NAISYS_HOSTNAME
-  machine_id         String?              @unique(map: "unq_hosts_machine_id")
+  /// SHA-256 of the host's access key (hex). The plaintext key is shown once
+  /// at creation/rotation and stored in the client's HOST_ACCESS_KEY env var.
+  /// Null rows can't authenticate — rotation in the supervisor sets a value.
+  access_key_hash    String?              @unique(map: "unq_hosts_access_key_hash")
   restricted         Boolean              @default(false)
   host_type          HostType             @default(naisys)
   last_ip            String?

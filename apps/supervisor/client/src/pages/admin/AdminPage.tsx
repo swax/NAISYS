@@ -8,7 +8,6 @@ import {
   Table,
   Tabs,
   Title,
-  Tooltip,
 } from "@mantine/core";
 import {
   formatFileSize,
@@ -22,25 +21,19 @@ import type {
 } from "@naisys/common-browser";
 import {
   AttachmentList,
-  SecretField,
   ServerLogViewer,
   VersionBadge,
 } from "@naisys/common-browser";
-import { IconInfoCircle } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import {
-  downloadExportConfig,
-  rotateHubAccessKey,
-} from "../../lib/api/apiAdmin";
+import { downloadExportConfig } from "../../lib/api/apiAdmin";
 import type { AdminInfoResponse } from "../../lib/api/apiClient";
 import { api, API_BASE, apiEndpoints } from "../../lib/api/apiClient";
 import { UpdateDialog } from "./UpdateDialog";
 
 export const AdminPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
-  const [rotating, setRotating] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
 
   const { data, isLoading: loading, refetch } = useQuery({
@@ -57,30 +50,8 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleRotateAccessKey = async () => {
-    const confirmed = window.confirm(
-      "This will generate a new hub access key and disconnect all clients. " +
-        "All NAISYS instances will need their HUB_ACCESS_KEY environment " +
-        "variable updated in their .env file before they can reconnect.",
-    );
-    if (!confirmed) return;
-
-    setRotating(true);
-    try {
-      const result = await rotateHubAccessKey();
-      if (result.success) {
-        void refetch();
-      }
-    } finally {
-      setRotating(false);
-    }
-  };
-
   const canExport = data ? !!hasAction(data._actions, "export-config") : false;
   const canViewLogs = data ? !!hasAction(data._actions, "view-logs") : false;
-  const canRotateKey = data
-    ? !!hasAction(data._actions, "rotate-access-key")
-    : false;
   const canViewAttachments = data
     ? !!hasAction(data._actions, "view-attachments")
     : false;
@@ -242,34 +213,6 @@ export const AdminPage: React.FC = () => {
                     <Table.Td fw={600}>DB Version</Table.Td>
                     <Table.Td>{data.hubDbVersion}</Table.Td>
                   </Table.Tr>
-                  {data.hubAccessKey && (
-                    <Table.Tr>
-                      <Table.Td fw={600}>
-                        <Group gap={4}>
-                          Access Key
-                          <Tooltip
-                            label="Set as HUB_ACCESS_KEY when installing NAISYS on other machines to connect to this hub"
-                            multiline
-                            w={250}
-                          >
-                            <IconInfoCircle
-                              size="1rem"
-                              style={{ cursor: "pointer" }}
-                            />
-                          </Tooltip>
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <SecretField
-                          value={data.hubAccessKey}
-                          onRotate={
-                            canRotateKey ? handleRotateAccessKey : undefined
-                          }
-                          rotating={rotating}
-                        />
-                      </Table.Td>
-                    </Table.Tr>
-                  )}
                 </Table.Tbody>
               </Table>
             </Stack>

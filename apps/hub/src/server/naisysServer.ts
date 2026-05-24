@@ -1,6 +1,6 @@
 import type { DualLogger } from "@naisys/common-node";
 import type {
-  HostType,
+  HostRegistered,
   HubConnectErrorCode,
   HubConnectErrorData,
   HubFireAndForgetEventName,
@@ -13,7 +13,6 @@ import type {
   HubSupervisorPushEvents,
   HubTriggerEventName,
 } from "@naisys/hub-protocol";
-import type { HostRegistered } from "@naisys/hub-protocol";
 import { HubEvents } from "@naisys/hub-protocol";
 import type { Server } from "socket.io";
 import type { ZodSchema } from "zod";
@@ -41,11 +40,9 @@ interface RegisteredHandler {
  */
 export function createNaisysServer(
   nsp: Server,
-  initialHubAccessKey: string,
   logService: DualLogger,
   hostRegistrar: HostRegistrar,
 ) {
-  let hubAccessKey = initialHubAccessKey;
   // Track connected NAISYS instances (keyed by hostId)
   const naisysConnections = new Map<number, NaisysConnection>();
   // Track connected supervisor instances (multiple allowed, all share one hostId)
@@ -178,43 +175,28 @@ export function createNaisysServer(
   // Authentication middleware
   nsp.use(async (socket, next) => {
     const {
-      hubAccessKey: clientAccessKey,
-      hostName,
-      machineId: rawMachineId,
+      accessKey: rawAccessKey,
       instanceId: rawInstanceId,
       startedAt: rawStartedAt,
-      hostType: rawHostType,
       clientVersion,
       environment: rawEnvironment,
     } = socket.handshake.auth;
 
-    if (!clientAccessKey || clientAccessKey !== hubAccessKey) {
+    const accessKey =
+      typeof rawAccessKey === "string" && rawAccessKey ? rawAccessKey : null;
+    if (!accessKey) {
       logService.log(
-        `[Hub] Connection rejected: invalid access key from ${socket.handshake.address}`,
+        `[Hub] Connection rejected: missing access key from ${socket.handshake.address}`,
       );
-      // Non-fatal: keys can rotate while a client is in retry; the client's
-      // auth callback re-reads the key on each attempt so the next try picks
-      // up the new value.
+      // Non-fatal: lets a client retry if a key was just rotated mid-flight.
       return next(
-        createConnectError("Invalid access key", "invalid_access_key", false),
+        createConnectError("Access key required", "invalid_access_key", false),
       );
-    }
-
-    if (!hostName) {
-      logService.log(`[Hub] Connection rejected: missing hostName`);
-      return next(createConnectError("Missing hostName", "missing_host_name"));
     }
 
     try {
-      const hostType = (
-        typeof rawHostType === "string" ? rawHostType : "naisys"
-      ) as HostType;
       const resolvedVersion =
         typeof clientVersion === "string" ? clientVersion : "";
-      const machineId =
-        typeof rawMachineId === "string" && rawMachineId
-          ? rawMachineId
-          : undefined;
       const instanceId =
         typeof rawInstanceId === "string" && rawInstanceId
           ? rawInstanceId
@@ -228,40 +210,46 @@ export function createNaisysServer(
           ? (rawEnvironment as Record<string, unknown>)
           : undefined;
 
-      const result =
-        hostType === "supervisor"
-          ? await hostRegistrar.registerSupervisor(
-              hostName,
-              socket.handshake.address,
-              resolvedVersion,
-            )
-          : await hostRegistrar.registerNaisysClient(
-              hostName,
-              machineId,
-              socket.handshake.address,
-              resolvedVersion,
-              environment,
-            );
+      const resolved = await hostRegistrar.resolveByAccessKey(accessKey);
+      if (!resolved) {
+        logService.log(
+          `[Hub] Connection rejected: access key did not match any host (${socket.handshake.address})`,
+        );
+        return next(
+          createConnectError(
+            "Invalid access key",
+            "invalid_access_key",
+            false,
+          ),
+        );
+      }
+
+      await hostRegistrar.markActive(
+        resolved,
+        socket.handshake.address,
+        resolvedVersion,
+        environment,
+      );
 
       // Supersede any existing naisys connection for this host (supervisors may have multiple).
       // The disconnect handler is identity-aware, so the old socket's cleanup
       // will not wipe the new connection once it registers.
-      if (hostType === "naisys") {
-        const existing = naisysConnections.get(result.hostId);
+      if (resolved.hostType === "naisys") {
+        const existing = naisysConnections.get(resolved.hostId);
         if (existing) {
           if (existing.getInstanceId() === instanceId) {
             logService.log(
-              `[Hub] Replacing existing socket for host '${result.hostName}' from the same process instance`,
+              `[Hub] Replacing existing socket for host '${resolved.hostName}' from the same process instance`,
             );
             existing.disconnect();
           } else if (processStartedAt >= existing.getProcessStartedAt()) {
             logService.log(
-              `[Hub] Superseding existing connection for host '${result.hostName}' — newer process instance connected`,
+              `[Hub] Superseding existing connection for host '${resolved.hostName}' — newer process instance connected`,
             );
             existing.disconnect();
           } else {
             logService.log(
-              `[Hub] Connection rejected: older process attempted to reclaim host '${result.hostName}'`,
+              `[Hub] Connection rejected: older process attempted to reclaim host '${resolved.hostName}'`,
             );
             return next(
               createConnectError(
@@ -273,17 +261,16 @@ export function createNaisysServer(
         }
       }
 
-      socket.data.hostId = result.hostId;
-      socket.data.hostName = result.hostName;
-      socket.data.machineId = result.machineId;
+      socket.data.hostId = resolved.hostId;
+      socket.data.hostName = resolved.hostName;
       socket.data.instanceId = instanceId;
       socket.data.processStartedAt = processStartedAt;
-      socket.data.hostType = hostType;
+      socket.data.hostType = resolved.hostType;
       socket.data.clientVersion = resolvedVersion;
       next();
     } catch (err) {
       logService.error(
-        `[Hub] Connection rejected: failed to register host ${hostName}: ${err}`,
+        `[Hub] Connection rejected: registration failed: ${err}`,
       );
       // Non-fatal: registration touches the DB and can hit transient failures
       // (pool timeout, deadlock); let the client keep retrying.
@@ -302,15 +289,14 @@ export function createNaisysServer(
     const {
       hostId,
       hostName,
-      machineId,
       instanceId,
       processStartedAt,
       hostType,
       clientVersion,
     } = socket.data;
 
-    // Send the client its assigned machineId and authoritative hostname
-    const registered: HostRegistered = { machineId, hostName };
+    // Send the client its resolved identity so it can label itself in topology updates
+    const registered: HostRegistered = { hostId, hostName };
     socket.emit(HubEvents.HOST_REGISTERED, registered);
 
     // Create connection handler for this socket, passing our emit function
@@ -364,18 +350,14 @@ export function createNaisysServer(
     });
   });
 
-  /** Update the hub access key used for authenticating new connections */
-  function updateHubAccessKey(newKey: string) {
-    hubAccessKey = newKey;
-  }
-
-  /** Disconnect all connected clients */
-  function disconnectAllClients() {
-    for (const connection of naisysConnections.values()) {
-      connection.disconnect();
-    }
-    for (const connection of supervisorConnections) {
-      connection.disconnect();
+  /** Disconnect every connection currently bound to the given host id */
+  function disconnectHost(hostId: number) {
+    const naisys = naisysConnections.get(hostId);
+    naisys?.disconnect();
+    for (const conn of supervisorConnections) {
+      if (conn.getHostId() === hostId) {
+        conn.disconnect();
+      }
     }
   }
 
@@ -410,11 +392,11 @@ export function createNaisysServer(
     broadcastToSupervisors,
     broadcastToAll,
     getConnectedClients: () => Array.from(naisysConnections.values()),
+    getSupervisorConnections: () => supervisorConnections.slice(),
     getConnectionByHostId: (hostId: number) => naisysConnections.get(hostId),
     getConnectionCount: () => naisysConnections.size,
     getSupervisorConnectionCount: () => supervisorConnections.length,
-    updateHubAccessKey,
-    disconnectAllClients,
+    disconnectHost,
   };
 }
 

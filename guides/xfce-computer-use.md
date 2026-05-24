@@ -46,7 +46,7 @@ npm install naisys
 ```bash
 tee /home/naisys/client/.env << EOF
 NAISYS_FOLDER=~
-HUB_ACCESS_KEY=<your-hub-access-token>
+HOST_ACCESS_KEY=<key from supervisor: Hosts → Add Host>
 DISPLAY=:2
 XDG_SESSION_TYPE=x11
 XAUTHORITY=/home/naisys/.Xauthority

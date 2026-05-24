@@ -4,6 +4,7 @@ import type {
   AssignAgentToHostRequest,
   CreateHostRequest,
   ErrorResponse,
+  HostAccessKeyResult,
   HostDetailResponse,
   HostListResponse,
   HostNameParams,
@@ -17,6 +18,7 @@ import {
   AssignAgentToHostRequestSchema,
   CreateHostRequestSchema,
   ErrorResponseSchema,
+  HostAccessKeyResultSchema,
   HostDetailResponseSchema,
   HostListResponseSchema,
   HostNameParamsSchema,
@@ -52,6 +54,7 @@ import {
   deleteHost,
   getHostDetail,
   getHosts,
+  rotateHostAccessKey,
   unassignAgentFromHost,
   updateHost,
 } from "../../services/hostService.js";
@@ -82,6 +85,13 @@ function hostActions(
       ...(hostType !== "supervisor"
         ? [
             {
+              rel: "rotate-access-key" as const,
+              path: "/rotate-access-key",
+              method: "POST" as const,
+              title: "Rotate Access Key",
+              permission: "manage_hosts" as const,
+            },
+            {
               rel: "assign-agent" as const,
               path: "/agents",
               method: "POST" as const,
@@ -104,8 +114,12 @@ function hostActions(
         method: "DELETE",
         title: "Delete Host",
         permission: "manage_hosts",
-        disabledWhen: (ctx: HostCtx) =>
-          ctx.isOnline ? "Host must be offline before deletion" : null,
+        disabledWhen: (ctx: HostCtx) => {
+          if (ctx.hostType === "supervisor") {
+            return "Supervisor host is bootstrap-managed";
+          }
+          return ctx.isOnline ? "Host must be offline before deletion" : null;
+        },
       },
     ],
     href,
@@ -196,17 +210,17 @@ export default function hostsRoutes(
   // POST / — Create host
   fastify.post<{
     Body: CreateHostRequest;
-    Reply: AgentActionResult | ErrorResponse;
+    Reply: HostAccessKeyResult | ErrorResponse;
   }>(
     "/",
     {
       preHandler: [requirePermission("manage_hosts")],
       schema: {
-        description: "Create a new host",
+        description: "Create a new host and return its plaintext access key",
         tags: ["Hosts"],
         body: CreateHostRequestSchema,
         response: {
-          200: AgentActionResultSchema,
+          200: HostAccessKeyResultSchema,
           400: ErrorResponseSchema,
           500: ErrorResponseSchema,
         },
@@ -216,14 +230,14 @@ export default function hostsRoutes(
     async (request, reply) => {
       try {
         const { name } = request.body;
-        const { id } = await createHost(name);
+        const { accessKey } = await createHost(name);
 
         sendHostsChanged();
 
         return {
           success: true,
-          message: `Host '${name}' created successfully`,
-          id,
+          message: `Host '${name}' created. Set HOST_ACCESS_KEY on the NAISYS host with the key below — it will not be shown again.`,
+          accessKey,
         };
       } catch (error) {
         const errorMessage =
@@ -238,6 +252,51 @@ export default function hostsRoutes(
 
         throw error;
       }
+    },
+  );
+
+  // POST /:hostname/rotate-access-key — Generate a fresh access key for a host
+  fastify.post<{
+    Params: HostNameParams;
+    Reply: HostAccessKeyResult | ErrorResponse;
+  }>(
+    "/:hostname/rotate-access-key",
+    {
+      preHandler: [requirePermission("manage_hosts")],
+      schema: {
+        description:
+          "Rotate the host's access key. The previous key is rejected on future connections.",
+        tags: ["Hosts"],
+        params: HostNameParamsSchema,
+        response: {
+          200: HostAccessKeyResultSchema,
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+        security: [{ cookieAuth: [] }],
+      },
+    },
+    async (request, reply) => {
+      const { hostname } = request.params;
+      const host = await getHostDetail(hostname);
+      if (!host) {
+        return notFound(reply, `Host "${hostname}" not found`);
+      }
+      if (host.hostType === "supervisor") {
+        return badRequest(
+          reply,
+          "Cannot rotate the supervisor host's access key from the UI — it is bootstrap-managed.",
+        );
+      }
+
+      const { accessKey } = await rotateHostAccessKey(hostname);
+      sendHostsChanged();
+
+      return {
+        success: true,
+        message: `Access key rotated for "${hostname}". Update HOST_ACCESS_KEY before the NAISYS host reconnects; current connections are not disconnected automatically.`,
+        accessKey,
+      };
     },
   );
 
@@ -368,6 +427,13 @@ export default function hostsRoutes(
 
       if (!host) {
         return notFound(reply, `Host "${hostname}" not found`);
+      }
+
+      if (host.hostType === "supervisor") {
+        return badRequest(
+          reply,
+          "Cannot delete the supervisor host — it is bootstrap-managed.",
+        );
       }
 
       if (isHostConnected(host.id)) {

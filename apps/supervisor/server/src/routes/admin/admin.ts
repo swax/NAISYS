@@ -13,7 +13,6 @@ import type {
   ErrorResponse,
   NpmVersionsRequest,
   NpmVersionsResponse,
-  RotateAccessKeyResult,
   SaveVariableResponse,
   ServerLogRequest,
   ServerLogResponse,
@@ -26,7 +25,6 @@ import {
   ErrorResponseSchema,
   NpmVersionsRequestSchema,
   NpmVersionsResponseSchema,
-  RotateAccessKeyResultSchema,
   SaveVariableResponseSchema,
   ServerLogRequestSchema,
   ServerLogResponseSchema,
@@ -43,10 +41,8 @@ import {
   type ExportUserRow,
 } from "../../services/agents/configExportService.js";
 import {
-  getHubAccessKey,
   getHubVersion,
   isHubConnected,
-  sendRotateAccessKey,
   sendVariablesChanged,
 } from "../../services/comms/hubConnectionService.js";
 import {
@@ -115,15 +111,6 @@ function adminActions(
     );
 
     actions.push(...targetVersionActions(targetVersion));
-
-    if (getHubAccessKey()) {
-      actions.push({
-        rel: "rotate-access-key",
-        href: `${API_PREFIX}/admin/rotate-access-key`,
-        method: "POST",
-        title: "Rotate Hub Access Key",
-      });
-    }
   }
 
   return actions;
@@ -180,7 +167,6 @@ export default function adminRoutes(
         hubDbSize,
         hubDbVersion: HUB_DB_VERSION,
         hubConnected: isHubConnected(),
-        hubAccessKey: getHubAccessKey(),
         targetVersion: targetVar?.value || undefined,
         _actions: actions.length > 0 ? actions : undefined,
       };
@@ -238,40 +224,6 @@ export default function adminRoutes(
       await archive.finalize();
 
       return reply.send(archive);
-    },
-  );
-
-  // POST /rotate-access-key — Rotate hub access key
-  fastify.post<{
-    Reply: RotateAccessKeyResult | ErrorResponse;
-  }>(
-    "/rotate-access-key",
-    {
-      preHandler: [requirePermission("supervisor_admin")],
-      schema: {
-        description: "Rotate the hub access key",
-        tags: ["Admin"],
-        response: {
-          200: RotateAccessKeyResultSchema,
-          500: ErrorResponseSchema,
-        },
-        security: [{ cookieAuth: [] }],
-      },
-    },
-    async (_request, reply) => {
-      try {
-        const result = await sendRotateAccessKey();
-        return result;
-      } catch (error) {
-        reply.log.error(error, "Error in POST /admin/rotate-access-key route");
-        return reply.status(500).send({
-          success: false,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Failed to rotate access key",
-        });
-      }
     },
   );
 

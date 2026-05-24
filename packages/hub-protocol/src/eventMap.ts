@@ -57,10 +57,6 @@ import type {
   MailUnreadResponse,
 } from "./schemas/comms/mail.js";
 import type {
-  RotateAccessKeyRequest,
-  RotateAccessKeyResponse,
-} from "./schemas/identity/admin.js";
-import type {
   CodexAccessTokenRequest,
   CodexAccessTokenResponse,
 } from "./schemas/identity/codex.js";
@@ -144,10 +140,6 @@ export interface HubRequestEvents {
   [HubEvents.MAIL_UNREAD]: {
     request: MailUnreadRequest;
     response: MailUnreadResponse;
-  };
-  [HubEvents.ROTATE_ACCESS_KEY]: {
-    request: RotateAccessKeyRequest;
-    response: RotateAccessKeyResponse;
   };
   [HubEvents.SCHEDULE_TRIGGER]: {
     request: ScheduleTriggerRequest;

@@ -3,6 +3,13 @@ import { z } from "zod";
 export const HostTypeEnum = z.enum(["naisys", "supervisor"]);
 export type HostType = z.infer<typeof HostTypeEnum>;
 
+/** Sent from hub to a freshly-authenticated client with its resolved identity */
+export const HostRegisteredSchema = z.object({
+  hostId: z.number(),
+  hostName: z.string(),
+});
+export type HostRegistered = z.infer<typeof HostRegisteredSchema>;
+
 /** Pushed from hub to all NAISYS instances when the set of known hosts changes */
 export const HostListSchema = z.object({
   hubVersion: z.string(),
@@ -10,7 +17,6 @@ export const HostListSchema = z.object({
     z.object({
       hostId: z.number(),
       hostName: z.string(),
-      machineId: z.string(),
       restricted: z.boolean(),
       hostType: HostTypeEnum,
       online: z.boolean(),
@@ -19,13 +25,6 @@ export const HostListSchema = z.object({
   ),
 });
 export type HostList = z.infer<typeof HostListSchema>;
-
-/** Sent from hub to a newly connected client with its assigned identity */
-export const HostRegisteredSchema = z.object({
-  machineId: z.string(),
-  hostName: z.string(),
-});
-export type HostRegistered = z.infer<typeof HostRegisteredSchema>;
 
 /**
  * Request to terminate the NAISYS client process on a host.

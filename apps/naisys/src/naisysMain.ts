@@ -143,12 +143,7 @@ if (hubUrl) {
 }
 
 const globalConfig = createGlobalConfig(hubClient, supervisorUrl);
-const hostService = createHostService(
-  hubClient,
-  hubClientConfig,
-  globalConfig,
-  promptNotification,
-);
+const hostService = createHostService(hubClient);
 const userService = createUserService(
   hubClient,
   promptNotification,
