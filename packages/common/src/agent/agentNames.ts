@@ -59,3 +59,10 @@ export const agentNames = [
   "yvonne",
   "zack",
 ];
+
+export function pickRandomAgentName(taken: Iterable<string>): string | null {
+  const takenSet = new Set(taken);
+  const available = agentNames.filter((n) => !takenSet.has(n));
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}

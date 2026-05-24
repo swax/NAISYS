@@ -1,5 +1,6 @@
 import { Button, Group, Modal, Select, Stack, TextInput } from "@mantine/core";
-import React, { useState } from "react";
+import { pickRandomAgentName } from "@naisys/common";
+import React, { useEffect, useState } from "react";
 
 import { useAgentDataContext } from "../../../contexts/AgentDataContext";
 import {
@@ -22,6 +23,13 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
   const [newAgentTitle, setNewAgentTitle] = useState("");
   const [copyFromAgent, setCopyFromAgent] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    if (opened && !newAgentName) {
+      const suggested = pickRandomAgentName(agents.map((a) => a.name));
+      if (suggested) setNewAgentName(suggested);
+    }
+  }, [opened, agents, newAgentName]);
 
   const handleCreateAgent = async () => {
     const name = newAgentName.trim();

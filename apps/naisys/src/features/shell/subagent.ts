@@ -1,4 +1,4 @@
-import type { AgentConfigFile } from "@naisys/common";
+import { agentNames, type AgentConfigFile } from "@naisys/common";
 import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import stripAnsi from "strip-ansi";
@@ -15,7 +15,6 @@ import type { CostTracker } from "../../llm/costTracker.js";
 import type { ChatService } from "../../mail/chat.js";
 import type { MailService } from "../../mail/mail.js";
 import type { RunService } from "../../services/agent/runService.js";
-import { agentNames } from "../../utils/agentNames.js";
 import type { InputModeService } from "../../utils/input/inputMode.js";
 import type { OutputService } from "../../utils/output/output.js";
 import type { PromptNotificationService } from "../../utils/output/promptNotificationService.js";
