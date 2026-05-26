@@ -1,7 +1,7 @@
 {
   "name": "naisys",
   "description": "NAISYS - Autonomous AI agent runner with built-in context management and cost tracking",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "type": "module",
   "main": "dist/naisys.js",
   "preferGlobal": true,
@@ -47,7 +47,7 @@
   "license": "MIT",
   "homepage": "https://naisys.org",
   "devDependencies": {
-    "@naisys/hub-database": "3.0.0",
+    "@naisys/hub-database": "3.0.1",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.9.1",
     "@types/text-table": "^0.2.5",
@@ -62,7 +62,7 @@
     "vitest": "^4.1.7"
   },
   "peerDependencies": {
-    "@naisys/hub": "3.0.0"
+    "@naisys/hub": "3.0.1"
   },
   "peerDependenciesMeta": {
     "@naisys/hub": {
@@ -75,9 +75,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
     "@google/genai": "^2.6.0",
-    "@naisys/common": "3.0.0",
-    "@naisys/common-node": "3.0.0",
-    "@naisys/hub-protocol": "3.0.0",
+    "@naisys/common": "3.0.1",
+    "@naisys/common-node": "3.0.1",
+    "@naisys/hub-protocol": "3.0.1",
     "@xterm/headless": "^6.0.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",

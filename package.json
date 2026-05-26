@@ -1,6 +1,6 @@
 {
   "name": "naisys-monorepo",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "NAISYS monorepo containing NAISYS core and related applications",
   "private": true,
   "packageManager": "npm@11.15.0",
