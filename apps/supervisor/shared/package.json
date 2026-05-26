@@ -17,7 +17,7 @@
     "npm:publish": "npm publish --access public"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@naisys/common": "3.0.0",
