@@ -16,19 +16,6 @@ import type {
 } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
-// Local re-declaration of @fastify/rate-limit's FastifyContextConfig
-// augmentation — same shape as the package's, but it's not merging in this
-// file for unknown reasons. Additive, so it doesn't break other files.
-declare module "fastify" {
-  interface FastifyContextConfig {
-    rateLimit?: {
-      max?: number;
-      timeWindow?: number | string;
-      keyGenerator?: (req: FastifyRequest) => string | Promise<string>;
-    };
-  }
-}
-
 import { hasPermission, requirePermission } from "../../authMiddleware.js";
 import { hubDb } from "../../database/hubDb.js";
 import { notFound } from "../../errorHelpers.js";
