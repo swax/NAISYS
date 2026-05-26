@@ -2,7 +2,12 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "./animations.css";
 
-import { AppShell, Box, MantineProvider } from "@mantine/core";
+import {
+  AppShell,
+  Box,
+  MantineProvider,
+  v8CssVariablesResolver,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Notifications } from "@mantine/notifications";
 import type { Permission } from "@naisys/supervisor-shared";
@@ -365,7 +370,10 @@ const AppRoot: React.FC = () => {
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <MantineProvider defaultColorScheme="dark">
+      <MantineProvider
+        defaultColorScheme="dark"
+        cssVariablesResolver={v8CssVariablesResolver}
+      >
         <AppRoot />
       </MantineProvider>
     </QueryClientProvider>

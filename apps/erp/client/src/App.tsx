@@ -2,7 +2,7 @@ import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
 
-import { MantineProvider } from "@mantine/core";
+import { MantineProvider, v8CssVariablesResolver } from "@mantine/core";
 import { DatesProvider } from "@mantine/dates";
 import { Notifications } from "@mantine/notifications";
 import React from "react";
@@ -123,7 +123,10 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <MantineProvider defaultColorScheme="dark">
+    <MantineProvider
+      defaultColorScheme="dark"
+      cssVariablesResolver={v8CssVariablesResolver}
+    >
       <DatesProvider settings={{ consistentWeeks: true }}>
         <Notifications position="top-right" />
         <BrowserRouter basename="/erp">

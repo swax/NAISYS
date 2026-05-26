@@ -51,7 +51,7 @@ export const AgentCandidatesSection: React.FC<AgentCandidatesSectionProps> = ({
           </Text>
         </Group>
       </UnstyledButton>
-      <Collapse in={expanded}>
+      <Collapse expanded={expanded}>
         {candidates.map((candidate) => {
           const { active, to } = getCandidateProps(candidate);
           const label = (

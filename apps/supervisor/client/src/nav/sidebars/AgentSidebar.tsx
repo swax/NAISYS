@@ -372,7 +372,7 @@ export const AgentSidebar: React.FC = () => {
               {showArchived ? "Hide" : "Show"} archived ({archivedAgents.length}
               )
             </Button>
-            <Collapse in={showArchived}>
+            <Collapse expanded={showArchived}>
               <Stack gap="xs">
                 {filterCollapsedAgents(orderedArchivedAgents).map((agent) =>
                   renderAgentCard(agent, true),
