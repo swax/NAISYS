@@ -272,7 +272,12 @@ async function startServer(wizardRan?: boolean) {
     }
   } catch (err) {
     console.error("[ERP] Failed to start:", err);
-    process.exit(1);
+    try {
+      await fastify.close();
+    } catch {
+      // Startup already failed; preserve the original error as the cause.
+    }
+    throw err;
   }
   return fastify;
 }

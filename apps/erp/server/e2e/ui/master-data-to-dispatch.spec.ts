@@ -112,7 +112,7 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
     await page.getByRole("button", { name: "Create New" }).click();
 
     await page.getByLabel("Key").fill(orderKey);
-    await page.getByRole("textbox", { name: "Produces Item" }).fill(itemKey);
+    await page.getByRole("combobox", { name: "Produces Item" }).fill(itemKey);
     await page.getByLabel("Description").fill(orderDesc);
     await page.getByRole("button", { name: "Create" }).click();
 
@@ -144,7 +144,7 @@ test.describe.serial("ERP master data to dispatch workflow (UI)", () => {
 
     // Edit to assign the work center
     await page.getByRole("button", { name: "Edit" }).click();
-    await page.getByRole("textbox", { name: "Work Center" }).fill(wcKey);
+    await page.getByRole("combobox", { name: "Work Center" }).fill(wcKey);
     await page.getByRole("button", { name: "Save" }).click();
 
     // Work center key shown on the operation detail header

@@ -197,11 +197,11 @@ MAIL_ENABLED=true
 
     // Wait for one of the conversation rows (beta or gamma) to render.
     await page
-      .getByText("beta (Beta Bot)")
+      .getByText("Beta Bot (beta)")
       .first()
       .waitFor({ state: "visible", timeout: 15000 });
     await page
-      .getByText("gamma (Gamma Bot)")
+      .getByText("Gamma Bot (gamma)")
       .first()
       .waitFor({ state: "visible", timeout: 15000 });
 
@@ -266,7 +266,7 @@ MAIL_ENABLED=true
     // Mantine MultiSelect: click input, then click the option for gamma.
     await newDialog.getByLabel("To").click();
     await page
-      .getByRole("option", { name: /^gamma/ })
+      .getByRole("option", { name: /^Gamma Bot \(gamma\)$/ })
       .first()
       .click();
     await newDialog.getByLabel("Subject").fill("Hi gamma");
