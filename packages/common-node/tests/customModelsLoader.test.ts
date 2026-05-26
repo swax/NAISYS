@@ -1,9 +1,4 @@
-import {
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -99,9 +94,9 @@ describe("custom model loading", () => {
   test("requires NAISYS_FOLDER before saving custom models", () => {
     delete process.env.NAISYS_FOLDER;
 
-    expect(() =>
-      saveCustomModels({ llmModels: [], imageModels: [] }),
-    ).toThrow("NAISYS_FOLDER environment variable is not set");
+    expect(() => saveCustomModels({ llmModels: [], imageModels: [] })).toThrow(
+      "NAISYS_FOLDER environment variable is not set",
+    );
   });
 
   test("saves valid custom models and omits empty sections", () => {
@@ -127,8 +122,8 @@ describe("custom model loading", () => {
     const raw = readFileSync(path.join(folder, "custom-models.yaml"), "utf-8");
     expect(raw).toContain("llmModels:");
     expect(raw).not.toContain("imageModels:");
-    expect(loadCustomModels(folder).llmModels.map((model) => model.key)).toEqual(
-      ["saved-llm"],
-    );
+    expect(
+      loadCustomModels(folder).llmModels.map((model) => model.key),
+    ).toEqual(["saved-llm"]);
   });
 });

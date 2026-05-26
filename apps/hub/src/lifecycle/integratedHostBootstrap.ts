@@ -81,8 +81,6 @@ export async function bootstrapIntegratedNaisysHost(
         access_key_hash: expectedHash,
       },
     });
-    logService.log(
-      `[Hub:HostBootstrap] Created integrated host "${hostName}"`,
-    );
+    logService.log(`[Hub:HostBootstrap] Created integrated host "${hostName}"`);
   }
 }

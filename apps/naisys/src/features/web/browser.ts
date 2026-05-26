@@ -85,7 +85,9 @@ export function createBrowserService(
       lines.push(
         "Selector syntax: 'text=Foo', '#id', '.cls', 'role=button[name=Sign in]'",
       );
-      lines.push("Use `ns-more` for subsequent pages when `text` output is paginated.");
+      lines.push(
+        "Use `ns-more` for subsequent pages when `text` output is paginated.",
+      );
     }
 
     lines.push("");

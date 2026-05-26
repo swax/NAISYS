@@ -231,19 +231,14 @@ if (coverageRunSucceeded && existsSync(summaryPath)) {
       }
       if (supplementedStatements > 0) {
         summary = summaryFromCoverageMap(map);
-        writeFileSync(
-          coverageFinalPath,
-          JSON.stringify(map.toJSON(), null, 2),
-        );
+        writeFileSync(coverageFinalPath, JSON.stringify(map.toJSON(), null, 2));
         writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
         console.log(
           `Merged ${supplementedStatements} Vitest-covered statements into c8 summary.`,
         );
       }
     } catch (err) {
-      console.warn(
-        `Skipping workspace Vitest coverage merge: ${err.message}`,
-      );
+      console.warn(`Skipping workspace Vitest coverage merge: ${err.message}`);
     }
   }
   const totals = new Map();

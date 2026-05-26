@@ -560,10 +560,7 @@ describe("hubCostService", () => {
     const { server } = createServerHarness();
     const { hubDb } = createHubDb();
     const logger = createLogger();
-    const ownershipService = createOwnershipService(
-      [1],
-      new Map([[1, [101]]]),
-    );
+    const ownershipService = createOwnershipService([1], new Map([[1, [101]]]));
     const heartbeatService = createHeartbeatService([
       { userId: 1, runId: 7, subagentId: null, sessionId: 1 },
     ]);

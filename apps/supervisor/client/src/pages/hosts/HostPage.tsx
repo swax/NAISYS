@@ -462,8 +462,8 @@ export const HostPage: React.FC = () => {
           </Text>
           <Text size="sm" c="dimmed">
             Note: if a process manager such as PM2 is keeping NAISYS alive,
-            terminating it may only restart the process rather than shut it
-            down permanently.
+            terminating it may only restart the process rather than shut it down
+            permanently.
           </Text>
           <Alert
             color="blue"

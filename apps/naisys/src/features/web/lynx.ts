@@ -99,7 +99,9 @@ export function createLynxService(
     // Globalize once over the full list so link numbers stay stable across pages.
     const globalized = globalizeLinkList(dedupedUrls);
 
-    outputInDebugMode(`Links Token size: ${utilities.getTokenCount(globalized)}`);
+    outputInDebugMode(
+      `Links Token size: ${utilities.getTokenCount(globalized)}`,
+    );
 
     return pagedOutputBuffer.setContent(`ns-lynx links ${url}`, globalized);
   }

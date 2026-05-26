@@ -1,5 +1,5 @@
-import { sumAgentMetricsByUuid } from "@naisys/hub-database";
 import { OperationRunStatus } from "@naisys/erp-shared";
+import { sumAgentMetricsByUuid } from "@naisys/hub-database";
 
 import erpDb from "../../database/erpDb.js";
 

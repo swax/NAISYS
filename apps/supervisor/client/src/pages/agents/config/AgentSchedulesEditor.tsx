@@ -262,10 +262,9 @@ export const AgentSchedulesEditor: React.FC<AgentSchedulesEditorProps> = ({
         <Anchor component={Link} to="/variables" inherit>
           TIMEZONE variable
         </Anchor>{" "}
-        to override it. On fire, the agent gets a chat from the initiator
-        (its lead, or admin, by default) and is started if not running. Its
-        reply goes back to the initiator, who can then run their own
-        post-processing.
+        to override it. On fire, the agent gets a chat from the initiator (its
+        lead, or admin, by default) and is started if not running. Its reply
+        goes back to the initiator, who can then run their own post-processing.
       </Text>
       {schedules.length === 0 ? (
         <Text size="sm" c="dimmed">

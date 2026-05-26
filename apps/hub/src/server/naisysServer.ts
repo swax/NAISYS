@@ -216,11 +216,7 @@ export function createNaisysServer(
           `[Hub] Connection rejected: access key did not match any host (${socket.handshake.address})`,
         );
         return next(
-          createConnectError(
-            "Invalid access key",
-            "invalid_access_key",
-            false,
-          ),
+          createConnectError("Invalid access key", "invalid_access_key", false),
         );
       }
 

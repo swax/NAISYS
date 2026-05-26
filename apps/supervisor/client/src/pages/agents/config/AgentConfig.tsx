@@ -19,6 +19,7 @@ import { useParams } from "react-router-dom";
 
 import { useAgentDataContext } from "../../../contexts/AgentDataContext";
 import { useHostDataContext } from "../../../contexts/HostDataContext";
+import { formatAgentLabel } from "../../../lib/agentLabel";
 import {
   assignAgentToHost,
   getAgentConfig,
@@ -26,7 +27,6 @@ import {
   unassignAgentFromHost,
   updateAgentConfig,
 } from "../../../lib/api/apiAgents";
-import { formatAgentLabel } from "../../../lib/agentLabel";
 import {
   api,
   apiEndpoints,
@@ -291,9 +291,9 @@ export const AgentConfig: React.FC = () => {
             <Alert color="blue" title="Admin diagnostic console">
               The admin user is NAISYS&apos;s built-in diagnostic console — a
               no-model agent that runs on every host. Only the settings that
-              apply to a console are shown here; LLM-loop settings (shell
-              model, schedules, continuity, …) don&apos;t apply to it and are
-              managed by NAISYS.
+              apply to a console are shown here; LLM-loop settings (shell model,
+              schedules, continuity, …) don&apos;t apply to it and are managed
+              by NAISYS.
             </Alert>
             <AdminConfigForm
               key={configRevision}

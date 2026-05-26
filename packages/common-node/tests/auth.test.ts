@@ -32,8 +32,7 @@ describe("auth helpers", () => {
 
   test("hashes tokens with SHA-256", () => {
     expect(hashToken("secret")).toBe(
-      "2bb80d537b1da3e38bd30361aa855686bde0eacd7162" +
-        "fef6a25fe97bf527a25b",
+      "2bb80d537b1da3e38bd30361aa855686bde0eacd7162" + "fef6a25fe97bf527a25b",
     );
   });
 
@@ -43,9 +42,7 @@ describe("auth helpers", () => {
     process.env.NODE_ENV = "production";
 
     expect(SESSION_COOKIE_NAME).toBe("naisys_session");
-    expect(
-      sessionCookieOptions(new Date("2026-05-18T00:05:30Z")),
-    ).toEqual({
+    expect(sessionCookieOptions(new Date("2026-05-18T00:05:30Z"))).toEqual({
       path: "/",
       httpOnly: true,
       sameSite: "lax",
@@ -54,9 +51,9 @@ describe("auth helpers", () => {
     });
 
     process.env.NODE_ENV = "test";
-    expect(
-      sessionCookieOptions(new Date("2026-05-18T00:00:30Z")).secure,
-    ).toBe(false);
+    expect(sessionCookieOptions(new Date("2026-05-18T00:00:30Z")).secure).toBe(
+      false,
+    );
   });
 
   test("generates and persists only the hash of a persistent user API key", async () => {

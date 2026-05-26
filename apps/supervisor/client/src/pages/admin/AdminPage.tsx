@@ -36,7 +36,11 @@ export const AdminPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
 
-  const { data, isLoading: loading, refetch } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
     queryKey: ["admin-info"],
     queryFn: () => api.get<AdminInfoResponse>(apiEndpoints.admin),
   });

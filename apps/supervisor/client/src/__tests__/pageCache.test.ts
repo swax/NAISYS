@@ -33,12 +33,12 @@ const data = (...pages: ListPage<Item>[]): ListInfiniteData<Item> => ({
 describe("flattenItems", () => {
   test("flattens, dedupes by key, and sorts", () => {
     const pages = [page(item(3), item(1)), page(item(2))];
-    expect(
-      flattenItems(pages, key, recency, recency, false).map(key),
-    ).toEqual([1, 2, 3]);
-    expect(
-      flattenItems(pages, key, recency, recency, true).map(key),
-    ).toEqual([3, 2, 1]);
+    expect(flattenItems(pages, key, recency, recency, false).map(key)).toEqual([
+      1, 2, 3,
+    ]);
+    expect(flattenItems(pages, key, recency, recency, true).map(key)).toEqual([
+      3, 2, 1,
+    ]);
   });
 
   test("keeps the freshest copy when a key spans pages, either order", () => {

@@ -1,5 +1,9 @@
 import type { UserEntry } from "@naisys/common";
-import { ADMIN_USERNAME, determineAgentStatus, pushToArrayMap } from "@naisys/common";
+import {
+  ADMIN_USERNAME,
+  determineAgentStatus,
+  pushToArrayMap,
+} from "@naisys/common";
 import { loadAgentConfigs } from "@naisys/common-node";
 import type { UserListResponse } from "@naisys/hub-protocol";
 import { HubEvents, UserListResponseSchema } from "@naisys/hub-protocol";

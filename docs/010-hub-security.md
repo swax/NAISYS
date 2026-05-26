@@ -180,29 +180,29 @@ Repeat steps 1–4 for each additional remote host. Each gets its own key; nothi
 
 ## Environment variables
 
-| Variable          | Where                     | Purpose                                                                  |
-| ----------------- | ------------------------- | ------------------------------------------------------------------------ |
-| `NAISYS_FOLDER`   | Hub, NAISYS, Supervisor   | Base directory for cert files and databases (`NAISYS_FOLDER/cert/`)      |
-| `HOST_ACCESS_KEY` | NAISYS client             | The host's access key — required for remote (standalone) hub connections |
-| `NAISYS_HOSTNAME` | NAISYS (integrated only)  | Optional override for the host's name on first integrated bootstrap      |
-| `SERVER_PORT`    | Hub                       | Plain-HTTP port the hub listens on (default 3300); the proxy points here |
+| Variable          | Where                    | Purpose                                                                  |
+| ----------------- | ------------------------ | ------------------------------------------------------------------------ |
+| `NAISYS_FOLDER`   | Hub, NAISYS, Supervisor  | Base directory for cert files and databases (`NAISYS_FOLDER/cert/`)      |
+| `HOST_ACCESS_KEY` | NAISYS client            | The host's access key — required for remote (standalone) hub connections |
+| `NAISYS_HOSTNAME` | NAISYS (integrated only) | Optional override for the host's name on first integrated bootstrap      |
+| `SERVER_PORT`     | Hub                      | Plain-HTTP port the hub listens on (default 3300); the proxy points here |
 
 `HOST_ACCESS_KEY` is listed in `globalConfigLoader.EXCLUDED_KEYS` (alongside the legacy `HUB_ACCESS_KEY` name) so the hub never distributes it to clients through the config channel.
 
 ## Files
 
-| File                                                                       | Role                                                                       |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `apps/hub/src/server/naisysServer.ts`                                      | Socket.IO auth middleware that resolves host by access-key hash            |
-| `apps/hub/src/lifecycle/hostRegistrar.ts`                                  | `resolveByAccessKey` + `markActive` + cache                                |
-| `apps/hub/src/lifecycle/integratedHostBootstrap.ts`                        | Generates/reconciles the integrated naisys host + key                      |
-| `apps/hub/src/lifecycle/hubHostService.ts`                                 | Broadcasts host list; handles `HOST_REKEYED` (force-disconnect)            |
-| `apps/supervisor/server/src/services/comms/supervisorHostBootstrap.ts`     | Generates/reconciles the SUPERVISOR host + key                             |
-| `apps/supervisor/server/src/services/hostService.ts`                       | `createHost` + `rotateHostAccessKey` (DB-side key generation)              |
-| `apps/supervisor/server/src/routes/infra/hosts.ts`                         | `POST /hosts` (with plaintext in response) + rotate route                  |
-| `apps/supervisor/server/src/services/comms/hubConnectionService.ts`        | Supervisor's hub-client — reads cert key, sends `HOST_REKEYED`             |
-| `packages/common-node/src/hub/hostAccessKey.ts`                            | Shared `resolveHostAccessKey()` (env-var only)                             |
-| `apps/naisys/src/hub/hubClientConfig.ts`                                   | Client-side check that `HOST_ACCESS_KEY` is configured                     |
-| `apps/naisys/src/hub/hubConnection.ts`                                     | NAISYS Socket.IO client — sends the key in `auth`                          |
-| `NAISYS_FOLDER/cert/integrated-naisys-access-key`                          | Plaintext key for the integrated naisys host (mode 0o600)                  |
-| `NAISYS_FOLDER/cert/integrated-supervisor-access-key`                      | Plaintext key for the SUPERVISOR host (mode 0o600)                         |
+| File                                                                   | Role                                                            |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `apps/hub/src/server/naisysServer.ts`                                  | Socket.IO auth middleware that resolves host by access-key hash |
+| `apps/hub/src/lifecycle/hostRegistrar.ts`                              | `resolveByAccessKey` + `markActive` + cache                     |
+| `apps/hub/src/lifecycle/integratedHostBootstrap.ts`                    | Generates/reconciles the integrated naisys host + key           |
+| `apps/hub/src/lifecycle/hubHostService.ts`                             | Broadcasts host list; handles `HOST_REKEYED` (force-disconnect) |
+| `apps/supervisor/server/src/services/comms/supervisorHostBootstrap.ts` | Generates/reconciles the SUPERVISOR host + key                  |
+| `apps/supervisor/server/src/services/hostService.ts`                   | `createHost` + `rotateHostAccessKey` (DB-side key generation)   |
+| `apps/supervisor/server/src/routes/infra/hosts.ts`                     | `POST /hosts` (with plaintext in response) + rotate route       |
+| `apps/supervisor/server/src/services/comms/hubConnectionService.ts`    | Supervisor's hub-client — reads cert key, sends `HOST_REKEYED`  |
+| `packages/common-node/src/hub/hostAccessKey.ts`                        | Shared `resolveHostAccessKey()` (env-var only)                  |
+| `apps/naisys/src/hub/hubClientConfig.ts`                               | Client-side check that `HOST_ACCESS_KEY` is configured          |
+| `apps/naisys/src/hub/hubConnection.ts`                                 | NAISYS Socket.IO client — sends the key in `auth`               |
+| `NAISYS_FOLDER/cert/integrated-naisys-access-key`                      | Plaintext key for the integrated naisys host (mode 0o600)       |
+| `NAISYS_FOLDER/cert/integrated-supervisor-access-key`                  | Plaintext key for the SUPERVISOR host (mode 0o600)              |

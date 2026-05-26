@@ -152,7 +152,9 @@ export const LaborTicketList: React.FC<Props> = ({
                       {ticket.cost != null ? `$${ticket.cost.toFixed(2)}` : "—"}
                     </Table.Td>
                     <Table.Td>
-                      {ticket.tokens != null ? formatTokens(ticket.tokens) : "—"}
+                      {ticket.tokens != null
+                        ? formatTokens(ticket.tokens)
+                        : "—"}
                     </Table.Td>
                     <Table.Td>
                       {hasActionTemplate(

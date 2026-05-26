@@ -63,7 +63,11 @@ export const UserDetail: React.FC = () => {
 
   const isSelf = currentUser?.username === routeUsername;
 
-  const { data: user, isLoading: loading, refetch } = useQuery({
+  const {
+    data: user,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
     queryKey: ["user", routeUsername],
     queryFn: () => getUser(routeUsername!),
     enabled: !!routeUsername,

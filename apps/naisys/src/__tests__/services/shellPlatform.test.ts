@@ -30,9 +30,7 @@ describe("shellPlatform", () => {
     );
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain(
-      `source-status:${scenario.expectedStatus}`,
-    );
+    expect(result.stdout).toContain(`source-status:${scenario.expectedStatus}`);
     expect(result.stdout).toContain("normal-failure-survived");
 
     const haltCount =

@@ -55,9 +55,7 @@ export function createShellCommand(
       // Secure continuations carry a secret (password / API key) — label by
       // the running command so neither the source line nor the ns-more
       // prefix exposes it. Non-secure continuations use the typed input.
-      label = isSecureContinuation()
-        ? getCurrentCommandName()
-        : input.trim();
+      label = isSecureContinuation() ? getCurrentCommandName() : input.trim();
       response = await shellWrapper.continueCommand({
         kind: "input",
         text: input,

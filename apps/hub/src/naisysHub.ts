@@ -21,7 +21,6 @@ import { Server } from "socket.io";
 import { fileURLToPath } from "url";
 
 import { createHubCodexAuthService } from "./auth/hubCodexAuthService.js";
-import { bootstrapIntegratedNaisysHost } from "./lifecycle/integratedHostBootstrap.js";
 import { createHubRuntimeKeyService } from "./auth/hubRuntimeKeyService.js";
 import { createHubUserService } from "./auth/hubUserService.js";
 import { createHubConfigService } from "./config/hubConfigService.js";
@@ -35,6 +34,7 @@ import { createHubHostService } from "./lifecycle/hubHostService.js";
 import { createHubOwnershipService } from "./lifecycle/hubOwnershipService.js";
 import { createHubRunService } from "./lifecycle/hubRunService.js";
 import { createHubScheduleService } from "./lifecycle/hubScheduleService.js";
+import { bootstrapIntegratedNaisysHost } from "./lifecycle/integratedHostBootstrap.js";
 import { createHubAttachmentService } from "./mail/hubAttachmentService.js";
 import { createHubMailService } from "./mail/hubMailService.js";
 import { createHubSendMailService } from "./mail/hubSendMailService.js";

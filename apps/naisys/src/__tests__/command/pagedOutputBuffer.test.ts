@@ -50,8 +50,14 @@ describe("pagedOutputBuffer", () => {
   test("uses exact ids for duplicate commands and bare stem for most recent", () => {
     const buf = buildBuffer();
 
-    const oldFirstPage = buf.setContent("curl https://example.com", longContent("old"));
-    const newFirstPage = buf.setContent("curl https://example.com", longContent("new"));
+    const oldFirstPage = buf.setContent(
+      "curl https://example.com",
+      longContent("old"),
+    );
+    const newFirstPage = buf.setContent(
+      "curl https://example.com",
+      longContent("new"),
+    );
 
     expect(oldFirstPage).toContain("ns-more curl-1 --page=2");
     expect(newFirstPage).toContain("ns-more curl-2 --page=2");

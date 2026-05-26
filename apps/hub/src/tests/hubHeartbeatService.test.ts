@@ -45,8 +45,9 @@ function createOwnershipService(adminUserId = 999) {
   const owned = new Map<number, Set<number>>();
   return {
     adminUserId,
-    hostOwnsUser: vi.fn((hostId: number, userId: number) =>
-      userId === adminUserId || (owned.get(hostId)?.has(userId) ?? false),
+    hostOwnsUser: vi.fn(
+      (hostId: number, userId: number) =>
+        userId === adminUserId || (owned.get(hostId)?.has(userId) ?? false),
     ),
     addStartedAgent: vi.fn((hostId: number, userId: number) => {
       let set = owned.get(hostId);
@@ -79,7 +80,8 @@ function createOwnershipService(adminUserId = 999) {
     ),
     findHostsForAgent: vi.fn((userId: number) => {
       const hostIds: number[] = [];
-      for (const [hostId, set] of owned) if (set.has(userId)) hostIds.push(hostId);
+      for (const [hostId, set] of owned)
+        if (set.has(userId)) hostIds.push(hostId);
       return hostIds;
     }),
     getHostActiveAgentCount: vi.fn(

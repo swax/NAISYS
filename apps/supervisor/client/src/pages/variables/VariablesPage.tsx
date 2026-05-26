@@ -138,7 +138,11 @@ export const VariablesPage: React.FC = () => {
     getInitialValueInEffect: false,
   });
 
-  const { data, isLoading: loading, refetch } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    refetch,
+  } = useQuery({
     queryKey: ["variables"],
     queryFn: () => api.get<VariablesResponse>(apiEndpoints.variables),
   });
@@ -364,9 +368,7 @@ export const VariablesPage: React.FC = () => {
               size="sm"
               variant="transparent"
               color={
-                (isEditing ? editSensitive : item.sensitive)
-                  ? "orange"
-                  : "gray"
+                (isEditing ? editSensitive : item.sensitive) ? "orange" : "gray"
               }
               onClick={
                 isEditing ? () => setEditSensitive((v) => !v) : undefined

@@ -46,29 +46,32 @@ export const useAgentData = () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.agentData });
         return;
       }
-      queryClient.setQueryData<AgentListResponse>(queryKeys.agentData, (old) => {
-        if (!old?.items) return old;
-        let changed = false;
-        const items = old.items.map((agent) => {
-          const update = event.agents[String(agent.id)];
-          if (!update) return agent;
-          if (
-            agent.status !== update.status ||
-            agent.latestLogId !== update.latestLogId ||
-            agent.latestMailId !== update.latestMailId
-          ) {
-            changed = true;
-            return {
-              ...agent,
-              status: update.status,
-              latestLogId: update.latestLogId,
-              latestMailId: update.latestMailId,
-            };
-          }
-          return agent;
-        });
-        return changed ? { ...old, items } : old;
-      });
+      queryClient.setQueryData<AgentListResponse>(
+        queryKeys.agentData,
+        (old) => {
+          if (!old?.items) return old;
+          let changed = false;
+          const items = old.items.map((agent) => {
+            const update = event.agents[String(agent.id)];
+            if (!update) return agent;
+            if (
+              agent.status !== update.status ||
+              agent.latestLogId !== update.latestLogId ||
+              agent.latestMailId !== update.latestMailId
+            ) {
+              changed = true;
+              return {
+                ...agent,
+                status: update.status,
+                latestLogId: update.latestLogId,
+                latestMailId: update.latestMailId,
+              };
+            }
+            return agent;
+          });
+          return changed ? { ...old, items } : old;
+        },
+      );
     },
     [queryClient],
   );

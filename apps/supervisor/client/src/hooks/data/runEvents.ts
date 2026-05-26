@@ -34,10 +34,7 @@ export const runKey = (run: {
  * run. Heartbeats carry liveness plus paused/state; log and cost events fold
  * deltas onto the running totals. The caller locates `run` by {@link runKey}.
  */
-export function applyRunsEvent(
-  run: RunSession,
-  event: RunsEvent,
-): RunSession {
+export function applyRunsEvent(run: RunSession, event: RunsEvent): RunSession {
   switch (event.type) {
     case "heartbeat-update":
       return {

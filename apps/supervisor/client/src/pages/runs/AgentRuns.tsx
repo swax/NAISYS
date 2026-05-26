@@ -255,13 +255,15 @@ export const AgentRuns: React.FC = () => {
   const commandInputRef = useRef<HTMLTextAreaElement>(null);
   const shouldRefocusCommandInputRef = useRef(false);
 
-  const { pushHistory: pushCommandHistory, handleKeyDown: commandHistoryKeyDown } =
-    useInputHistory({
-      storageKey: username ? `run:${username}` : null,
-      value: commandInput,
-      onValueChange: setCommandInput,
-      inputRef: commandInputRef,
-    });
+  const {
+    pushHistory: pushCommandHistory,
+    handleKeyDown: commandHistoryKeyDown,
+  } = useInputHistory({
+    storageKey: username ? `run:${username}` : null,
+    value: commandInput,
+    onValueChange: setCommandInput,
+    inputRef: commandInputRef,
+  });
 
   useEffect(() => {
     if (commandSending || !shouldRefocusCommandInputRef.current) return;
@@ -525,17 +527,17 @@ export const AgentRuns: React.FC = () => {
                 {selectedRun.isOnline &&
                   selectedRun.subagentId == null &&
                   username !== ADMIN_USERNAME && (
-                  <Button
-                    size="compact-xs"
-                    variant="light"
-                    color="red"
-                    loading={stopLoading}
-                    leftSection={<IconPlayerStop size={12} />}
-                    onClick={() => void handleStop(selectedRun)}
-                  >
-                    Stop
-                  </Button>
-                )}
+                    <Button
+                      size="compact-xs"
+                      variant="light"
+                      color="red"
+                      loading={stopLoading}
+                      leftSection={<IconPlayerStop size={12} />}
+                      onClick={() => void handleStop(selectedRun)}
+                    >
+                      Stop
+                    </Button>
+                  )}
               </Group>
               <Group gap="xs">
                 <Text size="xs" c="dimmed">

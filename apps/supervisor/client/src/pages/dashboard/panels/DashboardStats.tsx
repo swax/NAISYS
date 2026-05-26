@@ -45,7 +45,10 @@ export const DashboardStats: React.FC<{ stats: DashboardStatsData }> = ({
         value={formatCost(stats.spendLast24h)}
         sub={spendSub}
       />
-      <StatTile label="Tokens (24h)" value={formatTokens(stats.tokensLast24h)} />
+      <StatTile
+        label="Tokens (24h)"
+        value={formatTokens(stats.tokensLast24h)}
+      />
     </SimpleGrid>
   );
 };

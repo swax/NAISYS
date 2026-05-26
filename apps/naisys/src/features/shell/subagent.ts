@@ -1,4 +1,4 @@
-import { agentNames, type AgentConfigFile } from "@naisys/common";
+import { type AgentConfigFile, agentNames } from "@naisys/common";
 import { HubEvents } from "@naisys/hub-protocol";
 import stringArgv from "string-argv";
 import stripAnsi from "strip-ansi";

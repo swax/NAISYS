@@ -184,9 +184,7 @@ export const MailConversationList: React.FC<MailConversationListProps> = ({
                         <Text
                           size="sm"
                           lineClamp={1}
-                          style={
-                            conv.isArchived ? { opacity: 0.5 } : undefined
-                          }
+                          style={conv.isArchived ? { opacity: 0.5 } : undefined}
                         >
                           {groupBySubject
                             ? conv.normalizedSubject

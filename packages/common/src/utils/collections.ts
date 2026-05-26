@@ -211,7 +211,11 @@ export function sortBy<T>(
   keyFn: (item: T) => SortKey | readonly SortKey[],
 ): T[] {
   return Array.from(items).sort((a, b) =>
-    compareTuplesWith(toKeyTuple(keyFn(a)), toKeyTuple(keyFn(b)), compareSortKeys),
+    compareTuplesWith(
+      toKeyTuple(keyFn(a)),
+      toKeyTuple(keyFn(b)),
+      compareSortKeys,
+    ),
   );
 }
 

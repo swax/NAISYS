@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { LogEntry } from "../lib/api/apiClient";
 import { mergeLogEntries } from "../hooks/useContextLog";
+import type { LogEntry } from "../lib/api/apiClient";
 
 const log = (id: number, message: string = `log-${id}`): LogEntry => ({
   id,

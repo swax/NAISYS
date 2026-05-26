@@ -1,10 +1,7 @@
 import type { FastifyRequest } from "fastify";
 
 import { getUserForRegistrationToken } from "../../services/auth/passkeyService.js";
-import {
-  getUserById,
-  getUserPermissions,
-} from "../../services/userService.js";
+import { getUserById, getUserPermissions } from "../../services/userService.js";
 
 export async function buildAuthUserResponse(userId: number) {
   const user = await getUserById(userId);
