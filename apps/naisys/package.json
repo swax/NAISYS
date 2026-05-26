@@ -74,7 +74,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
-    "@google/genai": "^1.52.0",
+    "@google/genai": "^2.6.0",
     "@naisys/common": "3.0.0",
     "@naisys/common-node": "3.0.0",
     "@naisys/hub-protocol": "3.0.0",
