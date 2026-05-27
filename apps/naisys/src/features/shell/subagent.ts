@@ -613,7 +613,8 @@ export function createSubagentService(
       .map((sub) =>
         agentManager.stopAgent(sub.userId, "parent terminated").catch((err) => {
           output.errorAndLog(
-            `Failed to stop ephemeral subagent ${sub.agentName}: ${err instanceof Error ? err.message : String(err)}`,
+            `Failed to stop ephemeral subagent ${sub.agentName}: ${err}`,
+            err,
           );
         }),
       );

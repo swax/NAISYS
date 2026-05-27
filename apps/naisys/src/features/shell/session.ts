@@ -205,7 +205,10 @@ export function createSessionService(
         try {
           return [id, await hubAttachmentClient.downloadToBuffer(id)] as const;
         } catch (e) {
-          output.errorAndLog(`Failed to fetch resume attachment ${id}: ${e}`);
+          output.errorAndLog(
+            `Failed to fetch resume attachment ${id}: ${e}`,
+            e,
+          );
           return [id, null] as const;
         }
       },
@@ -466,7 +469,7 @@ export function createSessionService(
         try {
           await produceRestoreSummary();
         } catch (e) {
-          output.errorAndLog(`Failed to produce restore summary: ${e}`);
+          output.errorAndLog(`Failed to produce restore summary: ${e}`, e);
         }
       }
     }

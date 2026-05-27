@@ -97,7 +97,7 @@ async function createStreamingOpenAiResponse(
   }
   return {
     ...response,
-    output: response.output.length > 0 ? response.output : outputItems,
+    output: response.output?.length ? response.output : outputItems,
     output_text: response.output_text || outputText,
   };
 }

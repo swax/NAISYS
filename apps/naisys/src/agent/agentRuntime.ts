@@ -443,7 +443,7 @@ export async function createAgentRuntime(
       try {
         return await commandLoop.run(abortController.signal);
       } catch (ex) {
-        output.errorAndLog(`AGENT CRASHED: ${ex}`);
+        output.errorAndLog(`AGENT CRASHED: ${ex}`, ex);
         return `error: ${ex}`;
       }
     },

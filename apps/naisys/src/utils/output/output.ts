@@ -81,10 +81,15 @@ export function createOutputService(logService: LogService) {
     write(msg, OutputColor.error);
   }
 
-  function errorAndLog(msg: string) {
-    error(msg);
-
-    writeDbLog(msg, "error");
+  function errorAndLog(msg: string, err?: unknown) {
+    const stack = err instanceof Error && err.stack ? err.stack : undefined;
+    if (stack) {
+      error(`${msg} (see error log for details)`);
+      writeDbLog(`${msg}\n${stack}`, "error");
+    } else {
+      error(msg);
+      writeDbLog(msg, "error");
+    }
   }
 
   function writeDbLog(msg: string, type: LlmMessageType, filepath?: string) {

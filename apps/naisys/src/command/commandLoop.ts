@@ -632,6 +632,7 @@ export function createCommandLoop(
       if (errorStr.includes("400") && contextManager.scrubRecentMedia()) {
         output.errorAndLog(
           `Attempting Context Recovery: Recent media scrubbed from context due to API error: ${errorStr}`,
+          e,
         );
         contextManager.append(
           `System: Recent media was scrubbed from the context because it caused an API error: ${errorStr.slice(0, 150)}`,
@@ -679,10 +680,11 @@ export function createCommandLoop(
         contextManager.append("...");
         output.errorAndLog(
           `Error too long for context: ${errorMsg.slice(200)}`,
+          e,
         );
       }
     } else {
-      output.errorAndLog(errorMsg);
+      output.errorAndLog(errorMsg, e);
     }
 
     // If llm is in some error loop then hold in debug mode

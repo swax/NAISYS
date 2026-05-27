@@ -834,7 +834,7 @@ export function createDesktopService(
           );
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          output.errorAndLog(`Desktop action failed: ${msg}`);
+          output.errorAndLog(`Desktop action failed: ${msg}`, e);
           contextManager.appendDesktopError(action.id, msg);
         }
       }
