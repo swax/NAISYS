@@ -1,6 +1,6 @@
 {
   "name": "@naisys/common-node",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "type": "module",
   "description": "[internal] Node-only utilities for NAISYS",
   "files": [
@@ -17,7 +17,7 @@
     "npm:publish": "npm publish --access public"
   },
   "dependencies": {
-    "@naisys/common": "3.0.1",
+    "@naisys/common": "3.0.2",
     "better-sqlite3": "^12.10.0",
     "js-yaml": "^4.1.1",
     "pino": "^10.3.1"
