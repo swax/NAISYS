@@ -327,7 +327,7 @@ export const UpdateDialog: React.FC<UpdateDialogProps> = ({
                 <Radio value="beta" label={`Beta (${npmData.beta})`} />
               )}
               <Group gap="sm" align="center">
-                <Radio value="custom" label="Custom" />
+                <Radio value="custom" label="Other" />
                 {selectedOption === "custom" && (
                   <>
                     <TextInput
