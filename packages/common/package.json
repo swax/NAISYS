@@ -3,6 +3,11 @@
   "version": "3.0.2",
   "type": "module",
   "description": "[internal] Common utilities and constants for NAISYS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "packages/common"
+  },
   "files": [
     "dist",
     "assets",

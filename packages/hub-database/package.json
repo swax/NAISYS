@@ -3,6 +3,11 @@
   "version": "3.0.2",
   "type": "module",
   "description": "[internal] Hub database schema and Prisma client for NAISYS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "packages/hub-database"
+  },
   "files": [
     "dist",
     "prisma.config.ts",

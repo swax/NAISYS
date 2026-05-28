@@ -2,6 +2,11 @@
   "name": "@naisys/erp-shared",
   "version": "3.0.2",
   "description": "[internal] NAISYS ERP shared types and validation schemas",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/erp/shared"
+  },
   "type": "module",
   "files": [
     "dist",

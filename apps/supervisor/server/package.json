@@ -2,6 +2,11 @@
   "name": "@naisys/supervisor",
   "version": "3.0.2",
   "description": "NAISYS Supervisor - Web UI for monitoring agents, logs, and messaging",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/supervisor/server"
+  },
   "type": "module",
   "main": "dist/supervisorServer.js",
   "bin": {

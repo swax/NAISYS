@@ -33,7 +33,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/swax/NAISYS.git"
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/naisys"
   },
   "keywords": [
     "ai",

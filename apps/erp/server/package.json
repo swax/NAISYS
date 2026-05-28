@@ -2,6 +2,11 @@
   "name": "@naisys/erp",
   "version": "3.0.2",
   "description": "NAISYS ERP - Web UI for AI-driven order and work management",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/erp/server"
+  },
   "type": "module",
   "main": "dist/erpServer.js",
   "bin": {

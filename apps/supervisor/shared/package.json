@@ -2,6 +2,11 @@
   "name": "@naisys/supervisor-shared",
   "version": "3.0.2",
   "description": "[internal] NAISYS Supervisor shared types and validation schemas",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/supervisor/shared"
+  },
   "type": "module",
   "files": [
     "dist",

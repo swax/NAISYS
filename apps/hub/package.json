@@ -2,6 +2,11 @@
   "name": "@naisys/hub",
   "version": "3.0.2",
   "description": "NAISYS Hub - Adds persistence and multi-instance coordination to NAISYS",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "apps/hub"
+  },
   "type": "module",
   "main": "dist/naisysHub.js",
   "bin": {

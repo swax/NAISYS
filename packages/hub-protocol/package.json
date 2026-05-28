@@ -3,6 +3,11 @@
   "version": "3.0.2",
   "type": "module",
   "description": "[internal] Protocol types and schemas for NAISYS Hub communication",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swax/NAISYS.git",
+    "directory": "packages/hub-protocol"
+  },
   "files": [
     "dist",
     "!dist/**/*.map",
