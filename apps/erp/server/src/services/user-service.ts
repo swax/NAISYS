@@ -122,11 +122,14 @@ export async function createUserWithPassword(data: {
 
 export async function updateUser(
   id: number,
-  data: { username?: string; password?: string },
+  data: { username?: string; password?: string; title?: string },
 ) {
   const updateData: Record<string, unknown> = {};
   if (data.username !== undefined) {
     updateData.username = data.username;
+  }
+  if (data.title !== undefined) {
+    updateData.title = data.title;
   }
   if (data.password !== undefined) {
     updateData.passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
@@ -237,20 +240,29 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
  */
 export async function ensureSupervisorSuperAdmin(): Promise<void> {
   const result = await ensureSuperAdmin();
-  const title = (await findHubUserTitleByUuid(result.user.uuid)) ?? "";
 
-  await erpDb.user.upsert({
+  // Super admin is a non-agent — seed title from hub on first bootstrap,
+  // but leave it alone afterwards so local edits stick.
+  const existing = await erpDb.user.findUnique({
     where: { uuid: result.user.uuid },
-    create: {
-      uuid: result.user.uuid,
-      username: result.user.username,
-      title,
-    },
-    update: {
-      username: result.user.username,
-      title,
-    },
   });
+  if (existing) {
+    if (existing.username !== result.user.username) {
+      await erpDb.user.update({
+        where: { id: existing.id },
+        data: { username: result.user.username },
+      });
+    }
+  } else {
+    const title = (await findHubUserTitleByUuid(result.user.uuid)) ?? "";
+    await erpDb.user.create({
+      data: {
+        uuid: result.user.uuid,
+        username: result.user.username,
+        title,
+      },
+    });
+  }
 
   const localSuperAdmin = await erpDb.user.findUnique({
     where: { uuid: result.user.uuid },

@@ -34,6 +34,7 @@ export const UpdateUserSchema = z
   .object({
     username: urlSafeUsername.optional(),
     password: z.string().min(6).optional(),
+    title: z.string().max(255).optional(),
   })
   .strict();
 

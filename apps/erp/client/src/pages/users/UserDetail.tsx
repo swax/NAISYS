@@ -38,6 +38,7 @@ export const UserDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editOpened, { open: openEdit, close: closeEdit }] = useDisclosure();
   const [editUsername, setEditUsername] = useState("");
+  const [editTitle, setEditTitle] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [grantPerm, setGrantPerm] = useState<ErpPermission | null>(null);
@@ -77,13 +78,15 @@ export const UserDetail: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    if (!routeUsername || !editUsername) return;
+    if (!routeUsername || !editUsername || !user) return;
     setSaving(true);
     setEditError("");
     try {
-      await api.put(apiEndpoints.user(routeUsername), {
+      const body: { username: string; title?: string } = {
         username: editUsername,
-      });
+      };
+      if (titleEditable) body.title = editTitle;
+      await api.put(apiEndpoints.user(routeUsername), body);
       closeEdit();
       if (editUsername !== routeUsername) {
         void navigate(`/users/${editUsername}`, { replace: true });
@@ -188,6 +191,8 @@ export const UserDetail: React.FC = () => {
     (p) => !user.permissions?.some((up) => up.permission === p),
   );
 
+  const titleEditable = !user.isAgent || !supervisorAuth;
+
   return (
     <Container size="md" py="xl">
       <Group justify="space-between" mb="lg">
@@ -218,6 +223,7 @@ export const UserDetail: React.FC = () => {
             <Button
               onClick={() => {
                 setEditUsername(user.username);
+                setEditTitle(user.title);
                 setEditError("");
                 openEdit();
               }}
@@ -252,6 +258,12 @@ export const UserDetail: React.FC = () => {
               Username:
             </Text>
             <Text ff="monospace">{user.username}</Text>
+          </Group>
+          <Group>
+            <Text fw={600} w={120}>
+              Title:
+            </Text>
+            <Text>{user.title || <Text c="dimmed" span>—</Text>}</Text>
           </Group>
           <Group>
             <Text fw={600} w={120}>
@@ -361,6 +373,13 @@ export const UserDetail: React.FC = () => {
             value={editUsername}
             onChange={(e) => setEditUsername(e.currentTarget.value)}
           />
+          {titleEditable && (
+            <TextInput
+              label="Title"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.currentTarget.value)}
+            />
+          )}
           {editError && (
             <Text c="red" size="sm">
               {editError}

@@ -47,11 +47,20 @@ function userItemLinks(username: string): HateoasLink[] {
 
 function userActions(
   username: string,
+  isAgent: boolean,
   isSelf: boolean,
   isAdmin: boolean,
 ): HateoasAction[] {
   const href = `${API_PREFIX}/users/${username}`;
   const actions: HateoasAction[] = [];
+
+  // In SSO mode the supervisor owns passwords (passkey-only) and external API
+  // keys, so ERP doesn't expose its own change-password / rotate-key actions.
+  const sso = isSupervisorAuth();
+
+  // Title is editable when the user isn't an SSO-managed agent (whose title
+  // is mirrored from the hub on every auth).
+  const titleEditable = !isAgent || !sso;
 
   if (isAdmin) {
     actions.push({
@@ -60,13 +69,9 @@ function userActions(
       method: "PUT",
       title: "Update",
       schema: `${API_PREFIX}/schemas/UpdateUser`,
-      body: { username: "" },
+      body: { username: "", ...(titleEditable ? { title: "" } : {}) },
     });
   }
-
-  // In SSO mode the supervisor owns passwords (passkey-only) and external API
-  // keys, so ERP doesn't expose its own change-password / rotate-key actions.
-  const sso = isSupervisorAuth();
 
   if (isSelf && !sso) {
     actions.push({
@@ -158,7 +163,7 @@ export function formatUser(
       _actions: permissionActions(user.username, p.permission, isSelf, isAdmin),
     })),
     _links: userItemLinks(user.username),
-    _actions: userActions(user.username, isSelf, isAdmin),
+    _actions: userActions(user.username, user.isAgent, isSelf, isAdmin),
   };
 }
 
@@ -475,17 +480,24 @@ export default function userRoutes(fastify: FastifyInstance) {
       }
 
       const isAdmin = hasPermission(request.erpUser, "erp_admin");
-
-      // In SSO mode the supervisor owns passwords, so we strip any password
-      // field before forwarding the update — even from admins.
       const sso = isSupervisorAuth();
-      const body = isAdmin
-        ? sso
-          ? { username: request.body.username }
-          : request.body
-        : sso
-          ? {}
-          : { password: request.body.password };
+
+      // Field-level gating:
+      // - username: admin-only.
+      // - password: non-SSO only (supervisor owns passwords in SSO mode).
+      // - title: editable unless the target is an SSO-managed agent (whose
+      //   title is mirrored from the hub on every auth).
+      const titleEditable = !targetUser.isAgent || !sso;
+      const body: { username?: string; password?: string; title?: string } = {};
+      if (isAdmin && request.body.username !== undefined) {
+        body.username = request.body.username;
+      }
+      if (!sso && request.body.password !== undefined) {
+        body.password = request.body.password;
+      }
+      if (titleEditable && request.body.title !== undefined) {
+        body.title = request.body.title;
+      }
 
       try {
         const user = await updateUser(targetUser.id, body);

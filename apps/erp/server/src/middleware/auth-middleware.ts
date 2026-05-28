@@ -60,12 +60,30 @@ async function resolveCookie(token: string): Promise<ErpUser | null> {
 async function loadCookieUserSso(tokenHash: string) {
   const session = await findSession(tokenHash);
   if (!session) return null;
-  const title = (await findHubUserTitleByUuid(session.uuid)) ?? "";
-  return erpDb.user.upsert({
+
+  const existing = await erpDb.user.findUnique({
     where: { uuid: session.uuid },
-    create: { uuid: session.uuid, username: session.username, title },
-    update: { title },
   });
+
+  if (!existing) {
+    const title = (await findHubUserTitleByUuid(session.uuid)) ?? "";
+    return erpDb.user.create({
+      data: { uuid: session.uuid, username: session.username, title },
+    });
+  }
+
+  // Agents mirror hub title; non-agents own their title locally.
+  if (existing.isAgent) {
+    const title = (await findHubUserTitleByUuid(session.uuid)) ?? "";
+    if (title !== existing.title) {
+      return erpDb.user.update({
+        where: { id: existing.id },
+        data: { title },
+      });
+    }
+  }
+
+  return existing;
 }
 
 async function loadCookieUserStandalone(tokenHash: string) {
@@ -95,13 +113,33 @@ async function loadApiKeyUserSso(apiKey: string) {
   if (!match) return null;
 
   const isAgent = supervisorUser?.isAgent ?? !!hubAgent;
-  const title =
-    hubAgent?.title ?? (await findHubUserTitleByUuid(match.uuid)) ?? "";
-  return erpDb.user.upsert({
+
+  const existing = await erpDb.user.findUnique({
     where: { uuid: match.uuid },
-    create: { uuid: match.uuid, username: match.username, isAgent, title },
-    update: { title },
   });
+
+  const fetchTitle = async () =>
+    hubAgent?.title ?? (await findHubUserTitleByUuid(match.uuid)) ?? "";
+
+  if (!existing) {
+    const title = await fetchTitle();
+    return erpDb.user.create({
+      data: { uuid: match.uuid, username: match.username, isAgent, title },
+    });
+  }
+
+  // Agents mirror hub title; non-agents own their title locally.
+  if (existing.isAgent) {
+    const title = await fetchTitle();
+    if (title !== existing.title) {
+      return erpDb.user.update({
+        where: { id: existing.id },
+        data: { title },
+      });
+    }
+  }
+
+  return existing;
 }
 
 export function hasPermission(
