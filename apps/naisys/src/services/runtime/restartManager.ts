@@ -7,6 +7,15 @@ export const RESTART_WRAPPER_ACTIVE_ENV = "NAISYS_RESTART_WRAPPER_ACTIVE";
 export const RESTART_WRAPPER_CHILD_ENV = "NAISYS_RESTART_WRAPPER_CHILD";
 export const DISABLE_RESTART_WRAPPER_ENV = "NAISYS_DISABLE_RESTART_WRAPPER";
 
+/** Flags that should only apply to the first invocation and be dropped on auto-update restarts. */
+const ONE_SHOT_FLAGS = ["--setup"];
+
+export function stripOneShotFlags(args: string[]): string[] {
+  return args.filter(
+    (arg) => !ONE_SHOT_FLAGS.some((flag) => arg === flag || arg.startsWith(`${flag}=`)),
+  );
+}
+
 const POSIX_FORWARD_SIGNALS: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
 const WINDOWS_FORWARD_SIGNALS: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
 const SIGNAL_EXIT_CODES: Partial<Record<NodeJS.Signals, number>> = {
@@ -65,8 +74,10 @@ export async function runWithRestartWrapper(): Promise<number> {
     process.on(signal, () => forwardSignal(signal));
   }
 
+  let childArgs = process.argv.slice(1);
+
   while (true) {
-    activeChild = spawn(process.argv[0], process.argv.slice(1), {
+    activeChild = spawn(process.argv[0], childArgs, {
       cwd: process.cwd(),
       stdio: "inherit",
       env: {
@@ -81,6 +92,7 @@ export async function runWithRestartWrapper(): Promise<number> {
 
     if (exitCode === RESTART_EXIT_CODE) {
       console.log("[NAISYS] Restarting...");
+      childArgs = stripOneShotFlags(childArgs);
       continue;
     }
 

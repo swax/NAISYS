@@ -8,6 +8,7 @@ import {
   RESTART_WRAPPER_ACTIVE_ENV,
   RESTART_WRAPPER_CHILD_ENV,
   shouldUseRestartWrapper,
+  stripOneShotFlags,
 } from "../../services/runtime/restartManager.js";
 
 describe("restartManager", () => {
@@ -88,5 +89,15 @@ describe("restartManager", () => {
     expect(getExitCodeForSignal("SIGTERM")).toBe(143);
     expect(getExitCodeForSignal("SIGUSR1")).toBe(1);
     expect(getExitCodeForSignal(null)).toBe(1);
+  });
+
+  test("strips --setup from args so auto-update restarts do not re-enter the wizard", () => {
+    expect(
+      stripOneShotFlags(["naisys", "--hub=https://x", "--setup"]),
+    ).toEqual(["naisys", "--hub=https://x"]);
+    expect(stripOneShotFlags(["naisys", "--hub=https://x"])).toEqual([
+      "naisys",
+      "--hub=https://x",
+    ]);
   });
 });
