@@ -12,11 +12,11 @@ export const LatestErrorsPanel: React.FC<{
   <Paper p="md" withBorder>
     <Group gap={8} mb="sm">
       <IconAlertTriangle size={18} />
-      <Text fw={600}>Latest errors</Text>
+      <Text fw={600}>Latest errors (24h)</Text>
     </Group>
     {errorRuns.length === 0 ? (
       <Text size="sm" c="dimmed">
-        No recent errors.
+        No errors in the last 24 hours.
       </Text>
     ) : (
       <Stack gap={8}>

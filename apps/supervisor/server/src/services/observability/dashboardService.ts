@@ -116,7 +116,11 @@ export async function getDashboard(): Promise<DashboardData> {
       },
     }),
     hubDb.context_log.findMany({
-      where: { type: "error", id: { gt: errorFloorId } },
+      where: {
+        type: "error",
+        id: { gt: errorFloorId },
+        created_at: { gte: since24h },
+      },
       orderBy: { id: "desc" },
       take: ERROR_SCAN_LIMIT,
       select: {
