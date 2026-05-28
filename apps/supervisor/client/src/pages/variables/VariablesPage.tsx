@@ -12,6 +12,7 @@ import {
   Stack,
   Table,
   Text,
+  Textarea,
   TextInput,
   Title,
   Tooltip,
@@ -90,14 +91,22 @@ const VariableValueInput: React.FC<VariableValueInputProps> = ({
     );
   }
   return (
-    <TextInput
+    <Textarea
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.currentTarget.value)}
       size="xs"
+      autosize
+      minRows={1}
+      maxRows={8}
       autoFocus={autoFocus}
       onKeyDown={(e) => {
-        if (e.key === "Enter") onSubmit?.();
+        // Enter submits (matches the single-line text-input convention used
+        // elsewhere on the page); Shift+Enter inserts a newline.
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          onSubmit?.();
+        }
         if (e.key === "Escape") onCancel?.();
       }}
     />
@@ -297,8 +306,11 @@ export const VariablesPage: React.FC = () => {
               />
             </Stack>
           ) : (
-            <Group gap={4} wrap="nowrap">
-              <Text size="sm" style={{ fontFamily: "monospace" }}>
+            <Group gap={4} wrap="nowrap" align="flex-start">
+              <Text
+                size="sm"
+                style={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}
+              >
                 {item.sensitive && !revealedKeys.has(item.key)
                   ? "••••••••"
                   : item.value}
