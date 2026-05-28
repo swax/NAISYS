@@ -48,7 +48,6 @@ import { initErpDb } from "./database/erpDb.js";
 import { erpRoutes } from "./erpRoutes.js";
 import { registerAuthMiddleware } from "./middleware/auth-middleware.js";
 import { isSupervisorAuth } from "./middleware/supervisorAuth.js";
-import { backfillOpRunTokens } from "./services/production/labor-ticket-backfill.js";
 import {
   ensureLocalSuperAdmin,
   ensureSupervisorSuperAdmin,
@@ -117,7 +116,6 @@ export const erpPlugin: FastifyPluginAsync<ErpPluginOptions> = async (
 
     await ensureSupervisorSuperAdmin();
     await syncAgentTitlesFromHub();
-    await backfillOpRunTokens();
   } else {
     await ensureLocalSuperAdmin(opts.superAdminPassword);
   }
