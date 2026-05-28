@@ -1,6 +1,6 @@
 {
   "name": "@naisys/common-browser",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "private": true,
   "type": "module",
   "description": "Shared React/Mantine components and utilities for NAISYS client apps",
@@ -13,7 +13,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@naisys/common": "3.0.2",
+    "@naisys/common": "3.0.3",
     "diff": "^9.0.0"
   },
   "peerDependencies": {

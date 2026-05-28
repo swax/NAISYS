@@ -1,6 +1,6 @@
 {
   "name": "@naisys/supervisor-shared",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "[internal] NAISYS Supervisor shared types and validation schemas",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@naisys/common": "3.0.2",
+    "@naisys/common": "3.0.3",
     "zod": "^4.4.3"
   },
   "exports": {

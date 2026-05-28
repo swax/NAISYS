@@ -1,6 +1,6 @@
 {
   "name": "@naisys/supervisor-database",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "type": "module",
   "description": "[internal] Supervisor database schema and Prisma client for NAISYS",
   "repository": {
@@ -31,8 +31,8 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@naisys/common": "3.0.2",
-    "@naisys/common-node": "3.0.2",
+    "@naisys/common": "3.0.3",
+    "@naisys/common-node": "3.0.3",
     "bcryptjs": "^3.0.3",
     "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/client": "^7.8.0",

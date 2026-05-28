@@ -1,6 +1,6 @@
 {
   "name": "@naisys/common",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "type": "module",
   "description": "[internal] Common utilities and constants for NAISYS",
   "repository": {

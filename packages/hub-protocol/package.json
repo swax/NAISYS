@@ -1,6 +1,6 @@
 {
   "name": "@naisys/hub-protocol",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "type": "module",
   "description": "[internal] Protocol types and schemas for NAISYS Hub communication",
   "repository": {
@@ -24,7 +24,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@naisys/common": "3.0.2",
+    "@naisys/common": "3.0.3",
     "zod": "^4.4.3"
   },
   "exports": {
