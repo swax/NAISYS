@@ -28,6 +28,7 @@ export const FieldRefSchema = z.object({
   fields: z.array(FieldRefFieldSchema),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });

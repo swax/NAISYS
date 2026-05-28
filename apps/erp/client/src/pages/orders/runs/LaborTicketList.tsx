@@ -14,6 +14,7 @@ import { IconTrash } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { formatUserLabel } from "../../../lib/userLabel";
 
 export interface LaborActions {
   canClockIn: boolean;
@@ -120,7 +121,9 @@ export const LaborTicketList: React.FC<Props> = ({
               <Table.Tbody>
                 {data.items.map((ticket) => (
                   <Table.Tr key={ticket.id}>
-                    <Table.Td>{ticket.username}</Table.Td>
+                    <Table.Td>
+                      {formatUserLabel(ticket.username, ticket.userTitle)}
+                    </Table.Td>
                     <Table.Td>
                       {ticket.runId != null ? (
                         <Anchor

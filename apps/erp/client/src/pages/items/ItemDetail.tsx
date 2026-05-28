@@ -141,8 +141,10 @@ export const ItemDetail: React.FC = () => {
           <Title order={2}>{item.key}</Title>
           <MetadataTooltip
             createdBy={item.createdBy}
+            createdByTitle={item.createdByTitle}
             createdAt={item.createdAt}
             updatedBy={item.updatedBy}
+            updatedByTitle={item.updatedByTitle}
             updatedAt={item.updatedAt}
           />
         </Group>

@@ -251,8 +251,10 @@ export const StepList: React.FC<StepListProps> = ({
                   <Group gap="xs" wrap="nowrap">
                     <MetadataTooltip
                       createdBy={step.createdBy}
+                      createdByTitle={step.createdByTitle}
                       createdAt={step.createdAt}
                       updatedBy={step.updatedBy}
+                      updatedByTitle={step.updatedByTitle}
                       updatedAt={step.updatedAt}
                     />
                     {hasAction(step._actions, "update") && (

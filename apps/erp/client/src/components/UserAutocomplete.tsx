@@ -4,10 +4,12 @@ import type { UserListResponse } from "@naisys/erp-shared";
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints } from "../lib/api";
+import { formatUserLabel } from "../lib/userLabel";
 
 interface UserOption {
   id: number;
   username: string;
+  title: string;
 }
 
 interface UserAutocompleteProps extends Omit<
@@ -37,7 +39,13 @@ export const UserAutocomplete: React.FC<UserAutocompleteProps> = ({
       const result = await api.get<UserListResponse>(
         `${apiEndpoints.users}?${params}`,
       );
-      setOptions(result.items.map((u) => ({ id: u.id, username: u.username })));
+      setOptions(
+        result.items.map((u) => ({
+          id: u.id,
+          username: u.username,
+          title: u.title,
+        })),
+      );
     } catch {
       setOptions([]);
     }
@@ -47,9 +55,17 @@ export const UserAutocomplete: React.FC<UserAutocompleteProps> = ({
     void fetchOptions(debouncedValue);
   }, [debouncedValue, fetchOptions]);
 
+  // Mantine Autocomplete uses option `value` as the dropdown label by default.
+  // We pass `{ value: username, label: "Title (username)" }` so the formatted
+  // text is shown in the menu while submission still returns the bare username.
+  const data = options.map((o) => ({
+    value: o.username,
+    label: formatUserLabel(o.username, o.title),
+  }));
+
   return (
     <Autocomplete
-      data={options.map((o) => o.username)}
+      data={data}
       value={value}
       onChange={onChange}
       onOptionSubmit={(val) => {

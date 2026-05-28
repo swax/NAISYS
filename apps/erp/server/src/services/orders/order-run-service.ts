@@ -21,16 +21,16 @@ export const includeRev = {
   orderRev: { select: { revNo: true, description: true } },
   order: { select: { item: { select: { key: true } } } },
   itemInstances: { select: { id: true, key: true }, take: 1 },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type OrderRunWithRev = OrderRunModel & {
   orderRev: { revNo: number; description: string };
   order: { item: { key: string } | null };
   itemInstances: { id: number; key: string }[];
-  createdBy: { username: string };
-  updatedBy: { username: string };
+  createdBy: { username: string; title: string };
+  updatedBy: { username: string; title: string };
 };
 
 // --- Lookups ---

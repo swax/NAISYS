@@ -72,6 +72,7 @@ function formatFieldRef(
     })),
     createdAt: ref.createdAt.toISOString(),
     createdBy: ref.createdBy.username,
+    createdByTitle: ref.createdBy.title,
     _links: childItemLinks(
       base,
       ref.seqNo,

@@ -250,8 +250,10 @@ export const FieldDefList: React.FC<FieldListProps> = ({
               <Group gap={4} wrap="nowrap">
                 <MetadataTooltip
                   createdBy={field.createdBy}
+                  createdByTitle={field.createdByTitle}
                   createdAt={field.createdAt}
                   updatedBy={field.updatedBy}
+                  updatedByTitle={field.updatedByTitle}
                   updatedAt={field.updatedAt}
                 />
                 {hasAction(field._actions, "update") && (

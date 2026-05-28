@@ -21,6 +21,7 @@ import { useNavigate, useParams } from "react-router";
 import { MetadataTooltip } from "../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
+import { formatUserLabel } from "../../lib/userLabel";
 
 export const WorkCenterDetail: React.FC = () => {
   const { key } = useParams<{ key: string }>();
@@ -170,8 +171,10 @@ export const WorkCenterDetail: React.FC = () => {
           <Title order={2}>{wc.key}</Title>
           <MetadataTooltip
             createdBy={wc.createdBy}
+            createdByTitle={wc.createdByTitle}
             createdAt={wc.createdAt}
             updatedBy={wc.updatedBy}
+            updatedByTitle={wc.updatedByTitle}
             updatedAt={wc.updatedAt}
           />
         </Group>
@@ -233,7 +236,9 @@ export const WorkCenterDetail: React.FC = () => {
             {wc.userAssignments.map((a) => (
               <Table.Tr key={a.userId}>
                 <Table.Td>
-                  <Text size="sm">{a.username}</Text>
+                  <Text size="sm">
+                    {formatUserLabel(a.username, a.userTitle)}
+                  </Text>
                 </Table.Td>
                 <Table.Td>
                   <Text size="sm">
@@ -241,7 +246,11 @@ export const WorkCenterDetail: React.FC = () => {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  <Text size="sm">{a.createdBy ?? "\u2014"}</Text>
+                  <Text size="sm">
+                    {a.createdBy
+                      ? formatUserLabel(a.createdBy, a.createdByTitle)
+                      : "\u2014"}
+                  </Text>
                 </Table.Td>
                 {canAssign && (
                   <Table.Td>

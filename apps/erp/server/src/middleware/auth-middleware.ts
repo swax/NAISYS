@@ -15,6 +15,7 @@ import { isSupervisorAuth } from "./supervisorAuth.js";
 export interface ErpUser {
   id: number;
   username: string;
+  title: string;
   permissions: ErpPermission[];
 }
 
@@ -39,10 +40,12 @@ async function loadPermissions(userId: number): Promise<ErpPermission[]> {
 async function materializeErpUser(localUser: {
   id: number;
   username: string;
+  title: string;
 }): Promise<ErpUser> {
   return {
     id: localUser.id,
     username: localUser.username,
+    title: localUser.title,
     permissions: await loadPermissions(localUser.id),
   };
 }

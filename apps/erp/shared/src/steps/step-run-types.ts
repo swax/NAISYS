@@ -104,8 +104,10 @@ export const StepRunSchema = z.object({
   fieldValues: z.array(FieldValueEntrySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
   _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
@@ -186,6 +188,7 @@ export const StepRunTransitionSchema = z.object({
   note: z.string().nullable(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _actions: z.array(HateoasActionSchema).optional(),
   _actionTemplates: z.array(HateoasActionTemplateSchema).optional(),
 });

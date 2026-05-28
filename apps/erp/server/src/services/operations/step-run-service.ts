@@ -46,8 +46,8 @@ export const includeStepRunWithFields = {
       },
     },
   },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type StepRunWithStepAndFields = {
@@ -87,8 +87,8 @@ export type StepRunWithStepAndFields = {
       }[];
     }[];
   } | null;
-  createdBy: { username: string };
-  updatedBy: { username: string };
+  createdBy: { username: string; title: string };
+  updatedBy: { username: string; title: string };
 };
 
 // --- Lightweight include (step metadata only, no field values) ---
@@ -107,8 +107,8 @@ export const includeStepRun = {
       },
     },
   },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type StepRunWithStep = {
@@ -129,8 +129,8 @@ export type StepRunWithStep = {
       _count: { fields: number };
     } | null;
   };
-  createdBy: { username: string };
-  updatedBy: { username: string };
+  createdBy: { username: string; title: string };
+  updatedBy: { username: string; title: string };
 };
 
 // --- Lookups ---

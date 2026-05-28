@@ -22,6 +22,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { UserAutocomplete } from "../../components/UserAutocomplete";
 import { WorkCenterAutocomplete } from "../../components/WorkCenterAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
+import { formatUserLabel } from "../../lib/userLabel";
 import { cellLinkStyle } from "../../lib/tableStyles";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -299,7 +300,12 @@ export const DispatchList: React.FC = () => {
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
-                        {item.assignedTo ?? "\u2014"}
+                        {item.assignedTo
+                          ? formatUserLabel(
+                              item.assignedTo,
+                              item.assignedToTitle,
+                            )
+                          : "\u2014"}
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>

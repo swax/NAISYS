@@ -34,9 +34,9 @@ export const includeOp = {
       orderRev: { select: { revNo: true, description: true } },
     },
   },
-  assignedTo: { select: { username: true } },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  assignedTo: { select: { username: true, title: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type OpRunWithOp = OperationRunModel & {
@@ -49,9 +49,9 @@ export type OpRunWithOp = OperationRunModel & {
   orderRun: {
     orderRev: { revNo: number; description: string };
   };
-  assignedTo: { username: string } | null;
-  createdBy: { username: string };
-  updatedBy: { username: string };
+  assignedTo: { username: string; title: string } | null;
+  createdBy: { username: string; title: string };
+  updatedBy: { username: string; title: string };
 };
 
 export type OpRunWithSummary = OpRunWithOp & {
@@ -91,9 +91,9 @@ export async function listOpRuns(runId: number): Promise<OpRunWithSummary[]> {
         },
       },
       _count: { select: { stepRuns: true } },
-      assignedTo: { select: { username: true } },
-      createdBy: { select: { username: true } },
-      updatedBy: { select: { username: true } },
+      assignedTo: { select: { username: true, title: true } },
+      createdBy: { select: { username: true, title: true } },
+      updatedBy: { select: { username: true, title: true } },
     },
     orderBy: { operation: { seqNo: "asc" } },
   });

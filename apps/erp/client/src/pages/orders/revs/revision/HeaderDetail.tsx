@@ -132,8 +132,10 @@ export const HeaderDetail: React.FC = () => {
             <Text fw={600}>HEADER</Text>
             <MetadataTooltip
               createdBy={revision.createdBy}
+              createdByTitle={revision.createdByTitle}
               createdAt={revision.createdAt}
               updatedBy={revision.updatedBy}
+              updatedByTitle={revision.updatedByTitle}
               updatedAt={revision.updatedAt}
             />
           </Group>

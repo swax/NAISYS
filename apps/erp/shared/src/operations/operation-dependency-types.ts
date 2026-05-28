@@ -13,6 +13,7 @@ export const OperationDependencySchema = z.object({
   predecessorTitle: z.string(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
 });
 
 export type OperationDependency = z.infer<typeof OperationDependencySchema>;

@@ -8,8 +8,8 @@ const includeDetail = {
   ...includeUsers,
   userAssignments: {
     include: {
-      user: { select: { id: true, username: true } },
-      createdBy: { select: { username: true } },
+      user: { select: { id: true, username: true, title: true } },
+      createdBy: { select: { username: true, title: true } },
     },
     orderBy: { user: { username: "asc" as const } },
   },
@@ -19,8 +19,8 @@ const includeDetail = {
 export type WorkCenterWithDetail = WorkCenterModel &
   WithAuditUsers & {
     userAssignments: Array<{
-      user: { id: number; username: string };
-      createdBy: { username: string };
+      user: { id: number; username: string; title: string };
+      createdBy: { username: string; title: string };
       createdAt: Date;
     }>;
     _count: { userAssignments: number };

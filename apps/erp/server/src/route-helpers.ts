@@ -61,15 +61,15 @@ export function mutationResult<TFull, TSlim>(
 // --- Shared Prisma include for audit user fields ---
 
 export const includeUsers = {
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type WithAuditUsers = {
   createdAt: Date;
-  createdBy: { username: string };
+  createdBy: { username: string; title: string };
   updatedAt: Date;
-  updatedBy: { username: string };
+  updatedBy: { username: string; title: string };
 };
 
 // --- Formatting helpers ---
@@ -78,8 +78,10 @@ export function formatAuditFields(item: WithAuditUsers) {
   return {
     createdAt: item.createdAt.toISOString(),
     createdBy: item.createdBy.username,
+    createdByTitle: item.createdBy.title,
     updatedAt: item.updatedAt.toISOString(),
     updatedBy: item.updatedBy.username,
+    updatedByTitle: item.updatedBy.title,
   };
 }
 

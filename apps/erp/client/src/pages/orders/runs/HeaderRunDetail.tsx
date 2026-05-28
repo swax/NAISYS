@@ -86,8 +86,10 @@ export const HeaderRunDetail: React.FC = () => {
             <Text fw={600}>HEADER</Text>
             <MetadataTooltip
               createdBy={orderRun.createdBy}
+              createdByTitle={orderRun.createdByTitle}
               createdAt={orderRun.createdAt}
               updatedBy={orderRun.updatedBy}
+              updatedByTitle={orderRun.updatedByTitle}
               updatedAt={orderRun.updatedAt}
             />
           </Group>

@@ -49,6 +49,7 @@ function formatDependency(dep: DependencyWithDetails) {
     predecessorTitle: dep.predecessor.title,
     createdAt: dep.createdAt.toISOString(),
     createdBy: dep.createdBy.username,
+    createdByTitle: dep.createdBy.title,
   };
 }
 

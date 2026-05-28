@@ -63,6 +63,7 @@ function formatComment(
     body: comment.body,
     createdAt: comment.createdAt.toISOString(),
     createdBy: comment.createdBy.username,
+    createdByTitle: comment.createdBy.title,
     _links: [
       selfLink(`/${commentResource(orderKey, runNo, seqNo)}/${comment.id}`),
     ],

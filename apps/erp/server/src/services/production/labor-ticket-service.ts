@@ -10,15 +10,15 @@ import { writeAuditEntry } from "../audit.js";
 // --- Prisma include & result type ---
 
 export const includeLaborTicket = {
-  user: { select: { username: true } },
-  createdBy: { select: { username: true } },
-  updatedBy: { select: { username: true } },
+  user: { select: { username: true, title: true } },
+  createdBy: { select: { username: true, title: true } },
+  updatedBy: { select: { username: true, title: true } },
 } as const;
 
 export type LaborTicketWithUser = LaborTicketModel & {
-  user: { username: string };
-  createdBy: { username: string };
-  updatedBy: { username: string };
+  user: { username: string; title: string };
+  createdBy: { username: string; title: string };
+  updatedBy: { username: string; title: string };
 };
 
 // --- Helpers ---

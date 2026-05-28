@@ -2,7 +2,7 @@ import erpDb from "../../database/erpDb.js";
 
 const depInclude = {
   predecessor: { select: { seqNo: true, title: true } },
-  createdBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
 } as const;
 
 export type DependencyWithDetails = Awaited<

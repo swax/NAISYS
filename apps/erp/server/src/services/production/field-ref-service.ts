@@ -16,7 +16,7 @@ const includeFieldRef = {
       },
     },
   },
-  createdBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
 } as const;
 
 export type FieldRefWithDetails = Awaited<

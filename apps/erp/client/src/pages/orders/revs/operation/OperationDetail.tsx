@@ -150,8 +150,10 @@ export const OperationDetail: React.FC = () => {
             )}
             <MetadataTooltip
               createdBy={operation.createdBy}
+              createdByTitle={operation.createdByTitle}
               createdAt={operation.createdAt}
               updatedBy={operation.updatedBy}
+              updatedByTitle={operation.updatedByTitle}
               updatedAt={operation.updatedAt}
             />
           </Group>

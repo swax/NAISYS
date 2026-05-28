@@ -55,8 +55,10 @@ export const OrderRunSchema = z.object({
   operationSummary: z.array(OperationRunSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -167,6 +169,7 @@ export const DispatchItemSchema = z.object({
   canWork: z.boolean(),
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
+  assignedToTitle: z.string().nullable(),
   dueAt: z.string().nullable(),
   createdAt: z.iso.datetime(),
 });

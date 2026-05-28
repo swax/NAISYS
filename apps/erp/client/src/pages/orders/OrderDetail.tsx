@@ -111,8 +111,10 @@ export const OrderDetail: React.FC = () => {
           <Title order={2}>{order.key}</Title>
           <MetadataTooltip
             createdBy={order.createdBy}
+            createdByTitle={order.createdByTitle}
             createdAt={order.createdAt}
             updatedBy={order.updatedBy}
+            updatedByTitle={order.updatedByTitle}
             updatedAt={order.updatedAt}
           />
           <Badge

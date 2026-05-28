@@ -11,8 +11,10 @@ import { paginationQuery } from "../pagination-types.js";
 export const WorkCenterUserSchema = z.object({
   userId: z.number(),
   username: z.string(),
+  userTitle: z.string(),
   createdAt: z.string(),
   createdBy: z.string().nullable(),
+  createdByTitle: z.string().nullable(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 
@@ -26,8 +28,10 @@ export const WorkCenterSchema = z.object({
   userAssignments: z.array(WorkCenterUserSchema),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -94,8 +98,10 @@ export const WorkCenterListItemSchema = z.object({
   userCount: z.number(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
 });
 
 export type WorkCenterListItem = z.infer<typeof WorkCenterListItemSchema>;

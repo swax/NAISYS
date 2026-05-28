@@ -18,6 +18,7 @@ import { IconApi, IconEye, IconLogout, IconUser } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router";
 
 import { useAuth } from "../lib/AuthContext";
+import { formatUserLabel } from "../lib/userLabel";
 import { RouteErrorBoundary } from "./error/ErrorBoundary";
 import { LoginModal } from "./forms/LoginModal";
 
@@ -199,7 +200,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ supervisorAuth }) => {
                   color="gray"
                   style={{ flexShrink: 0 }}
                 >
-                  {user.username}
+                  {formatUserLabel(user.username, user.title)}
                 </Button>
               </Menu.Target>
               <Menu.Dropdown>

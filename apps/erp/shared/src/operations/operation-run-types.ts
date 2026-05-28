@@ -43,6 +43,7 @@ export const OperationRunSchema = z.object({
   predecessors: z.array(OperationPredecessorSchema).optional(),
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
+  assignedToTitle: z.string().nullable(),
   cost: z.number().nullable(),
   tokens: z.number().nullable(),
   note: z.string().nullable(),
@@ -51,8 +52,10 @@ export const OperationRunSchema = z.object({
   fieldRefSummary: z.array(FieldRefValueSummarySchema).optional(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
@@ -88,12 +91,14 @@ export const OperationRunTransitionSchema = z.object({
   id: z.number(),
   status: OperationRunStatusEnum,
   assignedTo: z.string().nullable(),
+  assignedToTitle: z.string().nullable(),
   cost: z.number().nullable(),
   tokens: z.number().nullable(),
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _actions: z.array(HateoasActionSchema).optional(),
 });
 

@@ -23,6 +23,7 @@ export const OperationRunCommentSchema = z.object({
   body: z.string(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
 });
 

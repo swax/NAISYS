@@ -29,6 +29,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { FieldValueRunList } from "../../../components/lists/FieldValueList";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { formatUserLabel } from "../../../lib/userLabel";
 
 interface Props {
   orderKey: string;
@@ -243,7 +244,7 @@ export const StepRunList: React.FC<Props> = ({
                       {reopenAction && (
                         <Group gap="xs" align="center">
                           <Text size="xs" c="green">
-                            Completed by {step.updatedBy} on{" "}
+                            Completed by {formatUserLabel(step.updatedBy, step.updatedByTitle)} on{" "}
                             {new Date(step.updatedAt).toLocaleString()}
                           </Text>
                           {(() => {
@@ -288,7 +289,7 @@ export const StepRunList: React.FC<Props> = ({
                       )}
                       {!completeAction && !reopenAction && step.completed && (
                         <Text size="xs" c="green">
-                          Completed by {step.updatedBy} on{" "}
+                          Completed by {formatUserLabel(step.updatedBy, step.updatedByTitle)} on{" "}
                           {new Date(step.updatedAt).toLocaleString()}
                         </Text>
                       )}

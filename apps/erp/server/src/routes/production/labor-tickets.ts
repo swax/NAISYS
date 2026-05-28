@@ -143,6 +143,7 @@ function formatLaborTicket(
     operationRunId: ticket.operationRunId,
     userId: ticket.userId,
     username: ticket.user.username,
+    userTitle: ticket.user.title,
     runId: ticket.runId,
     clockIn: ticket.clockIn.toISOString(),
     clockOut: formatDate(ticket.clockOut),

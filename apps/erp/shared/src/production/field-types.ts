@@ -29,8 +29,10 @@ export const FieldSchema = z.object({
   required: z.boolean(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
   _actions: z.array(HateoasActionSchema).optional(),
 });

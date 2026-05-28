@@ -40,6 +40,7 @@ import { FieldValueRunList } from "../../../components/lists/FieldValueList";
 import { MetadataTooltip } from "../../../components/MetadataTooltip";
 import { UserAutocomplete } from "../../../components/UserAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { formatUserLabel } from "../../../lib/userLabel";
 import { DependencyList } from "../revs/lists/DependencyList";
 import { CommentList } from "./CommentList";
 import type { LaborActions } from "./LaborTicketList";
@@ -264,8 +265,10 @@ export const OperationRunDetail: React.FC = () => {
             )}
             <MetadataTooltip
               createdBy={opRun.createdBy}
+              createdByTitle={opRun.createdByTitle}
               createdAt={opRun.createdAt}
               updatedBy={opRun.updatedBy}
+              updatedByTitle={opRun.updatedByTitle}
               updatedAt={opRun.updatedAt}
             />
             <Badge
@@ -278,7 +281,8 @@ export const OperationRunDetail: React.FC = () => {
             {opRun.assignedTo ? (
               <Group gap={4}>
                 <Text size="sm" c="dimmed">
-                  assigned to {opRun.assignedTo}
+                  assigned to{" "}
+                  {formatUserLabel(opRun.assignedTo, opRun.assignedToTitle)}
                 </Text>
                 {hasAction(opRun._actions, "assign") && (
                   <ActionIcon
@@ -460,7 +464,8 @@ export const OperationRunDetail: React.FC = () => {
               return (
                 <Group gap="xs" align="center">
                   <Text size="xs" c={color}>
-                    {label} by {opRun.updatedBy} on{" "}
+                    {label} by{" "}
+                    {formatUserLabel(opRun.updatedBy, opRun.updatedByTitle)} on{" "}
                     {new Date(opRun.updatedAt).toLocaleString()}
                     {opRun.cost ? ` for $${opRun.cost.toFixed(2)}` : ""}
                     {opRun.tokens ? ` (${formatTokens(opRun.tokens)})` : ""}

@@ -145,7 +145,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
                 workCenter: { select: { key: true, id: true } },
               },
             },
-            assignedTo: { select: { username: true } },
+            assignedTo: { select: { username: true, title: true } },
             orderRun: {
               select: {
                 runNo: true,
@@ -183,6 +183,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             canWork: itemCanWork,
             status: opRun.status,
             assignedTo: opRun.assignedTo?.username ?? null,
+            assignedToTitle: opRun.assignedTo?.title ?? null,
             dueAt: opRun.orderRun.dueAt,
             createdAt: opRun.createdAt.toISOString(),
           };

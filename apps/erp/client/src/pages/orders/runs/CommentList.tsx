@@ -17,6 +17,7 @@ import type {
 import { useCallback, useEffect, useState } from "react";
 
 import { api, apiEndpoints, showErrorNotification } from "../../../lib/api";
+import { formatUserLabel } from "../../../lib/userLabel";
 
 const TYPE_COLORS: Record<string, string> = {
   note: "blue",
@@ -116,7 +117,7 @@ export const CommentList: React.FC<Props> = ({
           <Group justify="space-between" align="flex-start" mb={4}>
             <Group gap="xs">
               <Text size="sm" fw={600}>
-                {comment.createdBy}
+                {formatUserLabel(comment.createdBy, comment.createdByTitle)}
               </Text>
               <Badge
                 color={TYPE_COLORS[comment.type] ?? "gray"}

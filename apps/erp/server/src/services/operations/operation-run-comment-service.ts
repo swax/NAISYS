@@ -6,11 +6,11 @@ import type { OperationRunCommentModel } from "../../generated/prisma/models/Ope
 // --- Prisma include & result type ---
 
 export const includeComment = {
-  createdBy: { select: { username: true } },
+  createdBy: { select: { username: true, title: true } },
 } as const;
 
 export type CommentWithUser = OperationRunCommentModel & {
-  createdBy: { username: string };
+  createdBy: { username: string; title: string };
 };
 
 // --- Lookups ---

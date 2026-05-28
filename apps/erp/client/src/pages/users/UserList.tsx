@@ -190,6 +190,7 @@ export const UserList: React.FC = () => {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Username</Table.Th>
+                <Table.Th>Title</Table.Th>
                 <Table.Th>Type</Table.Th>
                 <Table.Th>Permissions</Table.Th>
                 <Table.Th>Created</Table.Th>
@@ -210,6 +211,15 @@ export const UserList: React.FC = () => {
                           {item.username}
                         </Text>
                       </Group>
+                    </Link>
+                  </Table.Td>
+                  <Table.Td style={{ padding: 0 }}>
+                    <Link to={`/users/${item.username}`} style={cellLinkStyle}>
+                      {item.title || (
+                        <Text c="dimmed" span>
+                          —
+                        </Text>
+                      )}
                     </Link>
                   </Table.Td>
                   <Table.Td style={{ padding: 0 }}>

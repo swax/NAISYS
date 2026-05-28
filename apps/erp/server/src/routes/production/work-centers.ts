@@ -101,8 +101,10 @@ function formatWorkCenter(wc: WorkCenterWithDetail, user: ErpUser | undefined) {
     userAssignments: wc.userAssignments.map((a) => ({
       userId: a.user.id,
       username: a.user.username,
+      userTitle: a.user.title,
       createdAt: a.createdAt.toISOString(),
       createdBy: a.createdBy?.username ?? null,
+      createdByTitle: a.createdBy?.title ?? null,
       _actions: [
         {
           rel: "remove",

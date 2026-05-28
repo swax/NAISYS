@@ -81,7 +81,9 @@ export default function authRoutes(fastify: FastifyInstance) {
         sessionCookieOptions(expiresAt),
       );
 
-      return { user: { id: user.id, username: user.username } };
+      return {
+        user: { id: user.id, username: user.username, title: user.title },
+      };
     },
   });
 
@@ -128,6 +130,7 @@ export default function authRoutes(fastify: FastifyInstance) {
       return {
         id: request.erpUser.id,
         username: request.erpUser.username,
+        title: request.erpUser.title,
         permissions: request.erpUser.permissions,
       };
     },

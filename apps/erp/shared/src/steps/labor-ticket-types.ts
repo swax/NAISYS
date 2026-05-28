@@ -12,6 +12,7 @@ export const LaborTicketSchema = z.object({
   operationRunId: z.number(),
   userId: z.number(),
   username: z.string(),
+  userTitle: z.string(),
   runId: z.number().nullable(),
   clockIn: z.iso.datetime(),
   clockOut: z.iso.datetime().nullable(),
@@ -19,8 +20,10 @@ export const LaborTicketSchema = z.object({
   tokens: z.number().nullable(),
   createdAt: z.iso.datetime(),
   createdBy: z.string(),
+  createdByTitle: z.string(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
+  updatedByTitle: z.string(),
   _links: z.array(HateoasLinkSchema).optional(),
 });
 
