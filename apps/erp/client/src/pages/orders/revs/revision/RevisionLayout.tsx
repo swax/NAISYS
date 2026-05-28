@@ -138,7 +138,8 @@ export const RevisionLayout: React.FC = () => {
                 display: "flex",
                 flexDirection: "column",
                 overflowY: "auto",
-                padding: "0 var(--mantine-spacing-md)",
+                padding:
+                  "0 var(--mantine-spacing-md) var(--mantine-spacing-xs)",
               }}
             >
               <Group justify="flex-end" p={4}>

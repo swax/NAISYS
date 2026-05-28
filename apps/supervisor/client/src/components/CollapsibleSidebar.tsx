@@ -70,7 +70,14 @@ export const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
               </ActionIcon>
             </Tooltip>
           </Group>
-          <Box style={{ flex: 1, minHeight: 0, ...contentStyle }}>
+          <Box
+            style={{
+              flex: 1,
+              minHeight: 0,
+              paddingBottom: "var(--mantine-spacing-xs)",
+              ...contentStyle,
+            }}
+          >
             {children}
           </Box>
         </Box>
