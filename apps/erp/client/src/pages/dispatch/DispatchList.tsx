@@ -15,11 +15,12 @@ import {
 } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import type { DispatchListResponse } from "@naisys/erp-shared";
-import { OperationRunStatus, OrderRunPriorityEnum } from "@naisys/erp-shared";
+import { OperationRunStatus } from "@naisys/erp-shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { UserAutocomplete } from "../../components/UserAutocomplete";
+import { WorkCenterAutocomplete } from "../../components/WorkCenterAutocomplete";
 import { api, apiEndpoints, showErrorNotification } from "../../lib/api";
 import { cellLinkStyle } from "../../lib/tableStyles";
 
@@ -30,13 +31,6 @@ const STATUS_COLORS: Record<string, string> = {
   [OperationRunStatus.completed]: "green",
   [OperationRunStatus.skipped]: "gray",
   [OperationRunStatus.failed]: "red",
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  low: "gray",
-  medium: "blue",
-  high: "orange",
-  critical: "red",
 };
 
 const STATUS_OPTIONS = [
@@ -51,7 +45,7 @@ export const DispatchList: React.FC = () => {
 
   const page = Number(searchParams.get("page")) || 1;
   const status = searchParams.get("status") || undefined;
-  const priority = searchParams.get("priority") || undefined;
+  const workCenter = searchParams.get("workCenter") || "";
   const search = searchParams.get("search") || "";
   const viewAs = searchParams.get("viewAs") || "";
   const canWork = searchParams.get("canWork") === "true";
@@ -59,10 +53,14 @@ export const DispatchList: React.FC = () => {
 
   const [searchInput, setSearchInput] = useState(search);
   const [viewAsInput, setViewAsInput] = useState(viewAs);
+  const [workCenterInput, setWorkCenterInput] = useState(workCenter);
   const [debouncedSearch] = useDebouncedValue(searchInput, 300);
   const isFirstRender = useRef(true);
 
-  // Sync debounced value to search params
+  // Sync debounced value to search params.
+  // setSearchParams is intentionally not in deps: react-router v7 returns a
+  // new setSearchParams reference on every URL change, which would re-fire
+  // this effect and clobber page=1 on any pagination / filter click.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -74,7 +72,7 @@ export const DispatchList: React.FC = () => {
       prev.set("page", "1");
       return prev;
     });
-  }, [debouncedSearch, setSearchParams]);
+  }, [debouncedSearch]);
 
   const [data, setData] = useState<DispatchListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,7 +84,7 @@ export const DispatchList: React.FC = () => {
       params.set("page", String(page));
       params.set("pageSize", "20");
       if (status) params.set("status", status);
-      if (priority) params.set("priority", priority);
+      if (workCenter) params.set("workCenter", workCenter);
       if (search) params.set("search", search);
       if (viewAs) params.set("viewAs", viewAs);
       if (canWork) params.set("canWork", "true");
@@ -101,7 +99,7 @@ export const DispatchList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, status, priority, search, viewAs, canWork, clockedIn]);
+  }, [page, status, workCenter, search, viewAs, canWork, clockedIn]);
 
   useEffect(() => {
     void fetchData();
@@ -149,22 +147,28 @@ export const DispatchList: React.FC = () => {
           }}
           clearable
         />
-        <Select
-          placeholder="All priorities"
-          data={OrderRunPriorityEnum.options.map((v) => ({
-            value: v,
-            label: v.charAt(0).toUpperCase() + v.slice(1),
-          }))}
-          value={priority ?? null}
+        <WorkCenterAutocomplete
+          placeholder="Work center..."
+          value={workCenterInput}
           onChange={(val) => {
+            setWorkCenterInput(val);
+            if (!val) {
+              setSearchParams((prev) => {
+                prev.delete("workCenter");
+                prev.set("page", "1");
+                return prev;
+              });
+            }
+          }}
+          onOptionSubmit={(val) => {
+            setWorkCenterInput(val);
             setSearchParams((prev) => {
-              if (val) prev.set("priority", val);
-              else prev.delete("priority");
+              prev.set("workCenter", val);
               prev.set("page", "1");
               return prev;
             });
           }}
-          clearable
+          w={180}
         />
         <UserAutocomplete
           placeholder="View as user..."
@@ -229,7 +233,7 @@ export const DispatchList: React.FC = () => {
                 <Table.Th>Operation</Table.Th>
                 <Table.Th>Can Work</Table.Th>
                 <Table.Th>Status</Table.Th>
-                <Table.Th>Priority</Table.Th>
+                <Table.Th>Work Center</Table.Th>
                 <Table.Th>Assigned To</Table.Th>
                 <Table.Th>Due</Table.Th>
               </Table.Tr>
@@ -284,12 +288,13 @@ export const DispatchList: React.FC = () => {
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
                       <Link to={opRunLink} style={cellLinkStyle}>
-                        <Badge
-                          color={PRIORITY_COLORS[item.priority] ?? "gray"}
-                          variant="light"
-                        >
-                          {item.priority}
-                        </Badge>
+                        {item.workCenterKey ? (
+                          <Text size="sm" ff="monospace">
+                            {item.workCenterKey}
+                          </Text>
+                        ) : (
+                          "—"
+                        )}
                       </Link>
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>

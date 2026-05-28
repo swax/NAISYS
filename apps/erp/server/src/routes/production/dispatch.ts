@@ -38,7 +38,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         page,
         pageSize,
         status,
-        priority,
+        workCenter,
         search,
         viewAs,
         canWork,
@@ -79,9 +79,10 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         status: { in: status ? [status] : DEFAULT_OP_STATUSES },
         orderRun: {
           status: { in: OPEN_ORDER_STATUSES },
-          ...(priority ? { priority } : {}),
         },
       };
+
+      const operationFilters: Record<string, unknown> = {};
 
       // canWork filter: only show ops where the perspective user can work
       if (canWork) {
@@ -106,10 +107,19 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
 
         // Work center access
         if (userWcIds.length > 0) {
-          where.operation = {
-            OR: [{ workCenterId: null }, { workCenterId: { in: userWcIds } }],
-          };
+          operationFilters.OR = [
+            { workCenterId: null },
+            { workCenterId: { in: userWcIds } },
+          ];
         }
+      }
+
+      if (workCenter) {
+        operationFilters.workCenter = { key: workCenter };
+      }
+
+      if (Object.keys(operationFilters).length > 0) {
+        where.operation = operationFilters;
       }
 
       if (search) {
@@ -139,7 +149,6 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             orderRun: {
               select: {
                 runNo: true,
-                priority: true,
                 dueAt: true,
                 order: { select: { key: true } },
                 orderRev: { select: { revNo: true } },
@@ -173,7 +182,6 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             workCenterKey: opRun.operation.workCenter?.key ?? null,
             canWork: itemCanWork,
             status: opRun.status,
-            priority: opRun.orderRun.priority,
             assignedTo: opRun.assignedTo?.username ?? null,
             dueAt: opRun.orderRun.dueAt,
             createdAt: opRun.createdAt.toISOString(),
@@ -185,7 +193,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         _links: [
           ...paginationLinks("dispatch", page, pageSize, total, {
             status,
-            priority,
+            workCenter,
             search,
             viewAs,
             canWork: canWork ? "true" : undefined,

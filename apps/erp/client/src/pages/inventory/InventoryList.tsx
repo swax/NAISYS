@@ -27,7 +27,10 @@ export const InventoryList: React.FC = () => {
   const [debouncedSearch] = useDebouncedValue(searchInput, 300);
   const isFirstRender = useRef(true);
 
-  // Sync debounced value to search params
+  // Sync debounced value to search params.
+  // setSearchParams is intentionally not in deps: react-router v7 returns a
+  // new setSearchParams reference on every URL change, which would re-fire
+  // this effect and clobber page=1 on any pagination / filter click.
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -39,7 +42,7 @@ export const InventoryList: React.FC = () => {
       prev.set("page", "1");
       return prev;
     });
-  }, [debouncedSearch, setSearchParams]);
+  }, [debouncedSearch]);
 
   const [data, setData] = useState<InventoryListResponse | null>(null);
   const [loading, setLoading] = useState(true);

@@ -140,7 +140,7 @@ export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;
 export const DispatchListQuerySchema = z.object({
   ...paginationQuery(),
   status: OperationRunStatusEnum.optional(),
-  priority: OrderRunPriorityEnum.optional(),
+  workCenter: z.string().optional(),
   search: z.string().optional(),
   viewAs: z.string().optional(),
   canWork: z
@@ -166,7 +166,6 @@ export const DispatchItemSchema = z.object({
   workCenterKey: z.string().nullable(),
   canWork: z.boolean(),
   status: OperationRunStatusEnum,
-  priority: OrderRunPriorityEnum,
   assignedTo: z.string().nullable(),
   dueAt: z.string().nullable(),
   createdAt: z.iso.datetime(),
