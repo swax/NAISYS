@@ -9,7 +9,7 @@ export interface OperationSummaryItem {
   id: number;
   seqNo: number;
   title: string;
-  stepCount?: number;
+  workCenterKey?: string | null;
   cost?: number | null;
   tokens?: number | null;
   predecessors?: OperationPredecessor[];
@@ -19,12 +19,14 @@ interface OperationSummaryTableProps {
   items: OperationSummaryItem[] | null;
   loading: boolean;
   linkBuilder: (seqNo: number) => string;
+  showRunMetrics?: boolean;
 }
 
 export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
   items,
   loading,
   linkBuilder,
+  showRunMetrics = false,
 }) => {
   return (
     <>
@@ -45,9 +47,13 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                 <Table.Th>Seq</Table.Th>
                 <Table.Th>Title</Table.Th>
                 <Table.Th>Prerequisites</Table.Th>
-                <Table.Th>Steps</Table.Th>
-                <Table.Th>Cost</Table.Th>
-                <Table.Th>Tokens</Table.Th>
+                <Table.Th>Work Center</Table.Th>
+                {showRunMetrics && (
+                  <>
+                    <Table.Th>Cost</Table.Th>
+                    <Table.Th>Tokens</Table.Th>
+                  </>
+                )}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -84,19 +90,23 @@ export const OperationSummaryTable: React.FC<OperationSummaryTableProps> = ({
                     </Table.Td>
                     <Table.Td style={{ padding: 0 }}>
                       <Link to={opLink} style={cellLinkStyle}>
-                        {op.stepCount ?? 0}
+                        {op.workCenterKey ?? "\u2014"}
                       </Link>
                     </Table.Td>
-                    <Table.Td style={{ padding: 0 }}>
-                      <Link to={opLink} style={cellLinkStyle}>
-                        {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
-                      </Link>
-                    </Table.Td>
-                    <Table.Td style={{ padding: 0 }}>
-                      <Link to={opLink} style={cellLinkStyle}>
-                        {op.tokens ? formatTokens(op.tokens) : "\u2014"}
-                      </Link>
-                    </Table.Td>
+                    {showRunMetrics && (
+                      <>
+                        <Table.Td style={{ padding: 0 }}>
+                          <Link to={opLink} style={cellLinkStyle}>
+                            {op.cost ? `$${op.cost.toFixed(2)}` : "\u2014"}
+                          </Link>
+                        </Table.Td>
+                        <Table.Td style={{ padding: 0 }}>
+                          <Link to={opLink} style={cellLinkStyle}>
+                            {op.tokens ? formatTokens(op.tokens) : "\u2014"}
+                          </Link>
+                        </Table.Td>
+                      </>
+                    )}
                   </Table.Tr>
                 );
               })}

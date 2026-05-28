@@ -175,6 +175,7 @@ export const HeaderRunDetail: React.FC = () => {
           linkBuilder={(seqNo) =>
             `/orders/${orderKey}/runs/${runNo}/ops/${seqNo}`
           }
+          showRunMetrics
         />
       </Stack>
     </Container>
