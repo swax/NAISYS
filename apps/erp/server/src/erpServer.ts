@@ -52,6 +52,7 @@ import { backfillOpRunTokens } from "./services/production/labor-ticket-backfill
 import {
   ensureLocalSuperAdmin,
   ensureSupervisorSuperAdmin,
+  syncAgentTitlesFromHub,
 } from "./services/user-service.js";
 export { enableSupervisorAuth } from "./middleware/supervisorAuth.js";
 
@@ -115,6 +116,7 @@ export const erpPlugin: FastifyPluginAsync<ErpPluginOptions> = async (
     }
 
     await ensureSupervisorSuperAdmin();
+    await syncAgentTitlesFromHub();
     await backfillOpRunTokens();
   } else {
     await ensureLocalSuperAdmin(opts.superAdminPassword);

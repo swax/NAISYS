@@ -1,7 +1,10 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { generatePersistentUserApiKey } from "@naisys/common-node";
 import type { ErpPermission } from "@naisys/erp-shared";
-import { findHubUserTitleByUuid } from "@naisys/hub-database";
+import {
+  findHubUserTitleByUuid,
+  findHubUserTitlesByUuids,
+} from "@naisys/hub-database";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -269,6 +272,38 @@ export async function ensureSupervisorSuperAdmin(): Promise<void> {
   });
   if (localSuperAdmin) {
     await ensureErpAdminPermission(localSuperAdmin.id);
+  }
+}
+
+/**
+ * Pull the latest title from the hub for every agent user in ERP and update
+ * any drift. Non-agents are skipped — they own their title locally. Runs at
+ * ERP startup (SSO mode) so agent titles stay fresh even if the agent hasn't
+ * authenticated recently to trigger the per-request refresh in auth-middleware.
+ */
+export async function syncAgentTitlesFromHub(): Promise<void> {
+  const agents = await erpDb.user.findMany({
+    where: { isAgent: true },
+    select: { id: true, uuid: true, title: true },
+  });
+  if (agents.length === 0) return;
+
+  const hubTitles = await findHubUserTitlesByUuids(agents.map((a) => a.uuid));
+
+  let updated = 0;
+  for (const agent of agents) {
+    const hubTitle = hubTitles.get(agent.uuid);
+    if (hubTitle === undefined) continue; // not in hub, leave as-is
+    if (hubTitle === agent.title) continue;
+    await erpDb.user.update({
+      where: { id: agent.id },
+      data: { title: hubTitle },
+    });
+    updated++;
+  }
+
+  if (updated > 0) {
+    console.log(`[ERP] Synced ${updated} agent title(s) from hub.`);
   }
 }
 

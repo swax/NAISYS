@@ -71,6 +71,25 @@ export async function findHubUserTitleByUuid(
 }
 
 /**
+ * Bulk variant: look up titles for many uuids in one query. Returns a Map
+ * keyed by uuid; missing uuids are simply absent from the map.
+ */
+export async function findHubUserTitlesByUuids(
+  uuids: string[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (!prisma || uuids.length === 0) return result;
+
+  const rows = await prisma.users.findMany({
+    where: { uuid: { in: uuids } },
+    select: { uuid: true, title: true },
+  });
+
+  for (const row of rows) result.set(row.uuid, row.title);
+  return result;
+}
+
+/**
  * Get the latest run_id and current session start time for a hub user by UUID.
  */
 export async function getLatestRunInfoByUuid(

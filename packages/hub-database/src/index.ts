@@ -11,6 +11,7 @@ export {
   createHubDatabaseClient,
   findAgentByApiKey,
   findHubUserTitleByUuid,
+  findHubUserTitlesByUuids,
   getHubAgentById,
   getHubVariable,
   getLatestRunInfoByUuid,
