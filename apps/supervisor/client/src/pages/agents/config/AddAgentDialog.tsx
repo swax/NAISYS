@@ -3,6 +3,7 @@ import { pickRandomAgentName } from "@naisys/common";
 import React, { useEffect, useState } from "react";
 
 import { useAgentDataContext } from "../../../contexts/AgentDataContext";
+import { formatAgentLabel } from "../../../lib/agentLabel";
 import {
   createAgent,
   getAgentConfig,
@@ -80,7 +81,7 @@ export const AddAgentDialog: React.FC<AddAgentDialogProps> = ({
 
   const copyFromOptions = agents.map((a) => ({
     value: a.name,
-    label: a.name,
+    label: formatAgentLabel(a.name, a.title),
   }));
 
   return (
