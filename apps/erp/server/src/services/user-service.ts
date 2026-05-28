@@ -1,6 +1,7 @@
 import { SUPER_ADMIN_USERNAME } from "@naisys/common";
 import { generatePersistentUserApiKey } from "@naisys/common-node";
 import type { ErpPermission } from "@naisys/erp-shared";
+import { findHubUserTitleByUuid } from "@naisys/hub-database";
 import { ensureSuperAdmin } from "@naisys/supervisor-database";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -16,6 +17,7 @@ export const includePermissions = {
 export type UserWithPermissions = {
   id: number;
   username: string;
+  title: string;
   isAgent: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -85,11 +87,16 @@ export async function getUserByUuid(uuid: string) {
   });
 }
 
-export async function createUserForAgent(username: string, uuid: string) {
+export async function createUserForAgent(
+  username: string,
+  uuid: string,
+  title: string,
+) {
   return erpDb.user.create({
     data: {
       username,
       uuid,
+      title,
       isAgent: true,
     },
     include: includePermissions,
@@ -230,15 +237,18 @@ export async function ensureLocalSuperAdmin(password?: string): Promise<void> {
  */
 export async function ensureSupervisorSuperAdmin(): Promise<void> {
   const result = await ensureSuperAdmin();
+  const title = (await findHubUserTitleByUuid(result.user.uuid)) ?? "";
 
   await erpDb.user.upsert({
     where: { uuid: result.user.uuid },
     create: {
       uuid: result.user.uuid,
       username: result.user.username,
+      title,
     },
     update: {
       username: result.user.username,
+      title,
     },
   });
 

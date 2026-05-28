@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "title" TEXT NOT NULL DEFAULT '';

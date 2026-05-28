@@ -5,7 +5,7 @@ import {
   SESSION_COOKIE_NAME,
 } from "@naisys/common-node";
 import type { ErpPermission } from "@naisys/erp-shared";
-import { findAgentByApiKey } from "@naisys/hub-database";
+import { findAgentByApiKey, findHubUserTitleByUuid } from "@naisys/hub-database";
 import { findSession, findUserByApiKey } from "@naisys/supervisor-database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
@@ -60,10 +60,11 @@ async function resolveCookie(token: string): Promise<ErpUser | null> {
 async function loadCookieUserSso(tokenHash: string) {
   const session = await findSession(tokenHash);
   if (!session) return null;
+  const title = (await findHubUserTitleByUuid(session.uuid)) ?? "";
   return erpDb.user.upsert({
     where: { uuid: session.uuid },
-    create: { uuid: session.uuid, username: session.username },
-    update: {},
+    create: { uuid: session.uuid, username: session.username, title },
+    update: { title },
   });
 }
 
@@ -94,10 +95,12 @@ async function loadApiKeyUserSso(apiKey: string) {
   if (!match) return null;
 
   const isAgent = supervisorUser?.isAgent ?? !!hubAgent;
+  const title =
+    hubAgent?.title ?? (await findHubUserTitleByUuid(match.uuid)) ?? "";
   return erpDb.user.upsert({
     where: { uuid: match.uuid },
-    create: { uuid: match.uuid, username: match.username, isAgent },
-    update: {},
+    create: { uuid: match.uuid, username: match.username, isAgent, title },
+    update: { title },
   });
 }
 

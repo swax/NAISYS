@@ -73,6 +73,7 @@ export const UserPermissionSchema = z.object({
 export const UserSchema = z.object({
   id: z.number(),
   username: z.string(),
+  title: z.string(),
   isAgent: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -87,6 +88,7 @@ export type User = z.infer<typeof UserSchema>;
 export const UserListItemSchema = z.object({
   id: z.number(),
   username: z.string(),
+  title: z.string(),
   isAgent: z.boolean(),
   createdAt: z.string(),
   permissionCount: z.number(),

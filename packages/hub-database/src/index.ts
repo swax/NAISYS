@@ -10,6 +10,7 @@ export { deployPrismaMigrations } from "@naisys/common-node";
 export {
   createHubDatabaseClient,
   findAgentByApiKey,
+  findHubUserTitleByUuid,
   getHubAgentById,
   getHubVariable,
   getLatestRunInfoByUuid,

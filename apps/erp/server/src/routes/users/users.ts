@@ -146,6 +146,7 @@ export function formatUser(
   return {
     id: user.id,
     username: user.username,
+    title: user.title,
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -167,6 +168,7 @@ function formatListUser(
   return {
     id: user.id,
     username: user.username,
+    title: user.title,
     isAgent: user.isAgent,
     createdAt: user.createdAt.toISOString(),
     permissionCount: user.permissions.length,
@@ -391,7 +393,11 @@ export default function userRoutes(fastify: FastifyInstance) {
       }
 
       try {
-        const user = await createUserForAgent(hubAgent.username, hubAgent.uuid);
+        const user = await createUserForAgent(
+          hubAgent.username,
+          hubAgent.uuid,
+          hubAgent.title,
+        );
         const full = formatUser(
           user,
           request.erpUser!.id,

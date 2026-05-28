@@ -28,12 +28,12 @@ export async function createHubDatabaseClient(): Promise<boolean> {
  */
 export async function findAgentByApiKey(
   apiKey: string,
-): Promise<{ uuid: string; username: string } | null> {
+): Promise<{ uuid: string; username: string; title: string } | null> {
   if (!prisma) return null;
 
   const user = await prisma.users.findUnique({
     where: { api_key_hash: hashToken(apiKey) },
-    select: { uuid: true, username: true },
+    select: { uuid: true, username: true, title: true },
   });
 
   return user;
@@ -44,13 +44,30 @@ export async function findAgentByApiKey(
  */
 export async function getHubAgentById(
   id: number,
-): Promise<{ id: number; uuid: string; username: string } | null> {
+): Promise<{ id: number; uuid: string; username: string; title: string } | null> {
   if (!prisma) return null;
 
   return prisma.users.findUnique({
     where: { id },
-    select: { id: true, uuid: true, username: true },
+    select: { id: true, uuid: true, username: true, title: true },
   });
+}
+
+/**
+ * Look up a hub user's title by UUID. Used by ERP auth paths that resolve a
+ * user via supervisor (no title there) and need to mirror the hub-side title.
+ */
+export async function findHubUserTitleByUuid(
+  uuid: string,
+): Promise<string | null> {
+  if (!prisma) return null;
+
+  const user = await prisma.users.findFirst({
+    where: { uuid },
+    select: { title: true },
+  });
+
+  return user?.title ?? null;
 }
 
 /**
