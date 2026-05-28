@@ -387,7 +387,7 @@ export const AgentDetail: React.FC = () => {
 
   return (
     <Stack p="xs" maw={1000}>
-      <Group wrap="nowrap" style={{ overflowX: "auto" }}>
+      <Group wrap="nowrap" style={{ overflowX: "auto", paddingBlock: 4 }}>
         {(() => {
           if (username === ADMIN_USERNAME) return null;
           const startAction = hasAction(actions, "start", {
