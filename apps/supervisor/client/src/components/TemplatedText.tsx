@@ -56,12 +56,13 @@ export const TemplatedText: React.FC<{
           );
         }
 
-        // Unresolved variable (e.g. env vars) — show raw
+        // Unresolved variable — at runtime this will render as
+        // `[unresolved:<inner>]`, so flag it visually here.
         return (
-          <Tooltip key={i} label="Resolved at runtime" withArrow>
+          <Tooltip key={i} label="Unresolved — not defined" withArrow>
             <span
               style={{
-                color: "var(--mantine-color-dimmed)",
+                color: "var(--mantine-color-red-5)",
                 fontStyle: "italic",
                 cursor: "help",
               }}

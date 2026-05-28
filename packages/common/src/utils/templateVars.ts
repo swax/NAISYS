@@ -98,28 +98,28 @@ export function parseTemplateSegments(
 }
 
 /**
- * Resolve all template variables in a string, throwing on missing values.
+ * Resolve all template variables in a string. Unresolved variables are
+ * replaced with `[unresolved:<inner>]` so the agent can still start and the
+ * missing reference stays visible in the rendered output.
  */
 export function resolveTemplateString(
   template: string,
   varMaps: Record<string, Record<string, unknown>>,
 ): string {
-  return template.replace(TEMPLATE_VAR_PATTERN, (fullMatch, inner: string) => {
+  return template.replace(TEMPLATE_VAR_PATTERN, (_fullMatch, inner: string) => {
     const dotIndex = inner.indexOf(".");
     if (dotIndex === -1) {
-      throw new Error(`Invalid template variable: ${fullMatch}`);
+      return `[unresolved:${inner}]`;
     }
     const namespace = inner.slice(0, dotIndex);
     const key = inner.slice(dotIndex + 1);
     const map = varMaps[namespace];
     if (!map) {
-      throw new Error(
-        `Agent config: Error, unknown namespace '${namespace}' in ${fullMatch}`,
-      );
+      return `[unresolved:${inner}]`;
     }
     const value = valueFromString(map, key);
     if (value === undefined) {
-      throw new Error(`Agent config: Error, ${key} is not defined`);
+      return `[unresolved:${inner}]`;
     }
     return String(value);
   });
