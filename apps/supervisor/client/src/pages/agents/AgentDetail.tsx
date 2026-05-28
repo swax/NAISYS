@@ -226,16 +226,18 @@ export const AgentDetail: React.FC = () => {
     }
   };
 
-  const handleArchive = async () => {
+  const handleArchive = async (recursive?: boolean) => {
     if (!username) return;
     const confirmed = window.confirm(
-      `Archive agent "${agentData?.name}"? It will be hidden from the main list but can still be edited.`,
+      recursive
+        ? `Archive agent "${agentData?.name}" and all subordinates? They will be hidden from the main list but can still be edited. Any active subordinates will be stopped.`
+        : `Archive agent "${agentData?.name}"? It will be hidden from the main list but can still be edited.`,
     );
     if (!confirmed) return;
 
     setArchiving(true);
     try {
-      const result = await archiveAgent(username);
+      const result = await archiveAgent(username, recursive);
       if (result.success) {
         notifications.show({
           title: "Agent Archived",
@@ -550,18 +552,50 @@ export const AgentDetail: React.FC = () => {
             includeDisabled: true,
           });
           if (!archiveAction) return null;
-          const btn = (
-            <Button
-              color="orange"
-              loading={archiving}
-              disabled={archiveAction.disabled}
-              leftSection={<IconArchive size={16} />}
-              onClick={archiveAction.disabled ? undefined : handleArchive}
-            >
-              <Text visibleFrom="sm" span>
-                Archive
-              </Text>
-            </Button>
+          const isDisabled = !!archiveAction.disabled;
+          const group = (
+            <Group gap={0} wrap="nowrap">
+              <Button
+                color="orange"
+                loading={archiving}
+                disabled={isDisabled}
+                leftSection={<IconArchive size={16} />}
+                onClick={isDisabled ? undefined : () => handleArchive()}
+                style={{
+                  borderTopRightRadius: 0,
+                  borderBottomRightRadius: 0,
+                }}
+              >
+                <Text visibleFrom="sm" span>
+                  Archive
+                </Text>
+              </Button>
+              <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                  <Button
+                    color="orange"
+                    disabled={isDisabled || archiving}
+                    style={{
+                      borderTopLeftRadius: 0,
+                      borderBottomLeftRadius: 0,
+                      borderLeft: "1px solid rgba(255,255,255,0.3)",
+                      paddingLeft: 6,
+                      paddingRight: 6,
+                    }}
+                  >
+                    <IconChevronDown size={16} />
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconArchive size={14} />}
+                    onClick={() => handleArchive(true)}
+                  >
+                    Archive with Subordinates
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           );
           const reason = formatDisabledReason(archiveAction.disabledReason);
           return reason ? (
@@ -571,10 +605,10 @@ export const AgentDetail: React.FC = () => {
               maw={350}
               style={{ whiteSpace: "pre-line" }}
             >
-              {btn}
+              {group}
             </Tooltip>
           ) : (
-            btn
+            group
           );
         })()}
         {hasAction(actions, "unarchive") && (

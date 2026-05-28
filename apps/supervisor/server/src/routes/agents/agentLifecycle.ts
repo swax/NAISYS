@@ -335,6 +335,7 @@ export default function agentLifecycleRoutes(
   // POST /:username/archive — Archive agent
   fastify.post<{
     Params: AgentUsernameParams;
+    Body: AgentToggleRequest;
     Reply: AgentActionResult | ErrorResponse;
   }>(
     "/:username/archive",
@@ -344,6 +345,7 @@ export default function agentLifecycleRoutes(
         description: "Archive an agent",
         tags: ["Agents"],
         params: AgentUsernameParamsSchema,
+        body: AgentToggleRequestSchema,
         response: {
           200: AgentActionResultSchema,
           400: ErrorResponseSchema,
@@ -354,6 +356,7 @@ export default function agentLifecycleRoutes(
     },
     async (request, reply) => {
       const { username } = request.params;
+      const { recursive } = request.body;
       const id = resolveAgentId(username);
 
       if (!id) {
@@ -367,10 +370,37 @@ export default function agentLifecycleRoutes(
         );
       }
 
-      await archiveAgent(id);
+      const subordinateIds = recursive ? await findSubordinates(id) : [];
+      const allIds = [id, ...subordinateIds];
+
+      // Archive all in DB first, then try to stop any active ones
+      await Promise.all(allIds.map((agentId) => archiveAgent(agentId)));
       sendUserListChanged();
 
-      return { success: true, message: "Agent archived" };
+      if (isHubConnected()) {
+        const activeIds = allIds.filter((agentId) => isAgentActive(agentId));
+        if (activeIds.length > 0) {
+          void Promise.all(
+            activeIds.map((agentId) =>
+              sendAgentStop(agentId, "Agent archived").catch((err) =>
+                request.log.error(
+                  err,
+                  `Failed to stop archived agent ${agentId}`,
+                ),
+              ),
+            ),
+          );
+        }
+      }
+
+      const count = allIds.length;
+      return {
+        success: true,
+        message:
+          recursive && count > 1
+            ? `Archived ${count} agent(s); stop requested for active ones`
+            : "Agent archived",
+      };
     },
   );
 

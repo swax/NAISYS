@@ -187,10 +187,11 @@ export const disableAgent = async (
 
 export const archiveAgent = async (
   username: string,
+  recursive?: boolean,
 ): Promise<AgentActionResult> => {
-  return await api.post<{}, AgentActionResult>(
+  return await api.post<{ recursive?: boolean }, AgentActionResult>(
     apiEndpoints.agentArchive(username),
-    {},
+    recursive ? { recursive } : {},
   );
 };
 
