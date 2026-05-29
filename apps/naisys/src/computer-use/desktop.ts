@@ -371,6 +371,48 @@ export function createDesktopService(
     return `Full: ${fullPath}\nViewport: ${viewportNativePath}\nScaled: ${scaledPath}`;
   }
 
+  /**
+   * mark subcommand — append a screenshot with a crosshair at the given coord.
+   * Read-only (no claim), so it works even while another agent holds the desktop.
+   */
+  async function handleMarkCommand(
+    argv: string[],
+    usageError: (sub: DesktopSubcommand) => string,
+  ): Promise<string> {
+    if (!shellModel.supportsVision) {
+      return `Error: Model '${agentConfig.agentConfig().shellModel}' does not support vision. ${desktopCmd.name} mark requires a vision-capable model.`;
+    }
+
+    const x = Number(argv[1]);
+    const y = Number(argv[2]);
+    const state = requireVisibleDesktopState();
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      throw usageError("mark");
+    }
+    const { scaledWidth, scaledHeight } = state.desktopConfig;
+    if (x < 0 || y < 0 || x >= scaledWidth || y >= scaledHeight) {
+      throw `Coordinate (${x}, ${y}) is outside the screen resolution ${scaledWidth}x${scaledHeight}.`;
+    }
+
+    const marked = await computerService.captureMarkedScreenshot(x, y);
+    const blockReason = contextManager.appendImage(
+      marked.base64,
+      "image/png",
+      marked.filepath,
+    );
+    if (blockReason) return blockReason;
+
+    const [vx, vy] = scaledPointToViewportPoint(x, y, state);
+    const screenX = state.desktopConfig.viewport.x + vx;
+    const screenY = state.desktopConfig.viewport.y + vy;
+    return (
+      `Marked (${x}, ${y}) on the screenshot with a red crosshair ` +
+      `(physical screen pixel ${screenX}, ${screenY}). If the crosshair ` +
+      `isn't on your intended target, adjust the coordinates before clicking.`
+    );
+  }
+
   function handleFocusCommand(
     argv: string[],
     usageError: (sub: DesktopSubcommand) => string,
@@ -674,6 +716,10 @@ export function createDesktopService(
 
       case "dump": {
         return handleDump();
+      }
+
+      case "mark": {
+        return handleMarkCommand(argv, usageError);
       }
 
       case "focus": {

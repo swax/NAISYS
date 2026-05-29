@@ -42,6 +42,7 @@ export function makeComputerService(
     executeAction: vi.fn(),
     captureViewportScreenshot: vi.fn(),
     captureScaledScreenshot: vi.fn(),
+    captureMarkedScreenshot: vi.fn(),
     captureFullScreenshot: vi.fn(),
     platformName: desktopConfig.desktopPlatform,
     initError: undefined,

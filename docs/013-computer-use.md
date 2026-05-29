@@ -190,6 +190,7 @@ coords into `executeAction`, ComputerService translates.
 | `type <text>`        | Type text                                                                     |
 | `wait [seconds]`     | Pause to let the UI settle (defaults to 5s)                                   |
 | `dump`               | Save full / viewport-native / scaled screenshots for debugging                |
+| `mark X Y`           | Append the scaled viewport with a red crosshair at (X, Y); a coord diagnostic |
 | `release`            | Release this agent's claim on the shared desktop (see _Multi-agent sharing_)  |
 
 For vendors with native computer-use tool support, the subcommands
@@ -243,8 +244,8 @@ A NAISYS host can run several agents but typically has one display,
 mouse, and keyboard. The desktop is shared via a cooperative claim: the
 first modifying action by an agent implicitly claims the desktop, every
 subsequent action refreshes it, and shutdown releases it. Read-only ops
-(`screenshot`, `dump`, `wait`, `focus`, `release`, status, help) never
-claim. `focus` is per-agent — each agent has its own `computerService`
+(`screenshot`, `dump`, `mark`, `wait`, `focus`, `release`, status, help)
+never claim. `focus` is per-agent — each agent has its own `computerService`
 instance with its own viewport state — so two agents can hold different
 focus rects on the same desktop and screenshot/explore in parallel
 without contention. Only the actions that move the global mouse,

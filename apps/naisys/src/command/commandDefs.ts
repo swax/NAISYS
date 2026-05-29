@@ -70,7 +70,12 @@ export const desktopCmd: CommandDef = {
     dump: {
       usage: "dump",
       description:
-        "Save diagnostic desktop screenshots to the screenshots folder, including full and focused variants",
+        "Save desktop screenshots to the screenshots folder, including full and focused variants",
+    },
+    mark: {
+      usage: "mark <x> <y>",
+      description:
+        "Return a screenshot with a red crosshair drawn at the given coordinates, to validate where a coordinate lands before clicking",
     },
     focus: {
       usage: "focus [clear|<x> <y> <width> <height>]",

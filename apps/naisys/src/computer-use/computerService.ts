@@ -383,6 +383,35 @@ export async function resizeScreenshot(
   return resized.toString("base64");
 }
 
+/**
+ * Build an SVG overlay marking one point with a crosshair, ring, and center
+ * dot. White strokes sit wide beneath the red so the marker reads on any
+ * background; shapes only (no text) avoids a system-font dependency.
+ */
+export function buildMarkerSvg(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): string {
+  const reach = 34; // crosshair arm length from center, px
+  const ring = 16; // ring radius, px
+  // Crosshair + ring in one color; drawn white-then-red so red gets a halo.
+  const marker = (stroke: string, strokeWidth: number) =>
+    [
+      `<line x1="${x - reach}" y1="${y}" x2="${x + reach}" y2="${y}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`,
+      `<line x1="${x}" y1="${y - reach}" x2="${x}" y2="${y + reach}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round"/>`,
+      `<circle cx="${x}" cy="${y}" r="${ring}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}"/>`,
+    ].join("");
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
+    marker("white", 5),
+    marker("red", 2.5),
+    `<circle cx="${x}" cy="${y}" r="2.5" fill="red" stroke="white" stroke-width="1"/>`,
+    `</svg>`,
+  ].join("");
+}
+
 /** Map a coordinate pair between two 2D spaces with independent X/Y scaling. */
 export function mapCoordinateBetweenSpaces(
   coord: DesktopCoord,
@@ -649,6 +678,37 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     return { base64: raw.base64, filepath: raw.filepath };
   }
 
+  /**
+   * Scaled (LLM-view) screenshot with a marker at the given scaled-space coord,
+   * so an agent can see where a coord lands before clicking. Read-only — the
+   * cursor never moves. Overlay matches the image's actual pixel size (read back
+   * via metadata) so the marker lines up 1:1.
+   */
+  async function captureMarkedScreenshot(
+    x: number,
+    y: number,
+  ): Promise<{ base64: string; filepath: string }> {
+    const scaled = await captureScaledScreenshot();
+    const baseBuffer = Buffer.from(scaled.base64, "base64");
+    const metadata = await sharp(baseBuffer).metadata();
+
+    const svg = buildMarkerSvg(
+      x,
+      y,
+      metadata.width ?? 0,
+      metadata.height ?? 0,
+    );
+    const marked = await sharp(baseBuffer)
+      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
+      .png()
+      .toBuffer();
+
+    const markedPath = scaled.filepath.replace(/\.png$/, `-mark-${x}-${y}.png`);
+    fs.writeFileSync(markedPath, marked);
+
+    return { base64: marked.toString("base64"), filepath: markedPath };
+  }
+
   let initError: string | undefined;
 
   // Seed native display dimensions on startup when desktop mode is enabled
@@ -733,6 +793,7 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
 
   return {
     captureScaledScreenshot,
+    captureMarkedScreenshot,
     captureViewportScreenshot,
     captureFullScreenshot,
     executeAction: execute,

@@ -164,6 +164,89 @@ describe("desktop focus commands", () => {
   });
 });
 
+describe("desktop mark command", () => {
+  test("draws a crosshair screenshot and reports the landing pixel", async () => {
+    const { desktopService, contextManager, computerService } =
+      buildDesktopService({
+        config: {
+          nativeDisplayWidth: 3840,
+          nativeDisplayHeight: 2160,
+          viewport: { x: 0, y: 0, width: 3840, height: 2160 },
+          scaledWidth: 1380,
+          scaledHeight: 776,
+          scaleFactor: 0.359375,
+        },
+        computerService: {
+          captureMarkedScreenshot: vi.fn(() =>
+            Promise.resolve({ base64: "marked", filepath: "/tmp/mark.png" }),
+          ),
+        },
+      });
+
+    const result = await desktopService.handleCommand("mark 690 388");
+
+    expect(computerService.captureMarkedScreenshot).toHaveBeenCalledWith(
+      690,
+      388,
+    );
+    expect(contextManager.appendImage).toHaveBeenCalledWith(
+      "marked",
+      "image/png",
+      "/tmp/mark.png",
+    );
+    expect(result).toContain("Marked (690, 388)");
+    // 690/1380*3840 = 1920, 388/776*2160 = 1080
+    expect(result).toContain("physical screen pixel 1920, 1080");
+  });
+
+  test("rejects an out-of-bounds coordinate without capturing", async () => {
+    const { desktopService, computerService } = buildDesktopService({
+      config: { scaledWidth: 1380, scaledHeight: 776 },
+      computerService: { captureMarkedScreenshot: vi.fn() },
+    });
+
+    await expect(desktopService.handleCommand("mark 2000 100")).rejects.toBe(
+      "Coordinate (2000, 100) is outside the screen resolution 1380x776.",
+    );
+    expect(computerService.captureMarkedScreenshot).not.toHaveBeenCalled();
+  });
+
+  test("requires a vision-capable model", async () => {
+    const { desktopService } = buildDesktopService({
+      model: { supportsVision: false },
+    });
+
+    await expect(desktopService.handleCommand("mark 10 20")).resolves.toContain(
+      "does not support vision",
+    );
+  });
+
+  test("does not claim the desktop", async () => {
+    const claim = createDesktopClaimService();
+    const { desktopService } = buildDesktopService({
+      desktopClaimService: claim,
+      agentUsername: "alice",
+      computerService: {
+        captureMarkedScreenshot: vi.fn(() =>
+          Promise.resolve({ base64: "x", filepath: "/tmp/m.png" }),
+        ),
+      },
+    });
+
+    await desktopService.handleCommand("mark 10 20");
+    expect(claim.getStatus()).toBeNull();
+  });
+
+  test("stays visible in help even when the model supports computer use", async () => {
+    const { desktopService } = buildDesktopService({
+      model: { supportsComputerUse: true },
+    });
+
+    const helpText = await desktopService.handleCommand("help");
+    expect(helpText).toContain("mark <x> <y>");
+  });
+});
+
 describe("desktop claim sharing", () => {
   afterEach(() => {
     vi.useRealTimers();
