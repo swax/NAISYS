@@ -1,3 +1,5 @@
+import * as utilities from "../utils/utilities.js";
+
 /**
  * Bounded byte buffer for shell command output. Keeps the first `headMax`
  * bytes and a rolling window of the last `tailMax` bytes; bytes in the middle
@@ -17,14 +19,22 @@ export function createOutputBuffer(headMax: number, tailMax: number) {
           head += data;
           return;
         }
-        head += data.slice(0, room);
-        data = data.slice(room);
+        // Keep a surrogate pair whole across the head/tail boundary — once a
+        // drop marker is inserted between them in get(), a head ending on a
+        // lone high surrogate becomes invalid JSON.
+        const cut = utilities.surrogateSafeEnd(data, room);
+        head += data.slice(0, cut);
+        data = data.slice(cut);
       }
       tail += data;
       // Amortize: only slice when 2x over so total work stays O(n) on many
       // small chunks instead of O(n^2).
       if (tail.length > tailMax * 2) {
-        const overflow = tail.length - tailMax;
+        // Drop the orphaned low surrogate too if the trim front lands mid-pair.
+        const overflow = utilities.surrogateSafeStart(
+          tail,
+          tail.length - tailMax,
+        );
         tail = tail.slice(overflow);
         dropped += overflow;
       }

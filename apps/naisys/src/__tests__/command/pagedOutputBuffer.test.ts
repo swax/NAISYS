@@ -1,8 +1,27 @@
 import { describe, expect, test } from "vitest";
 
-import { createPagedOutputBuffer } from "../../command/pagedOutputBuffer.js";
+import {
+  breakContentIntoPages,
+  createPagedOutputBuffer,
+} from "../../command/pagedOutputBuffer.js";
 import type { GlobalConfig } from "../../globalConfig.js";
 import { createMockGlobalConfig } from "../mocks.js";
+
+/** True if the string contains a UTF-16 surrogate code unit without its
+ *  matching partner — the shape that serializes to invalid JSON. */
+function hasLoneSurrogate(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const next = s.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true; // high without low
+      i++; // valid pair — skip the low half
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      return true; // low without preceding high
+    }
+  }
+  return false;
+}
 
 function buildBuffer(outputTokenMax = 4) {
   const base = createMockGlobalConfig();
@@ -84,6 +103,34 @@ describe("pagedOutputBuffer", () => {
 
     const lastPage = buf.moreCommand.handleCommand("npm-1 --page=9999");
     expect(lastPage).toContain("No more pages.");
+  });
+
+  test("never splits a surrogate pair across page boundaries", () => {
+    // Dense non-BMP content: every grinning-face emoji is a 2-code-unit pair,
+    // so a naive code-unit cut lands mid-pair on roughly half of all offsets.
+    const content = "😀".repeat(1000);
+    const pages = breakContentIntoPages(content, 4);
+
+    expect(pages.length).toBeGreaterThan(1);
+    // Lossless: concatenating the pages reproduces the input exactly.
+    expect(pages.join("")).toBe(content);
+    // Each page is on its own valid UTF-16 — no orphaned surrogate halves.
+    for (const page of pages) {
+      expect(hasLoneSurrogate(page)).toBe(false);
+    }
+  });
+
+  test("keeps pairs whole when an ASCII prefix shifts the cut parity", () => {
+    // The leading "x" offsets every pair by one code unit, so cuts that were
+    // clean without it now land mid-pair — covers the opposite boundary parity.
+    const content = "x" + "😀".repeat(1000);
+    const pages = breakContentIntoPages(content, 4);
+
+    expect(pages.length).toBeGreaterThan(1);
+    expect(pages.join("")).toBe(content);
+    for (const page of pages) {
+      expect(hasLoneSurrogate(page)).toBe(false);
+    }
   });
 
   test("clear drops entries and resets id counters", () => {

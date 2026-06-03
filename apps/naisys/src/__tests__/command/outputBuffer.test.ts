@@ -64,6 +64,26 @@ describe("outputBuffer", () => {
     expect(buf.get()).toBe("fresh");
   });
 
+  test("keeps a surrogate pair whole across the head/tail boundary", () => {
+    // headMax=3 would cut "😀😀😀" (6 code units) after the first pair's high
+    // surrogate; the buffer must instead keep the pair in the tail. With no
+    // drop, get() reconstructs the original exactly.
+    const buf = createOutputBuffer(3, 100);
+    buf.append("😀😀😀");
+    expect(buf.get()).toBe("😀😀😀");
+  });
+
+  test("never leaves a lone surrogate when dropping the middle", () => {
+    // headMax=3 splits mid-pair (kept whole in tail); tailMax=5 forces a front
+    // trim whose offset (13) lands on a low surrogate and must skip it too.
+    const buf = createOutputBuffer(3, 5);
+    buf.append("😀".repeat(10));
+    // head="😀", 14 code units dropped, tail="😀😀" — every emoji intact.
+    expect(buf.get()).toBe(
+      "😀\n\n[... 14 bytes dropped to prevent OOM ...]\n\n😀😀",
+    );
+  });
+
   test("dropped count accumulates correctly", () => {
     const buf = createOutputBuffer(0, 2);
     // Tail trims at 4 bytes (2x tailMax). After each trim, dropped += overflow.

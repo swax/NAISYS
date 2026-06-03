@@ -21,7 +21,7 @@ interface BufferEntry {
 const BUFFER_CAPACITY = 25;
 const SOURCE_DISPLAY_MAX = 80;
 
-function breakContentIntoPages(
+export function breakContentIntoPages(
   content: string,
   tokensPerPage: number,
 ): string[] {
@@ -36,7 +36,11 @@ function breakContentIntoPages(
   const pages: string[] = [];
   let startIndex = 0;
   while (startIndex < content.length) {
-    const endIndex = Math.min(startIndex + charactersPerPage, content.length);
+    let endIndex = Math.min(startIndex + charactersPerPage, content.length);
+    // Don't split a surrogate pair across a page boundary, unless backing off
+    // would stall progress (a single page narrower than one whole pair).
+    const safeEnd = utilities.surrogateSafeEnd(content, endIndex);
+    if (safeEnd > startIndex) endIndex = safeEnd;
     pages.push(content.substring(startIndex, endIndex));
     startIndex = endIndex;
   }
