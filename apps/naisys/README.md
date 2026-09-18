@@ -30,7 +30,7 @@ Create a `.env` from [.env.example](.env.example) (or let the setup wizard walk 
 ```yaml
 username: smith
 title: Software Engineer
-shellModel: claude4sonnet
+shellModel: claude_sonnet
 agentPrompt: |
   You are ${agent.username} a ${agent.title} with the job of building a website.
 tokenMax: 50000

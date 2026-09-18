@@ -197,14 +197,25 @@ export async function sendWithOpenAiStandard(
   const messagesTokenCount = inputTokens;
   const cacheReadTokens =
     response.usage.input_tokens_details?.cached_tokens || 0;
-  const nonCachedPromptTokens = Math.max(0, inputTokens - cacheReadTokens);
+  // GPT-5.6+ bills cache writes separately. Older SDK typings omit this
+  // response field, and older models omit it from the response entirely.
+  const cacheWriteTokens =
+    (
+      response.usage.input_tokens_details as
+        | { cache_write_tokens?: number }
+        | undefined
+    )?.cache_write_tokens || 0;
+  const nonCachedPromptTokens = Math.max(
+    0,
+    inputTokens - cacheReadTokens - cacheWriteTokens,
+  );
 
   costTracker.recordTokens(
     source,
     model.key,
     nonCachedPromptTokens,
     outputTokens,
-    0,
+    cacheWriteTokens,
     cacheReadTokens,
   );
 

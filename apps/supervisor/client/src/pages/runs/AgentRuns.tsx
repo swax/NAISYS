@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { ADMIN_USERNAME, formatTokens } from "@naisys/common";
+import { ADMIN_USERNAME, findLlmModel, formatTokens } from "@naisys/common";
 import {
   IconHelp,
   IconList,
@@ -506,8 +506,7 @@ export const AgentRuns: React.FC = () => {
                   size="sm"
                   variant="light"
                   color={getApiTypeBadgeColor(
-                    llmModels.find((m) => m.key === selectedRun.modelName)
-                      ?.apiType,
+                    findLlmModel(llmModels, selectedRun.modelName)?.apiType,
                   )}
                   component={Link}
                   to={`/models/${encodeURIComponent(selectedRun.modelName)}`}
@@ -551,8 +550,9 @@ export const AgentRuns: React.FC = () => {
                 </Text>
                 {selectedRun.totalTokens > 0 &&
                   (() => {
-                    const modelMax = llmModels.find(
-                      (m) => m.key === selectedRun.modelName,
+                    const modelMax = findLlmModel(
+                      llmModels,
+                      selectedRun.modelName,
                     )?.maxTokens;
                     const agentTokenMax = agent?.tokenMax;
                     const tooltipParts = [

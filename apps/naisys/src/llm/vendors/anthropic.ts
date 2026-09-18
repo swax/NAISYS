@@ -102,7 +102,7 @@ export async function sendWithAnthropic(
 
   const createParams: Anthropic.MessageCreateParams = {
     model: model.versionName,
-    max_tokens: 4096, // Blows up on anything higher
+    max_tokens: 4096,
     messages: [
       {
         role: "user",
@@ -130,21 +130,43 @@ export async function sendWithAnthropic(
     ],
   };
 
-  const thinkingBudget = toAnthropicThinkingBudget(
-    model.reasoningLevel,
-    createParams.max_tokens!,
-  );
-  if (thinkingBudget !== undefined) {
-    createParams.thinking = {
-      type: "enabled",
-      budget_tokens: thinkingBudget,
-    };
+  // Current Claude models removed manual thinking budgets. Keep that mode
+  // for Haiku and older/custom models that still require it.
+  const adaptiveThinking =
+    /^claude-(?:opus-4-[678]|sonnet-4-6|(?:opus|sonnet|fable|mythos)-5)(?:-|$)/.test(
+      model.versionName,
+    );
+  if (adaptiveThinking) {
+    if (model.reasoningLevel === "none") {
+      if (/^claude-(?:fable|mythos)-5/.test(model.versionName)) {
+        throw new Error(
+          `${model.versionName} requires thinking; use low or higher.`,
+        );
+      }
+      createParams.thinking = { type: "disabled" };
+    } else {
+      createParams.thinking = { type: "adaptive" };
+      if (model.reasoningLevel) {
+        createParams.output_config = { effort: model.reasoningLevel };
+      }
+    }
+  } else {
+    const thinkingBudget = toAnthropicThinkingBudget(
+      model.reasoningLevel,
+      createParams.max_tokens!,
+    );
+    if (thinkingBudget !== undefined) {
+      createParams.thinking = {
+        type: "enabled",
+        budget_tokens: thinkingBudget,
+      };
+    }
   }
 
   // Build tools array — console and desktop tools can coexist
   if (useConsoleTools) {
     createParams.tools = [tools.consoleToolAnthropic];
-    if (thinkingBudget !== undefined) {
+    if (createParams.thinking && createParams.thinking.type !== "disabled") {
       createParams.tool_choice = { type: "auto" };
     } else {
       createParams.tool_choice = {
@@ -222,6 +244,12 @@ export async function sendWithAnthropic(
   const textParts: string[] = msgResponse.content
     .filter((c) => c.type === "text" && c.text)
     .map((c) => (c as Extract<typeof c, { type: "text" }>).text);
+
+  if (!textParts.length && !consoleCommands?.length && !desktopActions.length) {
+    throw new Error(
+      `Anthropic returned no text or tool calls (stop reason: ${msgResponse.stop_reason}).`,
+    );
+  }
 
   // Desktop actions present — they take priority for the response flow.
   // Console commands (if any) are folded into the text so the model sees them

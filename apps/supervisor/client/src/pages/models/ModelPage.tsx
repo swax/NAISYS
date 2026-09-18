@@ -11,8 +11,10 @@ import {
   Title,
 } from "@mantine/core";
 import {
-  builtInRealtimeModels,
   DEFAULT_REALTIME_MODEL_ID,
+  DEFAULT_REALTIME_MODEL_KEY,
+  findLlmModel,
+  getRealtimeModel,
   hasAction,
   type RealtimeModel,
 } from "@naisys/common";
@@ -88,13 +90,11 @@ export const ModelPage: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [handleBeforeUnload]);
 
-  const llm = !isNew ? llmModels.find((m) => m.key === key) : undefined;
-  const img = !isNew ? imageModels.find((m) => m.key === key) : undefined;
+  const llm = !isNew && key ? findLlmModel(llmModels, key) : undefined;
+  const img = !isNew && key ? findLlmModel(imageModels, key) : undefined;
   // Realtime catalog lives in @naisys/common — read-only, no edit/create.
   const realtime =
-    !isNew && !llm && !img
-      ? builtInRealtimeModels.find((m) => m.key === key)
-      : undefined;
+    !isNew && !llm && !img && key ? getRealtimeModel(key) : undefined;
 
   if (!isNew && !llm && !img && !realtime) {
     return (
@@ -108,7 +108,7 @@ export const ModelPage: React.FC = () => {
 
   // Early return so the edit/create branches below don't need to special-case it.
   if (realtime) {
-    const isDefault = realtime.key === DEFAULT_REALTIME_MODEL_ID;
+    const isDefault = realtime.versionName === DEFAULT_REALTIME_MODEL_ID;
     return (
       <Stack gap="md" maw={1000}>
         <Title order={2}>{realtime.label}</Title>
@@ -120,8 +120,8 @@ export const ModelPage: React.FC = () => {
             for its browser-held gpt-realtime session.
           </Text>
           <Text size="sm" mt="xs">
-            The voice agent uses <strong>{DEFAULT_REALTIME_MODEL_ID}</strong> by
-            default
+            The voice agent uses <strong>{DEFAULT_REALTIME_MODEL_KEY}</strong>{" "}
+            by default
             {isDefault ? " (this model)" : ""}. Override by setting the{" "}
             <Code>VOICE_AGENT_MODEL</Code>{" "}
             <Anchor component={Link} to="/variables">
@@ -387,6 +387,7 @@ function LlmReadOnlyTable({
 }: {
   model: {
     key: string;
+    aliases?: string[];
     label: string;
     versionName: string;
     apiType: string;
@@ -407,6 +408,7 @@ function LlmReadOnlyTable({
 }) {
   const rows: [string, string | number][] = [
     ["Key", model.key],
+    ["Aliases", model.aliases?.join(", ") || "\u2014"],
     ["Label", model.label],
     ["Version Name", model.versionName],
     ["API Type", model.apiType],
@@ -455,6 +457,7 @@ function ImageReadOnlyTable({
 }: {
   model: {
     key: string;
+    aliases?: string[];
     label: string;
     versionName: string;
     size: string;
@@ -466,6 +469,7 @@ function ImageReadOnlyTable({
 }) {
   const rows: [string, string | number][] = [
     ["Key", model.key],
+    ["Aliases", model.aliases?.join(", ") || "\u2014"],
     ["Label", model.label],
     ["Version Name", model.versionName],
     ["Size", model.size],
@@ -499,6 +503,7 @@ function RealtimeReadOnlyTable({ model }: { model: RealtimeModel }) {
     n === undefined ? "\u2014" : `$${n}`;
   const rows: [string, string | number][] = [
     ["Key", model.key],
+    ["Aliases", model.aliases?.join(", ") || "\u2014"],
     ["Label", model.label],
     ["Version Name", model.versionName],
     ["Model IDs", model.modelIds.join(", ")],

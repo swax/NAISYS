@@ -9,13 +9,16 @@ import {
   Stack,
   Switch,
   Text,
+  TextInput,
   Tooltip as MantineTooltip,
 } from "@mantine/core";
 import {
   countBy,
+  findModel,
   LlmApiType,
   pushToArrayMap,
   sortByDesc,
+  suggestOpenRouterModelKey,
 } from "@naisys/common";
 import { IconExclamationCircle } from "@tabler/icons-react";
 import type { ChartData, ChartOptions } from "chart.js";
@@ -26,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import {
   api,
   apiEndpoints,
+  type ModelsResponse,
   type OpenRouterCatalogResponse,
 } from "../../lib/api/apiClient";
 import { saveLlmModel } from "../../lib/api/apiModels";
@@ -51,6 +55,7 @@ export const AddOpenRouterModelDialog: React.FC<
   const [models, setModels] = useState<CatalogModel[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [modelKey, setModelKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [freeOnly, setFreeOnly] = useState(false);
@@ -94,6 +99,10 @@ export const AddOpenRouterModelDialog: React.FC<
     () => models?.find((m) => m.id === selectedId),
     [models, selectedId],
   );
+
+  useEffect(() => {
+    setModelKey(selectedId ? suggestOpenRouterModelKey(selectedId) : "");
+  }, [selectedId]);
 
   /**
    * Top N most-common providers get their own color; the rest are grouped as "other".
@@ -217,10 +226,19 @@ export const AddOpenRouterModelDialog: React.FC<
     setSaving(true);
     setSaveError(null);
     try {
-      // Use the slug after the provider prefix (e.g. "anthropic/claude-opus-4.7" → "claude-opus-4.7").
-      // If there's no slash, fall back to the full id.
-      const slashIdx = selected.id.indexOf("/");
-      const key = slashIdx >= 0 ? selected.id.slice(slashIdx + 1) : selected.id;
+      const key = modelKey.trim();
+      if (!key) throw new Error("Enter a model key.");
+      const existing = await api.get<ModelsResponse>(apiEndpoints.models);
+      if (
+        findModel(
+          [...existing.llmModelDetails, ...existing.imageModelDetails],
+          key,
+        )
+      ) {
+        throw new Error(
+          `Model name "${key}" already exists. Choose a different key or edit the existing model.`,
+        );
+      }
 
       const model: Record<string, unknown> = {
         key,
@@ -323,6 +341,14 @@ export const AddOpenRouterModelDialog: React.FC<
         )}
         {selected && (
           <Stack gap={4}>
+            <TextInput
+              label="Model Key"
+              description="A stable name for agent configurations. The selected provider model ID is saved separately."
+              value={modelKey}
+              onChange={(event) => setModelKey(event.currentTarget.value)}
+              disabled={saving}
+              required
+            />
             <Text size="xs" c="dimmed">
               Added to OpenRouter: {formatCreated(selected.created)}
             </Text>
@@ -354,7 +380,7 @@ export const AddOpenRouterModelDialog: React.FC<
             <Button
               onClick={handleAdd}
               loading={saving}
-              disabled={!selected || saving || !canSave}
+              disabled={!selected || !modelKey.trim() || saving || !canSave}
               data-disabled={!canSave ? true : undefined}
             >
               Add

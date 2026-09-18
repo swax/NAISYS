@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { formatTokens } from "@naisys/common";
+import { findLlmModel, formatTokens } from "@naisys/common";
 import { IconFileText, IconPlus } from "@tabler/icons-react";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -347,8 +347,7 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                         size="xs"
                         variant="light"
                         color={getApiTypeBadgeColor(
-                          llmModels.find((m) => m.key === run.modelName)
-                            ?.apiType,
+                          findLlmModel(llmModels, run.modelName)?.apiType,
                         )}
                         style={{ whiteSpace: "nowrap" }}
                       >
@@ -364,8 +363,9 @@ export const RunsSidebar: React.FC<RunsSidebarProps> = ({
                     </Text>
                     {run.totalTokens > 0 &&
                       (() => {
-                        const modelMax = llmModels.find(
-                          (m) => m.key === run.modelName,
+                        const modelMax = findLlmModel(
+                          llmModels,
+                          run.modelName,
                         )?.maxTokens;
                         const tooltipParts = [
                           `${run.totalTokens.toLocaleString()} tokens`,

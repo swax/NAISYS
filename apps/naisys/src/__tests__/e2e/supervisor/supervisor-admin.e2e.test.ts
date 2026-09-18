@@ -166,6 +166,7 @@ SERVER_PORT=${SERVER_PORT}
     const savedModel = await admin.put<SuccessResponse>("/models/llm", {
       model: {
         key: customModelKey,
+        aliases: ["admin-e2e-alias"],
         label: "Admin E2E Mock LLM",
         versionName: "test-1",
         apiType: "mock",
@@ -183,6 +184,115 @@ SERVER_PORT=${SERVER_PORT}
         (m) => m.key === customModelKey && m.isCustom,
       ),
     ).toBe(true);
+
+    expect(
+      models.llmModelDetails.find((m) => m.key === customModelKey)?.aliases,
+    ).toEqual(["admin-e2e-alias"]);
+    expect(models.llmModels.some((m) => m.value === "claude_opus")).toBe(true);
+    expect(models.llmModels.some((m) => m.value === "claude4opus")).toBe(false);
+    const opus = models.llmModelDetails.find((m) => m.key === "claude_opus")!;
+    expect(opus.aliases).toContain("claude4opus");
+
+    // An old API client can still override/reset using the compatibility name.
+    const { aliases: _aliases, ...legacyOpus } = opus;
+    expect(
+      (
+        await admin.put<SuccessResponse>("/models/llm", {
+          model: { ...legacyOpus, key: "claude4opus", inputCost: 7 },
+        })
+      ).success,
+    ).toBe(true);
+    const overridden = await admin.get<ModelsResponse>("/models");
+    expect(
+      overridden.llmModelDetails.find((m) => m.key === "claude_opus"),
+    ).toMatchObject({ inputCost: 7, aliases: ["claude4opus"], isCustom: true });
+    expect(
+      overridden.llmModelDetails.some((m) => m.key === "claude4opus"),
+    ).toBe(false);
+    await expect(
+      admin.put("/models/llm", {
+        model: {
+          ...legacyOpus,
+          key: "conflicting-model",
+          aliases: ["claude4opus"],
+        },
+      }),
+    ).rejects.toThrow(/400/);
+    await expect(
+      admin.put("/models/llm", {
+        model: {
+          ...legacyOpus,
+          key: "conflicting-model",
+          aliases: ["admin-e2e-alias"],
+        },
+      }),
+    ).rejects.toThrow(/400/);
+    expect(
+      (await admin.del<SuccessResponse>("/models/llm/claude4opus")).success,
+    ).toBe(true);
+    const reset = await admin.get<ModelsResponse>("/models");
+    expect(
+      reset.llmModelDetails.find((m) => m.key === "claude_opus"),
+    ).toMatchObject({
+      inputCost: opus.inputCost,
+      aliases: ["claude4opus"],
+      isCustom: false,
+    });
+
+    // Image aliases survive save/list/reset and share the same name namespace.
+    const image = models.imageModelDetails.find(
+      (m) => m.key === "gpt_image_high",
+    )!;
+    expect(image.aliases).toContain("gptimage1high");
+    expect(
+      (
+        await admin.put<SuccessResponse>("/models/image", {
+          model: {
+            ...image,
+            key: "gptimage1high",
+            aliases: ["test_image_alias"],
+            cost: 42,
+          },
+        })
+      ).success,
+    ).toBe(true);
+    const imageOverride = await admin.get<ModelsResponse>("/models");
+    expect(
+      imageOverride.imageModelDetails.find((m) => m.key === "gpt_image_high"),
+    ).toMatchObject({
+      cost: 42,
+      aliases: ["gptimage1high", "test_image_alias"],
+      isCustom: true,
+    });
+    await expect(
+      admin.put("/models/llm", {
+        model: {
+          ...legacyOpus,
+          key: "image_alias_collision",
+          aliases: ["test_image_alias"],
+        },
+      }),
+    ).rejects.toThrow(/400/);
+    await expect(
+      admin.put("/models/image", {
+        model: {
+          ...image,
+          key: "llm_alias_collision",
+          aliases: ["admin-e2e-alias"],
+        },
+      }),
+    ).rejects.toThrow(/400/);
+    expect(
+      (await admin.del<SuccessResponse>("/models/image/gptimage1high")).success,
+    ).toBe(true);
+    const imageReset = await admin.get<ModelsResponse>("/models");
+    expect(
+      imageReset.imageModelDetails.find((m) => m.key === "gpt_image_high"),
+    ).toMatchObject({
+      cost: image.cost,
+      aliases: ["gptimage1high"],
+      isCustom: false,
+    });
 
     // ---- Step 5: save another variable as admin (sensitive, masked for non-managers) ----
     const adminVarSaved = await admin.put<SuccessResponse>(
@@ -258,6 +368,7 @@ SERVER_PORT=${SERVER_PORT}
 
     const archived = await admin.post<SuccessResponse>(
       "/agents/peerbot/archive",
+      {},
     );
     expect(archived.success).toBe(true);
     const peerArchived =
@@ -266,6 +377,7 @@ SERVER_PORT=${SERVER_PORT}
 
     const unarchived = await admin.post<SuccessResponse>(
       "/agents/peerbot/unarchive",
+      {},
     );
     expect(unarchived.success).toBe(true);
     const peerUnarchived =
@@ -274,6 +386,7 @@ SERVER_PORT=${SERVER_PORT}
 
     const resetSpend = await admin.post<SuccessResponse>(
       "/agents/peerbot/reset-spend",
+      {},
     );
     expect(resetSpend.success).toBe(true);
 

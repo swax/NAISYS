@@ -4,6 +4,7 @@ import {
   NumberInput,
   Select,
   Stack,
+  TagsInput,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -16,6 +17,7 @@ import type { ImageModelDetail } from "../../lib/api/apiClient";
 
 interface ImageFormValues {
   key: string;
+  aliases: string[];
   label: string;
   versionName: string;
   size: string;
@@ -28,6 +30,7 @@ interface ImageFormValues {
 function transformFormValues(values: ImageFormValues): Record<string, unknown> {
   const result: Record<string, unknown> = {
     key: values.key,
+    aliases: values.aliases,
     label: values.label,
     versionName: values.versionName,
     size: values.size,
@@ -59,6 +62,7 @@ export const ImageModelForm: React.FC<ImageModelFormProps> = ({
   const form = useForm<ImageFormValues>({
     initialValues: {
       key: model?.key ?? "",
+      aliases: model?.aliases ?? [],
       label: model?.label ?? "",
       versionName: model?.versionName ?? "",
       size: model?.size ?? "1024x1024",
@@ -101,6 +105,12 @@ export const ImageModelForm: React.FC<ImageModelFormProps> = ({
           withAsterisk
           disabled={readOnly}
           {...form.getInputProps("versionName")}
+        />
+        <TagsInput
+          label="Aliases"
+          description="Alternative names accepted in agent configurations. Built-in compatibility aliases are always retained."
+          disabled={readOnly}
+          {...form.getInputProps("aliases")}
         />
 
         <Text fw={600} size="sm" c="dimmed">

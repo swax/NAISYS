@@ -28,7 +28,11 @@ function getVersionConfig(versionName: string): {
   toolType: ComputerToolType;
   betaFlag: string;
 } {
-  if (versionName.includes("4-6") || versionName.includes("4-5")) {
+  if (
+    /^claude-(?:opus-4-[5678]|sonnet-4-6|(?:opus|sonnet|fable|mythos)-5)(?:-|$)/.test(
+      versionName,
+    )
+  ) {
     return {
       toolType: "computer_20251124",
       betaFlag: "computer-use-2025-11-24",

@@ -88,6 +88,11 @@ describe("voiceService", () => {
     await expect(getVoiceModel()).resolves.toBe("gpt-realtime");
   });
 
+  test("resolves a stable realtime key before calling the provider", async () => {
+    mocks.getVariableCachedValue.mockResolvedValue(" gpt_realtime ");
+    await expect(getVoiceModel()).resolves.toBe("gpt-realtime-2");
+  });
+
   test("voice availability requires OPENAI_API_KEY to be set", async () => {
     mocks.getVariableCachedValue.mockImplementation((name: string) =>
       name === "OPENAI_API_KEY" ? "" : undefined,

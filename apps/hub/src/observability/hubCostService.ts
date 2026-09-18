@@ -4,7 +4,6 @@ import {
   LlmApiType,
   type ModelDbRow,
   parseSpendLimitsFromConfigJson,
-  unique,
 } from "@naisys/common";
 import {
   type CodexUsage,
@@ -485,17 +484,18 @@ export function createHubCostService(
     });
     if (sessions.length === 0) return new Set();
 
-    // Narrow the distinct model keys to the OpenAI Codex OAuth ones.
-    const modelKeys = unique(sessions.map((s) => s.model_name));
+    // Sessions may store aliases, so a key-only DB filter would miss them.
     const modelRows = (await hubDb.models.findMany({
-      where: { key: { in: modelKeys } },
+      where: { type: "llm" },
     })) as ModelDbRow[];
     const codexModelKeys = new Set<string>();
     for (const row of modelRows) {
       if (row.type !== "llm") continue;
       try {
-        if (dbFieldsToLlmModel(row).apiType === LlmApiType.OpenAIOAuth) {
+        const model = dbFieldsToLlmModel(row);
+        if (model.apiType === LlmApiType.OpenAIOAuth) {
           codexModelKeys.add(row.key);
+          for (const alias of model.aliases ?? []) codexModelKeys.add(alias);
         }
       } catch {
         /* ignore unparseable model meta */

@@ -11,6 +11,7 @@ export interface RealtimeModelPricingPerMTok {
 
 export interface RealtimeModel {
   key: string;
+  aliases?: readonly string[];
   label: string;
   versionName: string;
   modelIds: readonly string[];
@@ -33,6 +34,7 @@ export interface RealtimeUsageTokens {
 }
 
 export const DEFAULT_REALTIME_MODEL_ID = "gpt-realtime-2";
+export const DEFAULT_REALTIME_MODEL_KEY = "gpt_realtime";
 
 // Realtime models use modality-specific token rates, so they intentionally
 // live outside builtInLlmModels. Prices are per 1M tokens in USD.
@@ -40,7 +42,7 @@ export const DEFAULT_REALTIME_MODEL_ID = "gpt-realtime-2";
 export const builtInRealtimeModels: RealtimeModel[] = [
   {
     key: "gpt-realtime",
-    label: "GPT Realtime",
+    label: "GPT Realtime (Legacy)",
     versionName: "gpt-realtime",
     modelIds: ["gpt-realtime", "gpt-realtime-2025-08-28"],
     apiKeyVar: "OPENAI_API_KEY",
@@ -58,8 +60,9 @@ export const builtInRealtimeModels: RealtimeModel[] = [
     },
   },
   {
-    key: "gpt-realtime-2",
-    label: "GPT Realtime 2",
+    key: DEFAULT_REALTIME_MODEL_KEY,
+    aliases: ["gpt-realtime-2"],
+    label: "GPT Realtime",
     versionName: "gpt-realtime-2",
     modelIds: ["gpt-realtime-2"],
     apiKeyVar: "OPENAI_API_KEY",
@@ -81,7 +84,12 @@ export const builtInRealtimeModels: RealtimeModel[] = [
 
 export function getRealtimeModel(modelId: string): RealtimeModel | undefined {
   const id = modelId.trim();
-  return builtInRealtimeModels.find((model) => model.modelIds.includes(id));
+  return builtInRealtimeModels.find(
+    (model) =>
+      model.key === id ||
+      model.aliases?.includes(id) ||
+      model.modelIds.includes(id),
+  );
 }
 
 export function computeRealtimeModelCost(

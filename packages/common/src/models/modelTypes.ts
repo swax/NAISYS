@@ -33,6 +33,7 @@ export const MIN_CACHE_TTL_SECONDS = 300;
 export const LlmModelSchema = z
   .object({
     key: z.string().min(1),
+    aliases: z.array(z.string().trim().min(1)).optional(),
     label: z.string().min(1),
     versionName: z.string().min(1),
     apiType: z.enum(LlmApiType),
@@ -51,6 +52,16 @@ export const LlmModelSchema = z
     reasoningLevel: LlmReasoningLevelSchema.optional(),
   })
   .superRefine((data, ctx) => {
+    if (
+      data.aliases?.includes(data.key) ||
+      new Set(data.aliases).size !== (data.aliases?.length ?? 0)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Aliases must be unique and different from the model key",
+        path: ["aliases"],
+      });
+    }
     if (
       data.baseUrl &&
       ![
@@ -71,16 +82,30 @@ export const LlmModelSchema = z
 
 export type LlmModel = z.infer<typeof LlmModelSchema>;
 
-export const ImageModelSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
-  versionName: z.string().min(1),
-  size: z.string().min(1),
-  baseUrl: z.string().optional(),
-  apiKeyVar: z.string(),
-  cost: z.number(),
-  quality: z.enum(["standard", "hd", "high", "medium", "low"]).optional(),
-});
+export const ImageModelSchema = z
+  .object({
+    key: z.string().min(1),
+    aliases: z.array(z.string().trim().min(1)).optional(),
+    label: z.string().min(1),
+    versionName: z.string().min(1),
+    size: z.string().min(1),
+    baseUrl: z.string().optional(),
+    apiKeyVar: z.string(),
+    cost: z.number(),
+    quality: z.enum(["standard", "hd", "high", "medium", "low"]).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.aliases?.includes(data.key) ||
+      new Set(data.aliases).size !== (data.aliases?.length ?? 0)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Aliases must be unique and different from the model key",
+        path: ["aliases"],
+      });
+    }
+  });
 
 export type ImageModel = z.infer<typeof ImageModelSchema>;
 
@@ -96,6 +121,7 @@ export type CustomModelsFile = z.infer<typeof CustomModelsFileSchema>;
 // --- DB meta schemas (for JSON stored in models.meta column) ---
 
 const LlmMetaSchema = z.object({
+  aliases: z.array(z.string().min(1)).optional(),
   apiType: z.enum(LlmApiType),
   maxTokens: z.number().int().positive(),
   baseUrl: z.string().optional(),
@@ -113,6 +139,7 @@ const LlmMetaSchema = z.object({
 });
 
 const ImageMetaSchema = z.object({
+  aliases: z.array(z.string().min(1)).optional(),
   size: z.string().min(1),
   baseUrl: z.string().optional(),
   apiKeyVar: z.string(),
@@ -223,11 +250,82 @@ function mergeModels<T extends { key: string }>(
 }
 
 export function getAllLlmModels(customLlmModels?: LlmModel[]): LlmModel[] {
-  return mergeModels(builtInLlmModels, customLlmModels);
+  const custom = customLlmModels?.map(withBuiltInLlmAliases);
+  if (custom && new Set(custom.map((m) => m.key)).size !== custom.length) {
+    throw new Error(
+      "Multiple custom models resolve to the same canonical key; keep one definition per model",
+    );
+  }
+  const models = mergeModels(builtInLlmModels, custom);
+  validateLlmModelAliases(models);
+  return models;
 }
+
+/** Aliases resolve directly to a model, so chains and cycles are impossible. */
+export function findModel<
+  T extends { key: string; aliases?: readonly string[] },
+>(models: readonly T[], key: string): T | undefined {
+  return (
+    models.find((m) => m.key === key) ??
+    models.find((m) => m.aliases?.includes(key))
+  );
+}
+
+export const findLlmModel = findModel;
+
+/** Preserve built-in compatibility names when overriding or importing a model. */
+export function withBuiltInLlmAliases(model: LlmModel): LlmModel {
+  return withBuiltInAliases(model, builtInLlmModels);
+}
+
+export function withBuiltInImageAliases(model: ImageModel): ImageModel {
+  return withBuiltInAliases(model, builtInImageModels);
+}
+
+function withBuiltInAliases<T extends { key: string; aliases?: string[] }>(
+  model: T,
+  builtIns: T[],
+): T {
+  const builtIn = findModel(builtIns, model.key);
+  if (!builtIn) return model;
+  const aliases = [
+    ...new Set([...(builtIn.aliases ?? []), ...(model.aliases ?? [])]),
+  ].filter((key) => key !== builtIn.key);
+  return {
+    ...model,
+    key: builtIn.key,
+    ...(aliases.length > 0 ? { aliases } : {}),
+  };
+}
+
+/** Reject ambiguous names rather than silently selecting the wrong provider. */
+export function validateModelAliases(
+  models: readonly { key: string; aliases?: readonly string[] }[],
+): void {
+  const owners = new Map<string, string>();
+  for (const model of models) {
+    for (const name of [model.key, ...(model.aliases ?? [])]) {
+      if (owners.has(name))
+        throw new Error(
+          `Model name "${name}" is already used by "${owners.get(name)}"`,
+        );
+      owners.set(name, model.key);
+    }
+  }
+}
+
+export const validateLlmModelAliases = validateModelAliases;
 
 export function getAllImageModels(
   customImageModels?: ImageModel[],
 ): ImageModel[] {
-  return mergeModels(builtInImageModels, customImageModels);
+  const custom = customImageModels?.map(withBuiltInImageAliases);
+  if (custom && new Set(custom.map((m) => m.key)).size !== custom.length) {
+    throw new Error(
+      "Multiple custom image models resolve to the same canonical key; keep one definition per model",
+    );
+  }
+  const models = mergeModels(builtInImageModels, custom);
+  validateModelAliases(models);
+  return models;
 }

@@ -1,5 +1,11 @@
 import type { ImageModel, LlmModel } from "@naisys/common";
-import { getAllImageModels, getAllLlmModels } from "@naisys/common";
+import {
+  findLlmModel,
+  findModel,
+  getAllImageModels,
+  getAllLlmModels,
+  validateLlmModelAliases,
+} from "@naisys/common";
 import { loadCustomModels } from "@naisys/common-node";
 import { HubEvents, ModelsResponseSchema } from "@naisys/hub-protocol";
 
@@ -34,8 +40,12 @@ export function createModelService(hubClient: HubClient | undefined) {
             return;
           }
 
-          llmModels = response.llmModels ?? [];
-          imageModels = response.imageModels ?? [];
+          const updatedModels = response.llmModels ?? [];
+          validateLlmModelAliases(updatedModels);
+          const updatedImages = response.imageModels ?? [];
+          validateLlmModelAliases([...updatedModels, ...updatedImages]);
+          llmModels = updatedModels;
+          imageModels = updatedImages;
           resolveModels();
         } catch (error) {
           rejectModels(
@@ -48,6 +58,7 @@ export function createModelService(hubClient: HubClient | undefined) {
       const custom = loadCustomModels(process.env.NAISYS_FOLDER || "");
       llmModels = getAllLlmModels(custom.llmModels);
       imageModels = getAllImageModels(custom.imageModels);
+      validateLlmModelAliases([...llmModels, ...imageModels]);
       modelsReadyPromise = Promise.resolve();
     }
   }
@@ -57,7 +68,7 @@ export function createModelService(hubClient: HubClient | undefined) {
   }
 
   function getLlmModel(key: string): LlmModel {
-    const model = llmModels.find((m) => m.key === key);
+    const model = findLlmModel(llmModels, key);
     if (!model) {
       throw new Error(`LLM model not found: ${key}`);
     }
@@ -65,7 +76,7 @@ export function createModelService(hubClient: HubClient | undefined) {
   }
 
   function getImageModel(key: string): ImageModel {
-    const model = imageModels.find((m) => m.key === key);
+    const model = findModel(imageModels, key);
     if (!model) {
       throw new Error(`Image model not found: ${key}`);
     }

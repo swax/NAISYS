@@ -155,7 +155,7 @@ function createCodexAuthService(accessToken?: string) {
   } as unknown as HubCodexAuthService;
 }
 
-function llmModelRow(key: string, apiType: LlmApiType) {
+function llmModelRow(key: string, apiType: LlmApiType, aliases: string[] = []) {
   return {
     id: key.length,
     key,
@@ -165,6 +165,7 @@ function llmModelRow(key: string, apiType: LlmApiType) {
     is_builtin: true,
     is_custom: false,
     meta: JSON.stringify({
+      aliases,
       apiType,
       maxTokens: 1_000,
       apiKeyVar: "OPENAI_API_KEY",
@@ -435,7 +436,7 @@ describe("hubCostService", () => {
     service.cleanup();
   });
 
-  test("suspends and resumes active Codex OAuth users based on account usage", async () => {
+  test("suspends and resumes active Codex OAuth users through aliases based on account usage", async () => {
     vi.useFakeTimers();
 
     const { server } = createServerHarness();
@@ -460,12 +461,12 @@ describe("hubCostService", () => {
     const codexAuthService = createCodexAuthService("access-token");
     vi.mocked(hubDb.run_session.findMany as any).mockResolvedValue([
       { user_id: 1, model_name: "gpt-4.1" },
-      { user_id: 1, model_name: "codex-oauth" },
+      { user_id: 1, model_name: "codex-alias" },
       { user_id: 2, model_name: "gpt-4.1" },
     ]);
     vi.mocked(hubDb.models.findMany as any).mockResolvedValue([
       llmModelRow("gpt-4.1", LlmApiType.OpenAI),
-      llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth),
+      llmModelRow("codex-oauth", LlmApiType.OpenAIOAuth, ["codex-alias"]),
     ]);
     mockedFetchCodexUsage
       .mockResolvedValueOnce({

@@ -3,12 +3,14 @@ import type {
   CreateChatParameters,
   FunctionDeclaration,
   Part,
+  ThinkingConfig,
   Tool,
 } from "@google/genai";
 import {
   Environment,
   FunctionCallingConfigMode,
   GoogleGenAI,
+  ThinkingLevel,
 } from "@google/genai";
 import type { LlmReasoningLevel } from "@naisys/common";
 
@@ -53,6 +55,31 @@ function toGoogleThinkingBudget(
   }
 }
 
+function toGoogleThinkingConfig(
+  versionName: string,
+  level: LlmReasoningLevel | undefined,
+): ThinkingConfig | undefined {
+  if (!level) return undefined;
+  if (versionName.startsWith("gemini-3")) {
+    // Gemini 3 uses levels. Pro and Flash 3.7+ cannot disable thinking.
+    const supportsMinimal = /^gemini-3(?:-flash|\.[156]-flash)/.test(
+      versionName,
+    );
+    const thinkingLevel =
+      level === "none"
+        ? supportsMinimal
+          ? ThinkingLevel.MINIMAL
+          : ThinkingLevel.LOW
+        : level === "low"
+          ? ThinkingLevel.LOW
+          : level === "medium" && !versionName.startsWith("gemini-3-pro")
+            ? ThinkingLevel.MEDIUM
+            : ThinkingLevel.HIGH;
+    return { thinkingLevel };
+  }
+  return { thinkingBudget: toGoogleThinkingBudget(level) };
+}
+
 export async function sendWithGoogle(
   deps: VendorDeps,
   modelKey: string,
@@ -76,7 +103,6 @@ export async function sendWithGoogle(
   }
 
   const ai = getClient(apiKey, model.baseUrl);
-  const thinkingBudget = toGoogleThinkingBudget(model.reasoningLevel);
   const useConsoleTools =
     source === "console" &&
     useToolsForLlmConsoleResponses &&
@@ -112,13 +138,10 @@ export async function sendWithGoogle(
     model: model.versionName,
     config: {
       systemInstruction: systemMessage,
-      thinkingConfig:
-        thinkingBudget !== undefined
-          ? {
-              // -1 is dynamic thinking, 0 disables thinking.
-              thinkingBudget,
-            }
-          : undefined,
+      thinkingConfig: toGoogleThinkingConfig(
+        model.versionName,
+        model.reasoningLevel,
+      ),
     },
     history,
   };
@@ -174,7 +197,10 @@ export async function sendWithGoogle(
   }
 
   const inputTokens = result.usageMetadata.promptTokenCount || 0;
-  const outputTokens = result.usageMetadata.candidatesTokenCount || 0;
+  // Thinking is billed as output, even though it isn't returned as visible text.
+  const outputTokens =
+    (result.usageMetadata.candidatesTokenCount || 0) +
+    (result.usageMetadata.thoughtsTokenCount || 0);
   // Excludes output_tokens because it contains thinking tokens that don't persist in context;
   // the actual response text is estimated locally by contextManager.getTokenCount()
   const messagesTokenCount = inputTokens;

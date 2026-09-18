@@ -12,6 +12,7 @@ const ModelOptionSchema = z.object({
 
 export const LlmModelDetailSchema = z.object({
   key: z.string(),
+  aliases: z.array(z.string()).optional(),
   label: z.string(),
   versionName: z.string(),
   apiType: z.string(),
@@ -35,6 +36,7 @@ export type LlmModelDetail = z.infer<typeof LlmModelDetailSchema>;
 
 export const ImageModelDetailSchema = z.object({
   key: z.string(),
+  aliases: z.array(z.string()).optional(),
   label: z.string(),
   versionName: z.string(),
   size: z.string(),
@@ -62,6 +64,7 @@ export type ModelsResponse = z.infer<typeof ModelsResponseSchema>;
 export const SaveLlmModelRequestSchema = z.object({
   model: z.object({
     key: z.string().min(1),
+    aliases: z.array(z.string().trim().min(1)).optional(),
     label: z.string().min(1),
     versionName: z.string().min(1),
     apiType: z.string().min(1),
@@ -86,6 +89,7 @@ export type SaveLlmModelRequest = z.infer<typeof SaveLlmModelRequestSchema>;
 export const SaveImageModelRequestSchema = z.object({
   model: z.object({
     key: z.string().min(1),
+    aliases: z.array(z.string().trim().min(1)).optional(),
     label: z.string().min(1),
     versionName: z.string().min(1),
     size: z.string().min(1),

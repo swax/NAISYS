@@ -1,11 +1,17 @@
 import {
   builtInImageModels,
   builtInLlmModels,
+  dbFieldsToImageModel,
+  dbFieldsToLlmModel,
+  findLlmModel,
   type ImageModel,
   imageModelToDbFields,
   type LlmModel,
   llmModelToDbFields,
   type ModelDbRow,
+  validateLlmModelAliases,
+  withBuiltInImageAliases,
+  withBuiltInLlmAliases,
 } from "@naisys/common";
 
 import { hubDb } from "../database/hubDb.js";
@@ -18,20 +24,31 @@ export async function saveLlmModel(model: LlmModel): Promise<{
   success: boolean;
   message: string;
 }> {
-  const fields = llmModelToDbFields(model, false, true);
-
-  const existing = await hubDb.models.findUnique({
-    where: { key: model.key },
-  });
-
-  if (existing) {
-    await hubDb.models.update({
-      where: { key: model.key },
-      data: { ...fields, is_builtin: existing.is_builtin, is_custom: true },
+  await hubDb.$transaction(async (db) => {
+    const rows = (await db.models.findMany()) as ModelDbRow[];
+    const models = rows.filter((r) => r.type === "llm").map(dbFieldsToLlmModel);
+    const resolved = findLlmModel(models, model.key);
+    const canonical = withBuiltInLlmAliases({
+      ...model,
+      key: resolved?.key ?? model.key,
     });
-  } else {
-    await hubDb.models.create({ data: fields });
-  }
+    validateLlmModelAliases([
+      ...models.filter((m) => m.key !== canonical.key),
+      ...rows.filter((r) => r.type === "image").map(dbFieldsToImageModel),
+      canonical,
+    ]);
+    const existing = rows.find((r) => r.key === canonical.key);
+    const fields = llmModelToDbFields(
+      canonical,
+      existing?.is_builtin ?? false,
+      true,
+    );
+    await db.models.upsert({
+      where: { key: canonical.key },
+      update: fields,
+      create: fields,
+    });
+  });
 
   return { success: true, message: "LLM model saved" };
 }
@@ -40,20 +57,33 @@ export async function saveImageModel(model: ImageModel): Promise<{
   success: boolean;
   message: string;
 }> {
-  const fields = imageModelToDbFields(model, false, true);
-
-  const existing = await hubDb.models.findUnique({
-    where: { key: model.key },
-  });
-
-  if (existing) {
-    await hubDb.models.update({
-      where: { key: model.key },
-      data: { ...fields, is_builtin: existing.is_builtin, is_custom: true },
+  await hubDb.$transaction(async (db) => {
+    const rows = (await db.models.findMany()) as ModelDbRow[];
+    const models = rows
+      .filter((r) => r.type === "image")
+      .map(dbFieldsToImageModel);
+    const resolved = findLlmModel(models, model.key);
+    const canonical = withBuiltInImageAliases({
+      ...model,
+      key: resolved?.key ?? model.key,
     });
-  } else {
-    await hubDb.models.create({ data: fields });
-  }
+    validateLlmModelAliases([
+      ...models.filter((m) => m.key !== canonical.key),
+      ...rows.filter((r) => r.type === "llm").map(dbFieldsToLlmModel),
+      canonical,
+    ]);
+    const existing = rows.find((r) => r.key === canonical.key);
+    const fields = imageModelToDbFields(
+      canonical,
+      existing?.is_builtin ?? false,
+      true,
+    );
+    await db.models.upsert({
+      where: { key: canonical.key },
+      update: fields,
+      create: fields,
+    });
+  });
 
   return { success: true, message: "Image model saved" };
 }
@@ -63,6 +93,10 @@ export async function deleteLlmModel(key: string): Promise<{
   message: string;
   revertedToBuiltIn: boolean;
 }> {
+  const rows = (await hubDb.models.findMany({
+    where: { type: "llm" },
+  })) as ModelDbRow[];
+  key = findLlmModel(rows.map(dbFieldsToLlmModel), key)?.key ?? key;
   const existing = await hubDb.models.findUnique({ where: { key } });
 
   if (!existing || existing.type !== "llm") {
@@ -98,6 +132,10 @@ export async function deleteImageModel(key: string): Promise<{
   message: string;
   revertedToBuiltIn: boolean;
 }> {
+  const rows = (await hubDb.models.findMany({
+    where: { type: "image" },
+  })) as ModelDbRow[];
+  key = findLlmModel(rows.map(dbFieldsToImageModel), key)?.key ?? key;
   const existing = await hubDb.models.findUnique({ where: { key } });
 
   if (!existing || existing.type !== "image") {

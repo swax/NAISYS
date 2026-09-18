@@ -42,7 +42,8 @@ export interface VoiceParticipant {
 
 export async function getVoiceModel(): Promise<string> {
   const override = await getVariableCachedValue(VOICE_MODEL_VAR);
-  return override?.trim() || DEFAULT_VOICE_MODEL;
+  const key = override?.trim() || DEFAULT_VOICE_MODEL;
+  return getRealtimeModel(key)?.versionName ?? key;
 }
 
 export interface VoiceAvailability {

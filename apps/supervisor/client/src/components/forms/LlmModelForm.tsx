@@ -5,6 +5,7 @@ import {
   Select,
   Stack,
   Switch,
+  TagsInput,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -22,6 +23,7 @@ import type { LlmModelDetail } from "../../lib/api/apiClient";
 
 interface LlmFormValues {
   key: string;
+  aliases: string[];
   label: string;
   versionName: string;
   apiType: string;
@@ -43,6 +45,7 @@ interface LlmFormValues {
 function transformFormValues(values: LlmFormValues): Record<string, unknown> {
   const result: Record<string, unknown> = {
     key: values.key,
+    aliases: values.aliases,
     label: values.label,
     versionName: values.versionName,
     apiType: values.apiType,
@@ -99,6 +102,7 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
   const form = useForm<LlmFormValues>({
     initialValues: {
       key: model?.key ?? "",
+      aliases: model?.aliases ?? [],
       label: model?.label ?? "",
       versionName: model?.versionName ?? "",
       apiType: model?.apiType ?? LlmApiType.OpenAI,
@@ -143,6 +147,12 @@ export const LlmModelForm: React.FC<LlmModelFormProps> = ({
           withAsterisk
           disabled={readOnly}
           {...form.getInputProps("label")}
+        />
+        <TagsInput
+          label="Aliases"
+          description="Alternative names accepted in agent configurations. Built-in compatibility aliases are always retained."
+          disabled={readOnly}
+          {...form.getInputProps("aliases")}
         />
         <TextInput
           label="Version Name"

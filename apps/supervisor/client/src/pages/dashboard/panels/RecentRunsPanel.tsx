@@ -1,6 +1,6 @@
 import { Anchor, Badge, Box, Group, Paper, Stack, Text } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
-import { formatTokens } from "@naisys/common";
+import { findLlmModel, formatTokens } from "@naisys/common";
 import type { DashboardRun } from "@naisys/supervisor-shared";
 import { IconActivity } from "@tabler/icons-react";
 import React from "react";
@@ -35,9 +35,7 @@ export const RecentRunsPanel: React.FC<{ runs: DashboardRun[] }> = ({
       ) : (
         <Stack gap={8}>
           {runs.map((run) => {
-            const apiType = llmModels.find(
-              (m) => m.key === run.modelName,
-            )?.apiType;
+            const apiType = findLlmModel(llmModels, run.modelName)?.apiType;
             const platform = hosts.find(
               (h) => h.name === run.hostName,
             )?.platform;

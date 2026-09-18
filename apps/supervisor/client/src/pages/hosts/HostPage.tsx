@@ -18,7 +18,12 @@ import {
   Title,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { formatVersion, hasAction, hasActionTemplate } from "@naisys/common";
+import {
+  findLlmModel,
+  formatVersion,
+  hasAction,
+  hasActionTemplate,
+} from "@naisys/common";
 import { VersionBadge } from "@naisys/common-browser";
 import {
   IconCheck,
@@ -881,8 +886,7 @@ export const HostPage: React.FC = () => {
                           size="xs"
                           variant="light"
                           color={getApiTypeBadgeColor(
-                            llmModels.find((m) => m.key === run.modelName)
-                              ?.apiType,
+                            findLlmModel(llmModels, run.modelName)?.apiType,
                           )}
                         >
                           {run.modelName}
