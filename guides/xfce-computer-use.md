@@ -8,13 +8,14 @@ For the design side — how NAISYS translates screenshot clicks to real pixels, 
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y xfce4 tigervnc-standalone-server dbus-x11 scrot
+sudo apt-get install -y xfce4 tigervnc-standalone-server dbus-x11 xdotool scrot
 ```
 
 - `xfce4` — lightweight desktop environment
 - `tigervnc-standalone-server` — VNC server with built-in virtual display (replaces Xvfb + x11vnc)
 - `dbus-x11` — provides `dbus-launch`, required by XFCE in headless sessions
 - `scrot` — screenshot tool used by NAISYS for desktop interaction
+- `xdotool` — keyboard and pointer control used by NAISYS's X11 backend
 
 ## 2. Install Google Chrome
 
@@ -52,6 +53,30 @@ XDG_SESSION_TYPE=x11
 XAUTHORITY=/home/naisys/.Xauthority
 EOF
 ```
+
+### WSL virtual desktops
+
+NAISYS normally controls the Windows desktop when running in WSL. To control
+the XFCE/VNC display instead, add `NAISYS_DESKTOP_BACKEND=x11` to this host's
+local `.env`, alongside `DISPLAY` and `XAUTHORITY` above. Restart the NAISYS
+host after changing these settings. This explicit selection takes precedence
+over inherited WSLg/Wayland variables.
+
+WSL usually already exports `DISPLAY` for WSLg. Existing environment variables
+take precedence over `.env`, so also export the virtual display in the script
+that starts this host, before launching NAISYS:
+
+```bash
+export NAISYS_DESKTOP_BACKEND=x11
+export DISPLAY=:2
+export XAUTHORITY="$HOME/.Xauthority"
+export XDG_SESSION_TYPE=x11
+```
+
+The supported values are `auto` (default), `windows`, `macos`, `x11`, and
+`wayland`. Invalid or unavailable explicit selections fail instead of silently
+controlling a different desktop. Keep this setting local to the host; it is
+excluded from hub-distributed variables.
 
 ## 5. Configure VNC
 

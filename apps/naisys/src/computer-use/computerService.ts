@@ -18,6 +18,7 @@ import type {
   DesktopSubAction,
   DesktopViewport,
 } from "../llm/vendors/vendorTypes.js";
+import { selectDesktopBackend } from "./desktopBackend.js";
 import * as macosDesktop from "./desktops/macosDesktop.js";
 import * as waylandDesktop from "./desktops/waylandDesktop.js";
 import * as windowsDesktop from "./desktops/windowsDesktop.js";
@@ -67,24 +68,21 @@ export const KNOWN_DESKTOP_ACTION_TAGS = new Set<DesktopSubAction["action"]>([
 ]);
 
 function detectPlatform(): Platform | null {
-  if (process.platform === "win32")
-    return { backend: windowsDesktop, name: "Windows" };
-  if (process.platform === "darwin")
-    return { backend: macosDesktop, name: "macOS" };
-
-  // WSL: control the Windows host via powershell.exe rather than the WSLg
-  // Wayland compositor, since WSLg only exposes Linux GUI apps.
-  if (process.env.WSL_DISTRO_NAME)
-    return { backend: windowsDesktop, name: "Windows (WSL)" };
-
-  const sessionType = process.env.XDG_SESSION_TYPE;
-  if (sessionType === "wayland" || process.env.WAYLAND_DISPLAY)
-    return { backend: waylandDesktop, name: "Linux (Wayland)" };
-  if (sessionType === "x11" || process.env.DISPLAY)
-    return { backend: x11Desktop, name: "Linux (X11)" };
-
-  // No display server detected (headless, TTY, etc.)
-  return null;
+  switch (selectDesktopBackend()) {
+    case "windows":
+      return {
+        backend: windowsDesktop,
+        name: process.env.WSL_DISTRO_NAME ? "Windows (WSL)" : "Windows",
+      };
+    case "macos":
+      return { backend: macosDesktop, name: "macOS" };
+    case "wayland":
+      return { backend: waylandDesktop, name: "Linux (Wayland)" };
+    case "x11":
+      return { backend: x11Desktop, name: "Linux (X11)" };
+    case null:
+      return null;
+  }
 }
 
 // --- Screenshot cleanup ---
@@ -692,12 +690,7 @@ export async function createComputerService({ agentConfig }: AgentConfig) {
     const baseBuffer = Buffer.from(scaled.base64, "base64");
     const metadata = await sharp(baseBuffer).metadata();
 
-    const svg = buildMarkerSvg(
-      x,
-      y,
-      metadata.width ?? 0,
-      metadata.height ?? 0,
-    );
+    const svg = buildMarkerSvg(x, y, metadata.width ?? 0, metadata.height ?? 0);
     const marked = await sharp(baseBuffer)
       .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
       .png()
