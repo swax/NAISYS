@@ -118,10 +118,16 @@ export function createBrowserService(
       const cr = await loadChromium();
       output.commentAndLog("Launching headless Chromium...");
       try {
-        browser = await cr.launch({ headless: true });
+        browser = await cr.launch({
+          headless: true,
+          timeout: getOperationTimeoutMs(),
+        });
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        throw `Failed to launch Chromium. You may need to run: npx playwright install chromium\n${msg}`;
+        const hint = /executable.*doesn.t exist/i.test(msg)
+          ? " Install the matching browser with: npx playwright install chromium."
+          : " Check the browser process logs and host runtime before retrying.";
+        throw `Failed to launch Chromium.${hint}\n${msg}\nQA coverage: browser unavailable. A text/API fallback does not verify visual layout or interactive video playback; report those checks as NOT RUN.`;
       }
     }
 

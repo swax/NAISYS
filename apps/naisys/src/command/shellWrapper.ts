@@ -16,6 +16,7 @@ import {
 } from "../services/hub/naisysApiService.js";
 import * as pathService from "../services/runtime/pathService.js";
 import { getPlatformConfig } from "../services/runtime/shellPlatform.js";
+import { validateShellSyntax } from "../services/runtime/shellSyntax.js";
 import type { OutputService } from "../utils/output/output.js";
 import { killCmd, waitCmd } from "./commandDefs.js";
 import type { RegistrableCommand } from "./commandRegistry.js";
@@ -55,6 +56,9 @@ export function createShellWrapper(
   let _resolveCurrentCommand: ((value: string) => void) | undefined;
   let _currentCommandTimeout: NodeJS.Timeout | undefined;
   let _currentCommandText: string | undefined;
+  let _killRequested = false;
+  let _lastOutputAt = Date.now();
+  let _silentWaits = 0;
   /** Lines actually written to shell stdin — used to filter echoed input from output.
    *  Diverges from _currentCommandText when the multi-line wrapper rewrites the command. */
   let _shellInputLines: string[] = [];
@@ -145,8 +149,8 @@ export function createShellWrapper(
       processOutput(data, "stderr", pid);
     });
 
-    _process.on("close", (code) => {
-      processOutput(Buffer.from(`${code}`), "exit", pid);
+    _process.on("close", (code, signal) => {
+      processOutput(Buffer.from(JSON.stringify({ code, signal })), "exit", pid);
     });
 
     // Install pattern-based handler that catches any `ns-*` command leaking into
@@ -227,6 +231,14 @@ export function createShellWrapper(
     eventType: ShellEvent,
     pid: number,
   ) {
+    if (
+      eventType !== "exit" &&
+      rawDataStr.length &&
+      pid === _currentProcessId
+    ) {
+      _lastOutputAt = Date.now();
+      _silentWaits = 0;
+    }
     if (_wrapperSuspended) {
       _queuedOutput.push({ rawDataStr, eventType, pid });
       return;
@@ -255,9 +267,16 @@ export function createShellWrapper(
     }
 
     if (eventType === "exit") {
-      void output.errorAndLog(
-        `SHELL EXIT. PID: ${_process?.pid}, CODE: ${rawDataStr}`,
-      );
+      const { code, signal } = JSON.parse(rawDataStr.toString()) as {
+        code: number | null;
+        signal: string | null;
+      };
+      const exitDescription = _killRequested
+        ? "Command killed by request."
+        : signal
+          ? `Shell terminated by signal ${signal}.`
+          : `Shell exited with code ${code}.`;
+      void output.commentAndLog(`SHELL EXIT. PID: ${pid}. ${exitDescription}`);
 
       let finalOutput =
         _currentBufferType == "alternate"
@@ -272,7 +291,7 @@ export function createShellWrapper(
         finalOutput += `\nNAISYS: Make sure that you are using valid ${platformConfig.shellName} commands, and that any non-commands are prefixed with the 'ns-comment' command.`;
       }
 
-      finalOutput += `\nNAISYS: Command killed.`;
+      finalOutput += `\nNAISYS: ${exitDescription}`;
 
       resetProcess();
 
@@ -355,9 +374,16 @@ export function createShellWrapper(
     }
 
     command = command.trim();
-    _currentCommandText = command;
+    const syntaxError = await validateShellSyntax(command, platformConfig);
+    if (syntaxError) {
+      return `NAISYS: Command not executed: invalid or incomplete ${platformConfig.shellName} syntax.\n${syntaxError}\nCorrect the command and submit it again.`;
+    }
 
     await ensureOpen();
+    _currentCommandText = command;
+    _lastOutputAt = Date.now();
+    _silentWaits = 0;
+    _killRequested = false;
 
     if (options?.secure) {
       _secureContinuation = true;
@@ -501,7 +527,13 @@ export function createShellWrapper(
         ).toString()
       : "?";
 
-    outputWithInstruction += `\nNAISYS: Command interrupted after waiting ${actualWaitSeconds} seconds.`;
+    const silentSeconds = Math.floor((Date.now() - _lastOutputAt) / 1000);
+    _silentWaits++;
+    outputWithInstruction += `\nNAISYS: Command has not completed after waiting ${actualWaitSeconds} seconds (total ${getCommandElapsedTimeString()}, shell PID ${_currentProcessId}, last output ${silentSeconds}s ago). The process has not been stopped. Use ns-wait to wait or ns-kill to cancel.`;
+    if (_silentWaits >= 3) {
+      outputWithInstruction +=
+        " No new output across repeated waits. Silence alone does not prove progress or failure; check for a prompt, a child process or an updated artifact before repeatedly waiting.";
+    }
 
     _completeCommand(outputWithInstruction);
   }
@@ -513,6 +545,7 @@ export function createShellWrapper(
     }
 
     output.errorAndLog(`KILL-TREE SIGNAL SENT TO PID: ${_process.pid}`);
+    _killRequested = true;
     treeKill(pid, "SIGKILL");
 
     // Should trigger the process close event from here

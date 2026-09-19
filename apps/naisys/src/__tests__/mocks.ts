@@ -123,6 +123,7 @@ export function createMockSubagent() {
 export function createMockMailService() {
   const mailService: MailService = {
     command: mailCmd,
+    literalArgs: true,
     handleCommand: vi.fn(() => ""),
     getUnreadMessages: vi.fn(
       (): Promise<MailMessageData[]> => Promise.resolve([]),
@@ -140,6 +141,7 @@ export function createMockMailService() {
 export function createMockChatService() {
   const chatService: ChatService = {
     command: chatCmd,
+    literalArgs: true,
     handleCommand: vi.fn(() => ""),
     checkAndNotify: vi.fn(() => Promise.resolve()),
     sendToUser: vi.fn(() => Promise.resolve("")),

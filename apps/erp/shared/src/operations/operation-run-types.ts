@@ -49,6 +49,7 @@ export const OperationRunSchema = z.object({
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   retryNotBefore: z.iso.datetime().nullable().optional(),
+  retryWakeSentAt: z.iso.datetime().nullable().optional(),
   stepSummary: z.array(StepRunSummarySchema).optional(),
   fieldRefSummary: z.array(FieldRefValueSummarySchema).optional(),
   createdAt: z.iso.datetime(),
@@ -76,29 +77,34 @@ export type UpdateOperationRun = z.infer<typeof UpdateOperationRunSchema>;
 // Accept null/undefined so callers don't need to send -d '{}' on POST
 // endpoints where the body is entirely optional. A simpler
 // .nullable().default({}) doesn't narrow the output type in zod v4,
-// so we use a union + transform instead.
+// so we normalize a nullish input instead. Avoid an explicit undefined union:
+// undefined has no JSON representation and breaks schema discovery.
+const transitionNoteText = z
+  .string()
+  .max(
+    2000,
+    "Keep transition notes within 2000 characters; put detailed evidence in comments or attachments.",
+  )
+  .describe(
+    "Short status summary, at most 2000 characters. Put full evidence in operation comments/attachments.",
+  );
+
 export const TransitionNoteSchema = z
-  .union([
-    z.object({ note: z.string().max(2000).optional() }).strict(),
-    z.null(),
-    z.undefined(),
-  ])
+  .object({ note: transitionNoteText.optional() })
+  .strict()
+  .nullish()
   .transform((v) => v ?? {});
 
 export type TransitionNote = z.infer<typeof TransitionNoteSchema>;
 
 // A timed external blocker remains failed until its manager explicitly reopens it.
 export const FailOperationRunSchema = z
-  .union([
-    z
-      .object({
-        note: z.string().max(2000).optional(),
-        retryNotBefore: z.iso.datetime({ offset: true }).optional(),
-      })
-      .strict(),
-    z.null(),
-    z.undefined(),
-  ])
+  .object({
+    note: transitionNoteText.optional(),
+    retryNotBefore: z.iso.datetime({ offset: true }).optional(),
+  })
+  .strict()
+  .nullish()
   .transform((value) => value ?? {});
 
 // Slim transition response (start/complete/skip/fail/reopen)
@@ -112,6 +118,7 @@ export const OperationRunTransitionSchema = z.object({
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
   retryNotBefore: z.iso.datetime().nullable().optional(),
+  retryWakeSentAt: z.iso.datetime().nullable().optional(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
   updatedByTitle: z.string(),

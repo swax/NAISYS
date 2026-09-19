@@ -64,6 +64,9 @@ export interface CommandResponse {
 export interface RegistrableCommand {
   command: CommandDef;
 
+  /** Treat message text and attachment paths literally, including $ and ~. */
+  literalArgs?: boolean;
+
   /** Handler function that processes the command and returns a response */
   handleCommand: (
     cmdArgs: string,

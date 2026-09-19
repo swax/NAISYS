@@ -231,7 +231,8 @@ export const mailCmd: CommandDef = {
   subcommands: {
     send: {
       usage: 'send "<users>" "<subject>" "<msg>" [file1 file2 ...]',
-      description: "Send a message (subject and msg are separate quoted args)",
+      description:
+        "Send a message. Arguments are literal: $vars and $(commands) are not expanded. Use absolute attachment paths.",
     },
     inbox: {
       usage: "inbox",
@@ -262,12 +263,18 @@ export const chatCmd: CommandDef = {
   subcommands: {
     send: {
       usage: 'send "<users>" "<msg>" [file1 file2 ...]',
-      description: "Send a chat message, optionally attach files",
+      description:
+        "Send a chat message, optionally attach files. Arguments are literal: $vars and $(commands) are not expanded. Use absolute attachment paths.",
     },
     recent: {
       usage: 'recent [take] [skip] ["<users>"]',
       description:
         "Show recent chat messages, optionally filtered by user(s) (* = unread)",
+    },
+    since: {
+      usage: 'since <messageId> ["<users>"]',
+      description:
+        "Read only newer messages, oldest first (up to 20). Advance using the returned cursor; use ns-session wait for event-driven waits.",
     },
   },
 };

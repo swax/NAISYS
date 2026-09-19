@@ -16,6 +16,7 @@ import type { ShellWrapper } from "../command/shellWrapper.js";
 import type { HubClient } from "../hub/hubClient.js";
 import type { AttachmentService } from "../services/agent/attachmentService.js";
 import type { RunService } from "../services/agent/runService.js";
+import { quoteShellLiteral } from "../services/runtime/shellPlatform.js";
 import type { PromptNotificationService } from "../utils/output/promptNotificationService.js";
 
 /** Format inline attachment suffix, e.g. " [file.txt 2.1KB]" */
@@ -38,7 +39,7 @@ function formatDownloadFooter(
     allAttachments
       .map(
         (a) =>
-          `  curl -H "Authorization: Bearer $NAISYS_API_KEY" "${hubUrl}/attachments/${a.id}" -o ${a.filename}`,
+          `  curl -H "Authorization: Bearer $NAISYS_API_KEY" ${quoteShellLiteral(`${hubUrl}/attachments/${a.id}`)} -o ${quoteShellLiteral(a.filename)}`,
       )
       .join("\n")
   );
@@ -70,6 +71,7 @@ export function createChatService(
         if (hubClient) {
           lines.push(
             `  ${subs.recent.usage.padEnd(45)}${subs.recent.description}`,
+            `  ${subs.since.usage.padEnd(45)}${subs.since.description}`,
           );
         }
         return lines.join("\n");
@@ -98,6 +100,17 @@ export function createChatService(
         }
 
         return sendMessage(recipients, argv[2], attachmentIds, resolvedPaths);
+      }
+
+      case "since": {
+        const afterId = Number(argv[1]);
+        if (!argv[1] || !Number.isSafeInteger(afterId) || afterId < 0) {
+          throw usageError("since");
+        }
+        const withUserIds = argv[2]
+          ? userService.resolveUsernames(argv[2]).map((r) => r.userId)
+          : undefined;
+        return recentMessages(withUserIds, undefined, 20, afterId);
       }
 
       case "recent": {
@@ -193,6 +206,7 @@ export function createChatService(
     withUserIds?: number[],
     skip?: number,
     take?: number,
+    afterId?: number,
   ): Promise<string> {
     if (!hubClient) throw "Not available in local mode.";
 
@@ -201,6 +215,7 @@ export function createChatService(
       kind: "chat",
       skip,
       take: take ?? 10,
+      ...(afterId !== undefined ? { afterId } : {}),
       ...(withUserIds ? { withUserIds } : {}),
     });
 
@@ -215,7 +230,8 @@ export function createChatService(
 
     // Reverse to show chronological order (oldest first)
     const conversation = !!withUserIds;
-    const chronological = [...messages].reverse();
+    const chronological =
+      afterId !== undefined ? messages : [...messages].reverse();
 
     let output = chronological
       .map((m) => formatChatLine(m, conversation ? "conversation" : "overview"))
@@ -225,7 +241,11 @@ export function createChatService(
       output += formatDownloadFooter(hubClient.getHubUrl(), chronological);
     }
 
-    return output;
+    const cursor = Math.max(...messages.map((m) => m.id));
+    return (
+      output +
+      `\nChat cursor: ${cursor}. Use ns-chat since ${cursor} for new messages only (up to 20 per page).`
+    );
   }
 
   /**
@@ -385,6 +405,7 @@ export function createChatService(
 
   const registrableCommand: RegistrableCommand = {
     command: chatCmd,
+    literalArgs: true,
     handleCommand,
   };
 

@@ -29,6 +29,7 @@ export function createHubSendMailService(
     hostId?: number;
     attachmentIds?: number[];
     source?: string;
+    deduplicate?: boolean;
   }) {
     const now = new Date();
     // Redact once at entry — DB row, supervisor push, and any future fan-out
@@ -48,7 +49,18 @@ export function createHubSendMailService(
       .join(",");
 
     // Atomic transaction: create message, link attachments, add recipients, update notifications
-    const message = await hubDb.$transaction(async (hubTx) => {
+    const result = await hubDb.$transaction(async (hubTx) => {
+      if (params.deduplicate && params.source) {
+        const existing = await hubTx.mail_messages.findFirst({
+          where: {
+            source: params.source,
+            from_user_id: params.fromUserId,
+            participants,
+            kind: params.kind,
+          },
+        });
+        if (existing) return { message: existing, created: false };
+      }
       const msg = await hubTx.mail_messages.create({
         data: {
           from_user_id: params.fromUserId,
@@ -115,8 +127,11 @@ export function createHubSendMailService(
         data: { [notificationField]: msg.id },
       });
 
-      return msg;
+      return { message: msg, created: true };
     });
+
+    if (!result.created) return;
+    const message = result.message;
 
     const heartbeatField =
       params.kind === "chat" ? "latestChatId" : "latestMailId";

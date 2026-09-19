@@ -30,7 +30,8 @@ export default function schemaRoutes(fastify: FastifyInstance) {
         return { error: "Schema not found", schemaName };
       }
 
-      return z.toJSONSchema(zodSchema);
+      // Discovery describes what callers send, before defaults/transforms.
+      return z.toJSONSchema(zodSchema, { io: "input" });
     },
   });
 }

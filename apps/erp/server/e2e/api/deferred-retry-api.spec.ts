@@ -1,4 +1,9 @@
-import Database from "better-sqlite3";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "../../src/generated/prisma/client.js";
+import {
+  createRetryNotifier,
+  type RetryNotification,
+} from "../../src/services/operations/retry-notifications.js";
 import path from "node:path";
 import { test, expect } from "../fixtures";
 import { erpApiPath, expectJson } from "./helpers/erp-api-client";
@@ -53,13 +58,50 @@ test("deferred failures survive storage and cannot be redispatched/reopened earl
   );
   expect(deferred.items).toHaveLength(1);
   expect(deferred.items[0].canWork).toBe(false);
-  // Advance only this synthetic fixture's stored retry time; no wall-clock sleeps.
-  const db = new Database(path.resolve(".test-naisys/database/naisys_erp.db"));
-  db.prepare("UPDATE operation_runs SET retry_not_before = ? WHERE id = ?").run(
-    Date.now() - 1000,
-    item.id,
+  const prisma = new PrismaClient({
+    adapter: new PrismaBetterSqlite3({
+      url: `file:${path.resolve(".test-naisys/database/naisys_erp.db")}`,
+    }),
+  });
+  const notifications: RetryNotification[] = [];
+  const notificationErrors: unknown[] = [];
+  const notifier = createRetryNotifier(
+    prisma,
+    async (n) => {
+      notifications.push(n);
+    },
+    (error) => notificationErrors.push(error),
   );
-  db.close();
+  await notifier.tick();
+  expect(notifications.some((n) => n.body.includes(key))).toBe(false);
+  // Advance only this synthetic fixture's stored retry time; no wall-clock sleeps.
+  await prisma.operationRun.update({
+    where: { id: item.id },
+    data: { retryNotBefore: new Date(Date.now() - 1000) },
+  });
+  try {
+    await notifier.tick();
+    expect(notificationErrors).toEqual([]);
+    expect(notifications.filter((n) => n.body.includes(key))).toHaveLength(1);
+    const stored = await prisma.operationRun.findUniqueOrThrow({
+      where: { id: item.id },
+    });
+    expect(stored.status).toBe("failed"); // notification must not reopen it
+    expect(stored.retryManagerId).toBe(stored.updatedById);
+    expect(stored.retryWakeSentAt).not.toBeNull();
+    const restarted = createRetryNotifier(
+      prisma,
+      async (n) => {
+        notifications.push(n);
+      },
+      (error) => notificationErrors.push(error),
+    );
+    await restarted.tick();
+    expect(notifications.filter((n) => n.body.includes(key))).toHaveLength(1);
+  } finally {
+    notifier.stop();
+    await prisma.$disconnect();
+  }
   const ready = await expectJson<{ total: number }>(
     await api.get(erpApiPath(`/dispatch?search=${key}&canWork=true`)),
     200,

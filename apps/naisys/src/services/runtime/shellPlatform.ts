@@ -8,6 +8,16 @@ import * as os from "os";
 
 export type ShellPlatform = "windows" | "linux";
 
+/** Quote data for one shell argument without variable/command substitution. */
+export function quoteShellLiteral(
+  value: string,
+  platform = getPlatformConfig().platform,
+): string {
+  return platform === "windows"
+    ? `'${value.replace(/'/g, "''")}'`
+    : `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
 export interface PlatformConfig {
   platform: ShellPlatform;
   /** Shell command to spawn */

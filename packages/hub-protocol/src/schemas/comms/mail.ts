@@ -23,6 +23,8 @@ export const MailSendRequestSchema = z.object({
   body: z.string(),
   kind: MessageKindSchema,
   attachmentIds: z.array(z.number()).optional(),
+  /** Supervisor-only durable ERP notification id, stable across delivery retries. */
+  deliveryKey: z.string().startsWith("erp-retry:").max(200).optional(),
 });
 export type MailSendRequest = z.infer<typeof MailSendRequestSchema>;
 
@@ -45,6 +47,8 @@ export const MailListRequestSchema = z.object({
   skip: z.number().optional(),
   take: z.number().optional(),
   withUserIds: z.array(z.number()).optional(),
+  /** Incremental reads are oldest-first so a bounded page cannot skip messages. */
+  afterId: z.number().int().nonnegative().optional(),
 });
 export type MailListRequest = z.infer<typeof MailListRequestSchema>;
 

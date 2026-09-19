@@ -118,7 +118,9 @@ export function createCommandHandler(
         // Check command registry first
         const registeredCommand = commandRegistry.get(command);
         if (registeredCommand) {
-          const expandedArgs = await expandShellArgs(cmdArgs);
+          const expandedArgs = registeredCommand.literalArgs
+            ? cmdArgs
+            : await expandShellArgs(cmdArgs);
 
           const response = await registeredCommand.handleCommand(expandedArgs);
           sessionService.updateCanComplete(command, expandedArgs);

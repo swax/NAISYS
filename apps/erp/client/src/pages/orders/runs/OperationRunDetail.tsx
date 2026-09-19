@@ -546,6 +546,8 @@ export const OperationRunDetail: React.FC = () => {
                       Retry eligible after{" "}
                       {new Date(opRun.retryNotBefore).toLocaleString()}. A
                       manager must reopen this operation.
+                      {opRun.retryWakeSentAt &&
+                        ` Manager notification queued ${new Date(opRun.retryWakeSentAt).toLocaleString()}.`}
                     </Text>
                   )}
                 </Stack>

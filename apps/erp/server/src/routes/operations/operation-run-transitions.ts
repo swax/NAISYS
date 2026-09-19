@@ -333,6 +333,8 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           ...(tokens > 0 ? { tokens } : undefined),
           statusNote: note ?? null,
           retryNotBefore: retryNotBefore ? new Date(retryNotBefore) : null,
+          retryManagerId: retryNotBefore ? userId : null,
+          retryWakeSentAt: null,
         },
       );
       const full = await formatOpRunTransition(
@@ -400,7 +402,13 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.status,
         reopenTo,
         userId,
-        { completedAt: null, statusNote: note ?? null, retryNotBefore: null },
+        {
+          completedAt: null,
+          statusNote: note ?? null,
+          retryNotBefore: null,
+          retryManagerId: null,
+          retryWakeSentAt: null,
+        },
       );
       // Re-block successor ops that are still pending
       await reblockSuccessors(

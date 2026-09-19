@@ -34,6 +34,13 @@ export async function deployPrismaMigrations(options: {
 
   let currentVersion: number | undefined;
 
+  // Some SQLite schema-engine builds fail with an empty "Schema engine error"
+  // when the file does not exist (reproduced on Windows). Create it through
+  // SQLite first; opening an existing file never truncates it.
+  if (!existsSync(databasePath)) {
+    new Database(databasePath).close();
+  }
+
   // Check version if database file already exists
   if (existsSync(databasePath)) {
     const db = new Database(databasePath);

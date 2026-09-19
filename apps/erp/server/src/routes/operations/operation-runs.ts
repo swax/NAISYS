@@ -237,6 +237,7 @@ export async function formatOpRun(
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     retryNotBefore: formatDate(opRun.retryNotBefore),
+    retryWakeSentAt: formatDate(opRun.retryWakeSentAt),
     stepSummary: stepSummaryRows.map((sr) => ({
       seqNo: sr.step.seqNo,
       title: sr.step.title,
@@ -309,6 +310,7 @@ export async function formatOpRunTransition(
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     retryNotBefore: formatDate(opRun.retryNotBefore),
+    retryWakeSentAt: formatDate(opRun.retryWakeSentAt),
     ...formatAuditFields(opRun),
     _actions: await opRunItemActions(
       orderKey,
@@ -343,6 +345,7 @@ function formatListOpRun(opRun: OpRunWithSummary) {
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
     retryNotBefore: formatDate(opRun.retryNotBefore),
+    retryWakeSentAt: formatDate(opRun.retryWakeSentAt),
     ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,
     predecessors: opRun.operation.predecessors.map((d) => ({

@@ -31,12 +31,14 @@ function createTestHandler() {
   const shellCommand = createMockShellCommand();
   const contextManager = createMockContextManager();
   const inputMode = createMockInputMode();
+  const shellWrapper = createMockShellWrapper();
+  const mail = createMockMailService();
 
   const commandRegistry = createCommandRegistry(inputMode, [
     createMockLynxService(),
     createMockGenImg(),
     createMockSubagent(),
-    createMockMailService(),
+    mail,
     createMockSessionService(),
   ]);
 
@@ -46,7 +48,7 @@ function createTestHandler() {
     createMockCommandProtection(),
     promptBuilder,
     shellCommand,
-    createMockShellWrapper(),
+    shellWrapper,
     commandRegistry,
     contextManager,
     createMockOutputService(),
@@ -60,8 +62,19 @@ function createTestHandler() {
     popFirstCommand: commandHandler.exportedForTesting.popFirstCommand,
     shellCommand,
     contextManager,
+    shellWrapper,
+    mail,
   };
 }
+
+test("message arguments preserve dollar signs and never execute substitutions", async () => {
+  const { processCommand, mail, shellWrapper } = createTestHandler();
+  const args =
+    'send "nick" "A$AP Rocky" "Use $(touch should-not-exist) literally" "/tmp/A$AP.jpg"';
+  await processCommand(userHostPathPrompt, [`ns-mail ${args}`]);
+  expect(mail.handleCommand).toHaveBeenCalledWith(args);
+  expect(shellWrapper.executeCommand).not.toHaveBeenCalled();
+});
 
 describe("popFirstCommand function", () => {
   test("handles input with a prompt at beginning", async () => {

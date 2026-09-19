@@ -51,6 +51,21 @@ beforeEach(() => {
 });
 
 describe("ns-browser help and gating", () => {
+  test("reports unavailable visual QA honestly when the browser crashes", async () => {
+    launchMock.mockRejectedValue(
+      new Error(
+        "Target page, context or browser has been closed: close symbol missing",
+      ),
+    );
+    const svc = buildBrowserService();
+    await expect(
+      svc.handleCommand("open https://example.com"),
+    ).rejects.toContain("report those checks as NOT RUN");
+    expect(launchMock).toHaveBeenCalledWith({
+      headless: true,
+      timeout: 10_000,
+    });
+  });
   test("help is available even when disabled, defaults to visual mode", async () => {
     const svc = buildBrowserService({ browserEnabled: false });
     const result = await svc.handleCommand("help");
@@ -130,7 +145,10 @@ describe("ns-browser visual mode (default)", () => {
 
     const svc = buildBrowserService();
     const result = await svc.handleCommand("open https://example.com");
-    expect(launchMock).toHaveBeenCalledWith({ headless: true });
+    expect(launchMock).toHaveBeenCalledWith({
+      headless: true,
+      timeout: 10_000,
+    });
     expect(page.goto).toHaveBeenCalledWith("https://example.com", {
       waitUntil: "domcontentloaded",
     });

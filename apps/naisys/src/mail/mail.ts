@@ -380,6 +380,7 @@ export function createMailService(
 
   const registrableCommand: RegistrableCommand = {
     command: mailCmd,
+    literalArgs: true,
     handleCommand,
   };
 

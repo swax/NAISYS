@@ -49,7 +49,10 @@ export function createHubMailService(
           read_at: null,
           type: { not: "from" },
           user: { enabled: true, archived: false },
-          message: { source: null },
+          archived_at: null,
+          message: {
+            OR: [{ source: null }, { source: { startsWith: "erp-retry:" } }],
+          },
         },
         select: {
           user_id: true,
@@ -95,6 +98,17 @@ export function createHubMailService(
     try {
       const parsed = MailSendRequestSchema.parse(data);
 
+      if (
+        parsed.deliveryKey &&
+        !naisysServer
+          .getSupervisorConnections()
+          .some((connection) => connection.getHostId() === hostId)
+      ) {
+        throw new Error(
+          "Durable ERP notifications require a supervisor connection",
+        );
+      }
+
       await sendMailService.sendMail({
         fromUserId: parsed.fromUserId,
         fromRunId: parsed.fromRunId,
@@ -104,6 +118,8 @@ export function createHubMailService(
         kind: parsed.kind,
         hostId,
         attachmentIds: parsed.attachmentIds,
+        source: parsed.deliveryKey,
+        deduplicate: !!parsed.deliveryKey,
       });
 
       ack({ success: true });
@@ -155,6 +171,9 @@ export function createHubMailService(
         where: {
           ...ownershipCondition,
           kind: parsed.kind,
+          ...(parsed.afterId !== undefined
+            ? { id: { gt: parsed.afterId } }
+            : {}),
           NOT: {
             recipients: {
               some: {
@@ -177,7 +196,8 @@ export function createHubMailService(
             },
           },
         },
-        orderBy: { created_at: "desc" },
+        orderBy:
+          parsed.afterId !== undefined ? { id: "asc" } : { created_at: "desc" },
         skip: parsed.skip,
         take: parsed.take ?? 20,
       });

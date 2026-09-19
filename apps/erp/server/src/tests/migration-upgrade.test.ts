@@ -14,15 +14,13 @@ test("startup migrates an existing version 46 database to support deferred retri
   await mkdir(testRoot, { recursive: true });
   const fixture = await mkdtemp(path.join(testRoot, "migration-upgrade-"));
   const migrationName = "20260919062000_operation_retry_not_before";
+  const wakeMigrationName = "20260919090000_retry_manager_wakeup";
   const sourcePrisma = path.join(serverDir, "prisma");
   const targetPrisma = path.join(fixture, "prisma");
   const databasePath = path.join(fixture, "database", "naisys_erp.db");
   let passed = false;
   try {
     await mkdir(path.dirname(databasePath), { recursive: true });
-    const emptyDb = new Database(databasePath);
-    emptyDb.exec("PRAGMA user_version = 0");
-    emptyDb.close();
     await mkdir(path.join(targetPrisma, "migrations"), { recursive: true });
     await cp(
       path.join(serverDir, "prisma.config.ts"),
@@ -33,7 +31,7 @@ test("startup migrates an existing version 46 database to support deferred retri
       path.join(targetPrisma, "schema.prisma"),
     );
     for (const entry of await readdir(path.join(sourcePrisma, "migrations"))) {
-      if (entry !== migrationName) {
+      if (entry !== migrationName && entry !== wakeMigrationName) {
         await cp(
           path.join(sourcePrisma, "migrations", entry),
           path.join(targetPrisma, "migrations", entry),
@@ -64,6 +62,11 @@ test("startup migrates an existing version 46 database to support deferred retri
       { recursive: true },
     );
     // Use the real startup version, so a missing version bump reproduces the bug.
+    await cp(
+      path.join(sourcePrisma, "migrations", wakeMigrationName),
+      path.join(targetPrisma, "migrations", wakeMigrationName),
+      { recursive: true },
+    );
     await deployPrismaMigrations({
       ...options,
       expectedVersion: ERP_DB_VERSION,
@@ -73,6 +76,8 @@ test("startup migrates an existing version 46 database to support deferred retri
       expect(db.prepare("PRAGMA table_info(operation_runs)").all()).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ name: "retry_not_before" }),
+          expect.objectContaining({ name: "retry_manager_id" }),
+          expect.objectContaining({ name: "retry_wake_sent_at" }),
         ]),
       );
       expect(

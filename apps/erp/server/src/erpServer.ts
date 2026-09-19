@@ -44,10 +44,15 @@ import { takeCoverage } from "v8";
 
 import { registerApiReference } from "./api-reference.js";
 import { ERP_DB_VERSION, erpDbPath } from "./database/dbConfig.js";
+import erpDb from "./database/erpDb.js";
 import { initErpDb } from "./database/erpDb.js";
 import { erpRoutes } from "./erpRoutes.js";
 import { registerAuthMiddleware } from "./middleware/auth-middleware.js";
 import { isSupervisorAuth } from "./middleware/supervisorAuth.js";
+import {
+  createRetryNotifier,
+  type RetryNotification,
+} from "./services/operations/retry-notifications.js";
 import {
   ensureLocalSuperAdmin,
   ensureSupervisorSuperAdmin,
@@ -60,6 +65,8 @@ const __dirname = path.dirname(__filename);
 
 /** Plugin options for registering ERP inside another Fastify app */
 interface ErpPluginOptions {
+  /** Hosted supervisor delivers an idempotent chat through the hub. */
+  notifyRetry?: (notification: RetryNotification) => Promise<void>;
   /** If provided, used when creating or updating the local superadmin. Prompt in the caller (not here) to avoid Fastify's plugin-registration timeout. Ignored in supervisor-auth mode. */
   superAdminPassword?: string;
 }
@@ -157,6 +164,23 @@ export const erpPlugin: FastifyPluginAsync<ErpPluginOptions> = async (
 
   // API routes
   await fastify.register(erpRoutes);
+
+  if (opts.notifyRetry) {
+    const notifier = createRetryNotifier(erpDb, opts.notifyRetry, (error) => {
+      fastify.log.error(
+        { err: error },
+        "ERP retry notification failed; will retry",
+      );
+    });
+    fastify.addHook("onReady", (done) => {
+      notifier.start();
+      done();
+    });
+    fastify.addHook("onClose", (_instance, done) => {
+      notifier.stop();
+      done();
+    });
+  }
 
   registerApiReference(fastify);
 

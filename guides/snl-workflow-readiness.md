@@ -1,5 +1,11 @@
 # Automated sketch workflow readiness
 
+The follow-up [run handoff guide](snl-run-handoffs.md) covers the run-80 fixes:
+shell parsing, literal messages, incremental chat, public editorial text, explicit
+QA coverage, absolute download paths and durable retry notifications in ERP 48.
+Revision 35 was subsequently approved and used by run 80; its explicit no-portrait
+scope overrides the historical StarMapr pipeline discussion below.
+
 The September 18–19 readiness update is intentionally separate from starting a
 new sketch run. Server workflow revision **NEW-SKETCH 35** is a draft cloned from
 34; existing order runs are unchanged. Activate it only after the server supports
@@ -63,7 +69,8 @@ and requires a blocker note when supplied. The failure remains durable.
   inspectable with `canWork=false`. `canWork=true` always excludes future retries.
 - Reopen is disabled in HATEOAS and rejected server-side until the time passes.
 - After eligibility, a manager must explicitly reopen it; the timestamp clears.
-  This is not a background worker scheduler or an automatic agent wakeup.
+  ERP 48 adds a durable manager notification in hosted supervisor mode. The hub's
+  normal unread-message wakeup rules apply; see the follow-up guide for limits.
 - The operation UI shows the retry time. Indexing requested and indexed are
   distinct from automation completed and the site's NeedsReview state.
 

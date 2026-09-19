@@ -275,7 +275,9 @@ export const supervisorPlugin: FastifyPluginAsync<
       enableSupervisorAuth: any;
     };
     enableSupervisorAuth();
-    await fastify.register(erpPlugin);
+    const { notifyErpRetry } =
+      await import("./services/comms/erpRetryService.js");
+    await fastify.register(erpPlugin, { notifyRetry: notifyErpRetry });
   }
 
   if (isProd) {

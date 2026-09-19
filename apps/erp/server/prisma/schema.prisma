@@ -310,6 +310,8 @@ model OperationRun {
   tokens         Int?
   statusNote     String?          @map("status_note")
   retryNotBefore DateTime?        @map("retry_not_before")
+  retryManagerId Int?             @map("retry_manager_id")
+  retryWakeSentAt DateTime?        @map("retry_wake_sent_at")
   completedAt    DateTime?        @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
@@ -317,6 +319,7 @@ model OperationRun {
   updatedById Int                @map("updated_by")
 
   assignedTo   User?         @relation("opRunAssignedTo", fields: [assignedToId], references: [id], onDelete: Restrict)
+  retryManager User?         @relation("opRunRetryManager", fields: [retryManagerId], references: [id], onDelete: Restrict)
   createdBy    User          @relation("opRunCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy    User          @relation("opRunUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
   orderRun     OrderRun      @relation(fields: [orderRunId], references: [id], onDelete: Restrict)
@@ -428,6 +431,8 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
+
+  retryNotifications OperationRun[] @relation("opRunRetryManager")
 
   itemsCreated           Item[]                @relation("itemCreatedBy")
   itemsUpdated           Item[]                @relation("itemUpdatedBy")

@@ -463,6 +463,7 @@ export function sendMailViaHub(
   body: string,
   kind: "mail" | "chat" = "mail",
   attachmentIds?: number[],
+  deliveryKey?: string,
 ) {
   return new Promise<MailSendResponse>((resolve, reject) => {
     if (!socket || !connected) {
@@ -470,10 +471,23 @@ export function sendMailViaHub(
       return;
     }
 
+    const timeout = setTimeout(
+      () => reject(new Error("Hub mail acknowledgement timed out")),
+      15_000,
+    );
     socket.emit(
       HubEvents.MAIL_SEND,
-      { fromUserId, toUserIds, subject, body, kind, attachmentIds },
+      {
+        fromUserId,
+        toUserIds,
+        subject,
+        body,
+        kind,
+        attachmentIds,
+        deliveryKey,
+      },
       (response) => {
+        clearTimeout(timeout);
         resolve(response);
       },
     );
