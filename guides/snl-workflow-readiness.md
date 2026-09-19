@@ -76,7 +76,7 @@ report and completing the agent session.
 ## Verification and rollout
 
 Validated locally: 44 StarMapr synthetic regression tests, blank-image AWS HTTP
-200, 72 ERP unit tests, a real local ERP API integration test for storage/dispatch/
+200, 73 ERP tests (including a real version-46 startup migration), a local ERP API integration test for storage/dispatch/
 early-reopen rejection/elapsed retry, ERP server build/client type check, and
 SketchTV compilation plus 12 source-identity tests. No real-photo identification,
 actor training, or celebrity benchmark was executed by this work.
@@ -84,6 +84,25 @@ actor training, or celebrity benchmark was executed by this work.
 Before another live order: release/deploy the ERP code and SketchTV source API,
 verify API discovery exposes the new capabilities, then approve revision 35.
 Keep recurring scheduling disabled. Start a new test only when requested.
+
+### One-time server conversion from npm to Git
+
+The live server currently runs the npm install from `/home/naisys`; hash targets
+are ignored by npm installations. The updater supports a full commit hash only
+after the runner is launched from the NAISYS Git checkout.
+
+`release/deploy-git-server.sh FULL_COMMIT_HASH`, run as the existing `naisys`
+account, builds `/home/naisys/naisys-git` before stopping the current PM2 server.
+It keeps the same working directory and `/var/naisys` data, backs up SQLite
+databases and private PM2 launch configuration, then switches just that server.
+The existing npm installation is retained for rollback. This script is specific
+to upgrading the existing ERP schema 46 to 47. The schema-version bump is required
+for startup to apply the additive retry migration.
+
+After conversion, Supervisor Admin should show a Git version. Future updates can
+use `/FULL_COMMIT_HASH`, or `>=3.0.4/FULL_COMMIT_HASH` to retain the existing npm
+floor for other hosts. The target applies to all eligible connected Git hosts;
+inspect the host list before changing it. A target does not convert npm hosts.
 
 The existing StarMapr user-run benchmark takes independently labeled held-out
 positive/negative examples and rejects exact training-image leakage:
