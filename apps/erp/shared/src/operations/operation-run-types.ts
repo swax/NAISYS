@@ -48,6 +48,7 @@ export const OperationRunSchema = z.object({
   tokens: z.number().nullable(),
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  retryNotBefore: z.iso.datetime().nullable().optional(),
   stepSummary: z.array(StepRunSummarySchema).optional(),
   fieldRefSummary: z.array(FieldRefValueSummarySchema).optional(),
   createdAt: z.iso.datetime(),
@@ -86,6 +87,20 @@ export const TransitionNoteSchema = z
 
 export type TransitionNote = z.infer<typeof TransitionNoteSchema>;
 
+// A timed external blocker remains failed until its manager explicitly reopens it.
+export const FailOperationRunSchema = z
+  .union([
+    z
+      .object({
+        note: z.string().max(2000).optional(),
+        retryNotBefore: z.iso.datetime({ offset: true }).optional(),
+      })
+      .strict(),
+    z.null(),
+    z.undefined(),
+  ])
+  .transform((value) => value ?? {});
+
 // Slim transition response (start/complete/skip/fail/reopen)
 export const OperationRunTransitionSchema = z.object({
   id: z.number(),
@@ -96,6 +111,7 @@ export const OperationRunTransitionSchema = z.object({
   tokens: z.number().nullable(),
   note: z.string().nullable(),
   completedAt: z.iso.datetime().nullable(),
+  retryNotBefore: z.iso.datetime().nullable().optional(),
   updatedAt: z.iso.datetime(),
   updatedBy: z.string(),
   updatedByTitle: z.string(),

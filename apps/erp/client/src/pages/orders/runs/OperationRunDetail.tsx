@@ -541,6 +541,13 @@ export const OperationRunDetail: React.FC = () => {
                       Note: {opRun.note}
                     </Text>
                   )}
+                  {opRun.retryNotBefore && (
+                    <Text size="sm" c="orange">
+                      Retry eligible after{" "}
+                      {new Date(opRun.retryNotBefore).toLocaleString()}. A
+                      manager must reopen this operation.
+                    </Text>
+                  )}
                 </Stack>
               </Card>
             </Tabs.Panel>

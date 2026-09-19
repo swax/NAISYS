@@ -12,6 +12,10 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 
 import erpDb from "../../database/erpDb.js";
 import { API_PREFIX, paginationLinks } from "../../hateoas.js";
+import {
+  eligibleRetryWhere,
+  retryWaitReason,
+} from "../../services/operations/retry-policy.js";
 import { getUserWorkCenterIds } from "../../services/production/work-center-service.js";
 
 const OPEN_ORDER_STATUSES = [OrderRunStatus.released, OrderRunStatus.started];
@@ -43,6 +47,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
         viewAs,
         canWork,
         clockedIn,
+        includeDeferred,
       } = request.query;
 
       // Resolve the perspective user for canWork computation
@@ -81,6 +86,8 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           status: { in: OPEN_ORDER_STATUSES },
         },
       };
+      const now = new Date();
+      if (!includeDeferred || canWork) where.AND = [eligibleRetryWhere(now)];
 
       const operationFilters: Record<string, unknown> = {};
 
@@ -170,7 +177,10 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
           // canWork: work center access + permission for the op status
           const hasStatusPerm =
             opRun.status === OperationRunStatus.failed ? isManager : isExecutor;
-          const itemCanWork = hasWcAccess && hasStatusPerm;
+          const itemCanWork =
+            hasWcAccess &&
+            hasStatusPerm &&
+            !retryWaitReason(opRun.retryNotBefore, now);
 
           return {
             id: opRun.id,
@@ -182,6 +192,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             workCenterKey: opRun.operation.workCenter?.key ?? null,
             canWork: itemCanWork,
             status: opRun.status,
+            retryNotBefore: opRun.retryNotBefore?.toISOString() ?? null,
             assignedTo: opRun.assignedTo?.username ?? null,
             assignedToTitle: opRun.assignedTo?.title ?? null,
             dueAt: opRun.orderRun.dueAt,
@@ -199,6 +210,7 @@ export default function dispatchRoutes(fastify: FastifyInstance) {
             viewAs,
             canWork: canWork ? "true" : undefined,
             clockedIn: clockedIn ? "true" : undefined,
+            includeDeferred: includeDeferred ? "true" : undefined,
           }),
           {
             rel: "ready-to-close",

@@ -309,6 +309,7 @@ model OperationRun {
   cost           Float?
   tokens         Int?
   statusNote     String?          @map("status_note")
+  retryNotBefore DateTime?        @map("retry_not_before")
   completedAt    DateTime?        @map("completed_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   createdById Int                @map("created_by")
@@ -326,6 +327,7 @@ model OperationRun {
 
   @@unique([orderRunId, operationId])
   @@index([status])
+  @@index([retryNotBefore])
   @@map("operation_runs")
 }
 

@@ -41,6 +41,7 @@ import {
   updateOpRun,
   validateStatusFor,
 } from "../../services/operations/operation-run-service.js";
+import { retryWaitReason } from "../../services/operations/retry-policy.js";
 import { isUserClockedIn } from "../../services/production/labor-ticket-service.js";
 
 function opRunResource(orderKey: string, runNo: number) {
@@ -55,6 +56,7 @@ async function opRunItemActions(
   operationId: number,
   status: string,
   user: ErpUser | undefined,
+  retryNotBefore?: Date | null,
 ): Promise<HateoasAction[]> {
   const href = `${API_PREFIX}/${opRunResource(orderKey, runNo)}/${seqNo}`;
   const isExecutor = hasPermission(user, "order_executor");
@@ -162,6 +164,10 @@ async function opRunItemActions(
         path: "/fail",
         method: "POST",
         title: "Fail",
+        schema: `${API_PREFIX}/schemas/FailOperationRun`,
+        body: {
+          note: "Describe the blocker; optionally set retryNotBefore to an ISO timestamp",
+        },
         permission: "order_manager",
         statuses: [OperationRunStatus.in_progress],
         disabledWhen: () => wcErr,
@@ -177,7 +183,7 @@ async function opRunItemActions(
           OperationRunStatus.skipped,
           OperationRunStatus.failed,
         ],
-        disabledWhen: () => wcErr,
+        disabledWhen: () => wcErr ?? retryWaitReason(retryNotBefore),
       },
     ],
     href,
@@ -230,6 +236,7 @@ export async function formatOpRun(
     tokens: opRun.tokens,
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
+    retryNotBefore: formatDate(opRun.retryNotBefore),
     stepSummary: stepSummaryRows.map((sr) => ({
       seqNo: sr.step.seqNo,
       title: sr.step.title,
@@ -280,6 +287,7 @@ export async function formatOpRun(
       opRun.operationId,
       opRun.status,
       user,
+      opRun.retryNotBefore,
     ),
   };
 }
@@ -300,6 +308,7 @@ export async function formatOpRunTransition(
     tokens: opRun.tokens,
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
+    retryNotBefore: formatDate(opRun.retryNotBefore),
     ...formatAuditFields(opRun),
     _actions: await opRunItemActions(
       orderKey,
@@ -309,6 +318,7 @@ export async function formatOpRunTransition(
       opRun.operationId,
       opRun.status,
       user,
+      opRun.retryNotBefore,
     ),
   };
 }
@@ -332,6 +342,7 @@ function formatListOpRun(opRun: OpRunWithSummary) {
     tokens: opRun.tokens,
     note: opRun.statusNote ?? null,
     completedAt: formatDate(opRun.completedAt),
+    retryNotBefore: formatDate(opRun.retryNotBefore),
     ...formatAuditFields(opRun),
     stepCount: opRun._count.stepRuns,
     predecessors: opRun.operation.predecessors.map((d) => ({

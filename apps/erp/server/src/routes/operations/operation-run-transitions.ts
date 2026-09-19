@@ -1,5 +1,6 @@
 import {
   ErrorResponseSchema,
+  FailOperationRunSchema,
   OperationRunStatus,
   OperationRunTransitionSlimSchema,
   OrderRunStatus,
@@ -24,6 +25,7 @@ import {
   unblockSuccessors,
   validateStatusFor,
 } from "../../services/operations/operation-run-service.js";
+import { retryWaitReason } from "../../services/operations/retry-policy.js";
 import { transitionStatus as transitionOrderRunStatus } from "../../services/orders/order-run-service.js";
 import {
   clockIn,
@@ -278,7 +280,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       description: "Fail an operation run (in_progress → failed)",
       tags: ["Operation Runs"],
       params: SeqNoParamsSchema,
-      body: TransitionNoteSchema,
+      body: FailOperationRunSchema,
       response: {
         200: OperationRunTransitionSlimSchema,
         404: ErrorResponseSchema,
@@ -288,8 +290,18 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
     preHandler: requirePermission("order_manager"),
     handler: async (request, reply) => {
       const { orderKey, runNo, seqNo } = request.params;
-      const { note } = request.body;
+      const { note, retryNotBefore } = request.body;
       const userId = request.erpUser!.id;
+
+      if (retryNotBefore && new Date(retryNotBefore) <= new Date()) {
+        return conflict(reply, "retryNotBefore must be in the future");
+      }
+      if (retryNotBefore && !note?.trim()) {
+        return conflict(
+          reply,
+          "A blocker reason is required when deferring a retry",
+        );
+      }
 
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
@@ -320,6 +332,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
           ...(cost > 0 ? { cost } : undefined),
           ...(tokens > 0 ? { tokens } : undefined),
           statusNote: note ?? null,
+          retryNotBefore: retryNotBefore ? new Date(retryNotBefore) : null,
         },
       );
       const full = await formatOpRunTransition(
@@ -357,6 +370,9 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
       const resolved = await resolveOpRun(orderKey, runNo, seqNo);
       if (!resolved) return notFound(reply, `Operation run not found`);
 
+      const retryErr = retryWaitReason(resolved.opRun.retryNotBefore);
+      if (retryErr) return conflict(reply, retryErr);
+
       const wcErr = await checkWorkCenterAccess(
         resolved.opRun.operationId,
         request.erpUser!,
@@ -384,7 +400,7 @@ export default function operationRunTransitionRoutes(fastify: FastifyInstance) {
         resolved.opRun.status,
         reopenTo,
         userId,
-        { completedAt: null, statusNote: note ?? null },
+        { completedAt: null, statusNote: note ?? null, retryNotBefore: null },
       );
       // Re-block successor ops that are still pending
       await reblockSuccessors(

@@ -141,6 +141,10 @@ export type OrderRunListResponse = z.infer<typeof OrderRunListResponseSchema>;
 // Query params for dispatch view (operation runs across open orders)
 export const DispatchListQuerySchema = z.object({
   ...paginationQuery(),
+  includeDeferred: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
   status: OperationRunStatusEnum.optional(),
   workCenter: z.string().optional(),
   search: z.string().optional(),
@@ -159,6 +163,7 @@ export type DispatchListQuery = z.infer<typeof DispatchListQuerySchema>;
 
 // Dispatch item = operation run with parent order/run context
 export const DispatchItemSchema = z.object({
+  retryNotBefore: z.iso.datetime().nullable().optional(),
   id: z.number(),
   orderKey: z.string(),
   revNo: z.number(),
