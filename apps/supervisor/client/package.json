@@ -31,7 +31,7 @@
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.18.4",
     "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.8.3"
   },
@@ -40,8 +40,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "typescript": "^6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7",
+    "vite": "^8.3.5",
+    "vitest": "^4.1.12",
     "vite-plugin-istanbul": "^9.0.0"
   }
 }
