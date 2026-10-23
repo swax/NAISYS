@@ -106,7 +106,15 @@ SERVER_PORT=${SERVER_PORT}
 
     // --- Navigate to agent detail ---
     await page.getByText("uibot").first().click();
-    await page.getByRole("tab", { name: "Detail" }).click();
+    // Agent navigation is asynchronous. Wait for uibot's route and tab so
+    // a slow render cannot send the click to the previous agent's Detail tab.
+    await page.waitForURL(/\/supervisor\/agents\/uibot(?:\/[^?#]*)?$/, {
+      timeout: 15000,
+    });
+    await page
+      .getByRole("tab", { name: "Detail", exact: true })
+      .and(page.locator('[href="/supervisor/agents/uibot"]'))
+      .click();
     await page.waitForURL(/\/supervisor\/agents\/uibot$/, {
       timeout: 15000,
     });

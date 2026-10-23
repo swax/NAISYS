@@ -1,0 +1,71 @@
+name: Dependency security
+
+on:
+  pull_request:
+    paths:
+      - "**/package.json"
+      - package-lock.json
+      - .github/workflows/dependency-security.yml
+  push:
+    branches: [main]
+    paths:
+      - "**/package.json"
+      - package-lock.json
+      - .github/workflows/dependency-security.yml
+  schedule:
+    - cron: "23 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          check-latest: true
+          package-manager-cache: false
+      - name: Use the repository's pinned npm
+        run: npm install --global npm@11.15.0 --ignore-scripts
+      # Audit the complete lockfile, including build tools, without installing
+      # dependencies or executing their lifecycle scripts.
+      - name: Check for high and critical dependency advisories
+        run: npm audit --audit-level=high --ignore-scripts
+
+  validate:
+    if: github.event_name != 'schedule'
+    needs: audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          check-latest: true
+          package-manager-cache: false
+      - name: Use the repository's pinned npm
+        run: npm install --global npm@11.15.0 --ignore-scripts
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Prepare reviewed native and Prisma dependencies
+        run: npm rebuild better-sqlite3 esbuild @prisma/engines prisma
+      - name: Install the test browser and system dependencies
+        run: npm exec -- playwright install --with-deps chromium
+      - name: Build all packages and web clients
+        run: npm run build -- --concurrency=2
+      - name: Run unit, integration, and browser tests
+        run: npm run test -- --concurrency=2

@@ -25,13 +25,13 @@
   "dependencies": {
     "cron-parser": "^5.5.0",
     "semver": "^7.8.1",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/semver": "^7.7.1",
-    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/coverage-v8": "^4.1.12",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.12"
   },
   "exports": {
     ".": {
