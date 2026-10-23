@@ -13,35 +13,35 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@mantine/core": "^9.2.1",
-    "@mantine/dropzone": "^9.2.1",
-    "@mantine/form": "^9.2.1",
+    "@mantine/core": "^9.7.2",
+    "@mantine/dropzone": "^9.7.2",
+    "@mantine/form": "^9.7.2",
     "@mantine/hooks": "^9.2.1",
-    "@mantine/notifications": "^9.2.1",
+    "@mantine/notifications": "^9.7.2",
     "@naisys/common": "3.0.4",
     "@naisys/common-browser": "3.0.4",
     "@naisys/hub-protocol": "3.0.4",
     "@naisys/supervisor-shared": "3.0.4",
     "@simplewebauthn/browser": "^13.3.0",
-    "@tabler/icons-react": "^3.44.0",
-    "@tanstack/react-query": "^5.100.14",
+    "@tabler/icons-react": "^3.49.0",
+    "@tanstack/react-query": "^5.104.3",
     "chart.js": "^4.5.1",
     "qrcode.react": "^4.2.0",
-    "react": "^19.2.6",
+    "react": "^19.3.1",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.2.6",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.4",
     "remark-gfm": "^4.0.1",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.4"
   },
   "devDependencies": {
-    "@types/react": "^19.2.15",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "typescript": "^6.0.3",
     "vite": "^8.3.5",
     "vitest": "^4.1.12",
-    "vite-plugin-istanbul": "^9.0.0"
+    "vite-plugin-istanbul": "^9.0.1"
   }
 }
